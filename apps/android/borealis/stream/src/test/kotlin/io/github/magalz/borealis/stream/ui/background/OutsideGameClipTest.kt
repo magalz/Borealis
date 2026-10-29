@@ -73,19 +73,19 @@ class OutsideGameClipTest {
     }
 
     @Test
-    fun `an error before the connection plays the clip`() {
+    fun `an error before the connection holds the clip on its still, as a dialog does`() {
         val session = sessionAt(OutsideScreen.FAILED, clip)
 
         show(session)
 
-        assertClipPlays()
+        assertStillOnly()
     }
 
     @Test
-    fun `the question about a running app plays the clip`() {
+    fun `the question about a running app holds the clip on its still`() {
         show(sessionAt(OutsideScreen.CONFLICT, clip))
 
-        assertClipPlays()
+        assertStillOnly()
     }
 
     @Test
@@ -148,7 +148,7 @@ class OutsideGameClipTest {
         composeRule.mainClock.autoAdvance = false
         val session = sessionAt(OutsideScreen.STARTING, StreamVisuals())
         session.onStage(StartStage.PREPARING_DISPLAY)
-        session.onFailed(aFailure)
+        session.quitApp()
         show(session)
         composeRule.mainClock.advanceTimeBy(1_000)
         val first = composeRule.frame(OUTSIDE_GAME_BACKGROUND_TAG)

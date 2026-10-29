@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.os.Looper
 import android.view.SurfaceView
 import android.view.View
+import androidx.compose.ui.unit.IntSize
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -64,6 +65,35 @@ class PixelCopySourceTest {
 
         assertThat(PixelCopySource(view).bounds())
             .isEqualTo(VideoBounds(left = 0, top = 0, width = 1280, height = 720))
+    }
+
+    @Test
+    fun `the size of the video is read without asking where it is on the screen`() {
+        val view = sized(ValidSurfaceView(activity))
+        val before = view.locationQueries
+
+        assertThat(PixelCopySource(view).size()).isEqualTo(IntSize(1280, 720))
+
+        assertThat(view.locationQueries).isEqualTo(before)
+    }
+
+    @Test
+    fun `a view with no surface, or no size, has no size`() {
+        assertThat(PixelCopySource(View(activity)).size()).isNull()
+        assertThat(PixelCopySource(sized(SurfaceView(activity))).size()).isNull()
+        assertThat(PixelCopySource(sized(ValidSurfaceView(activity), 0, 0)).size()).isNull()
+    }
+
+    @Test
+    fun `a copy that cannot be made ends on the main thread, whichever thread asked`() {
+        val source = PixelCopySource(View(activity))
+        var endedOn: Thread? = null
+
+        Thread { source.copy(bitmap) { endedOn = Thread.currentThread() } }.apply { start() }.join()
+        assertThat(endedOn).isNull()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertThat(endedOn).isSameInstanceAs(Looper.getMainLooper().thread)
     }
 
     @Test

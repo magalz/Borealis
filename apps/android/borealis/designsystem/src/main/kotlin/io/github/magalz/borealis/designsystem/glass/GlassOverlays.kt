@@ -14,31 +14,51 @@ import androidx.compose.runtime.staticCompositionLocalOf
 internal data class OverlayGlass(val tint: Float)
 
 /**
- * The dialogs and sheets that are open over a [GlassHost], and what that does to it. [glass] is
- * what an overlay over a blurred window does; it is null where the window is not blurred, which is
- * where the glass is solid and where the device cannot blur.
+ * The dialogs, sheets and panels that are open over a [GlassHost], and what that does to it.
+ * [glass] is what an overlay over a blurred window does; it is null where the window is not
+ * blurred, which is where the glass is solid and where the device cannot blur.
+ *
+ * A dialog or a sheet is a window of its own, over the host: it blurs all that the host holds. A
+ * panel is inside the host (see [rememberPanelGlass]), so it blurs the background alone.
  */
 @Stable
 internal class GlassOverlays(private val glassState: State<OverlayGlass?>) {
-    private val count = mutableIntStateOf(0)
+    private val windows = mutableIntStateOf(0)
+    private val panels = mutableIntStateOf(0)
 
     val glass: OverlayGlass?
         get() = glassState.value
 
     /** Whether any overlay is open. */
     val isOpen: Boolean
-        get() = count.intValue > 0
+        get() = windows.intValue + panels.intValue > 0
 
-    /** Whether the window is blurred, and the background held still, now. */
+    /** Whether the window is blurred, and the background held still, by a dialog or a sheet. */
     val windowBlurred: Boolean
-        get() = isOpen && glass != null
+        get() = windows.intValue > 0 && glass != null
+
+    /** Whether the background alone is blurred, and held still, by a panel. */
+    val backgroundBlurred: Boolean
+        get() = panels.intValue > 0 && glass != null
+
+    /** Whether the background is held still now, by whichever overlay blurs it. */
+    val backgroundHeld: Boolean
+        get() = windowBlurred || backgroundBlurred
 
     fun enter() {
-        count.intValue++
+        windows.intValue++
     }
 
     fun leave() {
-        count.intValue--
+        windows.intValue--
+    }
+
+    fun enterPanel() {
+        panels.intValue++
+    }
+
+    fun leavePanel() {
+        panels.intValue--
     }
 }
 

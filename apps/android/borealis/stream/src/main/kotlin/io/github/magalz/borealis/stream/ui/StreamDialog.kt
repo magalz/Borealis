@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -44,8 +46,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
+import io.github.magalz.borealis.designsystem.components.LocalTextHalo
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.glass.rememberPanelGlass
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -72,30 +76,36 @@ internal class StreamDialogAction(
 
 /**
  * A dialog inside the stream chrome: a scrim over the whole layer and, centred on it, a panel with
- * the surface, the compact width and the padding of a `BorealisDialog`, the [title], the [content]
- * and the [actions] as buttons. The conflict dialog and the Quit popup of the menu are made from
- * it.
+ * the surface, the [width] (the compact one unless the dialog says otherwise) and the padding of a
+ * `BorealisDialog`, the [title], the [content], the [details] and the [actions] as buttons. The
+ * conflict dialog, the error popup and the Quit popup of the menu are made from it.
  *
  * It is not a `BorealisDialog`, on purpose. That one is a platform dialog window, and the stream
  * host owns the input: `StreamChromeHost.dispatchKeyEvent` routes the gamepad and the keys to the
  * chrome root, which a dialog window would bypass (gamepad B, the D-pad focus and the Back rule).
  *
  * The scrim takes the touches, so nothing under the dialog is reached, and a tap on it calls
- * [onDismiss], as Cancel does; a tap in the panel does not. The first of [actions] has the initial
- * focus, so it is the safe one (Cancel): a stray OK changes nothing. The focus stays in the dialog,
- * Up, Down, Left and Right move between the buttons and stop at the last. The gamepad B button, the
+ * [onDismiss], as Cancel does, unless [dismissOnScrimTap] is off and the tap does nothing (a dialog
+ * that has no Cancel); a tap in the panel does not. The first of [actions] has the initial focus,
+ * so it is the safe one (Cancel): a stray OK changes nothing. The focus stays in the dialog, Up,
+ * Down, Left and Right move between the buttons and stop at the last. The gamepad B button, the
  * Back key and Back of the system call [onDismiss] and are used up here, so neither reaches what is
  * under the dialog nor the host's callback, which closes the open panel.
  *
  * In the Streaming phase the panel is glass over the video (the menu provides it, see
  * `InGameMenu`): the same panel on the blurred copy of the video behind the tint, with the text
- * colours that keep 4.5:1 over it. The scrim stays. Elsewhere, and where the glass is solid, it is
- * the `surface` colour.
+ * colours that keep 4.5:1 over it. The scrim stays. Over the background of the screens outside the
+ * game the dialog does what a dialog window does in the Library (ADR 0057, decision 8): the
+ * background is blurred and held on its still frame, the dialog draws no scrim, and the panel takes
+ * the glass tint and the glass text colours; on API 28 to 30 the scrim and the solid panel stay.
+ * Elsewhere, and where the glass is solid, the panel is the `surface` colour.
  *
  * The panel is announced by its [title]. The title and the [content] are one polite live region, so
  * a screen reader reads the body with the title when the dialog opens; the title is the only
- * heading. Three buttons or more stack on a phone, where they do not fit side by side. [modifier]
- * applies to the panel.
+ * heading. The [details] come under it and are not read out when the dialog opens: a screen reader
+ * reaches them as it moves on. Three buttons or more stack on a phone, where they do not fit side
+ * by side; elsewhere the buttons go to the next row when they do not fit in one. [modifier] applies
+ * to the panel.
  */
 @Composable
 internal fun StreamDialog(
@@ -103,19 +113,27 @@ internal fun StreamDialog(
     onDismiss: () -> Unit,
     actions: List<StreamDialogAction>,
     modifier: Modifier = Modifier,
+    width: DialogWidth = DialogWidth.Compact,
+    dismissOnScrimTap: Boolean = true,
+    details: @Composable ColumnScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     require(actions.isNotEmpty()) { "A stream dialog has at least one action" }
     val colors = LocalBorealisColors.current
     val glass = LocalVideoGlass.current
+    // Over the background of the screens outside the game, the dialog opens the overlay of ADR
+    // 0057, decision 8: no scrim, the tinted panel; elsewhere this is null.
+    val overlay = rememberPanelGlass()
     val shape = MaterialTheme.shapes.extraLarge
     DismissOnSystemBack(onDismiss)
     BoxWithConstraints(
         Modifier.fillMaxSize()
-            .background(colors.scrim)
+            .then(if (overlay == null) Modifier.background(colors.scrim) else Modifier)
             // Before the insets: the scrim takes the tap over all it draws, the strips of the
             // system bars too, and nothing under it takes it.
-            .pointerInput(onDismiss) { detectTapGestures { onDismiss() } }
+            .pointerInput(onDismiss, dismissOnScrimTap) {
+                detectTapGestures { if (dismissOnScrimTap) onDismiss() }
+            }
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .onGamepadB(onDismiss)
             .onBackKey(onDismiss)
@@ -127,10 +145,14 @@ internal fun StreamDialog(
         Column(
             modifier
                 .semantics { paneTitle = title }
-                .width(BorealisDimens.dialogWidth(DialogWidth.Compact, maxWidth))
+                .width(BorealisDimens.dialogWidth(width, maxWidth))
                 .then(
-                    if (glass == null) Modifier.background(colors.surface, shape)
-                    else Modifier.videoGlassSurface(glass, shape)
+                    when {
+                        glass != null -> Modifier.videoGlassSurface(glass, shape)
+                        overlay != null ->
+                            Modifier.background(colors.surface.copy(alpha = overlay.tint), shape)
+                        else -> Modifier.background(colors.surface, shape)
+                    }
                 )
                 .border(1.dp, colors.line, shape)
                 .clip(shape)
@@ -140,7 +162,10 @@ internal fun StreamDialog(
                 .padding(BorealisTokens.Space.DialogPadding),
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
-            DialogContent(title, actions, glass != null, content)
+            // The same composition with and without the glass of the background.
+            CompositionLocalProvider(LocalBorealisColors provides (overlay?.colors ?: colors)) {
+                DialogContent(title, actions, glass != null, details, content)
+            }
         }
     }
 }
@@ -159,6 +184,7 @@ private fun DialogContent(
     title: String,
     actions: List<StreamDialogAction>,
     onGlass: Boolean,
+    details: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     OnVideoGlass(LocalVideoGlass.current) {
@@ -176,11 +202,13 @@ private fun DialogContent(
                 )
                 content()
             }
+            details()
             Actions(actions)
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Actions(actions: List<StreamDialogAction>) {
     val firstFocus = remember { FocusRequester() }
@@ -188,20 +216,33 @@ private fun Actions(actions: List<StreamDialogAction>) {
     val stacked =
         actions.size > MAX_SIDE_BY_SIDE_ON_A_PHONE && LocalFormFactor.current == FormFactor.Phone
     val width = if (stacked) Modifier.fillMaxWidth() else Modifier
+    val halo = LocalTextHalo.current
     val buttons: @Composable () -> Unit = {
         actions.forEachIndexed { index, action ->
-            BorealisButton(
-                action.label,
-                action.onClick,
-                if (index == 0) width.initialFocus(firstFocus) else width,
-                action.style,
-            )
+            // The label of a filled button stands on the fill, not on the glass: a halo around it
+            // would smudge it.
+            CompositionLocalProvider(
+                LocalTextHalo provides
+                    if (action.style == BorealisButtonStyle.Primary) null else halo
+            ) {
+                BorealisButton(
+                    action.label,
+                    action.onClick,
+                    if (index == 0) width.initialFocus(firstFocus) else width,
+                    action.style,
+                )
+            }
         }
     }
     if (stacked) {
         Column(verticalArrangement = Arrangement.spacedBy(BUTTON_GAP)) { buttons() }
     } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) { buttons() }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+            verticalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+        ) {
+            buttons()
+        }
     }
 }
 

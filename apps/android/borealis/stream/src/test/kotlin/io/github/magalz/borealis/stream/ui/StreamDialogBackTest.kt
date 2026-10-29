@@ -15,6 +15,7 @@ import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.setChrome
 import org.junit.Before
@@ -81,6 +82,20 @@ class StreamDialogBackTest {
         pressBack()
 
         assertThat(intents.calls).containsExactly("answerConflict CANCEL")
+        assertThat(hostBacks).isEmpty()
+    }
+
+    @Test
+    fun `Back closes the error popup, which leaves the stream, and does not go to the host`() {
+        val intents = RecordingIntents()
+        composeRule.setChrome(FormFactor.Phone) {
+            ConnectionErrorScreen("Desktop", "Desk PC", aFailure, intents)
+        }
+        composeRule.onNodeWithText("Try again").assertIsDisplayed()
+
+        pressBack()
+
+        assertThat(intents.calls).containsExactly("leave")
         assertThat(hostBacks).isEmpty()
     }
 }

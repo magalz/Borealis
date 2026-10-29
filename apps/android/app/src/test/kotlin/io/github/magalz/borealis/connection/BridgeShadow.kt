@@ -73,6 +73,12 @@ internal object ShadowRecordingBridge {
     /** What `interruptConnection` does besides recording the call. */
     @Volatile var onInterrupt: () -> Unit = {}
 
+    /**
+     * What `testClientConnectivity` does besides recording the call and answering: it runs when the
+     * call is made, before the answer, as the network test that it stands for would block.
+     */
+    @Volatile var onConnectivityTest: () -> Unit = {}
+
     @Volatile var externalAddress: String? = null
 
     /**
@@ -95,6 +101,7 @@ internal object ShadowRecordingBridge {
         intResult = 0
         onStartConnection = { 0 }
         onInterrupt = {}
+        onConnectivityTest = {}
         externalAddress = null
         answers.clear()
         realCleanupBridge()
@@ -498,6 +505,7 @@ internal object ShadowRecordingBridge {
         testFlags: Int,
     ): Int {
         record("testClientConnectivity", testServerHostName, referencePort, testFlags)
+        onConnectivityTest()
         return intAnswer("testClientConnectivity")
     }
 

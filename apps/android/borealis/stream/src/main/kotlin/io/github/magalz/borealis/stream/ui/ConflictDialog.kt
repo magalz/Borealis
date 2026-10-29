@@ -32,9 +32,8 @@ private const val WARNING_TINT = 0.1f
  * why, and for the focus on Cancel, which a stray OK cannot make costly, and for the gamepad B
  * button and Back, which cancel.
  *
- * It stands over the background of the screens outside the game, as a solid panel for now. ADR 0061
- * decision 5 (ADR 0057 decision 8: the window blur and the frozen background under a dialog, and
- * its tinted panel) is still to be done; the orchestrator schedules it.
+ * It stands over the background of the screens outside the game, with the glass that a dialog has
+ * in the Library (ADR 0061, decision 5; ADR 0057, decision 8): see [StreamDialog].
  */
 @Composable
 fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {

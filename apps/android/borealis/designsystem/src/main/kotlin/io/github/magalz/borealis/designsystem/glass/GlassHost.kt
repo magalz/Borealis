@@ -64,7 +64,8 @@ internal val LocalGlassScene = staticCompositionLocalOf {
  *
  * While a dialog or a sheet is open over the host ([OverlayOpen]) and the device can blur, the host
  * blurs all of its content and holds the background still: no frame of it is drawn while the sheet
- * is up. A drawn background runs at 24 frames a second on a TV while the blur is drawn.
+ * is up. A panel inside the host ([rememberPanelGlass]) does the same to the background alone. A
+ * drawn background runs at 24 frames a second on a TV while the blur is drawn.
  *
  * The owner of the host can hold the background back (ADR 0061): [frozen] holds every style on one
  * frame, and [clipsPlay] off releases the decoder of a clip style, which shows its still, while a
@@ -94,7 +95,7 @@ fun GlassHost(
 private fun HostBackground(style: BackgroundStyle, held: Boolean, clipsPlay: Boolean) {
     val scene = LocalGlassScene.current
     // The state is read here, so that opening a sheet recomposes the background and nothing else.
-    val frozen = held || LocalGlassOverlays.current?.windowBlurred == true
+    val frozen = held || LocalGlassOverlays.current?.backgroundHeld == true
     BorealisBackground(
         style,
         Modifier.fillMaxSize(),
@@ -136,8 +137,12 @@ internal fun GlassHostOver(
     val radiusPx = with(LocalDensity.current) { spec.blurDp.dp.toPx() }
     val blur = remember(radiusPx) { backdropBlur(radiusPx) }
     CompositionLocalProvider(LocalGlassOverlays provides overlays, LocalGlassScene provides scene) {
-        Box(modifier.fillMaxSize().windowBlur(overlays)) {
-            Box(Modifier.fillMaxSize().recordBackdrop(scene, source, blurred, blur)) {
+        Box(modifier.fillMaxSize().blurWhen { overlays.windowBlurred }) {
+            Box(
+                Modifier.fillMaxSize()
+                    .blurWhen { overlays.backgroundBlurred }
+                    .recordBackdrop(scene, source, blurred, blur)
+            ) {
                 background()
             }
             content()
@@ -198,17 +203,16 @@ private fun DrawScope.blurBackdrop(
 }
 
 /**
- * Blurs all that this holds while an overlay is open over a device that can blur. The effect is set
+ * Blurs all that this holds while [blurred] says so, on a device that can blur. The effect is set
  * in the layer, which reads the state of the counter: an overlay that opens redraws the layer and
  * recomposes nothing.
  */
-private fun Modifier.windowBlur(overlays: GlassOverlays): Modifier =
+private fun Modifier.blurWhen(blurred: () -> Boolean): Modifier =
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
         this
     } else {
         graphicsLayer {
             val radius = WINDOW_BLUR_DP.dp.toPx()
-            renderEffect =
-                if (overlays.windowBlurred) BlurEffect(radius, radius, TileMode.Clamp) else null
+            renderEffect = if (blurred()) BlurEffect(radius, radius, TileMode.Clamp) else null
         }
     }

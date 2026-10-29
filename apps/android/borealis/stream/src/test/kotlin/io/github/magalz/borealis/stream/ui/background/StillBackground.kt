@@ -10,5 +10,5 @@ import io.github.magalz.borealis.stream.StreamVisuals
  */
 @Composable
 internal fun OnStillBackground(content: @Composable () -> Unit) {
-    OutsideGameBackground(StreamVisuals(background = BackgroundMode.STILL), false, content)
+    OutsideGameBackground(StreamVisuals(background = BackgroundMode.STILL), false) { content() }
 }

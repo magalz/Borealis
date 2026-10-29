@@ -75,6 +75,32 @@ internal class GameFrozenFrameTest : GameTestBase() {
     }
 
     @Test
+    fun `the copy is asked for before the connectivity test of the end of the stream`() {
+        streamingWithVideo()
+        var askedAtTheTest: Boolean? = null
+        ShadowRecordingBridge.onConnectivityTest = { askedAtTheTest = frozen().requested() }
+
+        rig.game.connectionTerminated(-5)
+        rig.awaitStop()
+
+        assertThat(ShadowRecordingBridge.named("testClientConnectivity")).hasSize(1)
+        assertThat(askedAtTheTest).isTrue()
+    }
+
+    @Test
+    fun `the copy is asked for before the connectivity test of a stage that fails`() {
+        streamingWithVideo()
+        var askedAtTheTest: Boolean? = null
+        ShadowRecordingBridge.onConnectivityTest = { askedAtTheTest = frozen().requested() }
+
+        rig.game.stageFailed("Control connection", 0, -5)
+        ShadowLooper.idleMainLooper()
+
+        assertThat(ShadowRecordingBridge.named("testClientConnectivity")).hasSize(1)
+        assertThat(askedAtTheTest).isTrue()
+    }
+
+    @Test
     fun `the copy is asked for on the thread that reports the end, before the main thread acts`() {
         streamingWithVideo()
 

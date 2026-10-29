@@ -160,7 +160,7 @@ class LaunchAuditTest {
         return conflicts.resolve(
             { running },
             { null },
-            RequestedApp(7, "Steam"),
+            RequestedApp(7, "Steam", resumeChosen),
             ConflictActions(
                 prompt = { _, _, _, _, answer -> answer.choose(choice) },
                 relaunch = { true },
@@ -168,7 +168,6 @@ class LaunchAuditTest {
                 quitAndRelaunch = { true },
             ),
             host = host,
-            resumeChosen = resumeChosen,
         )
     }
 

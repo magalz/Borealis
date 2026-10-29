@@ -59,8 +59,12 @@ fun interface ConflictJoin {
     @Throws(IOException::class, XmlPullParserException::class) fun join(appId: Int): LaunchOutcome
 }
 
-/** The app the refused `/launch` asked for: its id and name, or null when the name is unknown. */
-data class RequestedApp(val id: Int, val name: String?)
+/**
+ * The app the refused `/launch` asked for: its id and name, or null when the name is unknown, and
+ * whether the user chose Resume or Continue on it in the Library, so the same app that runs is
+ * joined without a question.
+ */
+data class RequestedApp(val id: Int, val name: String?, val resumeChosen: Boolean = false)
 
 /**
  * How the connection answers a conflict: [prompt] asks the user; [relaunch] launches the requested
@@ -120,12 +124,7 @@ internal constructor(
     /**
      * Runs the resolution and returns whether the launch went through; false also means that the
      * user cancelled (the connection then ends quietly). Blocks, so call it off the main thread.
-     * [resumeChosen] is true when the user chose Resume or Continue on the requested app, which
-     * then is joined without a question when it is the one that runs.
      */
-    // The reader, the names, the request, the actions, the host label and the user's choice: the
-    // six values of one resolution.
-    @Suppress("LongParameterList")
     @Throws(IOException::class, XmlPullParserException::class)
     fun resolve(
         reader: RunningAppReader,
@@ -133,14 +132,13 @@ internal constructor(
         requested: RequestedApp,
         actions: ConflictActions,
         host: String? = null,
-        resumeChosen: Boolean = false,
     ): Boolean {
         used.set(true)
         return when (val seen = pollRunningApp(reader)) {
             Seen.Cancelled -> false
             Seen.Nothing -> actions.relaunch.run()
             is Seen.App ->
-                if (resumeChosen && seen.id == requested.id) {
+                if (requested.resumeChosen && seen.id == requested.id) {
                     joinedByChoice(host, seen.id)
                     afterJoin(actions.join.join(seen.id), actions.relaunch)
                 } else {

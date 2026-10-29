@@ -59,7 +59,7 @@ class LaunchConflictsTest {
         conflicts.resolve(
             reader,
             names,
-            RequestedApp(7, "Steam"),
+            RequestedApp(7, "Steam", resumeChosen),
             ConflictActions(
                 prompt = { running, name, requested, _, answer ->
                     prompts += Prompt(running, name, requested)
@@ -81,7 +81,6 @@ class LaunchConflictsTest {
                         quitResult
                     },
             ),
-            resumeChosen = resumeChosen,
         )
 
     @Test

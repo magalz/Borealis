@@ -230,7 +230,7 @@ open class NvConnection(
         return conflicts.resolve(
             RunningAppReader { h.getCurrentGame(h.getServerInfo(true)) },
             AppNameLookup { id -> h.getAppById(id)?.appName },
-            RequestedApp(app.appId, app.appName),
+            RequestedApp(app.appId, app.appName, streamConfig.resumeChosen),
             ConflictActions(
                 ConflictPrompt { runningId, runningName, requestedId, requestedName, answer ->
                     listener.launchConflict(
@@ -246,7 +246,6 @@ open class NvConnection(
                 LaunchAttempt { quitAndLaunch(h, context) },
             ),
             checkNotNull(context.serverAddress).address,
-            streamConfig.resumeChosen,
         )
     }
 

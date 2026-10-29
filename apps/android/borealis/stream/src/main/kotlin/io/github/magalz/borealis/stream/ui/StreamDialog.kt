@@ -103,6 +103,9 @@ internal fun StreamDialog(
     onDismiss: () -> Unit,
     actions: List<StreamDialogAction>,
     modifier: Modifier = Modifier,
+    width: DialogWidth = DialogWidth.Compact,
+    dismissOnScrimTap: Boolean = true,
+    details: @Composable ColumnScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     require(actions.isNotEmpty()) { "A stream dialog has at least one action" }

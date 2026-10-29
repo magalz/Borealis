@@ -229,7 +229,9 @@ internal constructor(
     /**
      * Opens the Library on the launch of this app and finishes while the stream is still in front,
      * so Android does not take it for a start from the background. The Library starts the app
-     * again, through its own apps and conflict flow.
+     * again, through its own apps and conflict flow. Trying again is the user's choice to resume
+     * that app if it runs, so it is remembered for the Library to take with the request: not in the
+     * request itself, which any app could send (host contract 7.6).
      */
     override fun retry() {
         if (retried) return
@@ -241,7 +243,10 @@ internal constructor(
             when {
                 id == null -> LibraryLaunchRequest.Hosts
                 appId == StreamConfiguration.INVALID_APP_ID -> LibraryLaunchRequest.Apps(id)
-                else -> LibraryLaunchRequest.Launch(id, appId)
+                else -> {
+                    entryPoint().resumeChoice().remember(id, appId)
+                    LibraryLaunchRequest.Launch(id, appId)
+                }
             }
         )
     }

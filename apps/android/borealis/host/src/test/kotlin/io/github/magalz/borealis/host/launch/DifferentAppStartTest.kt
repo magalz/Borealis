@@ -87,7 +87,7 @@ class DifferentAppStartTest {
         assertThat(requests).isEmpty()
         assertThat(cancelCalls).isEqualTo(1)
         assertThat(choices.single().outcome).isEqualTo(AuditOutcome.CANCELLED)
-        assertThat(choices.single().detail).isEqualTo("choice=cancel running_app=5")
+        assertThat(choices.single().detail).isEqualTo("choice=cancel running_app=5 entry=asked")
     }
 
     @Test
@@ -96,7 +96,7 @@ class DifferentAppStartTest {
 
         assertThat(result).isTrue()
         assertThat(requests).containsExactly("quit", "launch").inOrder()
-        assertThat(choices.single().detail).isEqualTo("choice=quit running_app=5")
+        assertThat(choices.single().detail).isEqualTo("choice=quit running_app=5 entry=asked")
     }
 
     @Test

@@ -319,7 +319,9 @@ class HostsViewModelTest {
         viewModel.effects.test {
             assertThat(awaitItem())
                 .isEqualTo(
-                    HostsEffect.StartStream(StreamRequest("h", 7, null, hdrSupported = false))
+                    HostsEffect.StartStream(
+                        StreamRequest("h", 7, null, hdrSupported = false, resumeChosen = true)
+                    )
                 )
         }
     }
@@ -406,7 +408,9 @@ class HostsViewModelTest {
         viewModel.effects.test {
             assertThat(awaitItem())
                 .isEqualTo(
-                    HostsEffect.StartStream(StreamRequest("h", 9, "Steam", hdrSupported = false))
+                    HostsEffect.StartStream(
+                        StreamRequest("h", 9, "Steam", hdrSupported = false, resumeChosen = true)
+                    )
                 )
         }
     }

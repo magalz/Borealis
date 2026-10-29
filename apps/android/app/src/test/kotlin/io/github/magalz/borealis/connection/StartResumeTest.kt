@@ -13,9 +13,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * A start of the app that already runs on the host: it is resumed, and the failures of `/resume`
- * have their own texts. Includes the second device that joins while the host still builds the
- * display of the first (a failed RTSP handshake right after an accepted `/resume`).
+ * A start of the app that already runs on the host, by a user who chose Resume or Continue on it:
+ * it is resumed without a question, and the failures of `/resume` have their own texts. Includes
+ * the second device that joins while the host still builds the display of the first (a failed RTSP
+ * handshake right after an accepted `/resume`).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(
@@ -33,7 +34,7 @@ class StartResumeTest {
     private val listener
         get() = rig.listener
 
-    private fun startAndFail(connection: NvConnection = rig.connection()): NvConnection {
+    private fun startAndFail(connection: NvConnection = rig.resumingConnection()): NvConnection {
         rig.start(connection)
         listener.await("stageFailed")
         listener.awaitEnded()
@@ -56,7 +57,7 @@ class StartResumeTest {
     @Test
     fun `an app that already runs is resumed, not launched`() {
         rig.script.running(DESKTOP_ID)
-        val connection = rig.connection()
+        val connection = rig.resumingConnection()
 
         rig.start(connection)
         ShadowRecordingBridge.await("startConnection")
@@ -80,7 +81,7 @@ class StartResumeTest {
         rig.script.running(DESKTOP_ID)
 
         LimeLogCapture().start().use { log ->
-            rig.start(rig.connection())
+            rig.start(rig.resumingConnection())
             ShadowRecordingBridge.await("startConnection")
             listener.awaitEnded()
 
@@ -166,7 +167,7 @@ class StartResumeTest {
         rig.script.running(DESKTOP_ID)
         rig.script.resumeReplies += HostReply.failure("503", "No running app to resume")
 
-        rig.start(rig.connection())
+        rig.start(rig.resumingConnection())
         ShadowRecordingBridge.await("startConnection")
         listener.awaitEnded()
 
@@ -185,7 +186,7 @@ class StartResumeTest {
     fun `a failed handshake of a GFE host after a resume is reported as it is`() {
         rig.script.running(DESKTOP_ID, HostScript.GFE_BUSY)
         ShadowRecordingBridge.onStartConnection = rtspFails()
-        val connection = rig.connection()
+        val connection = rig.resumingConnection()
 
         rig.start(connection)
         listener.await("stageFailed")
@@ -201,7 +202,7 @@ class StartResumeTest {
         rig.script.running(DESKTOP_ID)
         ShadowRecordingBridge.onStartConnection = rtspFails(code = -2)
 
-        rig.start(rig.connection())
+        rig.start(rig.resumingConnection())
         listener.await("stageFailed")
         listener.awaitEnded()
 
@@ -229,7 +230,7 @@ class StartResumeTest {
             -1
         }
 
-        rig.start(rig.connection())
+        rig.start(rig.resumingConnection())
         listener.await("stageFailed")
         listener.awaitEnded()
 
@@ -243,7 +244,7 @@ class StartResumeTest {
         ShadowRecordingBridge.onStartConnection = { call ->
             if (ShadowRecordingBridge.named("startConnection").size == 1) rtspFails()(call) else 0
         }
-        val connection = rig.connection()
+        val connection = rig.resumingConnection()
 
         rig.start(connection)
         ShadowRecordingBridge.await("startConnection", count = 2)
@@ -274,7 +275,7 @@ class StartResumeTest {
     fun `a restart that is cancelled while it waits for the host ends without a word`() {
         rig.script.running(DESKTOP_ID)
         ShadowRecordingBridge.onStartConnection = rtspFails()
-        val connection = rig.connection()
+        val connection = rig.resumingConnection()
         listener.onEvent = { if (it.startsWith("launchRetrying")) connection.cancelLaunch() }
 
         rig.start(connection)
@@ -297,7 +298,7 @@ class StartResumeTest {
     fun `a handshake that fails again after the restart is reported without the ports, as a collision`() {
         rig.script.running(DESKTOP_ID)
         ShadowRecordingBridge.onStartConnection = rtspFails()
-        val connection = rig.connection()
+        val connection = rig.resumingConnection()
 
         rig.start(connection)
         ShadowRecordingBridge.await("startConnection", count = 2)
@@ -318,7 +319,7 @@ class StartResumeTest {
             rig.script.running(OTHER_ID)
             rtspFails()(call)
         }
-        val connection = rig.connection()
+        val connection = rig.resumingConnection()
 
         rig.start(connection)
         ShadowRecordingBridge.await("startConnection")

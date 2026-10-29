@@ -190,6 +190,7 @@ class ServerHelperCharacterizationTest {
                 "UUID",
                 "PcName",
                 "ServerCert",
+                "ResumeChosen",
             )
         val extras = checkNotNull(intent.extras)
         assertThat(extras.get("Host")).isEqualTo("192.168.1.5")
@@ -202,6 +203,30 @@ class ServerHelperCharacterizationTest {
         assertThat(extras.get("UUID")).isEqualTo("uuid-1")
         assertThat(extras.get("PcName")).isEqualTo("Den PC")
         assertThat(extras.getByteArray("ServerCert")).isEqualTo(testCertificate().encoded)
+        assertThat(extras.get("ResumeChosen")).isEqualTo(false)
+    }
+
+    @Test
+    fun `the start intent says that the user chose to resume only when told so`() {
+        val chosen =
+            ServerHelper.createStartIntent(
+                activity,
+                NvApp("Hades II", 42, false),
+                computer(),
+                binder(),
+                resumeChosen = true,
+            )
+        val started =
+            ServerHelper.createStartIntent(
+                activity,
+                NvApp("Hades II", 42, false),
+                computer(),
+                binder(),
+            )
+
+        assertThat(chosen.getBooleanExtra(Game.EXTRA_RESUME_CHOSEN, false)).isTrue()
+        assertThat(chosen.extras?.get("ResumeChosen")).isEqualTo(true)
+        assertThat(started.extras?.get("ResumeChosen")).isEqualTo(false)
     }
 
     @Test
@@ -226,6 +251,7 @@ class ServerHelperCharacterizationTest {
                 Game.EXTRA_PC_UUID,
                 Game.EXTRA_PC_NAME,
                 Game.EXTRA_SERVER_CERT,
+                Game.EXTRA_RESUME_CHOSEN,
             )
     }
 
@@ -235,7 +261,7 @@ class ServerHelperCharacterizationTest {
             ServerHelper.createStartIntent(activity, NvApp("X", 1, false), computer(), binder())
 
         assertThat(intent.extras?.keySet()).doesNotContain("ServerCert")
-        assertThat(intent.extras?.keySet()).hasSize(9)
+        assertThat(intent.extras?.keySet()).hasSize(10)
     }
 
     @Test
@@ -246,7 +272,7 @@ class ServerHelperCharacterizationTest {
             ServerHelper.createStartIntent(activity, NvApp("X", 1, false), computer, binder())
 
         assertThat(intent.extras?.keySet()).doesNotContain("ServerCert")
-        assertThat(intent.extras?.keySet()).hasSize(9)
+        assertThat(intent.extras?.keySet()).hasSize(10)
         assertThat(intent.getStringExtra("Host")).isEqualTo("192.168.1.5")
     }
 
@@ -284,6 +310,23 @@ class ServerHelperCharacterizationTest {
                 binder(),
             )
         }
+    }
+
+    @Test
+    fun `starting a stream with the choice to resume puts it in the intent of the game`() {
+        ServerHelper.doStart(activity, NvApp("Hades II", 42, true), computer(), binder(), true)
+
+        val started = shadowOf(activity).nextStartedActivity
+        assertThat(started.getBooleanExtra("ResumeChosen", false)).isTrue()
+    }
+
+    @Test
+    fun `starting a stream without the choice to resume says so in the intent of the game`() {
+        ServerHelper.doStart(activity, NvApp("Hades II", 42, true), computer(), binder())
+
+        val started = shadowOf(activity).nextStartedActivity
+        assertThat(started.extras?.containsKey("ResumeChosen")).isTrue()
+        assertThat(started.getBooleanExtra("ResumeChosen", true)).isFalse()
     }
 
     @Test

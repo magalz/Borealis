@@ -30,6 +30,7 @@ constructor(private val connection: ComputerManagerConnection, private val boxAr
             activity,
             NvApp(name, request.appId, hdr),
             computer,
+            request.resumeChosen,
         )
         return true
     }

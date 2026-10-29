@@ -49,10 +49,17 @@ class HostsViewModel @Inject constructor(private val repository: HostRepository)
 
     fun onContinue(hostId: String) {
         val item = uiState.value.continueItems.firstOrNull { it.hostId == hostId } ?: return
-        // The adapter decides HDR from the app and the device when it starts the stream.
+        // The adapter decides HDR from the app and the device when it starts the stream. Continue
+        // is the user's choice to resume the app that the row shows running.
         send(
             HostsEffect.StartStream(
-                StreamRequest(hostId, item.appId, item.appName, hdrSupported = false)
+                StreamRequest(
+                    hostId,
+                    item.appId,
+                    item.appName,
+                    hdrSupported = false,
+                    resumeChosen = true,
+                )
             )
         )
     }

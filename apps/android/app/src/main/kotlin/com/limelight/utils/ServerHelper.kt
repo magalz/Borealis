@@ -65,6 +65,7 @@ object ServerHelper {
         intent.putExtra(Game.EXTRA_UNIQUEID, managerBinder.uniqueId)
         intent.putExtra(Game.EXTRA_PC_UUID, computer.uuid)
         intent.putExtra(Game.EXTRA_PC_NAME, computer.name)
+        intent.putExtra(Game.EXTRA_RESUME_CHOSEN, resumeChosen)
         try {
             computer.serverCert?.let { intent.putExtra(Game.EXTRA_SERVER_CERT, it.encoded) }
         } catch (e: CertificateEncodingException) {

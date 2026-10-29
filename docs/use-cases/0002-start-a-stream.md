@@ -73,9 +73,12 @@ says what happened and what to do next.
    ([host contract, section 7.6](../host-contract/luminalshine.md)).
 3. The use case ends.
 
-### A4: Another app is already running on the host (branches from step 4)
+### A4: Another app is already running on the host (branches from step 3 or 4)
 
-1. The host reports a running app and the system shows the conflict dialog.
+1. The host reports a running app, in `/serverinfo` at step 3 or in its refusal
+   of the launch at step 4, and the system shows the conflict dialog. It does
+   not, for the app that the user chose to resume
+   ([UC-003](0003-join-or-replace-a-running-app.md), A3).
 2. The flow continues in [UC-003](0003-join-or-replace-a-running-app.md).
 
 ### A5: The user goes back from Apps (Sprint 10; branches from step 1)
@@ -106,7 +109,12 @@ says what happened and what to do next.
    only while no decoder of the stream is held. The session holds the decoder
    from the stage Preparing the display, so the clip is released there and its
    still stays. The clip plays again once the connection has stopped. A drawn
-   style (Aurora curtains or Soft glow) keeps moving through the start.
+   style (Aurora curtains or Soft glow) keeps moving through the start. Under
+   the question about a running app and under the error popup, where the host
+   blurs the background (API 31 or later, Transparency Standard or Reduced, no
+   High contrast, the background not Off), every style is held still, a drawn
+   style too ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md),
+   decision 6).
 3. Reduce motion and the battery saver hold every style still and make no
    player, whatever the row says. With Transparency Off or High contrast the
    panel of the steps is a solid surface. Below API 31 it has the Reduced tint
@@ -177,9 +185,9 @@ says what happened and what to do next.
    the menu over the frame with Menu glass in the stream on Blur, and a solid
    surface with Solid, Transparency Off, High contrast or below API 31. Reduce
    motion and the battery saver change nothing: the frame is still. While the
-   copy is pending, tens of milliseconds, the popup is on black with a solid
-   panel. When no copy exists or it failed, the popup stands on the background
-   of A6.
+   copy is pending, which took about 0.2 to 0.3 s in the device rounds, the
+   popup is on black with a solid panel. When no copy exists or it failed, the
+   popup stands on the background of A6.
 4. The system writes SESSION_END with outcome FAILURE and `reason=error
    code=-1`. A graceful end (code 0) is `reason=host_ended`. A quit that the
    user chose is `reason=quit` ([UC-004](0004-use-the-in-game-menu.md)).
@@ -209,10 +217,10 @@ after the failure does not place it again.
 | UC-002-T3 | Given `/serverinfo` still times out after 3 attempts, when the budget ends, then the screen shows Host busy and no `/launch` is sent. | unit | partly exists (Sprint 5, unit) |
 | UC-002-T4 | Given the host asks for a retry, when the launch retries, then LAUNCH_RETRY is written for each retry and the screen shows the count. | unit | exists (Sprint 2, unit) |
 | UC-002-T5 | Given a pending launch, when the user chooses Cancel at any stage, then the Apps screen returns and no stream starts. | UI | partly exists (Sprint 5, UI; device round) |
-| UC-002-T6 | Given the host certificate changed, when the stream starts, then the error screen offers Pair again and CERTIFICATE_CHANGED is written. | unit | partly exists (Sprint 5, unit and UI) |
+| UC-002-T6 | Given the host certificate changed, when the stream starts, then the error popup offers Pair again and CERTIFICATE_CHANGED is written. | unit | partly exists (Sprint 5, unit and UI) |
 | UC-002-T7 | Given the host does not answer, when the start ends, then the screen says the host is offline and offers Wake PC. | UI | exists (Sprint 5, UI; device round) |
 | UC-002-T8 | Given a picture is shown, when the session ends, then SESSION_START holds the codec, resolution, frame rate and HDR state, and SESSION_END holds the duration and the reason. | unit | exists (Sprint 3, unit) |
-| UC-002-T9 | Given a stream that ran ends with error -1 from the host, when the error screen shows, then its title is "`<app>` stopped" and SESSION_END holds `reason=error code=-1`. | unit | exists (Sprint 5, unit; device round) |
+| UC-002-T9 | Given a stream that ran ends with error -1 from the host, when the error popup shows, then its title is "`<app>` stopped" and SESSION_END holds `reason=error code=-1`. | unit | exists (Sprint 5, unit; device round) |
 | UC-002-T10 | Given the host does not answer `/serverinfo` yet, when the retries run, then the connecting stage stays current and the 15 s note does not show. | emulator | exists (Sprint 5, device round) |
 | UC-002-T11 | Given a TV or a handheld and the Apps screen of the second host, when the user presses Back, then the card of that host has the focus, and not a Continue card above it or the first card. | UI | exists (Sprint 10, UI): `LibraryAppsBackFocusTest` |
 | UC-002-T12 | Given the host went offline, or the list was refreshed or moved the card out of view, when the user presses Back from Apps, then the card still has the focus, found by its host. | UI | exists (Sprint 10, UI): `LibraryAppsBackFocusTest` |
@@ -237,11 +245,11 @@ Sprint 5 device round of 2026-10-16 ran on a TV or a phone (see
 
 UC-002-T16 to T24 are Sprint 15 rows. They are Compose tests on Robolectric
 unless the level says unit, and `GameFrozenFrameTest` runs on the `Game` rig.
-What no test sees, and the owner's device round checks, is how the frozen
-frame looks: no round has recorded how the frame behind the popup looks, and a
-real `PixelCopy` at the moment of a drop was read on the TV in the log
-only (`Frozen frame requested` before `Connection terminated`, `Frozen frame
-copied` after it; [ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md),
+What no test sees is how the frozen frame looks. No round has recorded it,
+and the owner's device round checks it. A real `PixelCopy` at the moment of a
+drop was read on the TV in the log only: `Frozen frame requested` came before
+`Connection terminated`, and `Frozen frame copied` after it
+([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md),
 the measurements of 2026-10-29).
 
 Partly covered:
@@ -251,7 +259,7 @@ Partly covered:
   sent after that timeout.
 - UC-002-T5: the Cancel button of the Starting screen is tested. The return to
   the Apps screen and the cancel at every stage are not tested.
-- UC-002-T6: the error screen offers Pair again, and the classifier reports a
+- UC-002-T6: the error popup offers Pair again, and the classifier reports a
   changed certificate. No test checks the CERTIFICATE_CHANGED audit entry here.
 
 ## Host dependency

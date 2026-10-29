@@ -90,7 +90,7 @@ Decision details:
 9. **The error of a stream that ran is a popup over its last frame** (the owner's decision of 2026-10-29, added after the work of Sprint 15).
    * The error is a popup inside the chrome layer, a `StreamDialog` like the conflict dialog, and no longer a full screen. It has the message, Try again (focused), Wake PC or Pair again where the failure offers them, Diagnostics and Close. A tap outside it does nothing. Back and the gamepad B button close it, which is Close, back to the Library. Every failure uses it, also those of a start that never ran, which stand on the background.
    * When a stream that ran fails, the popup stands on the last frame of the stream, frozen and blurred. One copy of the video is made, a quarter of its size like the copy of the menu, and no clock runs for it.
-   * With no frame the popup stands on the user's background (decision 2): a failure before the first frame, the first-frame watchdog, and a copy that fails. While the copy is pending, which takes tens of milliseconds, the popup is on black with a solid panel and the background does not show, so it does not flash.
+   * With no frame the popup stands on the user's background (decision 2): a failure before the first frame, the first-frame watchdog, and a copy that fails. While the copy is pending, which took about 0.2 to 0.3 s in the device rounds (see the measures below), the popup is on black with a solid panel and the background does not show, so it does not flash.
    * The copy is asked for at the top of `connectionTerminated` and of `stageFailed` in `Game`, from the thread that reports the end, before the connectivity test and the stop of the connection, because the decoder is released a fraction of a second later and a copy after that gets no data. It is asked for only after the first frame was shown, not for the end that the user's own Quit caused and not for a graceful end.
    * The frame is always behind the popup when a copy exists. It is blurred where the device can blur and the settings allow it (API 31 or later, no Transparency Off, no High contrast), with the blur of the menu glass at the viewer's transparency, and sharp otherwise. The panel is the glass of the menu over the blurred frame where the menu glass option is Blur, and the solid surface with Solid, Transparency Off, High contrast or below API 31. With the option on Solid the frame is still blurred, and only the panel is solid. Reduce motion and the battery saver are not asked, because the frame is still and copied once. The scrim stays over the frame, also where it is blurred (decision 5).
    * The copy is in memory only. It is let go when the activity is destroyed, which is also how Try again ends it, and a copy that ends after that is dropped. Nothing is saved, and the log says only that a copy was asked for with its size, how long it took, or why it failed.
@@ -160,7 +160,7 @@ On the TV (Google TV Streamer, 2026-10-29), the drop was made by blocking the ne
 * Bad, because the copy of the last frame has to be taken before the decoder is released, so the request is at the top of `connectionTerminated`, on the connection thread, before the connectivity test.
 * Bad, because a rotation or a resize after the failure leaves the frame at its old place.
 * Bad, because the pending state of the copy has no time limit. It relies on `PixelCopy` answering every request it accepts. A copy that never ended would leave the popup on black under its scrim, with a solid panel, and every button works.
-* Bad, because the panel of the popup is solid for the tens of milliseconds of the copy and turns to glass when the frame arrives.
+* Bad, because the panel of the popup is solid, and the popup on black, for the 0.2 to 0.3 s that the copy took in the device rounds, and turns to glass when the frame arrives.
 * Bad, because no round has recorded how the frozen frame looks on a device, or its colour.
 * Bad, because with Thicker focus outline 0.5 dp of the casing of the focus outline is cut by the scroll clip of the side panel at its edges. The ring and 1 dp of the casing stay whole, and the 3:1 holds.
 * Bad, because the faint tail of the 3 dp halo is cut at the 2 dp bleed of the content layer on the title and body of the popup. It is cosmetic, and the contrast tests do not change.
@@ -231,7 +231,7 @@ On the TV (Google TV Streamer, 2026-10-29), the drop was made by blocking the ne
 
 ### Screens: every screen outside the game (chosen)
 
-* Good, because all the screens follow one rule, with no difference between them.
+* Good, because all the screens follow one rule, with no difference between them. *Amended on 2026-10-29:* the error of a stream that ran stands on its last frame, which is one difference (decision 9).
 * Bad, because the Disconnecting, conflict and error screens also show the background, and so can start the clip.
 
 ### Error of a stream that ran: the full-screen error on the background (today)
@@ -266,6 +266,6 @@ On the TV (Google TV Streamer, 2026-10-29), the drop was made by blocking the ne
   * decision 5 says that the conflict dialog and the error popup are panels of the chrome layer that blur the background alone, and where they do, and that the popup over the frame keeps its scrim;
   * decision 6 says when the decoder counts as held, and that every style is held still behind a dialog where the host blurs;
   * decision 8 and the consequences carry the matching notes.
-* The first wording of each amended decision stays above, so that the history reads. The [ADR process](README.md) keeps an accepted ADR as it was and records what changed in a note, as [0057](0057-glass-surfaces-and-the-accessibility-settings.md) does.
+* The first wording of each amended decision stays above, so that the history reads. A change is recorded in a dated note and the decision keeps its first wording, as [0057](0057-glass-surfaces-and-the-accessibility-settings.md) and [0052](0052-structure-the-phase-2-ui.md) do.
 * `StreamChromeRoot`, `StreamDialog`, `OverFrozenFrame`, `FrozenFrame`, `videoGlassSpec` and `frozenFrameLook` of `:borealis:stream` are where the decisions live.
 * Accessibility method and baseline: [docs/ux/accessibility.md](../ux/accessibility.md).

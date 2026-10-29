@@ -86,11 +86,13 @@ accident.
    confirmation until the host answers the quit, over the background of the
    screens outside the game. Back leaves the screen, and the quit goes on. The
    host may end the stream before it answers, with error -1, because
-   LuminalShine closes the control stream when it gets the cancel. That end is the quit's,
-   not an error: the system logs it at info with the time since the quit, runs
-   no connectivity test and shows no error. Another code while a quit is under
-   way is a network drop and goes the way of an error. The stream ends, and the
-   system writes SESSION_END with the reason.
+   LuminalShine closes the control stream when it gets the cancel. That end is
+   the quit's, not an error: the system logs it at info with the time since the
+   quit, runs no connectivity test and shows no error. Another code while a
+   quit is under way is a network drop. It is tested and logged as an error, but
+   the screen stays on Quitting until the quit answers, and the error popup
+   shows only if the quit then fails. The stream ends, and the system writes
+   SESSION_END with the reason.
 3. The system returns to the Apps screen. The app is no longer running on the
    host.
 4. The Library shows "App quit." once (Sprint 10), in a snackbar as wide as its
@@ -99,7 +101,9 @@ accident.
    a launcher shortcut started. A Quit that fails shows no notice and says so in
    a message, and the stream goes on. When the host had already ended the stream,
    the Quit that fails turns the screen into the error popup instead
-   ([UC-002](0002-start-a-stream.md), E5).
+   ([UC-002](0002-start-a-stream.md), E5). When that end was the quit's own -1,
+   no copy of the last frame was asked for, so the popup stands on the
+   background and not on a frozen frame.
 
 ### A4: Select or Start on a system pad (Sprint 6; branches from step 1)
 
@@ -277,7 +281,6 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T41 | Given a Quit that is under way, when the host ends the stream with -1, then no connectivity test runs, the end is logged at info with the time since the quit, and the screen stays on Quitting; any other code is a network drop. | unit | exists (Sprint 15, unit): `GameQuitEndTest`, `StreamSessionLeaveLogTest`, `QuitLogTest` |
 | UC-004-T42 | Given Menu glass in the stream on Blur, the transparency, High contrast, Reduce motion, the battery saver and the API level, when the menu opens, then the panel and the Quit popup are glass or solid as A10 says, the copies run only while the menu is open and the activity is started, and the Solid option and API 28 to 30 register no battery saver listener. | UI, unit | exists (Sprint 15): `MenuGlassRulesTest`, `MenuGlassOptionTest`, `MenuGlassCopiesTest`, `MenuGlassDrawTest`, `MenuGlassApi30Test`, `VideoGlassSpecTest`, `VideoGlassFramesTest`, `PixelCopySourceTest`, `StreamAppearanceTest` |
 | UC-004-T43 | Given the glass, when text stands on it, then every text colour of the menu and the popup keeps 4.5:1 on the ring of its halo over the lightest glass, the segmented controls keep 4.5:1 on their solid container, and the focus outline keeps 3:1 with its casing. | UI, tool | exists (Sprint 15): `TextHaloTest`, `MenuGlassHaloTest`, `MenuGlassCasingTest`, `MenuGlassFocusTest`, `FocusOverGlassTest`, `VideoGlassHaloTest` in `design/accessibility/test_contrast.py` |
-| UC-004-T44 | Given a stream that ends in error after its first frame, when the popup shows, then it stands on the frozen last frame as [UC-002](0002-start-a-stream.md), E5 says. | UI, unit | see UC-002-T20 to UC-002-T23 |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
@@ -308,9 +311,10 @@ T27), and `SystemPadQuitComboTest` checks the Start hold on a system pad (T28).
 Sprint 9 device round checks the quit combo on the S22 with a pad
 ([device validation](../development/device-validation.md#322-sprint-9-checks)).
 
-UC-004-T35 to T44 are Sprint 15 rows (issues #97, #98, #100, #102 and #104,
-and #105 for the error popup). The unit tests of the keys, the hold and the end of a Quit run on the
-`Game` rig of `:app`. No test sees the live copy of a real video, and no
+UC-004-T35 to T43 are Sprint 15 rows (issues #97, #98, #100, #102 and #104).
+The error popup over the frozen frame (#105, E1) is pinned by UC-002-T20 to
+UC-002-T23. The unit tests of the keys, the hold and the end of a Quit run on
+the `Game` rig of `:app`. No test sees the live copy of a real video, and no
 screenshot reference stands for the colour of an HDR copy, which has not been
 judged: the owner's device round checks the glass on the TV and on the S22.
 

@@ -1790,13 +1790,17 @@ popup over the background blur the background alone, at 24 dp, hold it still, dr
 scrim and take the tint of the glass, with the tint floor of the background as in the
 Library (ADR 0057, decision 4). The popup over the frozen frame keeps its scrim, also over
 a blurred frame. The glass over the video, which is the menu and the popups over the frame,
-takes the tint and the blur of the viewer's Transparency and is never raised: Standard is
-Glass tint and Glass blur (40 % and 8 dp by default), and Reduced is 85 % and 48 dp. A clip that the stream's decoder would compete with shows its still while the
-decoder is held (from the stage Preparing the display until the connection has stopped).
+takes the tint and the blur of the viewer's Transparency and is never raised. Standard is
+Glass tint and Glass blur (40 % and 8 dp by default), and Reduced is 85 % and 48 dp.
 
-The listener of the battery saver is registered only where there can be a glass: the menu
-glass on Blur, a stream view to copy and API 31 or later. The Solid option and API 28 to
-30 register none (`MenuGlassRulesTest`, `MenuGlassApi30Test`).
+A clip style shows its still, and not its video, while a decoder of the stream is held. That
+is from the stage Preparing the display until the connection has stopped.
+
+The listener of the battery saver for the menu glass is registered only where there can be
+a glass: the menu glass on Blur, a stream view to copy and API 31 or later. The Solid option
+and API 28 to 30 register none (`MenuGlassRulesTest`, `MenuGlassApi30Test`). The background
+outside the game follows the battery saver on every screen that shows it, whatever the API
+level or the option, so those screens listen while one of them is composed.
 
 ### The halo and the casing over the video glass
 
@@ -1844,8 +1848,8 @@ layer, `StreamDialog`, so they follow the same rules (`StreamDialogTest`,
   Quit popup, Try again in the error popup. The focus stays in the popup in every
   direction: Left and Right move between the buttons and stop at the last, and Up and Down
   never leave the popup. A phone opens a popup in touch mode, where a button cannot
-  take the focus, so the first key of a D-pad, a pad or a keyboard puts it on the first
-  button, and not on what is behind.
+  take the focus. There the first key of a D-pad, a pad or a keyboard puts it on the
+  first button, and not on what is behind.
 - **Back and B.** Back, the Back of the system and the gamepad B button call the dismissal
   (Cancel, or Close for the error popup) and stop there, so they reach neither the menu
   behind nor the host. A tap on the scrim is Cancel, except on the error popup, which has

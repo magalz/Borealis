@@ -73,6 +73,9 @@ counts, sizes, times, a code, a choice and a fixed reason word.
 | `VIDEO` | `Frozen frame failed` | `reason`: `no_surface` or `copy` | warn |
 | `VIDEO` | `Menu glass copies`: once a second while the menu glass runs | `copies`, `skipped`, `failed`, `no_surface`, `slowest_ms` | debug |
 
+- The three `HOST` lines come from `NvHTTP.quitApp`, so every Quit writes them: the Quit of the
+  in-game menu, the Quit of the Apps sheet of the Library and the quit before a quit and
+  relaunch.
 - `LaunchConflicts` also logs `running app conflict answered` with the `choice`, as before, now
   for every answer to the question, on both paths.
 - The end of the user's own Quit is no longer logged as an error, as `Connection terminated:

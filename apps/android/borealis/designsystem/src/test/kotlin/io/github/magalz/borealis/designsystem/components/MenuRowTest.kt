@@ -295,6 +295,23 @@ class MenuRowTest {
         composeRule.onNodeWithText("Keyboard").assertIsFocused()
     }
 
+    @Test
+    fun `a button at the end of a row is not a focus stop either`() {
+        composeRule.setContentInKeyboardMode {
+            Specimen {
+                MenuRow("Bitrate", {}, trailing = { Chip("Max", onClick = {}) })
+                MenuRow("Refresh", {})
+            }
+        }
+        composeRule.onNodeWithText("Bitrate").requestFocus()
+
+        composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Bitrate").assertIsFocused()
+        composeRule.onNodeWithText("Bitrate").performKeyInput { pressKey(Key.DirectionDown) }
+
+        composeRule.onNodeWithText("Refresh").assertIsFocused()
+    }
+
     @Composable
     private fun LowHigh() {
         SegmentedControl(

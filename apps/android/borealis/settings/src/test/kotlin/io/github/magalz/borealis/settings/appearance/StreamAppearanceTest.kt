@@ -98,6 +98,30 @@ class StreamAppearanceTest {
         assertThat(labelsOf(row)).containsExactly("Moving", "Still", "Off").inOrder()
     }
 
+    private fun summaryOf(setting: Setting<*>): String =
+        context.getString(checkNotNull(rowOf(setting).summaryRes))
+
+    @Test
+    fun `each summary is one short sentence, so that a row stays at two lines on a phone`() {
+        for (setting in listOf(Settings.STREAM_MENU_GLASS, Settings.STREAM_BACKGROUND)) {
+            val summary = summaryOf(setting)
+
+            assertWithMessage("the summary of ${setting.key} is \"$summary\"")
+                .that(summary.length)
+                .isAtMost(MAX_SUMMARY_LENGTH)
+            assertThat(summary.trimEnd('.')).doesNotContain(". ")
+        }
+    }
+
+    @Test
+    fun `the summary of the background says what each of its three choices does`() {
+        val summary = summaryOf(Settings.STREAM_BACKGROUND)
+
+        assertThat(summary).contains("Moving")
+        assertThat(summary).contains("Still")
+        assertThat(summary).contains("Off")
+    }
+
     @Test
     fun `a stored value that no choice has shows the default as the chosen one`() {
         for (setting in listOf(Settings.STREAM_MENU_GLASS, Settings.STREAM_BACKGROUND)) {
@@ -119,5 +143,10 @@ class StreamAppearanceTest {
 
         assertThat(rowOf(Settings.STREAM_MENU_GLASS).selectedChoiceKey(stored)).isEqualTo("solid")
         assertThat(rowOf(Settings.STREAM_BACKGROUND).selectedChoiceKey(stored)).isEqualTo("off")
+    }
+
+    private companion object {
+        /** The summary of Glass tint, the longest one of the group that fits two lines, is 62. */
+        const val MAX_SUMMARY_LENGTH = 70
     }
 }

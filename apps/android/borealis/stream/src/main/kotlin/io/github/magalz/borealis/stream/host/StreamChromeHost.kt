@@ -404,7 +404,8 @@ class StreamChromeHost(
 
 /**
  * What Back does in [session]: opens the menu while streaming, closes the open panel, answers
- * Cancel to the question about the running app, and leaves while starting or after a failure.
+ * Cancel to the question about the running app, leaves while starting, while a quit is under way or
+ * after a failure, and does nothing while a disconnect is under way, which ends on its own.
  */
 internal fun handleBack(session: StreamSession) {
     when (val phase = session.state.value.phase) {

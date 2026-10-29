@@ -7,7 +7,8 @@ import io.github.magalz.borealis.stream.ui.common.appLabel
 
 /**
  * A disconnect under way: the connection ends and the app keeps running on the PC. The screen stays
- * quiet over the black page, as the Quitting screen does, until the activity finishes.
+ * quiet over the background of the screens outside the game, as the Quitting screen does, until the
+ * activity finishes.
  */
 @Composable
 internal fun DisconnectingScreen(appName: String) {

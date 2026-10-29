@@ -36,7 +36,11 @@ targets of 48 dp on a phone and a handheld.
 5. The user starts a stream. The stream screens read the look once, when the
    stream starts: the text size, the focus outline, High contrast, the palette
    and Reduce motion. A change made during a stream shows in the next one. The
-   stream has no glass, because the video is behind it.
+   in-game menu is glass over a live copy of the video, and the screens outside
+   the game stand on the background of the user, as
+   [UC-004](0004-use-the-in-game-menu.md), A10, and
+   [UC-002](0002-start-a-stream.md), A6, say. Transparency Off, High contrast,
+   Reduce motion and the battery saver make the menu glass solid.
 
 ## Alternative flows
 
@@ -50,9 +54,10 @@ targets of 48 dp on a phone and a handheld.
    plays, a tile takes the focus without the 1.04 scale, a screen shows without
    its fade, a list scrolls without animation, the Aurora loader and the check
    mark stand still and a section opens at once. The indeterminate progress
-   indicators of Material (Quitting, Add host and Privacy and diagnostics) do not
-   follow it yet; Sprints [15](../roadmap.md#sprint-15-the-stream-screens-and-glass) and
-   [17](../roadmap.md#sprint-17-general-fixes) of the roadmap have the item.
+   indicators of Material (Add host and Privacy and diagnostics) do not follow it
+   yet; [Sprint 17](../roadmap.md#sprint-17-general-fixes) of the roadmap has the
+   item. The loader of Quitting and Disconnecting is the Aurora loader, which stands
+   still.
 3. The battery saver also gives the background one still frame.
 
 ### A2: Transparency (branches from step 3)

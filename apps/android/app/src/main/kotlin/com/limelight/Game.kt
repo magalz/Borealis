@@ -120,6 +120,14 @@ class Game :
     View.OnKeyListener {
     private var lastButtonState = 0
 
+    // BOREALIS: the Back button of the mouse, held for BACK_HOLD_MS, opens the in-game menu and
+    // sends nothing to the PC; a shorter press is X1, sent when the button comes up (stream)
+    private var backHoldOpenedMenu = false
+    private val openMenuFromBackHold = Runnable {
+        backHoldOpenedMenu = true
+        streamSession.openMenu()
+    }
+
     // Only 2 touches are supported
     private val touchContextMap = arrayOfNulls<TouchContext>(2)
     private var threeFingerDownTime = 0L
@@ -264,6 +272,7 @@ class Game :
         private const val HIDE_UI_AFTER_UI_CHANGE_MS = 2000
         private const val TOGGLE_GRAB_DELAY_MS = 250L
         private const val INPUT_GRAB_DELAY_MS = 500L
+        private const val BACK_HOLD_MS = 1000L
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -1298,7 +1307,8 @@ class Game :
         // The gamepad is zeroed and the game gets nothing from it
         controllerHandler.setCaptured(true)
         grabbedBeforeCapture = grabbedInput
-        streamActions.releaseHeldInput(lastButtonState)
+        // The PC is never left holding X1: Back is sent as a press and a release when it comes up
+        streamActions.releaseHeldInput(lastButtonState and MotionEvent.BUTTON_BACK.inv())
         lastButtonState = 0
         // A modifier that comes up while the chrome has the keys is never seen here
         modifierFlags = 0
@@ -1333,12 +1343,20 @@ class Game :
             }
         } else {
             inputCaptureProvider.disableCapture()
+            cancelBackHold()
         }
 
         // Grab/ungrab system keyboard shortcuts
         setMetaKeyCaptureState(grab)
 
         grabbedInput = grab
+    }
+
+    // BOREALIS: the Back button of the mouse stops waiting to open the menu: the pointer is no
+    // longer ours, so the release of the button may never be seen (stream)
+    private fun cancelBackHold() {
+        window.decorView.removeCallbacks(openMenuFromBackHold)
+        lastButtonState = lastButtonState and MotionEvent.BUTTON_BACK.inv()
     }
 
     private val toggleGrab = Runnable { setInputGrabState(!grabbedInput) }
@@ -2255,9 +2273,16 @@ class Game :
                 if (prefConfig.mouseNavButtons) {
                     if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
                         if ((buttonState and MotionEvent.BUTTON_BACK) != 0) {
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
+                            // BOREALIS: Back waits to see whether it is held (stream)
+                            backHoldOpenedMenu = false
+                            window.decorView.postDelayed(openMenuFromBackHold, BACK_HOLD_MS)
                         } else {
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
+                            window.decorView.removeCallbacks(openMenuFromBackHold)
+                            // BOREALIS: a short press is X1, sent now; a hold sent nothing (stream)
+                            if (!backHoldOpenedMenu) {
+                                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
+                                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
+                            }
                         }
                     }
 

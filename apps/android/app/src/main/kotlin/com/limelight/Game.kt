@@ -2709,9 +2709,9 @@ class Game :
     }
 
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
-        // BOREALIS: the last frame, copied before the network test (rare: a stage fails after the
-        // first frame) (stream)
-        if (firstFrameShown && ::chromeHost.isInitialized) chromeHost.freezeFrame()
+        // BOREALIS: the last frame, copied before the connectivity test; a stage fails after the
+        // first frame only rarely. The first frame was shown, so the chrome host exists (stream)
+        if (firstFrameShown) chromeHost.freezeFrame()
 
         // Perform a connection test if the failure could be due to a blocked port
         // This does network I/O, so don't do it on the main thread.
@@ -2764,14 +2764,11 @@ class Game :
         val endedByQuit = ::streamSession.isInitialized && streamSession.endedByQuit(errorCode)
 
         // BOREALIS: the last frame of a stream that ended in error is copied now, from this native
-        // thread: the decoder is released a fraction of a second from here, and the network test
-        // and
-        // the stop below come later. The popup of the error stands on the copy (stream)
+        // thread: the decoder is released a fraction of a second from here, and the connectivity
+        // test and the stop come later. The first frame was shown, so the chrome host exists. The
+        // popup of the error stands on the copy (stream)
         if (
-            firstFrameShown &&
-                !endedByQuit &&
-                errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION &&
-                ::chromeHost.isInitialized
+            firstFrameShown && !endedByQuit && errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION
         ) {
             chromeHost.freezeFrame()
         }

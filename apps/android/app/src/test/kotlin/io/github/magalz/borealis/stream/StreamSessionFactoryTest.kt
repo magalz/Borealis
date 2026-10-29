@@ -11,10 +11,12 @@ class StreamSessionFactoryTest {
     private fun prefs(
         trackpad: Boolean = true,
         mouseEmulation: Boolean = false,
+        mouseNavButtons: Boolean = false,
     ) =
         PreferenceConfiguration().apply {
             touchscreenTrackpad = trackpad
             this.mouseEmulation = mouseEmulation
+            this.mouseNavButtons = mouseNavButtons
         }
 
     @Test
@@ -57,6 +59,17 @@ class StreamSessionFactoryTest {
                     .gamepadMouse
             )
             .isFalse()
+    }
+
+    @Test
+    fun `the mouse navigation buttons follow their preference, which is off by default`() {
+        assertThat(StreamSessionFactory.defaults(prefs(), "off", true, true).mouseNavButtons)
+            .isFalse()
+        assertThat(
+                StreamSessionFactory.defaults(prefs(mouseNavButtons = true), "off", true, true)
+                    .mouseNavButtons
+            )
+            .isTrue()
     }
 
     @Test

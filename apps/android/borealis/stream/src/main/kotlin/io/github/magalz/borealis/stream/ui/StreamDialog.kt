@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -47,6 +48,7 @@ import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.glass.rememberPanelGlass
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -91,8 +93,11 @@ internal class StreamDialogAction(
  *
  * In the Streaming phase the panel is glass over the video (the menu provides it, see
  * `InGameMenu`): the same panel on the blurred copy of the video behind the tint, with the text
- * colours that keep 4.5:1 over it. The scrim stays. Elsewhere, and where the glass is solid, it is
- * the `surface` colour.
+ * colours that keep 4.5:1 over it. The scrim stays. Over the background of the screens outside the
+ * game the dialog does what a dialog window does in the Library (ADR 0057, decision 8): the
+ * background is blurred and held on its still frame, the dialog draws no scrim, and the panel takes
+ * the glass tint and the glass text colours; on API 28 to 30 the scrim and the solid panel stay.
+ * Elsewhere, and where the glass is solid, the panel is the `surface` colour.
  *
  * The panel is announced by its [title]. The title and the [content] are one polite live region, so
  * a screen reader reads the body with the title when the dialog opens; the title is the only
@@ -115,11 +120,14 @@ internal fun StreamDialog(
     require(actions.isNotEmpty()) { "A stream dialog has at least one action" }
     val colors = LocalBorealisColors.current
     val glass = LocalVideoGlass.current
+    // Over the background of the screens outside the game, the dialog opens the overlay of ADR
+    // 0057, decision 8: no scrim, the tinted panel; elsewhere this is null.
+    val overlay = rememberPanelGlass()
     val shape = MaterialTheme.shapes.extraLarge
     DismissOnSystemBack(onDismiss)
     BoxWithConstraints(
         Modifier.fillMaxSize()
-            .background(colors.scrim)
+            .then(if (overlay == null) Modifier.background(colors.scrim) else Modifier)
             // Before the insets: the scrim takes the tap over all it draws, the strips of the
             // system bars too, and nothing under it takes it.
             .pointerInput(onDismiss, dismissOnScrimTap) {
@@ -138,8 +146,12 @@ internal fun StreamDialog(
                 .semantics { paneTitle = title }
                 .width(BorealisDimens.dialogWidth(width, maxWidth))
                 .then(
-                    if (glass == null) Modifier.background(colors.surface, shape)
-                    else Modifier.videoGlassSurface(glass, shape)
+                    when {
+                        glass != null -> Modifier.videoGlassSurface(glass, shape)
+                        overlay != null ->
+                            Modifier.background(colors.surface.copy(alpha = overlay.tint), shape)
+                        else -> Modifier.background(colors.surface, shape)
+                    }
                 )
                 .border(1.dp, colors.line, shape)
                 .clip(shape)
@@ -149,7 +161,10 @@ internal fun StreamDialog(
                 .padding(BorealisTokens.Space.DialogPadding),
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
-            DialogContent(title, actions, glass != null, details, content)
+            // The same composition with and without the glass of the background.
+            CompositionLocalProvider(LocalBorealisColors provides (overlay?.colors ?: colors)) {
+                DialogContent(title, actions, glass != null, details, content)
+            }
         }
     }
 }

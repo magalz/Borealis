@@ -32,8 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -58,6 +56,7 @@ import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.glass.LocalVideoGlass
 import io.github.magalz.borealis.stream.ui.glass.OnVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.glassContentLayer
 import io.github.magalz.borealis.stream.ui.glass.videoGlassSurface
 import kotlinx.coroutines.flow.filter
 
@@ -150,10 +149,10 @@ internal fun StreamDialog(
  * The title, the body and the buttons of a [StreamDialog], in the text colours and with the halo of
  * the video glass where [onGlass], and the same composition without it.
  *
- * Over the glass the content is on an offscreen layer of its own: the text and its halos are drawn
- * into it once and the layer is kept, so the glass behind it, drawn again at each copy of the
- * video, composites it and does not draw them again. On the solid surface nothing behind it
- * changes, and it is drawn as it was.
+ * Over the glass the title and the body are on an offscreen layer of their own (see
+ * [glassContentLayer]). The buttons are not: a focus outline reaches outside its button, Cancel is
+ * the last child and it has the initial focus, and the layer would cut the outline at the edge of
+ * the content. Two buttons drawn at each copy of the video cost nothing.
  */
 @Composable
 private fun DialogContent(
@@ -163,15 +162,11 @@ private fun DialogContent(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     OnVideoGlass(LocalVideoGlass.current) {
-        Column(
-            Modifier.graphicsLayer {
-                compositingStrategy =
-                    if (onGlass) CompositingStrategy.Offscreen else CompositingStrategy.Auto
-            },
-            verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(DIALOG_GAP)) {
             Column(
-                Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                Modifier.glassContentLayer(onGlass).semantics(mergeDescendants = true) {
+                    liveRegion = LiveRegionMode.Polite
+                },
                 verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
             ) {
                 Text(

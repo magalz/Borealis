@@ -28,9 +28,7 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -60,6 +58,7 @@ import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.glass.LocalVideoGlass
 import io.github.magalz.borealis.stream.ui.glass.OnVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.glassContentLayer
 import io.github.magalz.borealis.stream.ui.glass.recordsVideoBackdrop
 import io.github.magalz.borealis.stream.ui.glass.rememberVideoGlass
 import io.github.magalz.borealis.stream.ui.glass.videoGlassSurface
@@ -154,16 +153,10 @@ private fun MenuPanel(
     quitFocus: FocusRequester,
     onQuit: () -> Unit,
 ) {
-    // Over the glass the content is on an offscreen layer of its own: the text and its halos are
-    // drawn into it once and the layer is kept, so the glass behind it, drawn again at each copy
-    // of the video, composites it and does not draw them again. A layer with no offscreen buffer
-    // would be replayed. On the solid surface nothing behind it changes, and it is drawn as it was.
+    // The layer, over the glass, is explained in glassContentLayer.
     val onGlass = LocalVideoGlass.current != null
     Column(
-        Modifier.graphicsLayer {
-                compositingStrategy =
-                    if (onGlass) CompositingStrategy.Offscreen else CompositingStrategy.Auto
-            }
+        Modifier.glassContentLayer(onGlass)
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End)
             )

@@ -33,8 +33,10 @@ import io.github.magalz.borealis.stream.input.CaptureEnd
 import io.github.magalz.borealis.stream.input.ChromeChord
 import io.github.magalz.borealis.stream.input.MenuChordDetector
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
+import io.github.magalz.borealis.stream.ui.glass.FrozenFrame
 import io.github.magalz.borealis.stream.ui.glass.LocalVideoSource
 import io.github.magalz.borealis.stream.ui.glass.PixelCopySource
+import io.github.magalz.borealis.stream.ui.glass.originOnScreen
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -106,6 +108,8 @@ class StreamChromeHost(
 
     private val videoSource = PixelCopySource(streamView)
 
+    internal val frozenFrame = FrozenFrame(videoSource, { originOnScreen() })
+
     private val composeView =
         ComposeView(activity).apply {
             setContent {
@@ -159,6 +163,9 @@ class StreamChromeHost(
             requestModalFocus()
         }
     }
+
+    /** Copies the last frame of the stream view, for the popup of the error that is coming. */
+    fun freezeFrame() = frozenFrame.request()
 
     /** The menu handle's bounds in the chrome's coordinates, or null when it is not shown. */
     internal fun setMenuHandleBounds(bounds: Rect?) {

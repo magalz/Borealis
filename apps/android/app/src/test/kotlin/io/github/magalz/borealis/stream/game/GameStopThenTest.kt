@@ -7,6 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Test
+import org.robolectric.shadows.ShadowLooper
 import org.robolectric.util.ReflectionHelpers
 
 /**
@@ -43,6 +44,30 @@ internal class GameStopThenTest : GameTestBase() {
 
         assertThat(done.await(WAIT_MS, TimeUnit.MILLISECONDS)).isTrue()
         assertThat(ShadowRecordingBridge.named("stopConnection")).hasSize(1)
+    }
+
+    @Test
+    fun `the session learns that the connection stopped, on the main thread, when the stop ends`() {
+        rig.streaming()
+        assertThat(rig.session.state.value.decoderHeld).isTrue()
+
+        rig.game.stopConnectionThen {}
+        rig.awaitStop()
+
+        // The thread of the stop only posts it.
+        assertThat(rig.session.state.value.decoderHeld).isTrue()
+        ShadowLooper.idleMainLooper()
+        assertThat(rig.session.state.value.decoderHeld).isFalse()
+    }
+
+    @Test
+    fun `the session learns it too when the activity stops the connection`() {
+        rig.streaming()
+
+        rig.stop()
+        ShadowLooper.idleMainLooper()
+
+        assertThat(rig.session.state.value.decoderHeld).isFalse()
     }
 
     @Test

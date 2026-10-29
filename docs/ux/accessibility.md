@@ -1826,8 +1826,8 @@ the glass of 40 %. Over it ink is 2.1:1 and ink-2 1.5:1 without a halo.
   at its edges; the ring and 1 dp of the casing stay whole.
 - **Not covered.** The faint tail of the halo is cut at the 2 dp bleed of the layer that
   holds the text of the popup, which is cosmetic. The tests read pixels on Robolectric,
-  not a device. The colour of an HDR copy on the S22 was not judged, and nobody has looked
-  by eye at the frozen frame behind the error popup.
+  not a device. The colour of an HDR copy on the S22 was not judged, and no round has
+  recorded how the frozen frame behind the error popup looks.
 - **Text on a panel.** The steps of the Starting screen, the conflict dialog and the error
   popup over the background stand on a panel, with the text colours of the glass and no
   halo. The title, the host name and the note of the Starting screen, and the texts of

@@ -59,6 +59,8 @@ accident.
    app is still running on the host. The Library shows "Disconnected. `<app>` is
    still running on the PC." once, in the snackbar that "App quit." uses (when
    the name is not known: "Disconnected. The app is still running on the PC.").
+   As with "App quit.", the notice waits for a Library that is there and is
+   dropped when none is.
 
 ### A3: The user quits the app (branches from step 3)
 

@@ -141,7 +141,7 @@ For decision 9, on the S22 (Disconnect from the Web UI of the host, Steam Big Pi
 * A copy requested when `connectionTerminated` is first reported, before the stop of the connection, and one requested 100 ms later both got the frame (218 to 278 ms each, 77.6 percent of the pixels not black).
 * The decoder stopped 150 ms after the first request and was released 260 ms after it. A copy at 500 ms and one at 2 s, after the Failed phase, returned `ERROR_SOURCE_NO_DATA`. That is why the request is at the top of `connectionTerminated`, and not at the Failed phase.
 
-On the TV (Google TV Streamer, 2026-10-29), the drop was made by blocking the networking of the app. The request came 16 ms before the line "Connection terminated: -1", the stop of the connection took 231 ms, and the copy ended 314 ms after the request, after the stop of the decoder, and worked. The popup was read on the screen by its text. The frame behind it was not captured: how it looks has not been checked by eye.
+On the TV (Google TV Streamer, 2026-10-29), the drop was made by blocking the networking of the app. The request came 16 ms before the line "Connection terminated: -1", the stop of the connection took 231 ms, and the copy ended 314 ms after the request, after the stop of the decoder, and worked. The popup was read on the screen by its text. The frame behind it was not captured: no round has recorded how it looks.
 
 ### Consequences
 
@@ -160,7 +160,7 @@ On the TV (Google TV Streamer, 2026-10-29), the drop was made by blocking the ne
 * Bad, because a rotation or a resize after the failure leaves the frame at its old place.
 * Bad, because the pending state of the copy has no time limit. It relies on `PixelCopy` answering every request it accepts. A copy that never ended would leave the popup on black under its scrim, with a solid panel, and every button works.
 * Bad, because the panel of the popup is solid for the tens of milliseconds of the copy and turns to glass when the frame arrives.
-* Bad, because the colour of the frozen frame and how it looks have not been judged by eye on a device.
+* Bad, because no round has recorded how the frozen frame looks on a device, or its colour.
 * Bad, because with Thicker focus outline 0.5 dp of the casing of the focus outline is cut by the scroll clip of the side panel at its edges. The ring and 1 dp of the casing stay whole, and the 3:1 holds.
 * Bad, because the faint tail of the 3 dp halo is cut at the 2 dp bleed of the content layer on the title and body of the popup. It is cosmetic, and the contrast tests do not change.
 

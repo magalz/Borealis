@@ -238,8 +238,8 @@ Sprint 5 device round of 2026-10-16 ran on a TV or a phone (see
 UC-002-T16 to T24 are Sprint 15 rows. They are Compose tests on Robolectric
 unless the level says unit, and `GameFrozenFrameTest` runs on the `Game` rig.
 What no test sees, and the owner's device round checks, is how the frozen
-frame looks: the frame behind the popup was not captured on the TV or the S22,
-and a real `PixelCopy` at the moment of a drop was read on the TV in the log
+frame looks: no round has recorded how the frame behind the popup looks, and a
+real `PixelCopy` at the moment of a drop was read on the TV in the log
 only (`Frozen frame requested` before `Connection terminated`, `Frozen frame
 copied` after it; [ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md),
 the measurements of 2026-10-29).

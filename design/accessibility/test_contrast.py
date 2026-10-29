@@ -752,6 +752,20 @@ class VideoGlassHaloTest(unittest.TestCase):
         self.assertGreaterEqual(worst["ink"], 4.5)
         self.assertGreaterEqual(worst["ink-2"], 4.5)
 
+    def test_the_focus_outline_needs_a_dark_casing_over_the_lightest_glass(self):
+        # A focus outline keeps 3:1 against what is next to it (WCAG 1.4.11). Over the lightest glass
+        # the accent-soft outline is 1.39:1 and the thick one, in ink, 2.1:1, and the casing of the
+        # page colour that the app draws round it under the halo is what it stands against.
+        glass_luminance = float(contrast.relative_luminance(self.frames["white"]).max())
+        page = float(contrast.relative_luminance(self.page))
+        for token, bare in (("accent-soft", 1.39), ("ink", 2.1)):
+            light = float(contrast.relative_luminance(contrast.parse_hex(self.colors[token][:7])))
+            with self.subTest(token=token):
+                over_glass = float(contrast.contrast_ratio(light, glass_luminance))
+                self.assertAlmostEqual(over_glass, bare, delta=0.05)
+                self.assertLess(over_glass, 3.0)
+                self.assertGreaterEqual(float(contrast.contrast_ratio(light, page)), 3.0)
+
     def test_the_labels_of_a_segmented_control_keep_4_5_over_their_solid_container(self):
         # An unselected label is ink-3 on the surface; the selected one is accent-soft over the
         # tint of the accent on the surface.

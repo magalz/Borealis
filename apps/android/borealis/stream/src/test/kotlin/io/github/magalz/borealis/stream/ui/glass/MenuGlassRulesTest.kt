@@ -1,8 +1,15 @@
 package io.github.magalz.borealis.stream.ui.glass
 
+import android.app.Application
 import android.graphics.Color as AndroidColor
+import android.os.PowerManager
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.requestFocus
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
@@ -14,6 +21,7 @@ import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -116,6 +124,46 @@ class MenuGlassRulesTest {
         glass.run(100)
 
         assertThat(isGlass(glass.popup().rightPixel())).isFalse()
+    }
+
+    // The battery saver
+
+    private fun powerSaveReceivers() =
+        shadowOf(ApplicationProvider.getApplicationContext<Application>())
+            .registeredReceivers
+            .filter { it.intentFilter.hasAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED) }
+
+    @Test
+    fun `the glass listens for the battery saver, once`() {
+        showsGlass()
+
+        assertThat(powerSaveReceivers()).hasSize(1)
+    }
+
+    @Test
+    fun `the menu glass option set to Solid registers no receiver for the battery saver`() {
+        glass.videoGlass = false
+        glass.show()
+        glass.run(100)
+
+        assertThat(powerSaveReceivers()).isEmpty()
+    }
+
+    @Test
+    fun `the battery saver coming on keeps the focus and what the user opened in the menu`() {
+        glass.keyboardMode = true
+        showsGlass()
+        composeRule.onNodeWithText("Send keys").performClick()
+        composeRule.onNodeWithText("Esc").assertExists()
+        composeRule.onNodeWithText("Keyboard").requestFocus()
+        composeRule.onNodeWithText("Keyboard").assertIsFocused()
+
+        setPowerSave(true)
+        glass.run(100)
+
+        assertThat(isGlass(glass.panel().leftPixel())).isFalse()
+        composeRule.onNodeWithText("Esc").assertExists()
+        composeRule.onNodeWithText("Keyboard").assertIsFocused()
     }
 
     private companion object {

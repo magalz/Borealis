@@ -36,6 +36,7 @@ import io.github.magalz.borealis.library.testing.FakeStreamLauncher
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
+import javax.inject.Inject
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -68,6 +69,8 @@ class LibraryActivityRequestTest {
     @BindValue @JvmField val streamLauncher: StreamLauncher = streams
     @BindValue @JvmField val legacyBridge: LegacyBridge = FakeLegacyBridge()
     @BindValue @JvmField val hostShortcuts: HostShortcuts = shortcuts
+
+    @Inject lateinit var resumeChoice: ResumeChoice
 
     private var scenario: ActivityScenario<LibraryActivity>? = null
 
@@ -139,6 +142,40 @@ class LibraryActivityRequestTest {
         back()
         composeRule.onNodeWithTag("host:desk").assertIsDisplayed()
         composeRule.onNodeWithText("Pair with this PC").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a Launch request after Try again resumes the app that runs, as the user's choice`() {
+        apps.emit(deskApps(running = RunningApp(1, "Hades II")))
+        resumeChoice.remember("desk", 1)
+
+        launch(LibraryLaunchRequest.Launch("desk", 1))
+
+        assertThat(streams.requests)
+            .containsExactly(
+                StreamRequest("desk", 1, "Hades II", hdrSupported = false, resumeChosen = true)
+            )
+    }
+
+    @Test
+    fun `a Launch request of a shortcut for the app that runs is not the user's choice`() {
+        apps.emit(deskApps(running = RunningApp(1, "Hades II")))
+
+        launch(LibraryLaunchRequest.Launch("desk", 1))
+
+        assertThat(streams.requests)
+            .containsExactly(StreamRequest("desk", 1, "Hades II", hdrSupported = false))
+    }
+
+    @Test
+    fun `the choice of Try again is gone when the Library goes before it handled the request`() {
+        resumeChoice.remember("desk", 1)
+        launch(LibraryLaunchRequest.Hosts)
+
+        scenario?.close()
+        scenario = null
+
+        assertThat(resumeChoice.take("desk", 1)).isFalse()
     }
 
     @Test

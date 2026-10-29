@@ -89,6 +89,26 @@ internal class GameFinishTest : GameTestBase() {
     }
 
     @Test
+    fun `opening the Library twice, to pair again and to see the diagnostics, asks to finish once`() {
+        rig.create()
+
+        rig.session.pairAgain()
+        rig.session.openDiagnostics()
+
+        assertThat(rig.game.finishRequests).isEqualTo(1)
+    }
+
+    @Test
+    fun `opening the Library after another exit finished the activity is not asked again`() {
+        rig.create()
+        rig.game.finish()
+
+        rig.session.openDiagnostics()
+
+        assertThat(rig.game.finishRequests).isEqualTo(1)
+    }
+
+    @Test
     fun `an activity that the system stops while it goes on is finished once`() {
         rig.streaming()
         assertThat(rig.game.isFinishing).isFalse()

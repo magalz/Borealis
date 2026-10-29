@@ -11,6 +11,8 @@ import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
+import io.github.magalz.borealis.stream.StreamUiState
+import io.github.magalz.borealis.stream.ui.background.OutsideGameBackground
 
 /**
  * Reports where the menu handle is, in the coordinates of the chrome root (`boundsInRoot`), or null
@@ -33,6 +35,11 @@ internal fun StreamChromeTheme(look: BorealisLook, content: @Composable () -> Un
  * Every screen is inside [BorealisTheme] for the form factor of the window, so the screens read
  * `LocalFormFactor` and never apply the theme themselves. The chrome host learns the menu handle
  * bounds through [report], and the screens draw with the [look] that the stream started with.
+ *
+ * Every phase but Streaming stands on one background, in one host that stays while the phase moves
+ * between them (Starting, the question about a running app, a failure, Quitting, Disconnecting),
+ * and that goes when the phase becomes Streaming: the first frame can come before the connection
+ * reports the stream, so the cut follows the phase and not the stage.
  */
 @Composable
 internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, look: BorealisLook) {
@@ -41,17 +48,29 @@ internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, l
     if (state.inPip) return
     StreamChromeTheme(look) {
         CompositionLocalProvider(LocalMenuHandleBounds provides report) {
-            when (val phase = state.phase) {
-                is StreamPhase.Starting ->
-                    StartingScreen(state.appName, state.hostName, phase, session)
-                is StreamPhase.Conflict -> ConflictDialog(phase, session)
-                is StreamPhase.Failed ->
-                    ConnectionErrorScreen(state.appName, state.hostName, phase.failure, session)
-                is StreamPhase.Quitting -> QuittingScreen(state.appName)
-                is StreamPhase.Disconnecting -> DisconnectingScreen(state.appName)
-                is StreamPhase.Streaming ->
-                    StreamingLayer(state.appName, state.hostName, phase, perf, session)
+            val phase = state.phase
+            if (phase is StreamPhase.Streaming) {
+                StreamingLayer(state.appName, state.hostName, phase, perf, session)
+            } else {
+                OutsideGameBackground(state.visuals, state.decoderHeld) {
+                    OutsideGameScreen(state, session)
+                }
             }
         }
+    }
+}
+
+/** The screen of a phase outside the game, over the background. */
+@Composable
+private fun OutsideGameScreen(state: StreamUiState, session: StreamSession) {
+    when (val phase = state.phase) {
+        is StreamPhase.Starting -> StartingScreen(state.appName, state.hostName, phase, session)
+        is StreamPhase.Conflict -> ConflictDialog(phase, session)
+        is StreamPhase.Failed ->
+            ConnectionErrorScreen(state.appName, state.hostName, phase.failure, session)
+        is StreamPhase.Quitting -> QuittingScreen(state.appName)
+        is StreamPhase.Disconnecting -> DisconnectingScreen(state.appName)
+        // The streaming layer has no background: the chrome root draws it instead of this.
+        is StreamPhase.Streaming -> Unit
     }
 }

@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.stream.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -28,12 +27,16 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BackdropInk
+import io.github.magalz.borealis.designsystem.components.BackdropText
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.Kicker
 import io.github.magalz.borealis.designsystem.components.StepList
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.initialFocus
+import io.github.magalz.borealis.designsystem.glass.GlassTextColors
+import io.github.magalz.borealis.designsystem.glass.glassSurface
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
@@ -54,13 +57,17 @@ internal const val STARTING_PANEL_TAG = "starting_panel"
 
 private const val CONTENT_WIDTH_FRACTION = 0.86f
 private val CONTENT_GAP = 16.dp
+private val PANEL_PADDING = 16.dp
 private val TEXT_GAP = 4.dp
 
 /**
- * The stages of starting a stream (UC-002) over the black stream: the title, the steps with the
- * current one marked, a note while the host builds the display, and Cancel. While the host asks
- * Borealis to try again, a Host busy line shows the same text the spinner of Sprint 2 showed.
- * Cancel has the initial focus on a TV or handheld, and the gamepad B button cancels too.
+ * The stages of starting a stream (UC-002) over the background of the screens outside the game: the
+ * title, the steps with the current one marked on a glass panel, a note while the host builds the
+ * display, and Cancel. While the host asks Borealis to try again, a Host busy line shows the same
+ * text the spinner of Sprint 2 showed, on the panel of the steps. The title and the note stand on
+ * the background, so they have its halo. The screen paints no page of its own: the background
+ * behind it does (`StreamChromeRoot`). Cancel has the initial focus on a TV or handheld, and the
+ * gamepad B button cancels too.
  */
 @Composable
 fun StartingScreen(
@@ -72,7 +79,6 @@ fun StartingScreen(
     val cancelFocus = remember { FocusRequester() }
     BoxWithConstraints(
         Modifier.fillMaxSize()
-            .background(LocalBorealisColors.current.page)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .onGamepadB(intents::leave),
         contentAlignment = Alignment.Center,
@@ -86,20 +92,15 @@ fun StartingScreen(
             verticalArrangement = Arrangement.spacedBy(CONTENT_GAP),
         ) {
             Heading(appName, hostName)
-            StepList(
-                steps(appName, hostName),
-                current = phase.stage.ordinal,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            StepsPanel(steps(appName, hostName), phase)
             if (phase.stage.showsDisplayNote()) {
-                Text(
+                BackdropText(
                     stringResource(R.string.stream_starting_display_note),
                     Modifier.fillMaxWidth(),
-                    color = LocalBorealisColors.current.ink3,
                     style = MaterialTheme.typography.bodySmall,
+                    ink = BackdropInk.Ink3,
                 )
             }
-            phase.retry?.let { HostBusy(it) }
             BorealisButton(
                 stringResource(R.string.stream_starting_cancel),
                 onClick = intents::leave,
@@ -113,19 +114,39 @@ fun StartingScreen(
 @Composable
 private fun Heading(appName: String, hostName: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
+        BackdropText(
             stringResource(R.string.stream_starting_title, appLabel(appName)),
             Modifier.semantics { heading() },
-            textAlign = TextAlign.Center,
             style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
         )
-        Text(
+        BackdropText(
             hostName,
             Modifier.padding(top = TEXT_GAP),
-            color = LocalBorealisColors.current.ink3,
-            textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall,
+            ink = BackdropInk.Ink3,
+            textAlign = TextAlign.Center,
         )
+    }
+}
+
+/**
+ * The steps, and the retry that the host asked for under them, on a glass panel: the glass keeps
+ * their text at 4.5:1 over the background, as it does the text of the Library's cards.
+ */
+@Composable
+private fun StepsPanel(steps: List<String>, phase: StreamPhase.Starting) {
+    GlassTextColors {
+        Column(
+            Modifier.fillMaxWidth()
+                .testTag(STARTING_PANEL_TAG)
+                .glassSurface(MaterialTheme.shapes.large)
+                .padding(PANEL_PADDING),
+            verticalArrangement = Arrangement.spacedBy(CONTENT_GAP),
+        ) {
+            StepList(steps, current = phase.stage.ordinal, modifier = Modifier.fillMaxWidth())
+            phase.retry?.let { HostBusy(it) }
+        }
     }
 }
 

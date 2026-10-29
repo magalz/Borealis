@@ -30,7 +30,9 @@ private const val WARNING_TINT = 0.1f
  * The choice for an app that is already running on the host (UC-003): Cancel, Join, or quit it and
  * start again. It is a [StreamDialog], inside the chrome and not a window of its own: see there for
  * why, and for the focus on Cancel, which a stray OK cannot make costly, and for the gamepad B
- * button and Back, which cancel.
+ * button and Back, which cancel. It stands over the background of the screens outside the game, and
+ * its panel is the solid surface of the dialog (the glass of a dialog is the stream's business,
+ * with the dialogs of the stream layer).
  */
 @Composable
 fun ConflictDialog(phase: StreamPhase.Conflict, intents: StreamIntents) {

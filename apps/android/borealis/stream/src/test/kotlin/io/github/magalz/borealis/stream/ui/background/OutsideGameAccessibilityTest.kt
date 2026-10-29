@@ -1,5 +1,8 @@
 package io.github.magalz.borealis.stream.ui.background
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -37,7 +40,10 @@ import org.robolectric.annotation.Config
 class OutsideGameAccessibilityTest {
     @get:Rule val composeRule = createComposeRule()
 
-    private fun show(session: StreamSession, look: BorealisLook = BorealisLook()) {
+    private var look by mutableStateOf(BorealisLook())
+
+    private fun show(session: StreamSession, shown: BorealisLook = BorealisLook()) {
+        look = shown
         composeRule.setContent { StreamChromeRoot(session, {}, look) }
         composeRule.waitForIdle()
     }
@@ -106,15 +112,15 @@ class OutsideGameAccessibilityTest {
     /** The colour at the top edge of the steps panel, in the middle, away from its corners. */
     private fun panelEdge(): Color = composeRule.frame(STARTING_PANEL_TAG)[PANEL_MIDDLE, EDGE]
 
-    private fun showSteps(look: BorealisLook) =
-        show(sessionAt(visuals = StreamVisuals(background = BackgroundMode.STILL)), look)
+    private fun showSteps(shown: BorealisLook) =
+        show(sessionAt(visuals = StreamVisuals(background = BackgroundMode.STILL)), shown)
 
-    private fun assertSolidPanel(look: BorealisLook) {
-        showSteps(look)
+    private fun assertSolidPanel(shown: BorealisLook) {
+        showSteps(shown)
 
         val edge = panelEdge()
         assertWithMessage("the panel edge is $edge")
-            .that(edge.isNear(borealisColors(look).surface))
+            .that(edge.isNear(borealisColors(shown).surface))
             .isTrue()
     }
 
@@ -127,12 +133,16 @@ class OutsideGameAccessibilityTest {
         assertSolidPanel(BorealisLook(highContrast = true))
 
     @Test
-    fun `with the default glass the steps panel shows the background through a tint`() {
+    fun `with the default glass the steps panel is a tint over the background, not the solid one`() {
         showSteps(BorealisLook())
+        val glass = panelEdge()
 
-        assertWithMessage("the panel edge is the solid surface")
-            .that(panelEdge().isNear(borealisColors(BorealisLook()).surface))
-            .isFalse()
+        composeRule.runOnIdle { look = BorealisLook(transparency = Transparency.Off) }
+        composeRule.waitForIdle()
+
+        assertWithMessage("the panel edge with glass is $glass, as solid as with Transparency Off")
+            .that(glass)
+            .isNotEqualTo(panelEdge())
     }
 
     @Test

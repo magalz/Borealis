@@ -120,13 +120,13 @@ class OutsideGameBackgroundTest {
 
     @Test
     fun `the intensity of the look dims the background as it does in the Library`() {
-        composeRule.mainClock.autoAdvance = false
         show(sessionAt(visuals = StreamVisuals(background = BackgroundMode.STILL)))
-        composeRule.mainClock.advanceTimeBy(1_000)
         val full = frame().distanceFromPage()
 
-        look = BorealisLook(backgroundIntensity = BackgroundIntensity.Quarter)
-        composeRule.mainClock.advanceTimeBy(1_000)
+        composeRule.runOnIdle {
+            look = BorealisLook(backgroundIntensity = BackgroundIntensity.Quarter)
+        }
+        composeRule.waitForIdle()
         val dimmed = frame().distanceFromPage()
 
         assertThat(full).isGreaterThan(0.0)

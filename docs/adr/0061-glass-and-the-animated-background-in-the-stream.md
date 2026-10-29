@@ -54,7 +54,7 @@ Decision details:
 3. **The accessibility settings still win** ([0057](0057-glass-surfaces-and-the-accessibility-settings.md)).
    * Transparency Off and High contrast give a solid surface and no copy.
    * Transparency Standard or Reduced gives the stream glass the tint and blur of that level. The final strength is set by the contrast check of decision 4.
-   * Reduce motion and the battery saver turn the copy off, so the menu glass is solid, and keep the background still, whatever the options.
+   * Reduce motion and the battery saver turn the copy off, so the menu glass is solid, and keep the background still, whatever the options. The battery saver is followed live, as [0056](0056-add-an-animated-background-and-the-appearance-group.md) decision 6 does in the Library; it is not part of the look read at the start.
    * Below API 31 the stream glass is solid, with no `RenderEffect`. The owner allows only Blur or Solid, with no tint-only option. This differs from the Reduced tint that [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decision 5 gives the Library panels on API 28 to 30.
    * The stream reads the look once, when the stream starts, as [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decision 11 says. The transparency level and its tint and blur, and the two new options, are read the same way, so a change shows in the next stream.
 4. **Text over the background and the blurred video.**
@@ -66,7 +66,7 @@ Decision details:
    * Outside the game, the screens and their dialogs sit on the background in a glass host, and follow [0057](0057-glass-surfaces-and-the-accessibility-settings.md) as the Library does, decision 8 included.
 6. **Clip lifecycle.** A clip style plays only while no stream decoder is configured.
    * It plays from the start until the stream's decoder is configured. The clip is released before the decoder is configured.
-   * It plays again after the stream's connection has stopped.
+   * It plays again after the stream's decoder has been released, when the connection has stopped.
    * While a decoder is configured (Quitting or Disconnecting before the stream has stopped, or an error screen while the decoder is still up), a clip style shows its still. A Compose style keeps moving.
 7. **Frame pace.** The background outside the game follows [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decision 9 unchanged. On a TV it runs at 24 frames a second while a blur is drawn. The copy rate of 30 a second is separate, and it applies only to the menu glass in the Streaming phase.
 8. **This amends** [0056](0056-add-an-animated-background-and-the-appearance-group.md) decision 5 and [0057](0057-glass-surfaces-and-the-accessibility-settings.md) decisions 10 and 13. Two more rules of 0057 differ in the stream and stay in force for the Library: decision 5 (the Reduced tint below API 31, where the stream glass is solid) and decision 8 (the window blur of dialogs, where the stream's Quit popup uses the copy).
@@ -84,9 +84,9 @@ Measured in the owner's comparison on 2026-10-28. The TV ran Steam Big Picture, 
 
 Other measures:
 
-* **TV copy:** over 40,751 copies, all successful, the copy took 11.9 ms at p50 and 18.6 ms at p95. 1.7 % of copies took over 25 ms, and the longest took 188 ms. The copy is 480 x 270 pixels.
+* **TV copy:** over all TV runs and rates, 40,751 copies, all successful: 11.9 ms at p50 and 18.6 ms at p95, 1.7 % over 25 ms, and the longest 188 ms. At the chosen 30 a second alone: 11.8 ms at p50, 17.7 ms at p95, 1.5 % over 25 ms. The copy is 480 x 270 pixels.
 * **S22 copy (HDR):** 30 copies a second, with no failed copy. The copy takes 2.8 ms at p50 and 15.3 ms at most. The first copy after the menu opens took 129.7 ms, and 3 requests were skipped in that first second. The 15.3 ms maximum is after that first copy. The chrome frame takes 7.3 ms at p50. The decode averages 5.6 ms with the menu open and 5.9 ms with it closed.
-* **TV start, from the creation of the activity to the first frame, in ms.** The start time varies by about 2 s from run to run (10.5 to 18 s over all runs), so only a large cost would show.
+* **TV start, from the creation of the activity to the first frame, in ms.** Within a series the start time varies by 1 to 2 s, and over all runs it spans 10.5 to 18 s, so only a large cost would show.
 
 | Background | Start times (ms) |
 | --- | --- |
@@ -177,7 +177,7 @@ Other measures:
 ### Screens: every screen outside the game (chosen)
 
 * Good, because all the screens follow one rule, with no difference between them.
-* Bad, because the Disconnecting, conflict and error screens also show the background, and so start the clip.
+* Bad, because the Disconnecting, conflict and error screens also show the background, and so can start the clip.
 
 ## More Information
 

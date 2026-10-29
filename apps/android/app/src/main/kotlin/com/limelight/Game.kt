@@ -907,6 +907,10 @@ class Game :
         // lifted while focus was not on us. Clear the modifier state.
         this.modifierFlags = 0
 
+        // BOREALIS: the release of the mouse's Back button may come while another window has the
+        // focus (stream)
+        if (!hasFocus) cancelBackHold()
+
         // With Android native pointer capture, capture is lost when focus is lost,
         // so it must be requested again when focus is regained.
         inputCaptureProvider.onWindowFocusChanged(hasFocus)
@@ -1217,6 +1221,7 @@ class Game :
     override fun onStop() {
         super.onStop()
         startupGuard.cancel() // BOREALIS: first-frame watchdog
+        cancelBackHold() // BOREALIS: the release of the mouse's Back button may never come (stream)
         // BOREALIS: a pending "app already running" question is a cancel (host.launch)
         if (::streamSession.isInitialized) {
             streamSession.answerConflict(ConflictChoice.CANCEL)
@@ -2684,16 +2689,23 @@ class Game :
                             "connection stop done",
                             "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
                         )
-                        // BOREALIS: the stream's decoder is released with the connection, so a
-                        // clip of the background plays again (stream)
-                        runOnUiThread { streamSession.onConnectionStopped() }
+                        tellConnectionStopped()
                         done?.run()
                     }
                 }
                 .start()
         } else {
+            // BOREALIS: a start that failed after the decoder stage holds a decoder and no
+            // connection (stream)
+            tellConnectionStopped()
             done?.run() // BOREALIS: nothing runs, so nothing to wait for (leave)
         }
+    }
+
+    // BOREALIS: the stream's decoder is released with the connection, so a clip of the background
+    // plays again; from any thread, run on the main one (stream)
+    private fun tellConnectionStopped() {
+        if (::streamSession.isInitialized) runOnUiThread { streamSession.onConnectionStopped() }
     }
 
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {

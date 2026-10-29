@@ -143,6 +143,24 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `the streaming phase carries the mouse navigation buttons setting, off unless it is on`() {
+        val off = startStreaming(StreamDefaults(OverlayMode.OFF, null, null, showMenuHint = true))
+        val on =
+            startStreaming(
+                StreamDefaults(
+                    OverlayMode.OFF,
+                    null,
+                    null,
+                    showMenuHint = true,
+                    mouseNavButtons = true,
+                )
+            )
+
+        assertThat((off.state.value.phase as StreamPhase.Streaming).mouseNavButtons).isFalse()
+        assertThat((on.state.value.phase as StreamPhase.Streaming).mouseNavButtons).isTrue()
+    }
+
+    @Test
     fun `a first frame before the connection is reported starts streaming once it is`() {
         session.onFirstFrame()
         assertThat(phase).isEqualTo(StreamPhase.Starting(StartStage.CONNECTING))

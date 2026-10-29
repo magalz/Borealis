@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.update
 
 /**
  * What a stream starts with: the user's settings when the first frame arrives, and the [visuals] of
- * the stream, which it keeps from the start.
+ * the stream, which it keeps from the start. [mouseNavButtons] says whether the Back button of the
+ * mouse is a button of its own (the setting of that name) and so can open the menu.
  */
 data class StreamDefaults(
     val overlay: OverlayMode,
@@ -22,6 +23,7 @@ data class StreamDefaults(
     val gamepadMouse: Boolean?,
     val showMenuHint: Boolean,
     val visuals: StreamVisuals = StreamVisuals(),
+    val mouseNavButtons: Boolean = false,
 )
 
 /**
@@ -173,6 +175,7 @@ class StreamSession(
             gamepadMouse = defaults.gamepadMouse,
             info = info,
             showMenuHint = defaults.showMenuHint,
+            mouseNavButtons = defaults.mouseNavButtons,
         )
     }
 
@@ -225,8 +228,9 @@ class StreamSession(
     }
 
     /**
-     * The connection has stopped and the decoder of the stream is released: a clip of the
-     * background plays again. Called from the thread that stopped it.
+     * The connection has stopped, or none ever ran, and the decoder of the stream is released: a
+     * clip of the background plays again. The activity calls it on the main thread: posted from the
+     * thread that stopped the connection once the stop ends, or at once when none ran.
      */
     fun onConnectionStopped() = mutableState.update { it.copy(decoderHeld = false) }
 

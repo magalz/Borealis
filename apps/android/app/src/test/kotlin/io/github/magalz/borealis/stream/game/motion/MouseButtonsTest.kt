@@ -45,7 +45,7 @@ internal class MouseButtonsTest : MotionTestBase() {
                 MotionEvent.BUTTON_STYLUS_PRIMARY to right,
                 MotionEvent.BUTTON_TERTIARY to middle,
                 MotionEvent.BUTTON_STYLUS_SECONDARY to middle,
-                MotionEvent.BUTTON_BACK to back,
+                // The Back button waits to see whether it is held; MouseBackHoldTest has it.
                 MotionEvent.BUTTON_FORWARD to forward,
             )
 
@@ -90,15 +90,9 @@ internal class MouseButtonsTest : MotionTestBase() {
                 MotionEvent.BUTTON_BACK or
                 MotionEvent.BUTTON_FORWARD
 
+        // Back waits to see whether it is held: a short press is sent when the button comes up.
         mouse(MotionEvent.ACTION_DOWN, all)
-        assertSent(
-            thePointer(),
-            press(left),
-            press(right),
-            press(middle),
-            press(back),
-            press(forward),
-        )
+        assertSent(thePointer(), press(left), press(right), press(middle), press(forward))
 
         mouse(MotionEvent.ACTION_UP, 0)
         assertSent(
@@ -106,6 +100,7 @@ internal class MouseButtonsTest : MotionTestBase() {
             release(left),
             release(right),
             release(middle),
+            press(back),
             release(back),
             release(forward),
         )

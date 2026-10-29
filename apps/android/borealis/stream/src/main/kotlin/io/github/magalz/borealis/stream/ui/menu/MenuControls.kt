@@ -110,8 +110,9 @@ internal fun PointerRow(phase: StreamPhase.Streaming, intents: StreamIntents) {
 }
 
 /**
- * A row with a segmented control for [options]. The segments choose one; OK, A or a tap on the row
- * itself selects the next option and wraps around, and the focus stays on the row.
+ * A row with a segmented control for [options]. OK, A or Enter on the row, or a tap on it, selects
+ * the next option and wraps around from the last to the first, and the focus stays on the row. The
+ * segments are not focus stops, so the keys never go into them; a tap on a segment selects it.
  */
 @Composable
 private fun <T> OptionRow(
@@ -133,6 +134,7 @@ private fun <T> OptionRow(
                 label = label,
                 onSelect = onSelect,
                 groupLabel = title,
+                focusable = false,
             )
         },
     )

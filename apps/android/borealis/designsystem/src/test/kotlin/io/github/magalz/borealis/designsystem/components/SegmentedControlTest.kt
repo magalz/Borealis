@@ -148,6 +148,31 @@ class SegmentedControlTest {
         composeRule.onNodeWithText("120 fps").assertIsFocused()
     }
 
+    @Test
+    fun `with focusable false no key reaches a segment and a tap still selects`() {
+        composeRule.setContentInKeyboardMode {
+            BorealisTheme(FormFactor.Tv) {
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    Chip("Back", onClick = {})
+                    SegmentedControl(
+                        OPTIONS,
+                        "60",
+                        { "$it fps" },
+                        { chosen += it },
+                        focusable = false,
+                    )
+                }
+            }
+        }
+        composeRule.onNodeWithText("Back").requestFocus()
+
+        composeRule.onNodeWithText("Back").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Back").assertIsFocused()
+        composeRule.onNodeWithText("120 fps").performClick()
+
+        assertThat(chosen).containsExactly("120")
+    }
+
     private fun tintOverPage() =
         BorealisTokens.Color.AccentTint.compositeOver(BorealisTokens.Color.Page)
 

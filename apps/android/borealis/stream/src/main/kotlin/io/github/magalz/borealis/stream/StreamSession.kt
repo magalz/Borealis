@@ -181,10 +181,15 @@ class StreamSession(
 
     /**
      * The stream ended with [code], reported from the connection thread. True when that is the end
-     * of the quit the user asked for, which the log then says with the time since the quit.
+     * of the quit the user asked for, which the log then says with the time since the quit: the
+     * host closes the stream when it gets the cancel, and the control stream reports that as the
+     * ENet disconnect, [ENET_DISCONNECT]. Any other code while a quit is pending is a network drop
+     * and goes the way of a failure.
      */
     fun endedByQuit(code: Int): Boolean {
-        if (mutableState.value.phase !is StreamPhase.Quitting) return false
+        if (code != ENET_DISCONNECT || mutableState.value.phase !is StreamPhase.Quitting) {
+            return false
+        }
         BorealisLog.i(
             LogTag.APP,
             "quit stream ended",
@@ -327,3 +332,9 @@ class StreamSession(
 }
 
 private const val NANOS_PER_MS = 1_000_000L
+
+/**
+ * The code that the control stream of moonlight-common-c reports when its ENet peer disconnects
+ * (`ControlStream.c`, `ENET_EVENT_TYPE_DISCONNECT`), which the host causes by closing the stream.
+ */
+private const val ENET_DISCONNECT = -1

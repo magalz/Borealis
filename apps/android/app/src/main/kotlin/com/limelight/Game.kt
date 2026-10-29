@@ -2702,8 +2702,9 @@ class Game :
     }
 
     override fun connectionTerminated(errorCode: Int) {
-        // BOREALIS: the host ends the stream when it gets the Quit that the user confirmed; that
-        // end is the quit's, so no connectivity test and no error (leave)
+        // BOREALIS: the host ends the stream when it gets the Quit that the user confirmed, and the
+        // control stream reports the ENet disconnect (-1); that end is the quit's, so no
+        // connectivity test and no error. Any other code is a network drop (leave)
         val endedByQuit = ::streamSession.isInitialized && streamSession.endedByQuit(errorCode)
 
         // Perform a connection test if the failure could be due to a blocked port

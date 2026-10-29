@@ -44,7 +44,7 @@ internal class GameQuitEndTest : GameTestBase() {
     fun `the end that the quit caused is not tested for a blocked network`() {
         streamWithQuitUnderWay()
 
-        rig.game.connectionTerminated(MoonBridgeCodes.ENDED)
+        rig.game.connectionTerminated(ENDED)
         rig.awaitStop()
 
         assertThat(connectivityTests()).isEmpty()
@@ -54,7 +54,7 @@ internal class GameQuitEndTest : GameTestBase() {
     fun `the end that the quit caused is logged at info as the quit's, not as an error`() {
         streamWithQuitUnderWay()
 
-        rig.game.connectionTerminated(MoonBridgeCodes.ENDED)
+        rig.game.connectionTerminated(ENDED)
         rig.awaitStop()
 
         val ended = borealisLog.records.single { it.message == "quit stream ended" }
@@ -68,7 +68,7 @@ internal class GameQuitEndTest : GameTestBase() {
     fun `the end that the quit caused keeps the screen on Quitting and stops the connection`() {
         streamWithQuitUnderWay()
 
-        rig.game.connectionTerminated(MoonBridgeCodes.ENDED)
+        rig.game.connectionTerminated(ENDED)
         rig.awaitStop()
 
         val quitting = rig.phase as StreamPhase.Quitting
@@ -80,17 +80,16 @@ internal class GameQuitEndTest : GameTestBase() {
     fun `an end that no quit caused is tested for a blocked network and logged as an error`() {
         rig.streaming()
 
-        rig.game.connectionTerminated(MoonBridgeCodes.ENDED)
+        rig.game.connectionTerminated(ENDED)
         rig.awaitStop()
 
         assertThat(connectivityTests()).hasSize(1)
-        assertThat(limeLog.entries)
-            .contains(Level.SEVERE to "Connection terminated: ${MoonBridgeCodes.ENDED}")
+        assertThat(limeLog.entries).contains(Level.SEVERE to "Connection terminated: ${ENDED}")
         assertThat(borealisLog.records.map { it.message }).doesNotContain("quit stream ended")
         assertThat(rig.phase).isInstanceOf(StreamPhase.Failed::class.java)
     }
 
-    private object MoonBridgeCodes {
+    private companion object {
         const val ENDED = -1
     }
 }

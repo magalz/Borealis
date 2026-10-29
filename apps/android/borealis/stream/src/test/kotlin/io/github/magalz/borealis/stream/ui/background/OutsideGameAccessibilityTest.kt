@@ -153,11 +153,11 @@ class OutsideGameAccessibilityTest {
     }
 
     @Test
-    fun `the text of a failure has the halo`() {
+    fun `the text of a failure is on the panel of the popup, so it has no halo`() {
         show(sessionAt(OutsideScreen.FAILED))
 
-        composeRule.assertHalo("Couldn't start Desktop")
-        composeRule.assertHalo("The stream could not start.")
+        composeRule.assertNoHalo("Couldn't start Desktop")
+        composeRule.assertNoHalo("The stream could not start.")
     }
 
     @Test

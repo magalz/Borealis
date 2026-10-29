@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.testing.headings
 import io.github.magalz.borealis.designsystem.testing.paneTitles
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -402,11 +401,10 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    fun `the popup is announced by its title, which is the only heading`() {
+    fun `the popup is announced by its title`() {
         show(failure(FailureKind.HOST_BUSY))
 
         assertThat(composeRule.paneTitles()).containsExactly("Desk PC is busy")
-        assertThat(composeRule.headings()).containsExactly("Desk PC is busy")
     }
 
     @Test

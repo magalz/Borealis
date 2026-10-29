@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -174,6 +175,16 @@ class LibraryActivityRequestTest {
 
         scenario?.close()
         scenario = null
+
+        assertThat(resumeChoice.take("desk", 1)).isFalse()
+    }
+
+    @Test
+    fun `the choice of Try again is gone when the Library is left before it handled the request`() {
+        resumeChoice.remember("desk", 1)
+        launch(LibraryLaunchRequest.Hosts)
+
+        scenario?.moveToState(Lifecycle.State.CREATED)
 
         assertThat(resumeChoice.take("desk", 1)).isFalse()
     }

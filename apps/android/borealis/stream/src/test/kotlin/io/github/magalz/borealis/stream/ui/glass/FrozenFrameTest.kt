@@ -86,6 +86,63 @@ class FrozenFrameTest {
     }
 
     @Test
+    fun `a request made on another thread reads the size of the video, not where it is`() {
+        Thread { frozen.request() }.apply { start() }.join()
+
+        // Where the video is on the screen is a question for the main thread, asked when the copy
+        // ends.
+        assertThat(source.boundsThreads).isEmpty()
+
+        source.finish()
+
+        assertThat(source.boundsThreads).containsExactly(Thread.currentThread())
+    }
+
+    @Test
+    fun `the copy is pending from the request until it has ended, whichever way`() {
+        assertThat(frozen.pending).isFalse()
+
+        frozen.request()
+        assertThat(frozen.pending).isTrue()
+        assertThat(frozen.frame).isNull()
+
+        source.finish()
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.frame).isNotNull()
+    }
+
+    @Test
+    fun `a copy that fails is no longer pending, and there is no frame`() {
+        frozen.request()
+
+        source.finish(ok = false)
+
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.frame).isNull()
+    }
+
+    @Test
+    fun `a video with nothing to copy is never pending`() {
+        source.bounds = null
+
+        frozen.request()
+
+        assertThat(frozen.pending).isFalse()
+    }
+
+    @Test
+    fun `release ends a pending copy, and the copy that ends after it is dropped`() {
+        frozen.request()
+
+        frozen.release()
+        assertThat(frozen.pending).isFalse()
+        source.finish()
+
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.frame).isNull()
+    }
+
+    @Test
     fun `nothing has been asked for until a request is made`() {
         assertThat(frozen.requested).isFalse()
         assertThat(source.requests).isEmpty()

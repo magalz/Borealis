@@ -7,6 +7,7 @@ import android.view.PixelCopy
 import android.view.SurfaceView
 import android.view.View
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.IntSize
 
 /** Where the stream video is on the screen, in pixels. */
 internal data class VideoBounds(val left: Int, val top: Int, val width: Int, val height: Int)
@@ -15,6 +16,9 @@ internal data class VideoBounds(val left: Int, val top: Int, val width: Int, val
 internal interface VideoSource {
     /** Where the video is, or null when there is nothing to copy: no surface, or an empty one. */
     fun bounds(): VideoBounds?
+
+    /** How big the video is, or null when there is nothing to copy. */
+    fun size(): IntSize?
 
     /**
      * Copies the video into [into], then calls [done] once, on the main thread, with the result.
@@ -32,6 +36,8 @@ internal val LocalVideoSource = staticCompositionLocalOf<VideoSource?> { null }
  */
 internal class PixelCopySource(private val view: View) : VideoSource {
     private val handler = Handler(Looper.getMainLooper())
+
+    override fun size(): IntSize? = null
 
     override fun bounds(): VideoBounds? {
         val surfaceView = view as? SurfaceView ?: return null

@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream.ui.glass
 
 import android.graphics.Bitmap
+import androidx.compose.ui.unit.IntSize
 import com.google.common.truth.Truth.assertWithMessage
 import kotlin.math.max
 
@@ -33,7 +34,15 @@ internal class FakeVideoSource(
     val beingWritten: List<Bitmap>
         get() = requests.takeLast(inFlight)
 
-    override fun bounds(): VideoBounds? = bounds
+    /** The threads that asked where the video is, in order. */
+    val boundsThreads = mutableListOf<Thread>()
+
+    override fun size(): IntSize? = bounds?.let { IntSize(it.width, it.height) }
+
+    override fun bounds(): VideoBounds? {
+        boundsThreads += Thread.currentThread()
+        return bounds
+    }
 
     override fun copy(into: Bitmap, done: (Boolean) -> Unit) {
         requests += into

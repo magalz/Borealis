@@ -43,6 +43,10 @@ internal class FrozenFrame(
     private val asked = AtomicBoolean(false)
     @Volatile private var released = false
 
+    /** Whether the copy was asked for and has neither ended with a frame nor failed yet. */
+    val pending: Boolean
+        get() = false
+
     /** Whether the copy has been asked for. */
     val requested: Boolean
         get() = asked.get()

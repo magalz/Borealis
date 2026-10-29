@@ -18,7 +18,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ResumeChoice @Inject constructor() {
-    private var remembered: Pair<String, Int>? = null
+    @Volatile private var remembered: Pair<String, Int>? = null
 
     /** Remembers that the user chose to resume [appId] on [hostId]. */
     fun remember(hostId: String, appId: Int) {

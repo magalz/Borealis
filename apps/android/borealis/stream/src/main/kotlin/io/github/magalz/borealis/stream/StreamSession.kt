@@ -228,8 +228,9 @@ class StreamSession(
     }
 
     /**
-     * The connection has stopped and the decoder of the stream is released: a clip of the
-     * background plays again. Called from the thread that stopped it.
+     * The connection has stopped, or none ever ran, and the decoder of the stream is released: a
+     * clip of the background plays again. The activity calls it on the main thread: posted from the
+     * thread that stopped the connection once the stop ends, or at once when none ran.
      */
     fun onConnectionStopped() = mutableState.update { it.copy(decoderHeld = false) }
 

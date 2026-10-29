@@ -132,7 +132,7 @@ class MenuGlassCopiesTest {
 
         glass.lifecycle.moveTo(Lifecycle.State.CREATED)
         glass.run(100)
-        var asked = glass.source.requests.size
+        val asked = glass.source.requests.size
         glass.run(1_000)
         assertThat(glass.source.requests).hasSize(asked)
 

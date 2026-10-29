@@ -79,7 +79,8 @@ class MenuGlassScreenshotTest {
         white: Boolean = false,
     ): GlassFixture {
         // The worst frame for the text, which the tint is chosen for: all white.
-        val paint: (Bitmap) -> Unit = if (white) { it -> it.eraseColor(WHITE) } else ::paintFrame
+        val paint: (Bitmap) -> Unit =
+            if (white) { bitmap -> bitmap.eraseColor(WHITE) } else ::paintFrame
         val source =
             FakeVideoSource(
                 bounds = VideoBounds(0, 0, px.width, px.height),

@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntOffset
+import androidx.core.graphics.createBitmap
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import kotlin.math.max
@@ -95,7 +96,7 @@ internal class VideoGlassFrames(
         val index = nextTarget()
         val slot =
             slots[index]?.takeIf { it.bitmap.width == width && it.bitmap.height == height }
-                ?: Slot(Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)).also {
+                ?: Slot(createBitmap(width, height)).also {
                     slots[index] = it
                 }
         pending = true

@@ -9,15 +9,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntSize
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -106,12 +100,6 @@ class MenuGlassScreenshotTest {
                 )
             }
         }
-    }
-
-    private fun GlassFixture.openQuitFromKeys() {
-        composeRule.onNodeWithText("Quit Desktop").performScrollTo().requestFocus()
-        composeRule.onNodeWithText("Quit Desktop").performKeyInput { pressKey(Key.DirectionCenter) }
-        run(FIRST_FRAME_MS)
     }
 
     private fun shoot(name: String) {
@@ -228,6 +216,5 @@ class MenuGlassScreenshotTest {
         val HANDHELD_PX = IntSize(1200, 720)
         const val SETTLE_MS = 100L
         const val WHITE = 0xFFFFFFFF.toInt()
-        const val FIRST_FRAME_MS = 16L
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -22,7 +23,10 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -115,6 +119,13 @@ internal class GlassFixture(
     /** The menu asks for Quit, and the popup is up. */
     fun openQuitPopup() {
         rule.onNodeWithText("Quit Desktop").performScrollTo().performClick()
+        run(FIRST_FRAME_MS)
+    }
+
+    /** The menu asks for Quit with the keys, so the popup opens with the focus on Cancel. */
+    fun openQuitFromKeys() {
+        rule.onNodeWithText("Quit Desktop").performScrollTo().requestFocus()
+        rule.onNodeWithText("Quit Desktop").performKeyInput { pressKey(Key.DirectionCenter) }
         run(FIRST_FRAME_MS)
     }
 

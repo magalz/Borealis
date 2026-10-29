@@ -54,6 +54,36 @@ Implementation requirements:
   frame-loss lines cannot evict pairing and launch history.
 - Logs are not uploaded automatically.
 
+### Log lines of the stream (Sprint 15)
+
+Sprint 15 added these lines. Each goes through `BorealisLog` and so through the redaction
+layer. None of them carries an IP address, a host name or the name of an app: their fields are
+counts, sizes, times, a code, a choice and a fixed reason word.
+
+| Tag | Line | Fields | Level |
+| --- | --- | --- | --- |
+| `APP` | `quit accepted`, `disconnect accepted` | none | info |
+| `APP` | `quit stream ended`: the end that the user's own Quit caused, which is error -1 while the quit is pending | `code`, `since_quit_ms` | info |
+| `APP` | `connection stop done` | `ms` | info |
+| `APP` | `activity finished`: every exit asks the system once | none | info |
+| `HOST` | `quit cancel sent`, `quit cancel answered`, `quit check answered` | `ms` on the last two | info |
+| `LAUNCH` | `running app joined on the user's choice` | none | info |
+| `VIDEO` | `Frozen frame requested`: the copy of the last frame of a stream that failed | `width`, `height` of the copy | info |
+| `VIDEO` | `Frozen frame copied` | `ms` | info |
+| `VIDEO` | `Frozen frame failed` | `reason`: `no_surface` or `copy` | warn |
+| `VIDEO` | `Menu glass copies`: once a second while the menu glass runs | `copies`, `skipped`, `failed`, `no_surface`, `slowest_ms` | debug |
+
+- `LaunchConflicts` also logs `running app conflict answered` with the `choice`, as before, now
+  for every answer to the question, on both paths.
+- The end of the user's own Quit is no longer logged as an error, as `Connection terminated:
+  -1` on the `UPSTREAM` tag. It is the `quit stream ended` line above, and no connectivity
+  test runs for it. Any other end is logged and tested as before.
+- The copies of the video stay in memory. The live copies of the menu glass are bitmaps a
+  quarter of the video, in a pool of three, drawn behind the menu and dropped with it. The one
+  copy of the last frame is held by the activity and let go when it is destroyed. No copy is
+  written to a file, logged, put in the audit trail or put in the diagnostic bundle, and the
+  lines above hold only the size of a copy and the time it took.
+
 ## Settings storage
 
 - The "Verbose logging" and "Mask addresses in logs and diagnostics" switches
@@ -72,13 +102,21 @@ Implementation requirements:
   (`borealis_colour_vision`). They hold stable ids and switches, and nothing
   else ([ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md)).
 - The five Appearance settings of Sprint 11 are stored in the same file. Together with
-  the eleven above, the file holds 16 settings, and it is excluded from backup too:
+  the eleven above, the file holds 16 settings, 18 with the two stream options of Sprint 15 below,
+  and it is excluded from backup too:
   Font (`borealis_font`), Accent colour (`borealis_accent`), Background intensity
   (`borealis_background_intensity`), Card density (`borealis_card_density`) and Text
   spacing (`borealis_text_spacing`). They hold stable ids and nothing personal
   ([ADR 0058](../adr/0058-appearance-and-reading-options.md)). They are not uploaded,
   and they are not put in diagnostics: no value of them is in a log line, in the audit
   trail or in the diagnostic bundle.
+- The two stream options of Sprint 15 are stored in the same file, so it holds 18 settings
+  and is excluded from backup: Background before and after the stream
+  (`borealis_stream_background`: `moving`, `still` or `off`) and Menu glass in the stream
+  (`borealis_stream_menu_glass`: `blur` or `solid`). They hold stable ids and nothing
+  personal ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md)). They
+  follow the same rule: they are never uploaded, and no value of them is in a log line, in the
+  audit trail or in the diagnostic bundle.
 - Accessibility choices can reveal a disability, so they are never uploaded and
   never put in diagnostics: no value of them is in a log line, in the audit trail or in
   the diagnostic bundle. The `manifest.json` of the bundle lists only the two
@@ -149,15 +187,21 @@ Events:
 - pairing start, success, failure and automatic restart;
 - unpair, confirmed or not confirmed;
 - host certificate change, TLS failures and pinning failures;
-- launch attempts, retries and the user's choice in the running-app conflict;
+- launch attempts, retries and the user's choice in the running-app conflict. The
+  `LAUNCH_CONFLICT` detail is `choice=<join|quit|cancel> running_app=<id> entry=<asked|chosen>`.
+  `asked` is the user's answer to the question about the running app, on the `/serverinfo`
+  path and on the path of a refused launch. `chosen` is a join that the user's earlier choice
+  made with no question (`choice=join`, outcome success): Resume, a tap on the app that runs
+  or Continue in the Library, or Try again on the error popup. The detail holds the id of the
+  running app and never its name;
   a start restarted after an RTSP failure that followed an accepted `/resume`
   is recorded as `LAUNCH_RETRY` with `reason=rtsp_after_resume`, so one tap can
   produce two `LAUNCH_ATTEMPT` entries;
 - session start (codec, resolution, fps and HDR) and session end (duration,
   reason or error code). The session end reason is one of:
   - `user`: the user left the stream screen;
-  - `disconnect`: the user chose Disconnect in the in-game menu, and the app
-    keeps running on the host;
+  - `disconnect`: the user chose Disconnect in the in-game menu or pressed
+    Ctrl+Alt+Shift+Q, and the app keeps running on the host;
   - `quit`: the user chose Quit in the in-game menu, and the app ended on the
     host;
   - `host_ended`: the host ended the stream;
@@ -171,7 +215,7 @@ Fields per entry:
 | --- | --- |
 | Timestamp | UTC time. |
 | Event type | One of the event names above. |
-| Host | Host name and address, masked per the "Mask addresses" setting. |
+| Host | Host name and address, masked per the "Mask addresses" setting. It is the one place of this trail that holds a host: the log lines of Sprint 15 hold none. |
 | Outcome | Success, failure or cancelled. |
 | Detail | Short redacted reason or error code. Never secrets. |
 | App version | Borealis version that wrote the entry. |

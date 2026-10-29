@@ -12,8 +12,9 @@ import androidx.compose.ui.node.ModifierNodeElement
 /**
  * Calls [action] when Back comes up anywhere in the panel, once per press, as the system does. The
  * key-down, its repeats and the key-up stay in the panel: Compose would take an unhandled Back for
- * a focus exit, out of a segmented control or a key of the keyboard, and the panel would close only
- * with a second press. A key-up without a key-down the panel saw (Back opened the panel) is left
+ * a focus exit, out of a chip of the menu or a key of the keyboard, and the panel would close only
+ * with a second press. The segments of the menu's option rows are no focus stops (issue #98), so
+ * Back has none to leave. A key-up without a key-down the panel saw (Back opened the panel) is left
  * alone and does nothing.
  *
  * Without focus in the panel nothing reaches it, and Back goes to the host's back callback.

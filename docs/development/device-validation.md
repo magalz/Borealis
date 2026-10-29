@@ -1,6 +1,6 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 14 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 15 on two devices against
 LuminalShine 26.09.1 and 26.10.0-beta.1 running on the owner's Windows PC. It is
 for the owner and for the orchestrator who runs the checks. Run the steps in
 order and record the results as a new section with a table, like sections 7 to
@@ -2131,6 +2131,313 @@ overlay. A `fail` needs a note.
 | B7 TV channel | TV | `not applicable`; the poster provider checks | | | |
 | B8 Resume | TV, S22 | no conflict screen; Home and resume | | | |
 | B9 Quit | TV, S22 | "Quitting…", then "Nothing running"; retry text | | | |
+
+### 3.29 Sprint 15 checks
+
+Run these on the Samsung Galaxy S22 and on the Google TV Streamer, with the owner's OK for the TV,
+against LuminalShine 26.10.1 on the owner's PC. Sprint 15 changed the screens of the stream
+([roadmap](../roadmap.md#sprint-15-the-stream-screens-and-glass),
+[ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md)): the Quit popup and the
+Quitting and Disconnecting screens, the in-game menu without lateral movement, the keyboard and mouse
+combos, the question a second device asks, the background and the glass, and the error of a dropped stream as
+a popup over its last frame. Record each item as `pass`, `fail`, `owner check` or `not applicable`, with a
+short note for each `fail`. The owner's own run is [3.30](#330-owners-20-minute-uat-sprint-15).
+
+The physical actions need the owner: the pad, the keyboard and the mouse, the second device and the eye. Do
+not record a host name, an address, a MAC address or a PIN, and take no screenshot of the stream (section
+5). The text of a popup can be read with `uiautomator dump`, as on 2026-10-29. What the frozen frame and the
+glass look like is the owner's judgement (`owner check`).
+
+Before you start:
+
+1. Install the build of the phase head on both devices (1.2). Both are paired with the host, and the host is
+   Online. The app ids below are those of the debug build, `io.github.magalz.borealis.debug`.
+2. Keep one logcat capture per device (1.4), with `ActivityTaskManager:I` added to its filter so that
+   `Duplicate finish request` shows. Clear it before each step. Keep it masked and outside the repository
+   (section 17, P2). Keep the host log open (1.3, step 5), and note the time of each Quit.
+3. Pick two apps on the host: Desktop, which has no process to close, and a game, which has the host's
+   `exit-timeout` (10 s by default). Quit closes the game and loses unsaved progress, so pick a game where
+   that costs nothing.
+
+Steps:
+
+1. Quit (TV, S22). Source: `StreamSession.quitApp`, `NvHTTP.quitApp`, `GameStreamActions.quitApp`.
+   - Stream the game. Open the in-game menu (Back on the TV; a pull of the handle or Back on the S22),
+     choose "Quit `<game>`". Expected: the Quit popup "Quit `<game>`?" is centred in the stream, over the
+     glass, with "Closes `<game>` on the PC." and "Unsaved progress in it is lost."; Cancel has the focus. B
+     or Back closes only the popup, and the focus returns to the Quit row. On the S22 a tap outside the
+     popup is Cancel. With TalkBack on (S22), opening the popup announces its title and its body.
+   - Choose Quit. Expected: "Quitting `<game>`…" shows at once, at the confirmation, over the user's
+     background, with the Borealis loader. It does not wait for the stream to end. Then the Library shows
+     "App quit." and "Nothing running".
+   - Expected in logcat, one of each (the order of the stream end and of the answer is the host's: it ends
+     the stream before it answers the cancel):
+
+     ```text
+     I Borealis.APP: quit accepted
+     I Borealis.HOST: quit cancel sent
+     I Borealis.APP: quit stream ended code=-1 since_quit_ms=N
+     I Borealis.APP: connection stop done ms=N
+     I Borealis.HOST: quit cancel answered ms=N
+     I Borealis.HOST: quit check answered ms=N
+     I Borealis.APP: activity finished
+     ```
+
+     Expected: no `E Borealis.UPSTREAM: Connection terminated: -1`, no `ActivityTaskManager: Duplicate
+     finish request` for `com.limelight.Game`, one `activity finished` and no `Frozen frame requested` (a
+     Quit gets no copy of the last frame). The `-1` of the user's own Quit is the `quit stream ended` line
+     at info; the host side is [#218](https://github.com/NortheBridge/luminalshine/issues/218).
+   - Quit at least 3 times on each device, Desktop and the game, and record for each Quit: the seconds from
+     the confirmation to the Library, `since_quit_ms`, `cancel answered ms` and `check answered ms`. Earlier
+     rounds measured 5 to 7 s, and about 17 s once (section 15). A Quit over 10 s is a finding for
+     [#217](https://github.com/NortheBridge/luminalshine/issues/217), not a `fail` of Borealis.
+   - Read the host log for each Quit from the first info line after the client's `quit cancel sent` time.
+     The clocks of the PC and the device can differ by a second or so, so compare the spans between the
+     host lines, not the wall times. Do not anchor on `CLIENT DISCONNECTED`: a user's Quit probably never
+     writes it, because `/cancel` removes the peer with `enet_peer_disconnect_now`, which raises no event
+     (from the source, not run). The lines that say where the time went (contract 7.6) are:
+     - `Session ended`, which closes the join of the last session (the first stage of `/cancel`).
+     - `Successfully requested the app to exit. Waiting up to N seconds for it to close.`, then
+       `All app processes have successfully exited.` or `App did not fully exit within the timeout.
+       Terminating the app's remaining processes.`
+     - `Executing Undo Cmd: [...]` (do not copy the command: it can hold a path) and `Undo command
+       timed out after N seconds`.
+     - `Display helper: transactional REVERT completed and helper exited after verification.`
+     - `Virtual display cleanup: begin` and `Virtual display cleanup: finished`, and `Virtual display
+       cleanup: helper restore was not verified; restarting the helper and retrying.` A Quit of a live
+       stream can log the begin and finished pair more than once: with the reason `rtsp_session_end` from
+       the join of the last session, before the app exits (30 s deadline); with the reason
+       `app_termination` after the app is terminated, followed by `Virtual display cleanup completed
+       after app termination.`; and with the reason `cancel`, only when a virtual display is still
+       active.
+
+     A Desktop has no process to close, so its exit lines can be missing. The host logs no answer time at
+     info. Use the last `Virtual display cleanup: finished` line, whatever its reason: in the usual case it
+     is the last info line of the teardown (the config revert after it logs nothing), so it stands for the
+     end of `/cancel`. With no virtual display to clean, the last of the other lines stands. Expected: the
+     time of each Quit is accounted for by the span from the first line to that one, and the client's
+     `cancel answered ms` agrees with it to about a second.
+   - From Apps, with the game left running by a Disconnect: open its actions and choose Quit. Expected:
+     "App quit.", with the lines `quit cancel sent`, `quit cancel answered ms=N` and `quit check answered
+     ms=N` and none of the stream lines. On the TV on 2026-10-29, with no stream running, `/cancel` answered
+     in 466 ms and the check in 74 ms.
+2. Disconnect (TV, S22). Source: `GameStreamActions.disconnect`.
+   - Stream the game, open the menu and choose Disconnect. Expected: "Disconnecting from `<game>`…" shows over
+     the user's background for at least about 1 s, then the Library says "Disconnected. `<game>` is still
+     running on the PC.", and the game is still running (its Continue row reads "Running on `<host>`").
+   - Expected in logcat: `I Borealis.APP: disconnect accepted`, `I Borealis.APP: connection stop done
+     ms=N` and one `I Borealis.APP: activity finished`. The time from `disconnect accepted` to `activity
+     finished` is about 1 s when the stop is quick, right after `connection stop done` when the stop takes
+     1 to 5 s, and about 5 s, before `connection stop done`, when the stop takes longer. No `Duplicate
+     finish request`, no error screen.
+3. The menu with no lateral movement (TV, S22 with a pad). Source: `:borealis:stream` menu, issue #98.
+   - Open the menu. On every row (Back to stream, Keyboard, the Send keys chips, the option rows of the
+     layout, Refresh the picture, Session info, Disconnect and Quit), press Left and Right on the D-pad
+     of the remote or the pad, and push the left stick left and right. Expected: the focus outline stays on
+     the row, no value changes and the menu does not close.
+   - Press OK (or A) on an option row: Overlay, and Gamepad mouse on the TV and the handheld layout (Pointer
+     speed shows once it is on), or Touch on the phone layout. Expected: the value changes to the next one,
+     and after the last it goes back to the first.
+   - Press Down from the top to Quit and Up back to the top. Expected: every row and every Send keys chip is
+     reached once, in one order (the chips are a vertical list).
+   - The sequence of D4 of the Sprint 12 round, adapted. The round pressed 25 Downs, OK, Right, OK on the
+     S22 and 14 Downs on the TV. Quit was not reached on the S22; on the TV those keys reached it (section
+     17, D4). Press Down to Send keys, OK (its chips open), Right, OK (they close), then Down to Quit.
+     Expected: Quit is reached, and OK opens the popup of step 1 (the tests `InGameMenuFocusTest` and
+     `UsbChromeMenuFocusTest` pin this form).
+   - S22, touch: tap a segment of Overlay and Touch (the phone layout, no pad), and with a pad of Gamepad
+     mouse and Pointer speed. Expected: the tapped value is chosen.
+4. Combos (S22, with a keyboard and a mouse; the set-up of 3.28, A9; a Notepad test file open on the PC,
+   section 5). Source: `Game.kt` (`handleSpecialKeys`, the Back hold of the mouse), issue #102.
+   - With the input grabbed, press Ctrl+Alt+Shift+M and release the keys. Expected: the menu opens when
+     the keys are released, and Notepad shows nothing (the modifiers reach the PC; only the M is eaten). Close
+     the menu. Release the grab with Ctrl+Alt+Shift+Z and repeat. Expected: the same.
+   - Press Ctrl+Alt+Shift+Q. Expected: the flow of step 2 (Disconnecting, then the Library notice), with
+     `disconnect accepted` in the log.
+   - Settings, Input, "Mouse back and forward buttons": On. In a stream, hold the Back (side) button of
+     the mouse. Expected: the menu opens after about 1 s, and the PC gets no Back. Press the button briefly.
+     Expected: the PC gets Back on release (use a browser on the PC that has gone through two pages).
+     Hold the right click for 2 s. Expected: the Borealis menu does not open, and the PC gets a held right
+     click (the context menu of Notepad opens when you release it). With the setting Off, holding the side
+     button opens no menu either.
+     A game that uses the side button as push-to-talk opens the menu after 1 s: known.
+   - The hint, once. It shows the first time for six seconds, or until a panel opens, and the app remembers
+     it (`menu_hint_shown` in `shared_prefs/BorealisStream.xml`). To see it again, stop the app and run
+     `adb -s <serial> shell am force-stop io.github.magalz.borealis.debug`, then
+     `adb -s <serial> shell run-as io.github.magalz.borealis.debug rm shared_prefs/BorealisStream.xml`.
+     With the keyboard and the mouse attached and no pad, and the setting Off, expected: "Press
+     Ctrl+Alt+Shift+M for the menu". With the setting On, expected: "Press Ctrl+Alt+Shift+M or hold the mouse
+     Back button for the menu". Without a keyboard or a mouse, expected: "Pull the handle down or press Back
+     for the menu" on the phone, and "Press Back for the menu" on the TV.
+5. A second device (TV and S22, in both orders). Source: `NvConnection.askAboutRunning`,
+   `LaunchConflicts`, issue #101, [UC-003](../use-cases/0003-join-or-replace-a-running-app.md). Read the
+   Audit trail of the second device afterwards (3.15, step 5): the `LAUNCH_CONFLICT` event reads
+   `choice=<join|quit|cancel> running_app=<id> entry=<asked|chosen>`.
+   - **Same app, a choice of the user.** Start Desktop on device 1 and Disconnect. On device 2, tap the
+     tile of Desktop in Apps (it reads running), or choose Resume in its actions, or use the Continue row of
+     Hosts. Expected: no Conflict dialog, the stream resumes, the log has `running app joined on the user's
+     choice` (`Borealis.LAUNCH`), and the audit reads `choice=join` and `entry=chosen`.
+   - **Same app, no choice (S22).** Pin a shortcut of the game on the S22 (3.28, B6). Start the game on the
+     TV, Disconnect, and tap the shortcut on the S22 with Borealis running. Expected: the Conflict dialog
+     "An app is already running" says that `<game>` is already running and can be joined or quit and started
+     again, with Join, Quit and relaunch, and Cancel, and Cancel has the focus. The log has no `quit cancel
+     sent` before the answer. Answer each in a new attempt. Join: the stream resumes (`entry=asked`). Quit
+     and relaunch: the game restarts, and the TV's stream, if it still ran, ends (`choice=quit`). Cancel:
+     the S22 returns to Apps with no error, and `quit cancel sent` never appears (`choice=cancel`). The
+     Streamer has no shortcut or poster to launch from (3.28, B7): `not applicable` there.
+   - **Another app, both orders.** With Desktop running from device 1, open the actions of the game on device
+     2 (a long press on the S22, hold OK on the TV) and choose Start. Expected: the Conflict dialog says that
+     Desktop is already running and can be joined, or quit and `<game>` started, with Join, Quit and start,
+     and Cancel focused. Nothing is quit before the answer: `quit cancel sent` appears only after Quit and
+     start. Run it with the TV first and the S22 second, then the other way round.
+   - **Try again.** Cause a drop as in step 7 while the game runs. Restore the network, then choose Try again
+     on the popup (with the network still blocked the start only fails again). Expected: the Library opens
+     on that game and the stream resumes it with no dialog (`entry=chosen`). Then drop a stream, quit the
+     game on the PC, restore the network and choose Try again. Expected: the game is launched anew, with no
+     dialog. The choice is used once: a pinned shortcut tapped afterwards asks.
+   - Known limit, not a `fail`: if another device restarted the app that the Library shows running, Resume
+     enters it without asking (the host gives no session id; discussion
+     [#221](https://github.com/NortheBridge/luminalshine/discussions/221)). Record it if you see it.
+6. The background and the glass (TV, S22). Source: ADR 0061, issues #103 and #104. Settings, Appearance has
+   "Background" (the style), "Background before and after the stream" (Moving, Still or Off; Moving is the
+   default) and "Menu glass in the stream" (Blur or Solid; Blur is the default). Accessibility has Reduce
+   motion, Transparency, High contrast and Thicker focus outline.
+   - TV, a clip style (Northern lights), Moving. Launch the game. Expected: the Starting screen shows its steps
+     on a glass panel over the background. The clip plays during the first steps and shows its still from
+     "Preparing the display" on, where the stream holds its decoder. The background goes when the stream
+     shows, with no frame of it over the first frame. The log has no `W Borealis.APP: Background video failed`, and the start
+     reaches its first frame within the spread of the runs with the background Off (10.5 to 18 s in the
+     comparison of 2026-10-28). Record the time from OK to the first frame, three starts with Moving and
+     three with Off. Quit: the Quitting screen shows the still of the clip while the stream stops, and the clip
+     plays again once the connection has stopped.
+   - TV, Aurora curtains, Moving. Expected: the background keeps moving on the Starting screen and the
+     Quitting screen. Set the option to Still: it shows a still on every screen. Set it to Off: the screens
+     stand on the plain page.
+   - Every screen outside the game stands on that background: Starting, the Conflict dialog (step 5), the
+     error popup (step 7), Quitting and Disconnecting.
+   - S22, an HDR stream (Settings, Video, HDR on and Codec HEVC; 3.12). Open the menu. Expected, as an
+     `owner check`: the menu stands on a blurred, live copy of the stream, the colour of the copy is right
+     (no green or purple cast) and no large patch of colour shows on the panel (the spike saw one for a
+     moment, once), and the glass changes with the video. The first copy after the menu opens was slow in the
+     spike (129.7 ms on the S22): note whether the menu opens with a visible delay.
+   - Over a bright frame (a white window on the PC) and a dark one, open the menu and the Quit popup.
+     Expected: every text keeps its contrast through its halo, the focus outline is visible through its
+     casing (also with Thicker focus outline on, where 0.5 dp of the casing is cut at the edges of the panel:
+     known), and the segmented controls (Touch, Pointer speed, Overlay) sit on a solid container with
+     readable labels.
+   - Set Reduce motion On. Expected: the menu glass is solid (no copy of the stream) and the background is
+     still. Set Transparency Off, then High contrast: the menu and the popups are solid. Set Menu glass in the
+     stream to Solid: the same. Put the settings back.
+7. The failed popup (TV, S22). Source: `Game.connectionTerminated`, `FrozenFrame`, issue #105. This needs a drop of
+   the stream that keeps adb up.
+   - TV: block the network of the app only. The block takes about 3 s to bite (on 2026-10-29 the video kept
+     decoding until then). Run:
+
+     ```sh
+     adb -s <serial-tv> shell cmd connectivity set-chain3-enabled true
+     adb -s <serial-tv> shell cmd connectivity set-package-networking-enabled false io.github.magalz.borealis.debug
+     ```
+
+     Restore it as soon as the popup shows:
+
+     ```sh
+     adb -s <serial-tv> shell cmd connectivity set-package-networking-enabled true io.github.magalz.borealis.debug
+     adb -s <serial-tv> shell cmd connectivity set-chain3-enabled false
+     ```
+
+     S22: the same commands (not tried there), or disconnect the client from the host's Web UI, which gave
+     an ENet -1 and a copy of the frame on 2026-10-29.
+   - Stream the game, then drop it. Expected in logcat: `I Borealis.VIDEO: Frozen frame requested
+     width=<w> height=<h>` (a quarter of the video size), before `E Borealis.UPSTREAM: Connection
+     terminated: -1`, and then `I Borealis.VIDEO: Frozen frame copied ms=N`, with `I Borealis.APP:
+     connection stop done ms=N` between them or after. On the TV on 2026-10-29 the request came 16 ms before
+     `Connection terminated`, the stop was done 231 ms after it, and the copy, which ended after the stop,
+     took 314 ms. A `W Borealis.VIDEO: Frozen frame failed reason=copy` means the copy failed: the popup then
+     stands on the background. Record it, with the time between the request and `connection stop done`.
+   - Expected on the screen: a centred popup "`<game>` stopped" with "The stream ended. The PC may have quit
+     the app, or the connection dropped.", the line "Error -1", and the buttons Try again (focused),
+     Diagnostics and Close (Wake PC where the host is offline, Pair again where the certificate changed). Read
+     the text with `adb -s <serial> shell uiautomator dump /sdcard/borealis-ui.xml`, pull it, read it and
+     delete it from the device and from your disk. Behind the popup, as an `owner check`: the last frame of the
+     stream, frozen and blurred, with the scrim over it. A tap outside the popup does nothing (S22). Back (or
+     B on a pad) closes the popup and opens the Library, which shows the game still running. Diagnostics
+     opens the diagnostics, and Close does what Back does. While the copy is pending, for tens of ms, the popup
+     is on black with a solid panel, then on the frame.
+   - The panel follows the menu glass: glass with Blur, solid with Solid, Transparency Off or High contrast.
+     On a phone in landscape the actions stack, and with a large text size the panel scrolls (S22). A
+     rotation after the drop leaves the frozen frame at its old place: known.
+   - A drop before the first frame. Start a stream and block the network while the Starting screen shows (the
+     start takes 10 to 20 s). Expected: the popup stands on the user's background, with its text, and the log
+     has no `Frozen frame` line (the copy is asked for only after the first frame). Restore the network.
+   - A Quit and a Disconnect (steps 1 and 2) leave no `Frozen frame` line. A stream that ends with the
+     graceful code gets no copy and no popup: the activity finishes. Whether ending the app on the PC from
+     the host's Web UI arrives as the graceful code or as a `-1` has not been observed (3.27, step 10):
+     record the code of `E Borealis.UPSTREAM: Connection terminated: <code>`. A `-1` with no Quit pending
+     is a drop, with a copy and the popup of this step; it is not a `fail`.
+8. End. Put the Appearance and Accessibility settings back, and remove the pinned shortcut if it is not
+   wanted. Quit the app on the S22, and end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on
+   the Streamer.
+
+The results go in a new section of this runbook, after the round.
+
+### 3.30 Owner's 20-minute UAT (Sprint 15)
+
+This is the owner's run by hand, after the checks of 3.29, on the Google TV Streamer (with the owner's OK) and
+on the S22, against LuminalShine on the owner's PC. It needs no sound: nothing in it depends on audio. It
+needs the owner's hands and eyes: the remote, a pad, the keyboard and the mouse, the second device and the
+frozen frame. The orchestrator reads the logcat afterwards. Do not record a host name, an address or a PIN,
+and take no screenshot of the stream (section 5).
+
+Before you start: the same build is on both devices, both are paired, the host is Online, and no app runs.
+The orchestrator has the drop commands of 3.29, step 7, ready for the TV and the S22. Settings are the
+defaults: "Background before and after the stream" Moving, "Menu glass in the stream" Blur, Reduce motion
+Follow system, Transparency Standard.
+
+Steps, with the minutes that the plan gives them:
+
+- **U1. Quit and the popup (TV, 3 min).** Stream a game. Open the menu with Back and choose Quit. Look at the
+  popup: is it centred, readable over the glass, with Cancel focused? Press Back once (only the popup
+  closes), open it again and choose Quit. Look at the Quitting screen: does it appear at once? Does it stay
+  quiet over the background? Note how long it takes to reach the Library, and whether anything looks like an
+  error.
+- **U2. The menu without lateral movement (TV, 2 min).** Stream again. In the menu, press Left and Right on
+  the remote on a few rows, then OK on Overlay and Gamepad mouse. Does the focus stay? Do the values change on OK
+  and wrap? Press Down and Up through every row to Quit. Press Back to leave the menu.
+- **U3. Disconnect (TV, 1 min).** Menu, Disconnect. Is "Disconnecting from `<game>`…" long enough to read?
+  Does the Library say that the game is still running?
+- **U4. The look (S22, 5 min).** In Settings, Appearance, look at "Background before and after the stream"
+  and "Menu glass in the stream". Start a stream with each of Moving and Still. Look at the Starting screen,
+  the menu (is the glass blurred, live, with the right colour; is the text readable over a bright window on
+  the PC?), and the Quitting screen. Then set Menu glass in the stream to Solid, and Reduce motion to On,
+  and look again. Put them back.
+- **U5. The dropped stream (S22, 3 min).** Stream a game. The orchestrator drops the connection. Look at the
+  popup: is the last frame of the stream behind it, frozen and blurred, with the scrim over it, and does it
+  look right? A tap outside does nothing. Press Back: does the Library show the game still running? This is
+  the check that no capture can make: the judgement is yours.
+- **U6. A second device (TV and S22, 4 min).** Start the game on the S22 and Disconnect. On the TV, tap the
+  running game: it resumes with no question. Disconnect on the TV. On the S22, tap the pinned shortcut of the
+  game (or, if you have none, choose Start on another app): does the dialog ask, with Cancel focused? Choose
+  Cancel, then try Join once.
+- **U7. The keyboard and the mouse (S22, 2 min).** With a keyboard and a mouse attached, stream, press
+  Ctrl+Alt+Shift+M and release: does the menu open? Close it. Set "Mouse back and forward buttons" to On, and
+  hold the Back button of the mouse for a second: does the menu open? Press it briefly: does the PC go back?
+  Put the setting back to what it was.
+
+At the end, put the Appearance and Accessibility settings back to the defaults named above, quit the game on
+the S22, and end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
+
+Record the result in this table, one row for each step. Use `pass`, `fail` or `not applicable`, and write
+what you saw in the notes. A `fail` needs a note.
+
+| Step | Device | Expected | Seen | Pass or fail | Notes |
+| --- | --- | --- | --- | --- | --- |
+| U1 Quit and the popup | TV | popup centred and readable; Quitting at once; the Library | | | |
+| U2 The menu without lateral movement | TV | Left and Right do nothing; OK cycles; Quit reached | | | |
+| U3 Disconnect | TV | the screen is readable; "still running" notice | | | |
+| U4 The look | S22 | Moving, Still, Blur, Solid, Reduce motion; readable text | | | |
+| U5 The dropped stream | S22 | last frame frozen and blurred behind the popup; Back to the Library | | | |
+| U6 A second device | TV, S22 | a tap on the running game resumes; the shortcut asks | | | |
+| U7 The keyboard and the mouse | S22 | the chord opens the menu; the Back hold opens it; a short press goes back | | | |
 
 ## 4. Results templates
 

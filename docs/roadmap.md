@@ -367,8 +367,10 @@ acceptance test (UAT) of the same day ran on `20861a28`
      colours. Every status also gets a shape or a text, not colour alone.
 
    The stream follows the text size, the focus outline, high contrast, the
-   palette and reduce motion, read once when the stream starts. The stream gets
-   no glass, because the video is behind it.
+   palette and reduce motion, read once when the stream starts. The stream got
+   no glass then, because the video is behind it; Sprint 15 gives the menu and
+   the popups of the stream glass from a copy of the video
+   ([ADR 0061](adr/0061-glass-and-the-animated-background-in-the-stream.md)).
 4. **TalkBack.** Done (issue #36, merge `c6e4b92a`). The app works with
    TalkBack on a phone and on a TV:
    - labels, headings and traversal order;
@@ -981,81 +983,160 @@ Items:
   play time was recorded. The findings went to
   Sprint 15, to Sprint 17 and to Sprint 19 (the owner first put some of them in the backlog,
   item (d) of the Sprint 14 block, and organized them the same day), and the host
-  crashed twice, the known #204 (see the [host-side items](#host-side-items-luminalshine)).
+  crashed twice, the known #204, since closed as a duplicate of #212 (see the
+  [host-side items](#host-side-items-luminalshine)).
   Wake-on-LAN could not be tested with the PC on Wi-Fi; it needs Ethernet, or Wi-Fi wake
   support, and a sleep that holds.
 
 ### Sprint 15: The stream screens and glass
 
-Planned, not started. On 2026-10-28 the owner moved the Library, Settings and layout items that this
-section held to [Sprint 17](#sprint-17-general-fixes); each says so there. The stream items stay.
+Built in the phase branch `phase/s15-stream-screens`, one merged task per issue
+([#97](https://github.com/magalz/Borealis/issues/97) to
+[#105](https://github.com/magalz/Borealis/issues/105)). The head of the phase was `2e76dfcfb` when this
+was written. The device round and the owner's UAT have not run: their checks are
+[device-validation section 3.29](development/device-validation.md#329-sprint-15-checks) and
+[section 3.30](development/device-validation.md#330-owners-20-minute-uat-sprint-15). On 2026-10-28 the
+owner moved the Library, Settings and layout items that this section held to
+[Sprint 17](#sprint-17-general-fixes); each says so there. The stream items stayed, and the code of each is
+done.
 
-- **Background during the stream start:** the animated background also shows on
-  the Starting screen, with the step text on a glass panel. It stops before the
-  first frame. This changes the Sprint 9 rule that the background is never in a
-  stream.
-  - Risk: on the TV, a background clip and the stream decoder compete for the
-    hardware decoder.
-- **Connecting and disconnecting screens.** Added at the Sprint 10 UAT
-  (2026-10-21). The Quitting screen gets the same treatment as the Starting
-  screen above: translucent over the animated background, with the step text on
-  a blurred glass panel.
-- **In-game menu in the Library's glass style.** Added at the Sprint 10 UAT
-  (2026-10-21). The video is drawn in a `SurfaceView`, which the Library's
-  `GlassHost` cannot blur. A spike compares a blurred `PixelCopy` snapshot of
-  the video, refreshed a few times a second, with tint only. This changes the
-  rule of [ADR 0057](adr/0057-glass-surfaces-and-the-accessibility-settings.md)
-  that the stream has no glass, so it needs a new decision.
-- **Quit confirmation of the stream as a centred popup.** Added at the Sprint 10
-  UAT (2026-10-21). It is a row in the side panel today.
-- **Quit wording in three places.** The choice between the Desktop text and the
-  game text is made in the Library action sheet (`AppActionsSheet.kt`), the
-  stream menu (`QuitConfirmation.kt`) and the conflict dialog
-  (`ConflictDialog.kt`). The strings repeat across `strings_apps.xml`,
-  `strings_menu.xml` and `strings_conflict.xml`, and the Library stores a flag
-  while the stream decides from the name of the app. The popup rewrites the
-  stream's quit confirmation.
-- **A Quit from the user logs an error.** The user's own Quit logs
-  `E Borealis.UPSTREAM: Connection terminated: -1`, and the system logs
-  `Duplicate finish request` for `com.limelight.Game`.
-- **Quit took about 17 s once on 26.10.0-beta.1.** "Quitting `<app>`…" stayed on screen until
-  `/cancel` answered: about 17 s once in the night round of 2026-10-21, and 5.5 to 6.7 s in the
-  morning smoke of the same day, against 5 to 7 s on 26.09.1. The cause is not known, because the
-  client logs nothing in between. Measure it again in this round, and report it upstream if it
-  repeats. The Sprint 14 round did not time the Quit:
-  [section 19](development/device-validation.md#19-results-sprint-14) has no duration of the
-  Quitting screen. It has two other Quit figures: in step 8, on the TV, a launch right after a Quit
-  gave "Launched new game session" about 12 s later; and in B9, on the S22, from Apps, "App quit."
-  was followed 1 s later by "Nothing running".
-- **Indeterminate progress indicators ignore Reduce motion.** `QuittingScreen`, `AddHostScreen` and
-  `PrivacyPane` draw Material's indicators, which do not ask `rememberAnimationsRemoved`. The
-  Quitting screen is redone in this sprint, so it takes the fix here. The Add host and Privacy part
-  moved to [Sprint 17](#sprint-17-general-fixes) (owner, 2026-10-28).
-- **The in-game menu loses its focus on Left or Right.** Found by the owner in the
-  Sprint 12 round (2026-10-24); the owner put it here. Left or Right, on the D-pad or
-  the analog stick, makes the focus outline disappear, and it does not come back until
-  the menu is closed and opened again. It happens often with the analog stick. Check
-  where the focus goes, and whether D4 of the round (keys from the phone not
-  reaching Quit) is the same cause. The Sprint 14 UAT did not report it
-  ([section 19](development/device-validation.md#19-results-sprint-14)).
-- **Second device during a launch.** Found in the Sprint 14 device round (2026-10-28); the
-  owner put it here. The host runs `/launch`, `/resume` and `/cancel` one at a time on its
-  launch worker (#203, [host contract](host-contract/luminalshine.md) 7.3), so a second device
-  waits until the first launch ends. On 26.10.0-beta.1 it then got the "An app is already
-  running" dialog, not the retry of "Another device is starting a stream".
-  Decide whether the same app that the device asked for joins without asking, and the dialog
-  stays for a different app. A yes changes
-  [UC-003](use-cases/0003-join-or-replace-a-running-app.md), where every choice is explicit. See
-  [device-validation section 19](development/device-validation.md#19-results-sprint-14).
-- **Disconnect gives no feedback.** Found in the Sprint 14 UAT (owner, 2026-10-28). After
-  Disconnect from the in-game menu the Library returns at once, and it looks as if nothing
-  happened. Add a "Disconnecting from `<app>`…" screen like the Quitting one (see
-  "Connecting and disconnecting screens" above). See
-  [device-validation section 19](development/device-validation.md#19-results-sprint-14), U1.
-- **A keyboard and mouse combo opens the in-game menu.** Found in the Sprint 14 UAT (owner,
-  2026-10-28), in the keyboard and mouse block on the S22. The menu opens today with Back, a pull
-  of the handle on the phone, or Select and Start held on a pad. The owner wants a combo of the
-  keyboard and the mouse that opens the in-game side menu too. Choose the combo.
+Owner decisions:
+
+- **Gate G2 (2026-10-28), after a live comparison on the TV and the S22.** The in-game menu and its
+  popups get glass from a live copy of the video at a quarter of its size, blurred and refreshed 30 times
+  a second, or a solid panel (Blur or Solid). There is no tint-only option (the owner judged it a
+  nightmare for accessibility) and no frozen copy (very strange and ugly when the video moves). Every
+  screen outside the game shows the user's background, moving, with no option for which screens. Both are
+  Appearance options. [ADR 0061](adr/0061-glass-and-the-animated-background-in-the-stream.md) records the
+  decision, and amends decision 5 of ADR 0056 and decisions 10 and 13 of ADR 0057. The spike that gave the
+  measures (issue #99, branch `spike/s15-stream-glass`) was never merged.
+- **No lateral movement in the in-game menu (2026-10-28).** The owner could not reproduce the focus loss of
+  the Sprint 12 round, and decided that Left and Right do nothing in the menu.
+- **The contrast of the glass (2026-10-29).** The glass is the viewer's own tint and blur (40 percent at 8 dp
+  at Standard, 85 percent at 48 dp at Reduced). The text on it has a halo, the segmented controls sit on a
+  solid container, and the focus outline has a casing. The tint floor of 83 percent of the first version was
+  dropped.
+- **The error of a running stream is a popup (2026-10-29).** It stands over the last frame, frozen and
+  blurred, and the scrim stays over the blurred frame too.
+
+Items, with what each became:
+
+- **Background during the stream start.** Done in #103 (ADR 0061). The Starting screen shows its steps on
+  a glass panel over the user's background, and so do the other screens outside the game: the conflict,
+  the error, Quitting and Disconnecting. The Appearance option "Background before and after the stream" is
+  Moving (the default), Still or Off. The background goes when the phase turns Streaming, not before the
+  first frame: the first frame can come before the connection reports the stream started, so the cut
+  follows the phase. This changes the Sprint 9 rule that the background is never in a stream.
+  - The risk, a background clip competing with the stream decoder for the hardware decoder on the TV, is
+    answered by the clip lifecycle of ADR 0061: a clip style plays only while no stream decoder is
+    configured, is released before the decoder is configured, and shows its still while a decoder is up
+    (Quitting, Disconnecting, or an error before the connection has stopped). A Compose style keeps moving.
+    In the spike the TV showed 0 decoder errors and no start cost beyond the spread of about 2 s between
+    runs. The accessibility rules of ADR 0057 win over both options.
+- **Connecting and disconnecting screens.** Added at the Sprint 10 UAT (2026-10-21). Done in #103 and #97.
+  Quitting, and the new Disconnecting screen, show their text over the background with its halo.
+- **In-game menu in the Library's glass style.** Added at the Sprint 10 UAT (2026-10-21). Done: the spike
+  and ADR 0061 (#99), and #104. The menu, its side panel and the Quit popup draw the copy of the video
+  under the viewer's tint, with the Appearance option "Menu glass in the stream" at Blur (the default) or
+  Solid. The copies stop when the menu closes and in picture-in-picture. ADR 0061 amends decision 10 of
+  [ADR 0057](adr/0057-glass-surfaces-and-the-accessibility-settings.md), which gave the stream no glass.
+- **Quit confirmation of the stream as a centred popup.** Added at the Sprint 10 UAT (2026-10-21). Done in
+  #100. The popup is inside the chrome layer, not a dialog window, and shares `StreamDialog` with the
+  conflict dialog. A tap outside, B and Back close only the popup, and the focus returns to the Quit row.
+- **Quit wording in three places.** Done in #100: `QuitCopy` in the design system is the one source of the
+  wording, for the Library's action sheet, the popup and the conflict dialog.
+- **A Quit from the user logs an error.** Done on the client in #97. The `-1` that follows the user's own
+  Quit is logged at info (`quit stream ended`), skips the connectivity test and shows no error, and every
+  exit asks the system to finish the activity once, so `Duplicate finish request` should be gone (the round
+  checks it on the devices). The host side is
+  [NortheBridge/luminalshine#218](https://github.com/NortheBridge/luminalshine/issues/218): the host
+  disconnects the control stream with no termination message (see the
+  [host contract](host-contract/luminalshine.md), section 7.6).
+- **Quit took about 17 s once on 26.10.0-beta.1.** Partly done. #97 logs the stages of a Quit with their
+  times (`quit accepted`, `quit cancel sent`, `quit cancel answered ms=`, `quit check answered ms=`,
+  `quit stream ended`, `connection stop done ms=`, `activity finished`), and "Quitting `<app>`…" shows from
+  the confirmation. By the host source the wait is the host's: it answers `/cancel` only after it has
+  stopped the sessions, ended the app and restored the display, and which step took the 17 s is not known.
+  The owner filed it as
+  [NortheBridge/luminalshine#217](https://github.com/NortheBridge/luminalshine/issues/217), with the list
+  of what `/cancel` waits on. The stream of that Quit ends with the `-1` of
+  [#218](https://github.com/NortheBridge/luminalshine/issues/218) before the host answers (the item
+  above). The round times it again (3.29, step 1).
+- **Indeterminate progress indicators ignore Reduce motion.** Done for the Quitting and Disconnecting
+  screens, which draw the Borealis loader, and it stands still when animations are removed (#97). The Add
+  host and Privacy part is in [Sprint 17](#sprint-17-general-fixes).
+- **The in-game menu loses its focus on Left or Right.** Found by the owner in the Sprint 12 round
+  (2026-10-24). Done in #98, by a decision and not a fix: the bug did not reproduce, and on 2026-10-28
+  the owner decided that the menu has no lateral movement. Left and Right are consumed, an option row
+  changes its value on OK or A and wraps, and Up and Down reach every row and every Send keys chip, in one
+  order. A touch on a segment still works on the phone. The sequence of D4 (the round pressed 25 Downs, OK,
+  Right, OK on the S22 and 14 Downs on the TV) reaches Quit in an adapted form that two tests pin: Down to
+  Send keys, OK, Right, OK, then Down to Quit. The round checks it on the devices.
+- **Second device during a launch.** Found in the Sprint 14 device round (2026-10-28). Done in #101: a
+  start that finds an app running asks on both paths, the `/serverinfo` path and the 400 path, unless the
+  user chose Resume, Continue or Try again for that app. The audit trail records `entry=asked` or
+  `entry=chosen`. A pinned shortcut or a TV poster for a running app asks now. One risk stays: if another
+  device restarted the app that the Library shows running, Resume enters it without asking, because the
+  host gives a paired client no session id. The host proposal is
+  [discussion #221](https://github.com/NortheBridge/luminalshine/discussions/221). The rule is in the
+  [host contract](host-contract/luminalshine.md), section 7.6. It changes
+  [UC-003](use-cases/0003-join-or-replace-a-running-app.md), where every choice was explicit.
+- **Disconnect gives no feedback.** Found in the Sprint 14 UAT (owner, 2026-10-28). Done in #97: the
+  phase Disconnecting shows "Disconnecting from `<app>`…" for at least about 1 s and waits for the stop
+  for at most 5 s, and then the Library says "Disconnected. `<app>` is still running on the PC.", the way
+  it says "App quit.".
+- **A keyboard and mouse combo opens the in-game menu.** Found in the Sprint 14 UAT (owner, 2026-10-28).
+  Done in #102: Ctrl+Alt+Shift+M opens the menu, consumed before the PC, and the Back button of the mouse
+  held for 1 s opens it too (with "Mouse back and forward buttons" on; a short press still reaches the PC,
+  and the right click that Android delivers as Back does not count). Ctrl+Alt+Shift+Q goes through the
+  session's Disconnect. The stream hint names the chord, and the mouse Back hold when that setting is on.
+  A game that uses the side button as push-to-talk opens the menu after 1 s.
+- **The error of a running stream as a popup over the last frame.** Added by the owner on 2026-10-29. Done
+  in #105. When a stream that showed a frame fails, the error is the shared `StreamDialog` (the message, Try
+  again, Diagnostics and Close, with Wake PC or Pair again where they applied) over one copy of the video
+  taken at the top of `connectionTerminated` and `stageFailed`, before the connectivity test and the stop:
+  on the S22 the decoder is released about 260 ms later and a copy then fails. The user's Quit, a graceful
+  end and the first-frame watchdog get no copy. With no frame, the popup stands on the user's background. A
+  tap outside does nothing, and Back and B close it, to the Library. The panel follows the menu glass
+  rules, and the conflict dialog and the popup over the background get the window blur of ADR 0057
+  decision 8 (a blurred, frozen background and no scrim on API 31 and later).
+
+Known limits of the code, kept as they are (the owner decides whether any of them gets a sprint):
+
+- **Focus outline with Thicker focus outline:** 0.5 dp of its casing is cut by the scroll clip of the side
+  panel at the left and right edges, and at the top and bottom when the menu is scrolled to an end. The
+  ring and 1 dp of casing stay whole, and 3:1 holds. A design-system layout change would remove it.
+- **The halo of the popup's title and body:** its faint tail is cut by the 2 dp bleed of the content layer.
+  It is cosmetic, and the contrast tests are not affected.
+- **A rotation after a failure:** the frozen frame is placed and scaled when it is copied, so a rotation,
+  a split-screen resize or leaving picture-in-picture after the failure leaves it at the old offset. It is
+  rare, and nothing crashes.
+- **A copy that never answers:** the pending state has no time cap; it relies on `PixelCopy` answering
+  every request. If it never did, the popup would stay on black under the scrim with a solid panel, and
+  every action would work. While a copy is pending (tens of ms) the panel is solid; it turns to glass when
+  the frame arrives.
+- **A phone in landscape:** the three or four actions of the popup stack, and with large text the panel
+  scrolls. It is covered by a test and a reference, and the S22 round checks it.
+- **Not measurable in Robolectric:** whether the offscreen layer of the halo is kept across frames (its
+  cost on a TV), bitmap reuse against the hardware renderer, the colour of an HDR copy, and the first copy
+  after the menu opens (129.7 ms on the S22 in the spike). The device round looks at them.
+- **`StreamChromeHost.handleBack`** still handles the Failed phase, which is unreachable while the popup is
+  composed. It is a harmless fallback. Two branches have no test, `FrozenFrame.kt` (the copy worked but the
+  view has no bounds when it ends) and `VideoSource.kt` (a refused `PixelCopy` request); the patch
+  coverage of #105 is 98.7%.
+- **The test fixtures:** other tests that end on a screen outside the game with the default look (the
+  background Moving) have the order hazard that `StreamBackTest` had, and `VideoGlassSpec.kt` repeats the
+  Reduced values (85 percent, 48 dp) that `GlassRules` keeps private. Both are in
+  [Sprint 18](#sprint-18-refactor-of-the-converted-code).
+
+Run: the device round and the owner's UAT. The device round, on the Google TV Streamer with the owner's OK
+and on the S22: Quit several times with the new stage lines and the host log, Disconnect, the menu with no
+lateral movement, the combos, a second device, the background and the glass, and a dropped stream with
+the popup over its frozen last frame. The checks are in
+[device-validation section 3.29](development/device-validation.md#329-sprint-15-checks). The owner's UAT is
+[section 3.30](development/device-validation.md#330-owners-20-minute-uat-sprint-15): about 20 minutes by hand,
+with no sound, that ends with the judgement of the frozen frame, which no capture of the stream can show.
+The results go in a section of the runbook after the round.
 
 ### Sprint 16: fixes of the converted code
 
@@ -1358,7 +1439,13 @@ Planned, not started. Owner decision of 2026-10-28.
     are done;
   - **`MenuChordDetector.update`** (`borealis/stream/.../input/MenuChordDetector.kt`), from the Sprint 9
     quality review: a complexity refactor. Cyclomatic complexity 13 and cognitive complexity 18, seven mutable
-    fields, a repeated expression, and an order dependency with no comment.
+    fields, a repeated expression, and an order dependency with no comment;
+  - **Test fixtures and the Reduced glass values**, from [Sprint 15](#sprint-15-the-stream-screens-and-glass)
+    (the reviews of #104): other tests that end on a screen outside the game with the default look (the
+    background Moving) have the order hazard that `StreamBackTest` had, so consider a background Off
+    default in the test fixtures; and `VideoGlassSpec.kt` (`:borealis:stream`) repeats the Reduced values
+    (85 percent, 48 dp) that `GlassRules` keeps private, with a comment that points at ADR 0057, so keep
+    them in one place.
 - **Method:** behaviour does not change. The characterization tests guide the refactor. A
   refactored place loses its suppression and its marker.
 - **Ends with a device round.**
@@ -1385,7 +1472,9 @@ release. Sprint 19 is hardening and security testing.
 - **AGP version check.** AGP has no new-version notice. Dependabot ignores it until
   it has a single source, and the lint check is off.
 - **LuminalShine wrong-PIN fix, as a contribution to the host.** Added at the
-  Sprint 10 UAT (2026-10-21). Proposed; the owner confirms at planning. On
+  Sprint 10 UAT (2026-10-21). Filed upstream on 2026-10-29 as
+  [NortheBridge/luminalshine#216](https://github.com/NortheBridge/luminalshine/issues/216), where
+  the owner plans to make fixes A and C; the owner confirms the scope at planning. On
   LuminalShine 26.10.0-beta.1, a wrong PIN keeps the pairing session for 5
   minutes, and a retry gets 409 until it expires. The owner saw the same symptom
   again in the Sprint 12 round (2026-10-24): a retry shows a new PIN for a moment,
@@ -2134,20 +2223,36 @@ test is named, none pins the item.
 ## Host-side items (LuminalShine)
 
 These are proposals and known issues in the LuminalShine host. The client works
-without them. The states are as of 2026-10-20. #199, #200 and #203 were merged
+without them. The states are as of 2026-10-29 (read with `gh` that day). #199, #200 and #203 were merged
 on 2026-10-20, and 26.10.0-beta.1 (a prerelease of 2026-10-20) ships them
-(release notes). #194 and #202 are fixed on the host (release notes). The open
-ones are #198, #201, #204 and #205; they were checked again on 2026-10-28 and are still open.
+(release notes). #194 and #202 are fixed on the host (release notes). On 2026-10-29 the owner
+closed #204 (as a duplicate of #212) and #205 (as fixed), and filed five issues, #216 to #220,
+and five discussions in the Ideas category, #221 to #225, from the findings of Borealis. The
+open ones are #198, #201, #212, #214, #216 to #220 and the owner's pull requests #213 and #215
+(#198 and #201 were checked again on 2026-10-29 and are still open).
 
 | Item | Kind | Summary |
 | --- | --- | --- |
 | [NortheBridge/luminalshine#194](https://github.com/NortheBridge/luminalshine/issues/194) | Issue | Stray bytes after a 404 response. Fixed on the host by #200, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/README.md). |
-| [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. See the [host contract](host-contract/README.md). |
+| [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. Open. See the [host contract](host-contract/README.md). |
 | [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. Shipped in 26.10.0-beta.1 (release notes). The client shows it in Sprint 20. |
 | [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Fix for #194. Shipped in 26.10.0-beta.1 (release notes). |
-| [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). |
+| [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). Open. See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). |
 | [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. Fixed on the host by #203, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Fix for #202. Merged on 2026-10-20 and shipped in 26.10.0-beta.1 (release notes). |
-| [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. Seen again twice on 2026-10-28, at 06:58:56 and 09:16:06 (exception `0x20474343`, a minidump each time; the host restarted itself): see [device-validation section 19](development/device-validation.md#19-results-sprint-14). See the [host contract](host-contract/luminalshine.md). |
-| [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. See the [host contract](host-contract/luminalshine.md). |
-| Wrong-PIN lockout on 26.10.0-beta.1 | Finding | After a wrong PIN, the host keeps the pairing session, and every retry gets 409 for up to 5 minutes. Restarting LuminalShine clears it. Seen live on 2026-10-21 and checked in source at `e2662a44`. Not filed upstream yet. See the [host contract](host-contract/luminalshine.md) and [Sprint 19](#sprint-19-secops). |
+| [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. Closed on 2026-10-29 as a duplicate of #212: the same exception (`0x20474343`), at the same offset in `KERNELBASE.dll`, right after the same log line. The crash is not fixed: see #212. It was seen twice on 2026-10-28 on 26.10.0-beta.1, at 06:58:56 and 09:16:06, in the Sprint 14 round ([device-validation section 19](development/device-validation.md#19-results-sprint-14)). See the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. Closed on 2026-10-29 as completed, with a comment: seen on 26.09.1, fixed in 26.10.0 by #188 (a retryable 409 while another client's launch is pending) and #203. The issue is to be reopened if it reproduces on 26.10.1 or later. Borealis keeps its retries (the 3-attempt `/serverinfo` read, the 3 s wait before `/resume` and the single restart after an RTSP -1): 26.09.1 has neither fix, and the race was not tested on a host that has them. See the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#212](https://github.com/NortheBridge/luminalshine/issues/212) | Issue | The host crashes with an unhandled C++ exception right after "Virtual display cleanup: finished" on a client disconnect: 3 times in about 35 disconnects on 2026-10-28 on 26.10.1, and twice that day on 26.10.0-beta.1. The cause, from the minidumps: the display-helper watchdog joins its own thread. Open; the fix is #213. See the [host contract](host-contract/luminalshine.md), section 7.3. |
+| [NortheBridge/luminalshine#213](https://github.com/NortheBridge/luminalshine/pull/213) | PR | The owner's fix for #212: the watchdog no longer joins itself on teardown. Open. |
+| [NortheBridge/luminalshine#214](https://github.com/NortheBridge/luminalshine/issues/214) | Issue | Hardens the display-helper watchdog start and stop: the thread object is not synchronized, and the watchdog's "never reap" rule has no test. Follow-up to #212. Open. |
+| [NortheBridge/luminalshine#215](https://github.com/NortheBridge/luminalshine/pull/215) | PR | The owner's fix for #214, stacked on #213. Open. |
+| [NortheBridge/luminalshine#216](https://github.com/NortheBridge/luminalshine/issues/216) | Issue | Wrong-PIN lockout, filed 2026-10-29 (it was the finding "Wrong-PIN lockout on 26.10.0-beta.1", not filed until then): after a wrong PIN, the host keeps the pairing session, and every retry gets 409 for up to 5 minutes. Restarting LuminalShine clears it. Seen live on 2026-10-21 and 2026-10-24 and checked in source at `dba21a9e` (the lines are the same since 26.10.0-beta.1). The owner plans to fix it: a new phase 1 from the same peer and certificate ends the old exchange (A), and a session stalled after the PIN expires after 30 s (C). Open. See the [host contract](host-contract/luminalshine.md) and [Sprint 19](#sprint-19-secops). |
+| [NortheBridge/luminalshine#217](https://github.com/NortheBridge/luminalshine/issues/217) | Issue | `/cancel` answers 5 to 17 s after a quit, and the client cannot tell a slow quit from a hung one. Filed 2026-10-29 with the list of what `/cancel` waits on. The owner plans to fix it. Open. See the [host contract](host-contract/luminalshine.md), section 7.6, and [Sprint 15](#sprint-15-the-stream-screens-and-glass). |
+| [NortheBridge/luminalshine#218](https://github.com/NortheBridge/luminalshine/issues/218) | Issue | `/cancel` drops the control stream without the termination message, so clients report error -1 for the user's own Quit. Filed 2026-10-29. The owner plans to fix it. Open. Borealis handles the user's own Quit on its side (Sprint 15). See the [host contract](host-contract/luminalshine.md), section 7.6. |
+| [NortheBridge/luminalshine#219](https://github.com/NortheBridge/luminalshine/issues/219) | Issue | The 4:4:4 fallback says it tells the client about the chroma change, but nothing is sent. Filed 2026-10-29; it is proposal P4. The owner starts with the comments. Open. See the [host contract](host-contract/luminalshine.md), sections 9.1 and 20. |
+| [NortheBridge/luminalshine#220](https://github.com/NortheBridge/luminalshine/issues/220) | Issue | The host's `architecture.md` (line 103) says `/cancel` does not pop the pending launch; it does. Filed 2026-10-29. The owner plans to fix it. Open. See the appendix of the [host contract](host-contract/luminalshine.md). |
+| [NortheBridge/luminalshine#221](https://github.com/NortheBridge/luminalshine/discussions/221) | Discussion | Let a paired client know whether the running app is its own session: a launch id, or an "opened by you" flag, in the HTTPS `/serverinfo`. Filed 2026-10-29 (Ideas); proposal P6. It would close the risk that stays after Sprint 15's second-device rule. See the [host contract](host-contract/luminalshine.md), sections 7.6 and 20. |
+| [NortheBridge/luminalshine#222](https://github.com/NortheBridge/luminalshine/discussions/222) | Discussion | An API level and a capability list in `/serverinfo`. Filed 2026-10-29 (Ideas); the rest of proposal P1. |
+| [NortheBridge/luminalshine#223](https://github.com/NortheBridge/luminalshine/discussions/223) | Discussion | PyroWave: honour the client's bitrate as an upper bound. Filed 2026-10-29 (Ideas); proposal P2. |
+| [NortheBridge/luminalshine#224](https://github.com/NortheBridge/luminalshine/discussions/224) | Discussion | PyroWave: a capability attribute for KEEP-frame replenishment. Filed 2026-10-29 (Ideas); proposal P3. |
+| [NortheBridge/luminalshine#225](https://github.com/NortheBridge/luminalshine/discussions/225) | Discussion | Document the launch and resume status codes, and add `Retry-After` to the retryable 409 and 503. Filed 2026-10-29 (Ideas); proposal P5. |

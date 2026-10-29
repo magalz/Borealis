@@ -438,7 +438,7 @@ class InGameMenuTest {
         text(DESKTOP_QUIT).performScrollTo().assertIsDisplayed()
         text("Quit Desktop").performScrollTo().performClick()
 
-        // The rows are hidden under the confirmation, so this is its body, not the row.
+        // The menu is out of reach behind the popup, so this is its body, not the row.
         text("Quit Desktop?").assertIsDisplayed()
         text(DESKTOP_QUIT).assertIsDisplayed()
         assertThat(fixture.intents.calls).isEmpty()
@@ -514,8 +514,10 @@ class InGameMenuTest {
 
         text("Cancel").performClick()
 
+        // The menu is as it was left, scrolled to the Quit row.
         text("Quit Desktop?").assertDoesNotExist()
-        text("Back to stream").assertIsDisplayed()
+        text("Quit Desktop").assertIsDisplayed()
+        text("Back to stream").assertExists()
         assertThat(fixture.intents.calls).isEmpty()
     }
 

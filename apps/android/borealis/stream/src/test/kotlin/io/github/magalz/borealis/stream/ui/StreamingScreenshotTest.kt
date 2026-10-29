@@ -6,13 +6,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -134,6 +137,31 @@ class StreamingScreenshotTest {
         composeRule.onNodeWithText("Quit Hades II").performScrollTo().performClick()
 
         shoot("menu_phone_quit-confirm-game")
+    }
+
+    /** On a TV the popup has the focus on Cancel, the safe button, as the D-pad opens it. */
+    @Test
+    @Config(qualifiers = TV)
+    fun menuTvQuitConfirmFocused() {
+        composeRule.setChromeInKeyboardMode(FormFactor.Tv) {
+            Stream { Layer(aStreaming(Panel.MENU, touchMode = null, gamepadMouse = false)) }
+        }
+        composeRule.onNodeWithText("Quit Desktop").performScrollTo().requestFocus()
+        composeRule.onNodeWithText("Quit Desktop").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        shoot("menu_tv_quit-confirm_focused")
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun menuHandheldQuitConfirmFocused() {
+        composeRule.setChromeInKeyboardMode(FormFactor.Handheld) {
+            Stream { Layer(aStreaming(Panel.MENU, OverlayMode.COMPACT, null, true, info)) }
+        }
+        composeRule.onNodeWithText("Quit Desktop").performScrollTo().requestFocus()
+        composeRule.onNodeWithText("Quit Desktop").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        shoot("menu_handheld_quit-confirm_focused")
     }
 
     @Test

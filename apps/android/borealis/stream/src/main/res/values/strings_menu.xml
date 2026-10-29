@@ -40,11 +40,7 @@
     <string name="stream_menu_disconnect_consequence_unknown">The app keeps running on the PC</string>
     <!-- %1$s is the app. -->
     <string name="stream_menu_quit">Quit %1$s</string>
-    <!-- %1$s is the app, or the running app when its name is not known. One sentence a line. -->
-    <string name="stream_menu_quit_consequence">Closes %1$s on the PC.\nUnsaved progress in it is lost.</string>
-    <!-- The same for Desktop, which has no program to close. -->
-    <string name="stream_menu_quit_consequence_desktop">Ends the stream.\nThe display and controls go back to the PC.</string>
-    <!-- The title of the confirmation, %1$s is the app. Its body is the consequence of the row. -->
+    <!-- The title of the Quit popup, %1$s is the app. Its body is the consequence of the row, from QuitCopy of the design system. -->
     <string name="stream_menu_quit_confirm">Quit %1$s?</string>
     <string name="stream_menu_quit_confirm_cancel">Cancel</string>
     <string name="stream_menu_quit_confirm_quit">Quit</string>

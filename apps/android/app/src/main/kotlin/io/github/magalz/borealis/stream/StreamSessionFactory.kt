@@ -92,8 +92,7 @@ object StreamSessionFactory {
      * how the background behaves outside the game, and the style that the viewer chose for it. A
      * stored id that no choice has stands for the default of its setting.
      */
-    @JvmStatic
-    fun visuals(snapshot: SettingsSnapshot): StreamVisuals =
+    internal fun visuals(snapshot: SettingsSnapshot): StreamVisuals =
         StreamVisuals(
             menuGlass =
                 when (snapshot[Settings.STREAM_MENU_GLASS]) {

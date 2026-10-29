@@ -122,6 +122,20 @@ internal constructor(
     }
 
     /**
+     * Puts [runningAppId] to the user at once, with no re-read of `/serverinfo` first: for an app
+     * that `/serverinfo` has just shown to the connection. Allows one resolution per launch, like
+     * [resolve], and returns the same.
+     */
+    @Throws(IOException::class, XmlPullParserException::class)
+    fun askAbout(
+        runningAppId: Int,
+        names: AppNameLookup,
+        requested: RequestedApp,
+        actions: ConflictActions,
+        host: String? = null,
+    ): Boolean = false
+
+    /**
      * Runs the resolution and returns whether the launch went through; false also means that the
      * user cancelled (the connection then ends quietly). Blocks, so call it off the main thread.
      */

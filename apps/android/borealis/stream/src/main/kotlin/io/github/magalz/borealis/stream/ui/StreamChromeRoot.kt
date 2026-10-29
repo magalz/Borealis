@@ -67,9 +67,8 @@ internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, l
             } else {
                 // The failure of a stream that ran stands on its last frame once the copy of it is
                 // asked for. The host of the background and the popup stay the same in all that the
-                // failure goes through (no copy, a pending one, the frame, a failed copy): only
-                // what
-                // is drawn behind the popup changes, so the popup is not made again.
+                // failure goes through (no copy, a pending one, the frame, a failed copy). Only
+                // what is drawn behind the popup changes, so the popup is not made again.
                 val frozen = LocalFrozenFrame.current
                 val failed = frozen != null && phase is StreamPhase.Failed
                 OutsideGameBackground(

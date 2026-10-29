@@ -8,8 +8,9 @@ of the text that stands on the background, and what the icons and the text field
 on it keep. It then records the high contrast and colour-blind palettes, what the
 screen readers and the touch targets need, and a WCAG 2.2 checklist. Sprint 11
 adds two sections before the checklist: the candidates of the accent colour
-(Accent candidates) and the halo in each candidate font (Halo per font). The
-tool is in [`design/accessibility/`](../../design/accessibility/README.md); its
+(Accent candidates) and the halo in each candidate font (Halo per font). Sprint 15
+adds a third, The stream: glass, halo and focus, which says what the settings do in a
+stream and what a screen reader and a D-pad find in it. The tool is in [`design/accessibility/`](../../design/accessibility/README.md); its
 README says how to run it again. The decisions that follow from the numbers are in
 [ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md).
 
@@ -19,6 +20,10 @@ README says how to run it again. The decisions that follow from the numbers are 
   holds the hash of each clip. The two sections of Sprint 11, on the accent
   candidates and on the halo per font, were measured on 2026-10-21 and carry
   their own revision.
+- The section on the stream (Sprint 15) was written on 2026-10-29 at `2e76dfcfb`. Its
+  numbers come from the commits of the video glass and from
+  [ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md); the
+  tool's own check of them is `VideoGlassHaloTest` in `design/accessibility/test_contrast.py`.
 - Revision measured: `fedc4ce0`. It widens the grid of the glass candidates of
   `fec048bb`, the first measurement. The frames are those of that first
   measurement, taken with the app code of `109e7dff`, the Sprint 9 merge: the
@@ -623,7 +628,9 @@ equal. `BackdropKicker` is a label in it, and `EmptyState` and the name under a 
   seen on API 28 to 30.
 - **When.** Over a background of any style, which is every one but the plain page. The Transparency
   Off and High contrast draw it too, because the background is still behind the text. Outside a
-  host, as in the Stream, there is no background and no halo.
+  host there is no background and no halo. The stream was that case; since Sprint 15 its screens
+  outside the game stand on the background, in a host, and their text has this halo (see The
+  stream: glass, halo and focus, below).
 - **The ink.** `BackdropInk` says what the text was: `Ink3` and `Ink4` are `ink-2` where there is
   a halo and the tokens, as they were, where there is not. `Ink` and `Ink2` are the tokens. The
   colours are those of the theme, so under High contrast they are the high contrast ones.
@@ -1749,6 +1756,128 @@ Known limitations of the density:
   Compact or Dense on a phone, only a few letters remain: "Des…" or "Stea…" on a 4-column phone.
 - The Continue card breaks words by character at the largest text with Wider on a phone.
 
+## The stream: glass, halo and focus (Sprint 15)
+
+Sprint 15 puts the animated background and the glass into the stream
+([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md)). The stream
+draws its chrome over a hardware video, so two things differ from the Library: the
+glass behind the in-game menu is a live blurred copy of the video, which is any frame,
+and the screens outside the game stand on the background of the user. This section
+records what the settings of ADR 0057 do there, how the text keeps its contrast, and what
+a D-pad and a screen reader find in the popups and the menu. The numbers of the
+contrast are in the ADR (decision 10, and the measurements of 2026-10-29).
+
+### What the settings do in the stream
+
+The stream reads the look, the two stream options of Appearance (Menu glass in the
+stream, and Background before and after the stream) and the background style once, when
+it starts, so a change shows in the next stream. The battery saver is the exception: it
+is followed live.
+
+| Setting or device | The menu and its Quit popup | The screens outside the game and their dialogs | The error popup over the last frame |
+| --- | --- | --- | --- |
+| Menu glass on Solid | A solid panel. No copy of the video is made. | No effect. | The panel is solid. The frame is still blurred. |
+| Background on Still or Off | No effect. | Still: one frame of the style, and no player. Off: the plain page, so the panels are solid and a dialog keeps its scrim. | No effect: the frame is behind the popup, not the background. |
+| Transparency Off | A solid panel, no copy. | The background is drawn, the panel of the steps is solid, and a dialog keeps its scrim over it: nothing blurs or holds the background. | The frame shows sharp under the scrim. The panel is solid. |
+| High contrast | As Transparency Off. | As Transparency Off. | As Transparency Off. |
+| Reduce motion | A solid panel, no copy. | Every style is held still. A clip makes no player. | No change: the frame is still and was copied once. |
+| Battery saver | A solid panel, no copy, followed live while the menu is open. | As Reduce motion, followed live. | No change. |
+| API 28 to 30 | A solid panel, no copy (nothing blurs). | The panel of the steps is the Reduced tint on the sharp background. A dialog keeps its scrim and its solid panel. | The frame shows sharp under the scrim. The panel is solid. |
+
+Where the host blurs (API 31 or later, Transparency Standard or Reduced, no High
+contrast, and a background style that is not Off), the conflict dialog and the error
+popup over the background blur the background alone, at 24 dp, hold it still, draw no
+scrim and take the tint of the glass, with the tint floor of the background as in the
+Library (ADR 0057, decision 4). The popup over the frozen frame keeps its scrim, also over
+a blurred frame. The glass over the video, which is the menu and the popups over the frame,
+takes the tint and the blur of the viewer's Transparency and is never raised. Standard is
+Glass tint and Glass blur (40 % and 8 dp by default), and Reduced is 85 % and 48 dp.
+
+A clip style shows its still, and not its video, while a decoder of the stream is held. That
+is from the stage Preparing the display until the connection has stopped.
+
+The listener of the battery saver for the menu glass is registered only where there can be
+a glass: the menu glass on Blur, a stream view to copy and API 31 or later. The Solid option
+and API 28 to 30 register none (`MenuGlassRulesTest`, `MenuGlassApi30Test`). The background
+outside the game follows the battery saver on every screen that shows it, whatever the API
+level or the option, so those screens listen while one of them is composed.
+
+### The halo and the casing over the video glass
+
+The video is any frame, so the text on the glass does not stand on the colour behind it:
+it stands on a halo. The lightest backdrop that a video can leave is a white frame under
+the glass of 40 %. Over it ink is 2.1:1 and ink-2 1.5:1 without a halo.
+
+- **The halo.** A halo of 3 dp, blurred by 2 dp, 100 % opaque, drawn in three passes (a
+  stroke, a stroke of half the width and the glyphs filled), on every text and every icon
+  of the menu and of the popups over the glass. The halo of a text on the background (the
+  Halo section above) is 80 % and one pass: it leaves the danger ink of the Quit row at
+  4.40:1 on a TV in the tool's model. One stroke also leaves a hole at the dot of an i or
+  a bullet, 3.7:1 for the red of Quit; the second stroke and the filled glyphs cover it.
+  `TextHaloTest` reads the ring in what is drawn, and `VideoGlassHaloTest` runs the tool's
+  model over a white frame and a busy bright one.
+- **The colours.** Ink, ink-2, accent-soft and danger-ink keep 4.5:1 on the ring. Ink-3
+  and ink-4 are ink-2 on the glass. The label of a primary button, which has the accent fill,
+  stands on its fill and has no halo.
+- **Segmented controls.** They sit on a container in the `surface` colour, in the colours
+  of the look and with no halo, so a label never stands on the video. The unselected label
+  (ink-3) and the selected one (accent-soft on the accent tint) keep 4.5:1 on it.
+- **The focus outline.** Over the lightest glass the accent-soft outline is 1.39:1 and the
+  thicker one, in ink, 2.1:1, where WCAG 1.4.11 asks 3:1. Under the halo the outline has a
+  casing: a stroke 1.5 dp wider on each side, in the `page` colour at the opacity of the
+  halo. With it the outline keeps 3:1 (`FocusOverGlassTest`, `MenuGlassCasingTest`). With
+  Thicker focus outline, 0.5 dp of the casing is cut by the scroll clip of the side panel
+  at its edges; the ring and 1 dp of the casing stay whole.
+- **Not covered.** The faint tail of the halo is cut at the 2 dp bleed of the layer that
+  holds the text of the popup, which is cosmetic. The tests read pixels on Robolectric,
+  not a device. The colour of an HDR copy on the S22 was not judged, and no round has
+  recorded how the frozen frame behind the error popup looks.
+- **Text on a panel.** The steps of the Starting screen, the conflict dialog and the error
+  popup over the background stand on a panel, with the text colours of the glass and no
+  halo. The title, the host name and the note of the Starting screen, and the texts of
+  Quitting and Disconnecting, stand on the background and have the halo of the Library. The
+  checks of the Accessibility Test Framework run these screens on the plain page.
+
+### The popups: focus and screen reader
+
+The conflict dialog, the error popup and the Quit popup are one component of the chrome
+layer, `StreamDialog`, so they follow the same rules (`StreamDialogTest`,
+`StreamDialogBackTest`).
+
+- **Focus.** The first button has the initial focus: Cancel in the conflict dialog and the
+  Quit popup, Try again in the error popup. The focus stays in the popup in every
+  direction: Left and Right move between the buttons and stop at the last, and Up and Down
+  never leave the popup. A phone opens a popup in touch mode, where a button cannot
+  take the focus. There the first key of a D-pad, a pad or a keyboard puts it on the
+  first button, and not on what is behind.
+- **Back and B.** Back, the Back of the system and the gamepad B button call the dismissal
+  (Cancel, or Close for the error popup) and stop there, so they reach neither the menu
+  behind nor the host. A tap on the scrim is Cancel, except on the error popup, which has
+  no Cancel and ignores a tap outside it.
+- **What is said.** The popup is announced by its title as a pane title. The title is the
+  only heading. The title and the body, with the warning of the conflict dialog, are one
+  polite live region, so a screen reader reads them when the popup opens. The raw code and
+  the port hint of the error popup are under it, outside that region, and a screen reader
+  reaches them as it moves on. Three buttons or more stack on a phone.
+- **What is out of reach.** While the Quit popup is open the menu behind it stays drawn
+  but has no focus and no semantics: neither the D-pad nor a screen reader enters it.
+- **Quitting and Disconnecting.** Their text is a polite live region. The loader stands
+  still with Reduce motion. Back leaves Quitting and does nothing during Disconnecting.
+
+### The menu has no lateral movement
+
+The owner decided on 2026-10-28 that the focus never moves sideways in the in-game menu
+(`InGameMenuFocusTest`, `UsbChromeMenuFocusTest`).
+
+- Left and Right do nothing on every row and chip, from a D-pad, a keyboard and the stick of
+  a pad on the USB driver. The chrome takes the keys, so none reaches the game or the PC.
+- Up and Down walk every focusable of the menu in the order it is drawn, and stop at the
+  first and the last. The chips of Send keys come in reading order, over their lines.
+- OK, Enter or A on an option row selects the next option and wraps to the first. The
+  segments of the row are not focus stops. A tap selects a segment, and so does a screen
+  reader, which hears "Change `<row>`" on the row and the group label after the name of a
+  segment.
+
 ## WCAG 2.2 checklist
 
 The criteria that Sprint 10 touched, and how each is met. Level AA is the target of every screen,
@@ -1758,21 +1887,21 @@ and AAA (1.4.6) for the text of High contrast.
 | --- | --- | --- |
 | 1.3.1 Info and Relationships | A | Headings, pane titles, one sentence for a host card and a pairing step, a role and an Expanded or Collapsed state for the sections of the phone Settings (`*TalkBackTest`). |
 | 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`), and the accent from the status colours (`AccentPaletteVariantsTest`). The Online shadow of Sprint 11 is a contrast aid, not a status cue. The Running badge of a cover is the dot and its label when the label fits on one line. On a phone with 4 columns the label never fits, so the badge is the dot alone: its shape and presence, the tile's TalkBack state "Running" and the Apps header "`<app>` running" carry the status. |
-| 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), and in the Add host field (Tables L and M). |
+| 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), in the Add host field (Tables L and M), and over the video glass of the stream through its halo (the stream section). |
 | 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
 | 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal, Wide and Wider, and at 2.0 Wider is drawn as Wide, with a dialog and a line in the row that say so (see text spacing: the limit at a very large font). |
 | 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast, and the Online dot with its shadow: 5.68:1 over the brightest host-card glass (3.79:1 without it, today's palette). The Apps title dot on the animated background is not measured (a known limitation, see the status dot). |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
-| 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. Progress indicators are not covered yet (roadmap, Sprints 15 and 17). |
+| 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. In the stream the same holds outside the game, the glass of the menu makes no copy of the video with Reduce motion or the battery saver, and the loader of Quitting and Disconnecting stands still with Reduce motion. The other progress indicators are not covered yet (roadmap, Sprint 17). |
 | 2.4.3 Focus Order | A | The traversal order of every screen is tested (`readingOrder`), and the focus goes back to the card that had it after Back from Apps. |
 | 2.4.6 Headings and Labels | AA | Headings on every screen title and section label. |
-| 2.4.7 Focus Visible | AA | The Borealis focus outline, 3 dp in accent-soft, and 5 dp in `ink` with Thicker focus outline and High contrast. |
+| 2.4.7 Focus Visible | AA | The Borealis focus outline, 3 dp in accent-soft, and 5 dp in `ink` with Thicker focus outline and High contrast, with a casing of the `page` colour over the video glass of the stream. |
 | 2.5.3 Label in Name | A | The accessible name of a control is its visible label (the Add host button, an accepted duplicate name). |
 | 2.5.8 Target Size (Minimum) | AA | 48 dp targets on a phone and a handheld (`TouchTargetTest`). A TV has no touch screen. |
 | 3.3.1 Error Identification | A | The error under a text field is in text, in `danger-ink`, inside the glass of the field, and is announced when it appears. |
 | 4.1.2 Name, Role, Value | A | The ATF checks every main screen for names, roles and duplicate names; the groups of Settings are tabs, and the segments have the label of their group. |
-| 4.1.3 Status Messages | AA | Polite live regions for pairing outcomes, Add host errors, the notices of the snackbars and the Quitting text. |
+| 4.1.3 Status Messages | AA | Polite live regions for pairing outcomes, Add host errors, the notices of the snackbars, the Quitting and Disconnecting texts and the title and body of a popup of the stream. |
 
 Not assessed here: 1.4.10 Reflow and 2.4.11 Focus Not Obscured. TalkBack on a
 device is a step of the runbook, and the halo and the tint-only glass have not been seen on API 28

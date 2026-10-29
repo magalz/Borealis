@@ -121,6 +121,34 @@ internal class MouseBackHoldTest : MotionTestBase() {
         assertThat(buttonsSent()).isEmpty()
     }
 
+    @Test
+    fun `a hold that the loss of the window focus ends does not open the menu`() {
+        streamingWithNavigationButtons()
+        mouse(MotionEvent.ACTION_DOWN, MotionEvent.BUTTON_BACK)
+        idle(500)
+
+        // The release of the button may come while another window has the focus.
+        rig.game.onWindowFocusChanged(false)
+        idle(1_000)
+
+        assertThat(panel()).isEqualTo(Panel.NONE)
+        // No Back is left pressed: a release that is never seen is not a short press later.
+        assertThat(rig.field<Int>("lastButtonState") and MotionEvent.BUTTON_BACK).isEqualTo(0)
+        assertThat(buttonsSent()).isEmpty()
+    }
+
+    @Test
+    fun `a hold that the stop of the activity ends does not open the menu`() {
+        streamingWithNavigationButtons()
+        mouse(MotionEvent.ACTION_DOWN, MotionEvent.BUTTON_BACK)
+        idle(500)
+
+        rig.stop()
+        idle(1_000)
+
+        assertThat(panel()).isEqualTo(Panel.NONE)
+    }
+
     // ----- A short press -----
 
     @Test

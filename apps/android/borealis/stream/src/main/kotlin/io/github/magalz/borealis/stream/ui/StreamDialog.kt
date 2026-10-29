@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,18 +73,19 @@ internal class StreamDialogAction(
 
 /**
  * A dialog inside the stream chrome: a scrim over the whole layer and, centred on it, a panel with
- * the surface, the compact width and the padding of a `BorealisDialog`, the [title], the [content]
- * and the [actions] as buttons. The conflict dialog and the Quit popup of the menu are made from
- * it.
+ * the surface, the [width] (the compact one unless the dialog says otherwise) and the padding of a
+ * `BorealisDialog`, the [title], the [content], the [details] and the [actions] as buttons. The
+ * conflict dialog, the error popup and the Quit popup of the menu are made from it.
  *
  * It is not a `BorealisDialog`, on purpose. That one is a platform dialog window, and the stream
  * host owns the input: `StreamChromeHost.dispatchKeyEvent` routes the gamepad and the keys to the
  * chrome root, which a dialog window would bypass (gamepad B, the D-pad focus and the Back rule).
  *
  * The scrim takes the touches, so nothing under the dialog is reached, and a tap on it calls
- * [onDismiss], as Cancel does; a tap in the panel does not. The first of [actions] has the initial
- * focus, so it is the safe one (Cancel): a stray OK changes nothing. The focus stays in the dialog,
- * Up, Down, Left and Right move between the buttons and stop at the last. The gamepad B button, the
+ * [onDismiss], as Cancel does, unless [dismissOnScrimTap] is off and the tap does nothing (a dialog
+ * that has no Cancel); a tap in the panel does not. The first of [actions] has the initial focus,
+ * so it is the safe one (Cancel): a stray OK changes nothing. The focus stays in the dialog, Up,
+ * Down, Left and Right move between the buttons and stop at the last. The gamepad B button, the
  * Back key and Back of the system call [onDismiss] and are used up here, so neither reaches what is
  * under the dialog nor the host's callback, which closes the open panel.
  *
@@ -94,8 +96,10 @@ internal class StreamDialogAction(
  *
  * The panel is announced by its [title]. The title and the [content] are one polite live region, so
  * a screen reader reads the body with the title when the dialog opens; the title is the only
- * heading. Three buttons or more stack on a phone, where they do not fit side by side. [modifier]
- * applies to the panel.
+ * heading. The [details] come under it and are not read out when the dialog opens: a screen reader
+ * reaches them as it moves on. Three buttons or more stack on a phone, where they do not fit side
+ * by side; elsewhere the buttons go to the next row when they do not fit in one. [modifier] applies
+ * to the panel.
  */
 @Composable
 internal fun StreamDialog(
@@ -118,7 +122,9 @@ internal fun StreamDialog(
             .background(colors.scrim)
             // Before the insets: the scrim takes the tap over all it draws, the strips of the
             // system bars too, and nothing under it takes it.
-            .pointerInput(onDismiss) { detectTapGestures { onDismiss() } }
+            .pointerInput(onDismiss, dismissOnScrimTap) {
+                detectTapGestures { if (dismissOnScrimTap) onDismiss() }
+            }
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .onGamepadB(onDismiss)
             .onBackKey(onDismiss)
@@ -130,7 +136,7 @@ internal fun StreamDialog(
         Column(
             modifier
                 .semantics { paneTitle = title }
-                .width(BorealisDimens.dialogWidth(DialogWidth.Compact, maxWidth))
+                .width(BorealisDimens.dialogWidth(width, maxWidth))
                 .then(
                     if (glass == null) Modifier.background(colors.surface, shape)
                     else Modifier.videoGlassSurface(glass, shape)
@@ -143,7 +149,7 @@ internal fun StreamDialog(
                 .padding(BorealisTokens.Space.DialogPadding),
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
-            DialogContent(title, actions, glass != null, content)
+            DialogContent(title, actions, glass != null, details, content)
         }
     }
 }
@@ -162,6 +168,7 @@ private fun DialogContent(
     title: String,
     actions: List<StreamDialogAction>,
     onGlass: Boolean,
+    details: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     OnVideoGlass(LocalVideoGlass.current) {
@@ -179,11 +186,13 @@ private fun DialogContent(
                 )
                 content()
             }
+            details()
             Actions(actions)
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Actions(actions: List<StreamDialogAction>) {
     val firstFocus = remember { FocusRequester() }
@@ -204,7 +213,12 @@ private fun Actions(actions: List<StreamDialogAction>) {
     if (stacked) {
         Column(verticalArrangement = Arrangement.spacedBy(BUTTON_GAP)) { buttons() }
     } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) { buttons() }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+            verticalArrangement = Arrangement.spacedBy(BUTTON_GAP),
+        ) {
+            buttons()
+        }
     }
 }
 

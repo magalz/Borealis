@@ -133,7 +133,10 @@ internal constructor(
         requested: RequestedApp,
         actions: ConflictActions,
         host: String? = null,
-    ): Boolean = false
+    ): Boolean {
+        used.set(true)
+        return !isCancelled.asBoolean && askAndAct(runningAppId, names, requested, actions, host)
+    }
 
     /**
      * Runs the resolution and returns whether the launch went through; false also means that the

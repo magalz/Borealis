@@ -108,7 +108,11 @@ internal constructor(
         return waitInSlices(SETTLE_WAIT_MS)
     }
 
-    /** A same-app `/resume` was accepted. Not for Join from the conflict dialog. */
+    /**
+     * A `/resume` of the app that this start asked for was accepted, whether the user chose Resume
+     * in the Library or answered Join in the dialog. Not for a Join of another app: a restart would
+     * not find that app again.
+     */
     fun resumeAccepted(isGfe: Boolean) {
         resumeAcceptedAt = if (isGfe) NONE else clock()
     }

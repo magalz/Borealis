@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
@@ -153,10 +154,16 @@ private fun MenuPanel(
     quitFocus: FocusRequester,
     onQuit: () -> Unit,
 ) {
+    // Over the glass the content is on an offscreen layer of its own: the text and its halos are
+    // drawn into it once and the layer is kept, so the glass behind it, drawn again at each copy
+    // of the video, composites it and does not draw them again. A layer with no offscreen buffer
+    // would be replayed. On the solid surface nothing behind it changes, and it is drawn as it was.
+    val onGlass = LocalVideoGlass.current != null
     Column(
-        // On a layer of its own: the glass behind it is drawn again at each copy of the video,
-        // and the text, with its halos, is not.
-        Modifier.graphicsLayer {}
+        Modifier.graphicsLayer {
+                compositingStrategy =
+                    if (onGlass) CompositingStrategy.Offscreen else CompositingStrategy.Auto
+            }
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End)
             )

@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.pointer.pointerInput
@@ -142,10 +143,19 @@ internal fun StreamDialog(
         ) {
             // The text colours and the halo of the video glass, the same composition without it.
             OnVideoGlass(glass) {
-                // On a layer of its own: the glass behind is drawn again at each copy of the
-                // video, and the text, with its halos, is not.
+                // Over the glass the content is on an offscreen layer of its own: the text and its
+                // halos are drawn into it once and the layer is kept, so the glass behind it, drawn
+                // again at each copy of the video, composites it and does not draw them again. On
+                // the solid surface nothing behind it changes, and it is drawn as it was.
                 Column(
-                    Modifier.graphicsLayer {},
+                    Modifier.graphicsLayer {
+                        compositingStrategy =
+                            if (glass != null) {
+                                CompositingStrategy.Offscreen
+                            } else {
+                                CompositingStrategy.Auto
+                            }
+                    },
                     verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
                 ) {
                     Column(

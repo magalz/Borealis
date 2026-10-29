@@ -74,7 +74,8 @@ fun Text(
         val halo = rememberTextHalo(onTextLayout)
         MaterialText(
             text = text,
-            modifier = if (halo == null) modifier else modifier.then(halo.modifier),
+            modifier =
+                if (halo == null) modifier else halo.semantics.then(modifier).then(halo.draw),
             color = color,
             autoSize = autoSize,
             fontSize = fontSize,
@@ -151,7 +152,7 @@ fun Text(
     val halo = rememberTextHalo(onTextLayout)
     MaterialText(
         text = spaced,
-        modifier = if (halo == null) modifier else modifier.then(halo.modifier),
+        modifier = if (halo == null) modifier else halo.semantics.then(modifier).then(halo.draw),
         color = color,
         autoSize = autoSize,
         fontSize = fontSize,

@@ -1,11 +1,6 @@
 package io.github.magalz.borealis.stream.ui.glass
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
-import android.os.PowerManager
 import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +30,6 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -47,6 +41,7 @@ import io.github.magalz.borealis.designsystem.components.LocalTextHalo
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
+import io.github.magalz.borealis.designsystem.theme.rememberPowerSaveMode
 import kotlinx.coroutines.delay
 
 /** The copies of the video are asked for 30 times a second (ADR 0061, decision 1). */
@@ -125,7 +120,14 @@ internal fun rememberVideoGlass(enabled: Boolean): VideoGlass? {
     val source = LocalVideoSource.current
     val look = LocalBorealisLook.current
     val colors = LocalBorealisColors.current
-    val batterySaver = rememberBatterySaver()
+    // Listens only where there can be a glass: the Solid option, no video, and an API below 31
+    // never register a receiver.
+    val batterySaver =
+        if (enabled && source != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            rememberPowerSaveMode()
+        } else {
+            false
+        }
     val animationsRemoved = rememberAnimationsRemoved()
     val spec =
         remember(look, colors, batterySaver, animationsRemoved) {
@@ -211,34 +213,4 @@ internal fun OnSolidSurface(content: @Composable (Modifier) -> Unit) {
     ) {
         content(container)
     }
-}
-
-/**
- * Whether the battery saver is on, now and while this is composed: read once and again each time
- * the system says it changed. The design system has the same for its backgrounds, and keeps it to
- * itself.
- */
-@Composable
-private fun rememberBatterySaver(): Boolean {
-    val context = LocalContext.current
-    val power = remember(context) { context.getSystemService(PowerManager::class.java) }
-    var saving by remember(power) { mutableStateOf(power.isPowerSaveMode) }
-    DisposableEffect(context, power) {
-        val receiver =
-            object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    saving = power.isPowerSaveMode
-                }
-            }
-        // A system broadcast: only the system can send it, and a receiver that only listens for
-        // those needs no export flag.
-        context.registerReceiver(
-            receiver,
-            IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED),
-        )
-        // It may have changed between the first read and the registration.
-        saving = power.isPowerSaveMode
-        onDispose { context.unregisterReceiver(receiver) }
-    }
-    return saving
 }

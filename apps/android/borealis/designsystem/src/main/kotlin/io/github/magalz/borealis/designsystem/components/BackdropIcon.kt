@@ -28,7 +28,10 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.LocalGlassScene
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 
-/** Set on the node of a [BackdropIcon]: true where the halo is drawn behind its icon. */
+/**
+ * Set on the node of a [BackdropIcon], with or without a halo under [LocalTextHalo]: true where the
+ * halo is drawn behind its icon.
+ */
 val BackdropIconHalo = SemanticsPropertyKey<Boolean>("BackdropIconHalo")
 
 private var SemanticsPropertyReceiver.backdropIconHalo by BackdropIconHalo

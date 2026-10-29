@@ -28,6 +28,9 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
  * stroke and the opacity of the style, and a node that has it says so through [BackdropTextHalo] or
  * [BackdropIconHalo].
  *
+ * A [BackdropText] under it draws its own halo and the one of its [Text], so two: a screen that
+ * sets the hook has no use for a [BackdropText] under it.
+ *
  * A screen sets it over a surface that shows a picture it does not know and cannot measure, as the
  * stream does over the glass on its video: the text there keeps its contrast on the halo and not on
  * what is behind it. A control that sits on a solid surface of its own sets it back to null. The
@@ -35,8 +38,16 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
  */
 val LocalTextHalo = staticCompositionLocalOf<TextHaloStyle?> { null }
 
-/** What a [Text] under [LocalTextHalo] adds to its own: the halo to draw behind it. */
-internal class TextHalo(val modifier: Modifier, val onTextLayout: (TextLayoutResult) -> Unit)
+/**
+ * What a [Text] under [LocalTextHalo] adds to its own: the [semantics] that say it has a halo,
+ * which go before the modifier of the caller, as a [BackdropText] has them, so that a modifier that
+ * clears them leaves the halo in them, and the [draw] of the halo, which goes after it.
+ */
+internal class TextHalo(
+    val semantics: Modifier,
+    val draw: Modifier,
+    val onTextLayout: (TextLayoutResult) -> Unit,
+)
 
 /**
  * The halo of a [Text] that has one, or null where [LocalTextHalo] has none. The halo is drawn from
@@ -48,13 +59,10 @@ internal fun rememberTextHalo(onTextLayout: ((TextLayoutResult) -> Unit)?): Text
     val page = LocalBorealisColors.current.page
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     return TextHalo(
-        Modifier.semantics { backdropTextHalo = true }
-            .drawBehind {
-                layout?.let { with(BackdropHalo) { drawHalo(it, page, style) } }
-            },
-        {
-            layout = it
-            onTextLayout?.invoke(it)
-        },
-    )
+        Modifier.semantics { backdropTextHalo = true },
+        Modifier.drawBehind { layout?.let { with(BackdropHalo) { drawHalo(it, page, style) } } },
+    ) {
+        layout = it
+        onTextLayout?.invoke(it)
+    }
 }

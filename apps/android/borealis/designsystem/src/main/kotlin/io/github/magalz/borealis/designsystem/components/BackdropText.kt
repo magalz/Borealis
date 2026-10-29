@@ -46,7 +46,10 @@ enum class BackdropInk {
     Ink4,
 }
 
-/** Set on the node of a [BackdropText]: true where the halo is drawn behind its text. */
+/**
+ * Set on the node of a [BackdropText], and of any [Text] under [LocalTextHalo]: true where the halo
+ * is drawn behind its text.
+ */
 val BackdropTextHalo = SemanticsPropertyKey<Boolean>("BackdropTextHalo")
 
 internal var SemanticsPropertyReceiver.backdropTextHalo by BackdropTextHalo

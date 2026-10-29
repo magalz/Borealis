@@ -15,6 +15,7 @@ import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.BorealisDialog
 import io.github.magalz.borealis.designsystem.components.DialogAction
 import io.github.magalz.borealis.designsystem.components.Text
+import io.github.magalz.borealis.designsystem.copy.QuitCopy
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisType
@@ -143,8 +144,7 @@ private fun quitConsequence(
             stringResource(R.string.apps_action_quit_and_start_desktop_consequence)
         action == AppAction.QUIT_AND_START ->
             stringResource(R.string.apps_action_quit_and_start_consequence, running)
-        desktop -> stringResource(R.string.apps_action_quit_desktop_consequence)
-        else -> stringResource(R.string.apps_action_quit_consequence, app)
+        else -> QuitCopy.consequence(app, desktop)
     }
 
 /**

@@ -3,9 +3,11 @@ package io.github.magalz.borealis.stream.ui.menu
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
@@ -31,7 +33,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -62,16 +63,18 @@ private val HEADER_PADDING_BOTTOM = 8.dp
  * The in-game menu (UC-004): a side panel over the stream with the header "<app> · <host>" (the
  * host alone when the app is not known) and the approved rows. Back to stream has the initial
  * focus. A tap on the scrim, the gamepad B button and Back close it, from any row or chip; B and
- * Back close the quit confirmation first. The panel takes Back itself so that Compose does not use
- * it to move the focus out of a chip; the host's back callback is for when nothing in the panel has
- * the focus.
+ * Back close the Quit popup first (it takes them itself). The panel takes Back itself so that
+ * Compose does not use it to move the focus out of a chip; the host's back callback is for when
+ * nothing in the panel has the focus.
  *
  * The rows have no lateral movement: Left and Right do nothing, Up and Down walk every focusable in
  * one vertical order, and OK on an option row selects its next option (see [menuKeys]). The
  * segments of an option row are for a tap only.
  *
- * Quit asks first, inside the panel, because it ends the stream for everyone and closes a game (its
- * texts say which). Disconnect does not: the app keeps running.
+ * Quit asks first, in a popup centred over the menu in the chrome layer, because it ends the stream
+ * for everyone and closes a game (its texts say which). The menu stays drawn behind the popup but
+ * is out of reach of the focus, the touch and the screen reader. Disconnect does not ask: the app
+ * keeps running.
  */
 @Composable
 internal fun InGameMenu(
@@ -88,54 +91,57 @@ internal fun InGameMenu(
         confirmingQuit = false
         backFromConfirmation = true
     }
-    // The rows come back after the confirmation: the focus goes to where it was, on Quit.
+    // The menu comes back after the popup: the focus goes to where it was, on Quit.
     LaunchedEffect(backFromConfirmation) {
         if (backFromConfirmation) {
             quitFocus.requestFocus()
             backFromConfirmation = false
         }
     }
-    val back = { if (confirmingQuit) cancelQuit() else intents.closePanel() }
     val header =
         if (appName.isBlank()) hostName
         else stringResource(R.string.stream_menu_header, appName, hostName)
-    SidePanel(
-        onDismiss = intents::closePanel,
-        modifier = Modifier.onGamepadB(back).onBackKey(back),
-    ) {
-        Column(
-            Modifier.windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Vertical + WindowInsetsSides.End
-                    )
-                )
-                .semantics { paneTitle = header }
+    Box(Modifier.fillMaxSize()) {
+        SidePanel(
+            onDismiss = intents::closePanel,
+            modifier =
+                Modifier.onGamepadB(intents::closePanel)
+                    .onBackKey(intents::closePanel)
+                    .inertWhen(confirmingQuit),
         ) {
-            Text(
-                header,
-                Modifier.padding(
-                        start = HEADER_PADDING_HORIZONTAL,
-                        top = HEADER_PADDING_TOP,
-                        end = HEADER_PADDING_HORIZONTAL,
-                        bottom = HEADER_PADDING_BOTTOM,
+            Column(
+                Modifier.windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Vertical + WindowInsetsSides.End
+                        )
                     )
-                    .semantics { heading() },
-                style = MaterialTheme.typography.titleMedium,
-            )
-            if (confirmingQuit) {
-                QuitConfirmation(appName, onCancel = cancelQuit, onQuit = intents::quitApp)
+                    .semantics { paneTitle = header }
+            ) {
+                Text(
+                    header,
+                    Modifier.padding(
+                            start = HEADER_PADDING_HORIZONTAL,
+                            top = HEADER_PADDING_TOP,
+                            end = HEADER_PADDING_HORIZONTAL,
+                            bottom = HEADER_PADDING_BOTTOM,
+                        )
+                        .semantics { heading() },
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                // The rows stay composed under the popup, out of reach, so what the user
+                // opened in them is still open when the popup goes.
+                MenuRows(
+                    appName,
+                    phase,
+                    perf,
+                    intents,
+                    quitFocus,
+                    onQuit = { confirmingQuit = true },
+                )
             }
-            // The rows stay composed under the confirmation, hidden, so that what the user opened
-            // in them is still open when the confirmation goes.
-            MenuRows(
-                appName,
-                phase,
-                perf,
-                intents,
-                quitFocus,
-                hidden = confirmingQuit,
-                onQuit = { confirmingQuit = true },
-            )
+        }
+        if (confirmingQuit) {
+            QuitConfirmation(appName, onCancel = cancelQuit, onQuit = intents::quitApp)
         }
     }
 }
@@ -147,7 +153,6 @@ private fun MenuRows(
     perf: PerfSnapshot?,
     intents: StreamIntents,
     quitFocus: FocusRequester,
-    hidden: Boolean,
     onQuit: () -> Unit,
 ) {
     val firstFocus = remember { FocusRequester() }
@@ -155,7 +160,7 @@ private fun MenuRows(
     Column(
         // The focus outline of a row reaches BorealisDimens.outlineReach outside it,
         // thickOutlineReach when it is the thicker one: the padding and the gap of a list hold it.
-        Modifier.hiddenWhen(hidden).menuKeys(focusManager).padding(BorealisDimens.listPadding),
+        Modifier.menuKeys(focusManager).padding(BorealisDimens.listPadding),
         verticalArrangement = Arrangement.spacedBy(BorealisDimens.listGap),
     ) {
         MenuRow(
@@ -243,20 +248,15 @@ private fun moveFocusOnKeyDown(
 }
 
 /**
- * Takes no space, draws nothing, takes no touch and no focus, and is not announced, while [hidden];
- * what is inside stays composed and keeps its state.
+ * Takes no focus from outside and is not announced, while [inert]; it stays drawn and composed and
+ * keeps its state. The popup over it has the touch, with its scrim. A search for the focus that
+ * would enter it is cancelled: `canFocus = false` on a group does not reach what is inside.
  */
-private fun Modifier.hiddenWhen(hidden: Boolean): Modifier =
-    if (!hidden) {
-        this
-    } else {
-        clearAndSetSemantics {}
-            .focusProperties { canFocus = false }
-            .layout { measurable, constraints ->
-                measurable.measure(constraints)
-                layout(0, 0) {}
-            }
-    }
+private fun Modifier.inertWhen(inert: Boolean): Modifier = focusProperties {
+    onEnter = { if (inert) cancelFocusChange() }
+}
+    .focusGroup()
+    .then(if (inert) Modifier.clearAndSetSemantics {} else Modifier)
 
 /** A hairline between what changes the stream and what ends the session. */
 @Composable

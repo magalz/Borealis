@@ -41,6 +41,9 @@ private var SemanticsPropertyReceiver.backdropIconHalo by BackdropIconHalo
  * [Icon]. The halo is drawn also where the glass is Off and with High contrast, for the background
  * is still behind the icon. An icon on a glass surface does not use it: the glass covers that.
  *
+ * Under [LocalTextHalo] the halo is drawn over any background and at the stroke and the opacity
+ * that it says: the icon is then on a glass over a picture that nothing measures.
+ *
  * [imageVector] has to be drawn with strokes, as the icons of [BorealisIcons] are, and the icon is
  * square. The node says through [BackdropIconHalo] whether the halo is drawn.
  */
@@ -51,10 +54,14 @@ fun BackdropIcon(
     modifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current,
 ) {
-    val halo = LocalGlassScene.current.style != BackgroundStyle.Off
+    val style = LocalTextHalo.current
+    val halo = LocalGlassScene.current.style != BackgroundStyle.Off || style != null
     val page = LocalBorealisColors.current.page
     val strokes = remember(imageVector) { imageVector.strokes() }
-    val behind = if (halo) Modifier.iconHalo(imageVector, strokes, page) else Modifier
+    val behind =
+        if (halo)
+            Modifier.iconHalo(imageVector, strokes, page, style ?: BackdropHalo.OVER_BACKGROUND)
+        else Modifier
     Icon(
         imageVector,
         contentDescription,
@@ -95,23 +102,27 @@ private fun ImageVector.strokes(): IconStrokes {
  * a blur of the mask, which Skia gives the sigma that it gives the shadow of a text. The icon is
  * drawn over it.
  */
-private fun Modifier.iconHalo(icon: ImageVector, strokes: IconStrokes, page: Color): Modifier =
-    drawWithCache {
-        val scale = size.minDimension / icon.viewportWidth
-        val outline =
-            Path().apply {
-                addPath(strokes.path)
-                transform(Matrix().apply { scale(scale, scale) })
-            }
-        val halo =
-            Paint().apply {
-                style = PaintingStyle.Stroke
-                strokeWidth = strokes.width * scale + 2 * BackdropHalo.STROKE_DP.dp.toPx()
-                strokeCap = StrokeCap.Round
-                strokeJoin = StrokeJoin.Round
-                color = BackdropHalo.color(page)
-                asFrameworkPaint().maskFilter =
-                    BlurMaskFilter(BackdropHalo.BLUR_DP.dp.toPx(), BlurMaskFilter.Blur.NORMAL)
-            }
-        onDrawBehind { drawIntoCanvas { it.drawPath(outline, halo) } }
-    }
+private fun Modifier.iconHalo(
+    icon: ImageVector,
+    strokes: IconStrokes,
+    page: Color,
+    haloStyle: TextHaloStyle,
+): Modifier = drawWithCache {
+    val scale = size.minDimension / icon.viewportWidth
+    val outline =
+        Path().apply {
+            addPath(strokes.path)
+            transform(Matrix().apply { scale(scale, scale) })
+        }
+    val halo =
+        Paint().apply {
+            style = PaintingStyle.Stroke
+            strokeWidth = strokes.width * scale + 2 * haloStyle.strokeDp.dp.toPx()
+            strokeCap = StrokeCap.Round
+            strokeJoin = StrokeJoin.Round
+            color = BackdropHalo.color(page, haloStyle)
+            asFrameworkPaint().maskFilter =
+                BlurMaskFilter(BackdropHalo.BLUR_DP.dp.toPx(), BlurMaskFilter.Blur.NORMAL)
+        }
+    onDrawBehind { drawIntoCanvas { it.drawPath(outline, halo) } }
+}

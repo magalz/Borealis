@@ -7,7 +7,10 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.PowerManager
 import android.view.View
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import io.github.magalz.borealis.designsystem.components.LocalTextHalo
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
@@ -172,6 +176,41 @@ internal fun Modifier.videoGlassSurface(glass: VideoGlass, shape: Shape): Modifi
     return clip(shape)
         .onGloballyPositioned { position = it.positionInRoot() }
         .drawBehind { glass.drawBackdrop(this, position, surface) }
+}
+
+/**
+ * What is drawn on the [glass]: the text colours of the glass, and the halo of its text. Where
+ * [glass] is null it is the colours of the look and no halo, so the content is the same composition
+ * with and without the glass, and a change of the battery saver does not compose it again.
+ */
+@Composable
+internal fun OnVideoGlass(glass: VideoGlass?, content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalBorealisColors provides (glass?.spec?.colors ?: LocalBorealisColors.current),
+        LocalTextHalo provides (if (glass == null) null else VIDEO_GLASS_HALO),
+        content = content,
+    )
+}
+
+/**
+ * A control that sits on the `surface` colour whatever is behind the menu, as a segmented control
+ * does: [content] gets the modifier that puts the surface behind it, in the shape of the control,
+ * and draws in the colours of the look with no halo, so that its labels never stand on the video.
+ * Without a glass the surface is already solid, so the modifier is empty.
+ */
+@Composable
+internal fun OnSolidSurface(content: @Composable (Modifier) -> Unit) {
+    val glass = LocalVideoGlass.current
+    val colors = glass?.spec?.surfaceColors ?: LocalBorealisColors.current
+    val container =
+        if (glass == null) Modifier
+        else Modifier.background(colors.surface, MaterialTheme.shapes.medium)
+    CompositionLocalProvider(
+        LocalBorealisColors provides colors,
+        LocalTextHalo provides null,
+    ) {
+        content(container)
+    }
 }
 
 /**

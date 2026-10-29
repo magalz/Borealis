@@ -40,6 +40,8 @@ import io.github.magalz.borealis.designsystem.theme.emOf
  * in the app uses (the inline content of an [AnnotatedString]): add one when a caller needs it.
  * Text fields have no word spacing: addresses and PINs have no spaces.
  *
+ * Under [LocalTextHalo] the text has the halo of a [BackdropText], at the opacity that it says.
+ *
  * Mind the end of a wrapped line. Android lets a space at the end of a line hang past the width,
  * and it wraps the line as if the extra spacing of that space were not there, so a line that ends
  * in a space at Wide or Wider can draw up to one word spacing (0.16 or 0.5 em) past the box of the
@@ -69,9 +71,10 @@ fun Text(
     style: TextStyle = LocalTextStyle.current,
 ) {
     if (LocalBorealisLook.current.textSpacing == TextSpacing.Normal || ' ' !in text) {
+        val halo = rememberTextHalo(onTextLayout)
         MaterialText(
             text = text,
-            modifier = modifier,
+            modifier = if (halo == null) modifier else modifier.then(halo.modifier),
             color = color,
             autoSize = autoSize,
             fontSize = fontSize,
@@ -86,7 +89,7 @@ fun Text(
             softWrap = softWrap,
             maxLines = maxLines,
             minLines = minLines,
-            onTextLayout = onTextLayout,
+            onTextLayout = halo?.onTextLayout ?: onTextLayout,
             style = style,
         )
     } else {
@@ -145,9 +148,10 @@ fun Text(
             val letterEm = emOf(own, size) ?: 0f
             remember(text, spacing, letterEm) { text.withWordSpacing(letterEm + spacing.wordEm) }
         }
+    val halo = rememberTextHalo(onTextLayout)
     MaterialText(
         text = spaced,
-        modifier = modifier,
+        modifier = if (halo == null) modifier else modifier.then(halo.modifier),
         color = color,
         autoSize = autoSize,
         fontSize = fontSize,
@@ -162,7 +166,7 @@ fun Text(
         softWrap = softWrap,
         maxLines = maxLines,
         minLines = minLines,
-        onTextLayout = onTextLayout,
+        onTextLayout = halo?.onTextLayout ?: onTextLayout,
         style = style,
     )
 }

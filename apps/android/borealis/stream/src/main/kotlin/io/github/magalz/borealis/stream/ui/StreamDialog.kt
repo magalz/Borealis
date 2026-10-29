@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -33,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -56,6 +56,7 @@ import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.glass.LocalVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.OnVideoGlass
 import io.github.magalz.borealis.stream.ui.glass.videoGlassSurface
 import kotlinx.coroutines.flow.filter
 
@@ -139,22 +140,29 @@ internal fun StreamDialog(
                 .padding(BorealisTokens.Space.DialogPadding),
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
-            // The colours that keep 4.5:1 over the video glass, the same composition without it.
-            CompositionLocalProvider(LocalBorealisColors provides (glass?.spec?.colors ?: colors)) {
+            // The text colours and the halo of the video glass, the same composition without it.
+            OnVideoGlass(glass) {
+                // On a layer of its own: the glass behind is drawn again at each copy of the
+                // video, and the text, with its halos, is not.
                 Column(
-                    Modifier.semantics(mergeDescendants = true) {
-                        liveRegion = LiveRegionMode.Polite
-                    },
+                    Modifier.graphicsLayer {},
                     verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
                 ) {
-                    Text(
-                        title,
-                        Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    content()
+                    Column(
+                        Modifier.semantics(mergeDescendants = true) {
+                            liveRegion = LiveRegionMode.Polite
+                        },
+                        verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
+                    ) {
+                        Text(
+                            title,
+                            Modifier.semantics { heading() },
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        content()
+                    }
+                    Actions(actions)
                 }
-                Actions(actions)
             }
         }
     }

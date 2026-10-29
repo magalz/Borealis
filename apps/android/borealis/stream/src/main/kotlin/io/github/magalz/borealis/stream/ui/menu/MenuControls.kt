@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.magalz.borealis.designsystem.components.BackdropIcon
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.Chip
 import io.github.magalz.borealis.designsystem.components.MenuRow
@@ -37,6 +37,7 @@ import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.Shortcuts
+import io.github.magalz.borealis.stream.ui.glass.OnSolidSurface
 import io.github.magalz.borealis.stream.ui.overlay.rememberPerfFormat
 
 private val CHIP_GAP_HORIZONTAL = 8.dp
@@ -128,14 +129,18 @@ private fun <T> OptionRow(
         value = label(selected),
         onClickLabel = stringResource(R.string.stream_menu_change_option, title),
         trailing = {
-            SegmentedControl(
-                options = options,
-                selected = selected,
-                label = label,
-                onSelect = onSelect,
-                groupLabel = title,
-                focusable = false,
-            )
+            // On the glass of the video the control keeps the solid surface behind its segments.
+            OnSolidSurface { solid ->
+                SegmentedControl(
+                    options = options,
+                    selected = selected,
+                    label = label,
+                    onSelect = onSelect,
+                    modifier = solid,
+                    groupLabel = title,
+                    focusable = false,
+                )
+            }
         },
     )
 }
@@ -223,7 +228,7 @@ private val EXPAND_MARK_SIZE = 20.dp
  */
 @Composable
 private fun ExpandMark(open: Boolean) {
-    Icon(
+    BackdropIcon(
         if (open) BorealisIcons.ChevronDown else BorealisIcons.ChevronRight,
         contentDescription = null,
         modifier = Modifier.size(EXPAND_MARK_SIZE),

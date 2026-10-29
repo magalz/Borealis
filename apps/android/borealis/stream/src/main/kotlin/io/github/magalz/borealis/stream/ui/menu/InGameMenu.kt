@@ -29,6 +29,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -57,6 +58,7 @@ import io.github.magalz.borealis.stream.ui.common.appLabel
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.glass.LocalVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.OnVideoGlass
 import io.github.magalz.borealis.stream.ui.glass.recordsVideoBackdrop
 import io.github.magalz.borealis.stream.ui.glass.rememberVideoGlass
 import io.github.magalz.borealis.stream.ui.glass.videoGlassSurface
@@ -124,12 +126,10 @@ internal fun InGameMenu(
                         .inertWhen(confirmingQuit),
                 panelBackground = glass?.let { Modifier.videoGlassSurface(it, RectangleShape) },
             ) {
-                // The same colours whatever the glass is, so that nothing in the panel is composed
-                // again, and loses its focus and its state, when the battery saver changes it.
-                CompositionLocalProvider(
-                    LocalBorealisColors provides
-                        (glass?.spec?.colors ?: LocalBorealisColors.current)
-                ) {
+                // The same composition whatever the glass is, so that nothing in the panel is
+                // composed again, and loses its focus and its state, when the battery saver
+                // changes it.
+                OnVideoGlass(glass) {
                     MenuPanel(header, appName, phase, perf, intents, quitFocus) {
                         confirmingQuit = true
                     }
@@ -154,7 +154,10 @@ private fun MenuPanel(
     onQuit: () -> Unit,
 ) {
     Column(
-        Modifier.windowInsetsPadding(
+        // On a layer of its own: the glass behind it is drawn again at each copy of the video,
+        // and the text, with its halos, is not.
+        Modifier.graphicsLayer {}
+            .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End)
             )
             .semantics { paneTitle = header }

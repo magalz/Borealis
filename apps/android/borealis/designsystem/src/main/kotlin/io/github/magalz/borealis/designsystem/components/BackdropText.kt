@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.semantics.SemanticsPropertyKey
@@ -47,7 +49,7 @@ enum class BackdropInk {
 /** Set on the node of a [BackdropText]: true where the halo is drawn behind its text. */
 val BackdropTextHalo = SemanticsPropertyKey<Boolean>("BackdropTextHalo")
 
-private var SemanticsPropertyReceiver.backdropTextHalo by BackdropTextHalo
+internal var SemanticsPropertyReceiver.backdropTextHalo by BackdropTextHalo
 
 /**
  * The halo behind a text on the animated background: the glyphs widened by [STROKE_DP], blurred by
@@ -67,26 +69,60 @@ internal object BackdropHalo {
     private const val PERCENT = 100f
     private const val BOTH_SIDES = 2
 
-    /** The colour of the halo over the page colour [page]: [page] at [OPACITY_PERCENT]. */
-    fun color(page: Color): Color = page.copy(alpha = OPACITY_PERCENT / PERCENT)
+    /** The halo of a [BackdropText]: [STROKE_DP] wide at [OPACITY_PERCENT]. */
+    val OVER_BACKGROUND = TextHaloStyle(OPACITY_PERCENT / PERCENT, STROKE_DP, filled = false)
 
-    /** Draws the halo of the text that [layout] laid out, in [page], behind it. */
-    fun DrawScope.drawHalo(layout: TextLayoutResult, page: Color) {
+    /**
+     * The colour of the halo over the page colour [page]: [page] at the opacity of [style], which
+     * is [OPACITY_PERCENT] where the text is on the background, and what a screen asks of
+     * [LocalTextHalo] where it is on something else.
+     */
+    fun color(page: Color, style: TextHaloStyle = OVER_BACKGROUND): Color =
+        page.copy(alpha = style.opacity)
+
+    /** Draws the halo of the text that [layout] laid out, in [page] with [style], behind it. */
+    fun DrawScope.drawHalo(
+        layout: TextLayoutResult,
+        page: Color,
+        style: TextHaloStyle = OVER_BACKGROUND,
+    ) {
         // The shadow of a stroked copy of the text, which has no colour of its own, is the halo: a
         // stroke of twice the width widens each glyph by the width, and the shadow blurs it. The
         // shadow layer of a paint is drawn on every API level, where a blur effect is not (API 31).
-        val shadow = Shadow(color(page), Offset.Zero, BLUR_DP.dp.toPx())
+        val shadow = Shadow(color(page, style), Offset.Zero, BLUR_DP.dp.toPx())
         val stroke =
-            Stroke(BOTH_SIDES * STROKE_DP.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+            Stroke(
+                BOTH_SIDES * style.strokeDp.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+            )
         // The paragraph is painted and not drawn with drawText: drawText clips to the size of the
         // layout unless the overflow is visible, and the halo is outside it.
         drawIntoCanvas { canvas ->
-            layout.multiParagraph.paint(
-                canvas,
-                color = Color.Transparent,
-                shadow = shadow,
-                drawStyle = stroke,
-            )
+            val paint = { drawStyle: DrawStyle ->
+                layout.multiParagraph.paint(
+                    canvas,
+                    color = Color.Transparent,
+                    shadow = shadow,
+                    drawStyle = drawStyle,
+                )
+            }
+            paint(stroke)
+            if (style.filled) {
+                // A stroke wider than a shape is wide has a hole where the shape is: the stroker
+                // winds the inner side of the outline the other way, and it cancels the outer
+                // side. The dot of an i, a period or a bullet then has almost no halo at its
+                // edge. A stroke of half the width has a hole of a third the size, and the glyph
+                // filled covers that.
+                paint(
+                    Stroke(
+                        stroke.width / BOTH_SIDES,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round,
+                    )
+                )
+                paint(Fill)
+            }
         }
     }
 }

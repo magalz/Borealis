@@ -659,13 +659,17 @@ class VideoGlassHaloTest(unittest.TestCase):
     """The text on the glass over the stream video (ADR 0061, decision 4), measured by the tool.
 
     The glass is the viewer's 40 percent of `surface` over the video, and the video is any frame.
-    The text on it has a halo, the halo of the text on a background but at the opacity of 100 %.
-    This takes the lightest frame there is, a white one, and a busy bright one of squares of white
-    and black, lays the glass of the app on them (a blur of 8 dp on the copy, which is a fourth of
-    the video, and the tint), and asks the tool's own model of the halo what the text keeps over
-    its ring: the least ratio over every colour of the frame with every alpha of the ring, as
-    `halo` takes it. The segmented controls are on the `surface` colour, which no frame reaches.
-    `MenuGlassHaloTest` and `TextHaloTest` of the app read the same in what is drawn.
+    The text on it has a halo, the halo of the text on a background (3 dp wide, a blur of 2 dp) but
+    100 % opaque. This takes the lightest frame there is, a white one, and a busy bright one of
+    squares of white and black, lays the glass of the app on them (a blur of 8 dp on the copy, which
+    is a fourth of the video, and the tint), and asks the tool's own model of the halo what the text
+    keeps over its ring: the least ratio over every colour of the frame with every alpha of the
+    ring, as `halo` takes it. The segmented controls are on the `surface` colour, which no frame
+    reaches.
+
+    The model dilates the glyphs, so a small shape, the dot of an i or a bullet, has its halo whole
+    in it. Drawn with one stroke it has a hole, and the app draws it in three passes so that it has
+    none: `TextHaloTest` of the app reads the ring in what is drawn, for the strings of the menu.
     """
 
     TINT = 0.40
@@ -691,13 +695,28 @@ class VideoGlassHaloTest(unittest.TestCase):
             for name, frame in (("white", white), ("busy", busy))
         }
 
+    @staticmethod
+    def ring_alphas(text, device, stroke, blur, opacity):
+        """The alpha of a halo on each pixel of the ring of a text style, for any stroke.
+
+        `halo_geometry` has the grid only, up to 3 dp; this is the same computation for one halo.
+        """
+        density = contrast.device_density(device)
+        sigma = contrast.blur_sigma(max(contrast.HALO_BLURS_DP) * density)
+        reach = math.ceil(stroke * density + contrast.HALO_REACH_SIGMAS * sigma)
+        pad = reach + contrast.HALO_RING_PX + 1
+        ring = contrast.ring_mask(contrast.glyph_mask(text, device, pad=pad))
+        rows, columns = np.nonzero(ring)
+        box = (slice(rows.min(), rows.max() + 1), slice(columns.min(), columns.max() + 1))
+        widened = contrast.glyph_mask(text, device, stroke, pad)
+        return opacity * contrast.halo_alpha(widened, blur, 1.0, density)[box][ring[box]]
+
     def worst(self, config):
         """The least ratio of each text colour with `config` over every frame, device and style."""
         found = {}
         for device in self.DEVICES:
             for text in contrast.HALO_TEXTS:
-                geometry = contrast.halo_geometry(text, device)
-                alphas = geometry.alphas[geometry.configs.index(config)]
+                alphas = self.ring_alphas(text, device, *config)
                 for colours in self.frames.values():
                     for token in self.TEXTS:
                         ratio = contrast.halo_worst_ratio(
@@ -706,6 +725,14 @@ class VideoGlassHaloTest(unittest.TestCase):
                         found[token] = min(found.get(token, ratio), ratio)
         return found
 
+    def test_the_ring_of_a_halo_is_what_the_tool_works_out_for_the_grid(self):
+        for device in self.DEVICES:
+            geometry = contrast.halo_geometry("body", device)
+            expected = geometry.alphas[geometry.configs.index((3, 2, 1.0))]
+            np.testing.assert_allclose(
+                self.ring_alphas("body", device, 3, 2, 1.0), expected, atol=1e-6
+            )
+
     def test_every_text_keeps_4_5_over_the_lightest_glass_with_the_halo(self):
         for token, ratio in self.worst(self.HALO).items():
             with self.subTest(token=token):
@@ -713,7 +740,7 @@ class VideoGlassHaloTest(unittest.TestCase):
 
     def test_without_a_halo_the_text_falls_short_over_it(self):
         # The check can fail: ink is 2.1:1 over the glass of 40 % over white, ink-2 1.5:1.
-        for token, ratio in self.worst(contrast.HALO_NONE).items():
+        for token, ratio in self.worst((0, 2, 0.0)).items():
             with self.subTest(token=token):
                 self.assertLess(ratio, 4.5)
 
@@ -724,14 +751,6 @@ class VideoGlassHaloTest(unittest.TestCase):
         self.assertLess(worst["danger-ink"], 4.5)
         self.assertGreaterEqual(worst["ink"], 4.5)
         self.assertGreaterEqual(worst["ink-2"], 4.5)
-
-    def test_it_is_the_smallest_candidate_of_the_grid_that_keeps_all_four(self):
-        passing = [
-            config
-            for config in contrast.halo_configs()
-            if min(self.worst(config).values()) >= 4.5 * contrast.HALO_MARGIN
-        ]
-        self.assertEqual(passing[0], self.HALO)
 
     def test_the_labels_of_a_segmented_control_keep_4_5_over_their_solid_container(self):
         # An unselected label is ink-3 on the surface; the selected one is accent-soft over the

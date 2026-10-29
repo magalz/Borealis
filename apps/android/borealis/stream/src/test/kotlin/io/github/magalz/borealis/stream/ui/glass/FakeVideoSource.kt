@@ -7,13 +7,14 @@ import kotlin.math.max
 /**
  * A video that a test copies from: a real `PixelCopy` needs a surface and a GPU, which Robolectric
  * has not. A copy ends when the test says so ([finish]), or at once ([completing]); when it works,
- * it paints [frameColor] over the whole bitmap, as the video would fill it, and not before, so a
- * bitmap that a copy has not finished is a bitmap that was never filled.
+ * it paints [frameColor] over the whole bitmap (or what [paint] draws), as the video would fill it,
+ * and not before, so a bitmap that a copy has not finished is a bitmap that was never filled.
  */
 internal class FakeVideoSource(
     var bounds: VideoBounds? = VIDEO,
     var frameColor: Int = android.graphics.Color.WHITE,
     var completing: Boolean = false,
+    var paint: ((Bitmap) -> Unit)? = null,
 ) : VideoSource {
     /** The bitmap of every copy asked for, in order. */
     val requests = mutableListOf<Bitmap>()
@@ -40,7 +41,7 @@ internal class FakeVideoSource(
         mostInFlight = max(mostInFlight, inFlight)
         val end = { ok: Boolean ->
             if (ok) {
-                into.eraseColor(frameColor)
+                paint?.invoke(into) ?: into.eraseColor(frameColor)
                 filled += into
             }
             inFlight--

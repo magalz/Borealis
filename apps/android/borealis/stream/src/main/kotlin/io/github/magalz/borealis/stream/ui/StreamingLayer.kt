@@ -35,12 +35,14 @@ private val HINT_TOP_OFFSET = 44.dp
  * With nothing open and the overlay off it draws nothing but the handle.
  */
 @Composable
+@Suppress("UnusedParameter") // Not wired yet.
 fun StreamingLayer(
     appName: String,
     hostName: String,
     phase: StreamPhase.Streaming,
     perf: PerfSnapshot?,
     intents: StreamIntents,
+    videoGlass: Boolean = true,
 ) {
     val formFactor = LocalFormFactor.current
     BoxWithConstraints(Modifier.fillMaxSize()) {

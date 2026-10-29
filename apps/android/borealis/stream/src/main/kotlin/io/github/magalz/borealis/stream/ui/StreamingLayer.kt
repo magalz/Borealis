@@ -79,6 +79,7 @@ fun StreamingLayer(
             Modifier.align(Alignment.TopCenter)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(top = HINT_TOP_OFFSET),
+            mouseNavButtons = phase.mouseNavButtons,
         )
     }
 }

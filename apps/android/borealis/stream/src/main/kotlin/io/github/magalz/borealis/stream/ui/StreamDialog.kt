@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
+import io.github.magalz.borealis.designsystem.components.LocalTextHalo
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.glass.rememberPanelGlass
@@ -215,14 +216,22 @@ private fun Actions(actions: List<StreamDialogAction>) {
     val stacked =
         actions.size > MAX_SIDE_BY_SIDE_ON_A_PHONE && LocalFormFactor.current == FormFactor.Phone
     val width = if (stacked) Modifier.fillMaxWidth() else Modifier
+    val halo = LocalTextHalo.current
     val buttons: @Composable () -> Unit = {
         actions.forEachIndexed { index, action ->
-            BorealisButton(
-                action.label,
-                action.onClick,
-                if (index == 0) width.initialFocus(firstFocus) else width,
-                action.style,
-            )
+            // The label of a filled button stands on the fill, not on the glass: a halo around it
+            // would smudge it.
+            CompositionLocalProvider(
+                LocalTextHalo provides
+                    if (action.style == BorealisButtonStyle.Primary) null else halo
+            ) {
+                BorealisButton(
+                    action.label,
+                    action.onClick,
+                    if (index == 0) width.initialFocus(firstFocus) else width,
+                    action.style,
+                )
+            }
         }
     }
     if (stacked) {

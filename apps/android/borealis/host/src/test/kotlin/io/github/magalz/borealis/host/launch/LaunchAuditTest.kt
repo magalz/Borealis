@@ -151,7 +151,11 @@ class LaunchAuditTest {
 
     // --- the user's choice in the running-app conflict ---
 
-    private fun resolve(choice: ConflictChoice, running: Int = 5): Boolean {
+    private fun resolve(
+        choice: ConflictChoice,
+        running: Int = 5,
+        resumeChosen: Boolean = false,
+    ): Boolean {
         val conflicts = LaunchConflicts({ false }, {}, 0L, { 0L }, {})
         return conflicts.resolve(
             { running },
@@ -164,6 +168,7 @@ class LaunchAuditTest {
                 quitAndRelaunch = { true },
             ),
             host = host,
+            resumeChosen = resumeChosen,
         )
     }
 
@@ -178,21 +183,51 @@ class LaunchAuditTest {
                 Triple(
                     AuditType.LAUNCH_CONFLICT,
                     AuditOutcome.SUCCESS,
-                    "choice=join running_app=5",
+                    "choice=join running_app=5 entry=asked",
                 ),
                 Triple(
                     AuditType.LAUNCH_CONFLICT,
                     AuditOutcome.SUCCESS,
-                    "choice=quit running_app=5",
+                    "choice=quit running_app=5 entry=asked",
                 ),
                 Triple(
                     AuditType.LAUNCH_CONFLICT,
                     AuditOutcome.CANCELLED,
-                    "choice=cancel running_app=5",
+                    "choice=cancel running_app=5 entry=asked",
                 ),
             )
             .inOrder()
         assertThat(audit.events.map { it.host }.toSet()).containsExactly(host)
+    }
+
+    @Test
+    fun `a resume that the user chose is recorded as a join that was not asked`() {
+        resolve(ConflictChoice.CANCEL, running = 7, resumeChosen = true)
+
+        val event = audit.events.single()
+        assertThat(event.type).isEqualTo(AuditType.LAUNCH_CONFLICT)
+        assertThat(event.outcome).isEqualTo(AuditOutcome.SUCCESS)
+        assertThat(event.host).isEqualTo(host)
+        assertThat(event.detail).isEqualTo("choice=join running_app=7 entry=chosen")
+    }
+
+    @Test
+    fun `a join on the choice of the user on the serverinfo path is recorded the same way`() {
+        LaunchConflicts({ false }, {}).joinedByChoice(host, 7)
+
+        val event = audit.events.single()
+        assertThat(event.type).isEqualTo(AuditType.LAUNCH_CONFLICT)
+        assertThat(event.outcome).isEqualTo(AuditOutcome.SUCCESS)
+        assertThat(event.host).isEqualTo(host)
+        assertThat(event.detail).isEqualTo("choice=join running_app=7 entry=chosen")
+    }
+
+    @Test
+    fun `another app than the chosen one is asked about, and recorded as asked`() {
+        resolve(ConflictChoice.QUIT_AND_RELAUNCH, running = 5, resumeChosen = true)
+
+        assertThat(audit.events.map { it.detail })
+            .containsExactly("choice=quit running_app=5 entry=asked")
     }
 
     @Test

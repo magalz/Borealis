@@ -54,6 +54,7 @@ class LaunchConflictsTest {
     private fun resolve(
         reader: RunningAppReader,
         names: AppNameLookup = AppNameLookup { "Desktop" },
+        resumeChosen: Boolean = false,
     ): Boolean =
         conflicts.resolve(
             reader,
@@ -80,6 +81,7 @@ class LaunchConflictsTest {
                         quitResult
                     },
             ),
+            resumeChosen = resumeChosen,
         )
 
     @Test
@@ -135,13 +137,67 @@ class LaunchConflictsTest {
     }
 
     @Test
-    fun `the same app running is put to the user too and never joined on its own`() {
+    fun `the same app running is put to the user too when they did not choose to resume it`() {
         answerWith = ConflictChoice.CANCEL
 
         resolve(reader(7))
 
         assertThat(prompts.single().running).isEqualTo(prompts.single().requested)
         assertThat(calls).isEmpty()
+    }
+
+    @Test
+    fun `the same app running is joined without asking when the user chose to resume it`() {
+        // A question would be answered at once, so that this test fails instead of waiting.
+        answerWith = ConflictChoice.CANCEL
+
+        val result = resolve(reader(7), resumeChosen = true)
+
+        assertThat(result).isTrue()
+        assertThat(calls).containsExactly("join 7")
+        assertThat(prompts).isEmpty()
+        assertThat(cancelCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `another app running is put to the user even when they chose to resume`() {
+        answerWith = ConflictChoice.CANCEL
+
+        val result = resolve(reader(5), resumeChosen = true)
+
+        assertThat(result).isFalse()
+        assertThat(prompts.single().running).isEqualTo(5)
+        assertThat(calls).isEmpty()
+    }
+
+    @Test
+    fun `an app that is gone is launched again without asking whatever the user chose`() {
+        val result = resolve(reader(0), resumeChosen = true)
+
+        assertThat(result).isTrue()
+        assertThat(calls).containsExactly("relaunch")
+        assertThat(prompts).isEmpty()
+    }
+
+    @Test
+    fun `a chosen join that finds nothing to resume launches the app instead`() {
+        answerWith = ConflictChoice.CANCEL
+        joinOutcome = LaunchOutcome.FALLBACK_TO_LAUNCH
+
+        val result = resolve(reader(7), resumeChosen = true)
+
+        assertThat(result).isTrue()
+        assertThat(calls).containsExactly("join 7", "relaunch").inOrder()
+        assertThat(prompts).isEmpty()
+    }
+
+    @Test
+    fun `a chosen join that the host does not take fails quietly`() {
+        answerWith = ConflictChoice.CANCEL
+        joinOutcome = LaunchOutcome.FAILED
+
+        assertThat(resolve(reader(7), resumeChosen = true)).isFalse()
+        assertThat(prompts).isEmpty()
     }
 
     @Test
@@ -352,6 +408,17 @@ class LaunchConflictsTest {
         val records = log.records.filter { it.tag == LogTag.LAUNCH }
         assertThat(records.flatMap { it.fields }).contains("choice" to "QUIT_AND_RELAUNCH")
         assertThat(records.joinToString { it.message + it.fields }).doesNotContain("Desktop")
+        assertThat(records.joinToString { it.message + it.fields }).doesNotContain("Steam")
+    }
+
+    @Test
+    fun `a join on the user's choice is logged without app names`() {
+        answerWith = ConflictChoice.CANCEL
+
+        resolve(reader(7), resumeChosen = true)
+
+        val records = log.records.filter { it.tag == LogTag.LAUNCH }
+        assertThat(records.map { it.message }).contains("running app joined on the user's choice")
         assertThat(records.joinToString { it.message + it.fields }).doesNotContain("Steam")
     }
 

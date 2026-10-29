@@ -317,6 +317,7 @@ page is private, so it is not linked here.
   [0055](0055-settings-storage-and-the-phase-2-settings-screen.md) (the settings storage).
 * Accessibility method and baseline: [docs/ux/accessibility.md](../ux/accessibility.md).
 * Roadmap: [Sprint 10](../roadmap.md#sprint-10-ux-and-accessibility).
+* Amended on 2026-10-28 by [0061](0061-glass-and-the-animated-background-in-the-stream.md): decision 10 (the stream has no glass) and decision 13 (the halo is never drawn in the stream) no longer hold. The stream gets the glass and the background, as 0061 decides.
 * Test dependency for the screen reader work of Sprint 10 (task `s10-talkback`):
   `io.github.takahirom.roborazzi:roborazzi-accessibility-check`, at the version of Roborazzi in the
   version catalog (1.76.0), in the test fixtures of `:borealis:designsystem`. It runs the

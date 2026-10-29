@@ -112,6 +112,7 @@ This is the record that the [dependency policy](../policies/dependencies.md#addi
   * Appearance has three rows now: Background, Glass tint and Glass blur;
   * Reduce motion is the app's own setting as well (Accessibility, [0057](0057-glass-surfaces-and-the-accessibility-settings.md)): Follow system, On or Off. Where this ADR says "the system removes animations", read "Reduce motion removes them", which follows the system by default;
   * Sprint 11 will show the background on the stream's Starting screen. (moved to Sprint 15 on 2026-10-21; see the roadmap)
+* Amended on 2026-10-28 by [0061](0061-glass-and-the-animated-background-in-the-stream.md): decision 5 (never in a stream) no longer holds for the screens outside the game. The background shows there, and not in the game.
 * Related: [0011](0011-datastore-room-and-keystore-for-new-persistence.md) (new settings start in DataStore), [0052](0052-structure-the-phase-2-ui.md) (Phase 2 UI, dark only) and [0044](0044-design-tokens-pipeline.md) (the tokens that the drawn styles use).
 * Use case: [UC-009, change settings](../use-cases/0009-change-settings.md).
 * Provenance of the clips: [design/backgrounds](../../design/backgrounds/README.md). Roadmap: [Sprint 9](../roadmap.md#sprint-9-ux-polish-and-the-handheld).

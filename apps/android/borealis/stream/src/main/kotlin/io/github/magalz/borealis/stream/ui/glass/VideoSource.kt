@@ -14,14 +14,21 @@ internal data class VideoBounds(val left: Int, val top: Int, val width: Int, val
 
 /** What the glass copies the video from. */
 internal interface VideoSource {
-    /** Where the video is, or null when there is nothing to copy: no surface, or an empty one. */
+    /**
+     * Where the video is, or null when there is nothing to copy: no surface, or an empty one. Ask
+     * on the main thread, where the views are laid out.
+     */
     fun bounds(): VideoBounds?
 
-    /** How big the video is, or null when there is nothing to copy. */
+    /**
+     * How big the video is, or null when there is nothing to copy. It asks nothing about where the
+     * video is, so any thread may ask: the connection thread does, when the stream ends.
+     */
     fun size(): IntSize?
 
     /**
-     * Copies the video into [into], then calls [done] once, on the main thread, with the result.
+     * Copies the video into [into], then calls [done] once, on the main thread, with the result:
+     * whichever thread asked, and also when there is nothing to copy or the request is refused.
      */
     fun copy(into: Bitmap, done: (Boolean) -> Unit)
 }
@@ -37,21 +44,24 @@ internal val LocalVideoSource = staticCompositionLocalOf<VideoSource?> { null }
 internal class PixelCopySource(private val view: View) : VideoSource {
     private val handler = Handler(Looper.getMainLooper())
 
-    override fun size(): IntSize? = null
-
-    override fun bounds(): VideoBounds? {
+    override fun size(): IntSize? {
         val surfaceView = view as? SurfaceView ?: return null
         if (!hasSurface(surfaceView) || surfaceView.width == 0 || surfaceView.height == 0)
             return null
+        return IntSize(surfaceView.width, surfaceView.height)
+    }
+
+    override fun bounds(): VideoBounds? {
+        val size = size() ?: return null
         val at = IntArray(2)
-        surfaceView.getLocationOnScreen(at)
-        return VideoBounds(at[0], at[1], surfaceView.width, surfaceView.height)
+        view.getLocationOnScreen(at)
+        return VideoBounds(at[0], at[1], size.width, size.height)
     }
 
     override fun copy(into: Bitmap, done: (Boolean) -> Unit) {
         val surfaceView = view as? SurfaceView
         if (surfaceView == null || !hasSurface(surfaceView)) {
-            done(false)
+            handler.post { done(false) }
             return
         }
         try {
@@ -64,7 +74,7 @@ internal class PixelCopySource(private val view: View) : VideoSource {
         } catch (expected: IllegalArgumentException) {
             // The surface went away between the check and the request: this copy failed, and the
             // line of the log that counts the failures says so.
-            done(false)
+            handler.post { done(false) }
         }
     }
 

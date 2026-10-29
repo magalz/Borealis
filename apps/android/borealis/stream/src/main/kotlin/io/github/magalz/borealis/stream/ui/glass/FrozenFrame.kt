@@ -5,6 +5,7 @@ import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntOffset
 import androidx.core.graphics.createBitmap
@@ -98,3 +99,6 @@ internal class FrozenFrame(
         frame = null
     }
 }
+
+/** The frozen frame behind the error popup. Null where there is no stream to have copied. */
+internal val LocalFrozenFrame = staticCompositionLocalOf<FrozenFrame?> { null }

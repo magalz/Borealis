@@ -1,11 +1,14 @@
 package io.github.magalz.borealis.stream.ui.glass
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.textColor
+import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.borealisColors
@@ -142,13 +145,21 @@ class MenuGlassDrawTest {
         glass.openQuitPopup()
         val pixel = glass.popup().rightPixel()
         assertThat(pixel.red).isGreaterThan(surface.red + 0.05f)
-        val body = "Ends the stream.\nThe display and controls go back to the PC."
+        // The menu has the same sentence under its Quit row, out of reach behind the popup.
+        val body =
+            composeRule.onNode(
+                hasText(QUIT_BODY) and hasAnyAncestor(glass.popupMatcher()),
+                useUnmergedTree = true,
+            )
 
-        assertThat(contrastOver(composeRule.textColor(body), wcagLuminance(pixel)))
-            .isAtLeast(AA_RATIO)
+        val color = body.textLayout().layoutInput.style.color
+
+        assertThat(contrastOver(color, wcagLuminance(pixel))).isAtLeast(AA_RATIO)
+        assertThat(color).isNotEqualTo(borealisColors(BorealisLook()).ink3)
     }
 
     private companion object {
+        const val QUIT_BODY = "Ends the stream.\nThe display and controls go back to the PC."
         const val TOLERANCE = 0.012f
     }
 }

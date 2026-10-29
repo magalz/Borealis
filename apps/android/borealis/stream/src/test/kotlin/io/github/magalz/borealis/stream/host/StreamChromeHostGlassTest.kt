@@ -36,6 +36,8 @@ class StreamChromeHostGlassTest {
             activity.addContentView(host, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         }
         composeRule.mainClock.advanceTimeBy(100)
+        composeRule.waitForIdle()
+        assertThat(stream.width).isGreaterThan(0)
     }
 
     private fun openMenu() {
@@ -45,6 +47,7 @@ class StreamChromeHostGlassTest {
             session.openMenu()
         }
         composeRule.mainClock.advanceTimeBy(100)
+        composeRule.waitForIdle()
     }
 
     private fun queriesDuring(millis: Long): Int {

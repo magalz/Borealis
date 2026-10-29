@@ -6,6 +6,7 @@ import android.os.Looper
 import android.os.PowerManager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.test.core.app.ApplicationProvider
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -72,17 +74,22 @@ internal class GlassFixture(
     var phase by mutableStateOf(aStreaming(Panel.MENU))
     var videoGlass by mutableStateOf(true)
     var formFactor = FormFactor.Phone
+    var keyboardMode = false
+
+    /** What the stream shows behind the chrome, for a screenshot: the picture of the fake video. */
+    var behind: @Composable () -> Unit = {}
     val lifecycle = TestLifecycle()
     val intents = RecordingIntents()
 
     fun show() {
-        rule.setContent {
+        val content: @Composable () -> Unit = {
             BorealisTheme(formFactor, look) {
                 CompositionLocalProvider(
                     LocalVideoSource provides source,
                     LocalLifecycleOwner provides lifecycle,
                 ) {
                     Box(Modifier.fillMaxSize()) {
+                        behind()
                         StreamingLayer(
                             "Desktop",
                             "Gaming PC",
@@ -95,6 +102,7 @@ internal class GlassFixture(
                 }
             }
         }
+        if (keyboardMode) rule.setContentInKeyboardMode(content) else rule.setContent(content)
         run(FIRST_FRAME_MS)
     }
 
@@ -114,8 +122,10 @@ internal class GlassFixture(
     fun panel(): SemanticsNodeInteraction = rule.onNode(hasScrollAction())
 
     /** The Quit popup, by its question. */
-    fun popup(): SemanticsNodeInteraction =
-        rule.onNode(SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, QUIT_QUESTION))
+    fun popup(): SemanticsNodeInteraction = rule.onNode(popupMatcher())
+
+    fun popupMatcher(): SemanticsMatcher =
+        SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, QUIT_QUESTION)
 
     private companion object {
         const val FIRST_FRAME_MS = 16L

@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -54,6 +55,8 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
+import io.github.magalz.borealis.stream.ui.glass.LocalVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.videoGlassSurface
 import kotlinx.coroutines.flow.filter
 
 private val DIALOG_GAP = 12.dp
@@ -83,6 +86,11 @@ internal class StreamDialogAction(
  * Back key and Back of the system call [onDismiss] and are used up here, so neither reaches what is
  * under the dialog nor the host's callback, which closes the open panel.
  *
+ * In the Streaming phase the panel is glass over the video (the menu provides it, see
+ * `InGameMenu`): the same panel on the blurred copy of the video behind the tint, with the text
+ * colours that keep 4.5:1 over it. The scrim stays. Elsewhere, and where the glass is solid, it is
+ * the `surface` colour.
+ *
  * The panel is announced by its [title]. The title and the [content] are one polite live region, so
  * a screen reader reads the body with the title when the dialog opens; the title is the only
  * heading. Three buttons or more stack on a phone, where they do not fit side by side. [modifier]
@@ -98,6 +106,7 @@ internal fun StreamDialog(
 ) {
     require(actions.isNotEmpty()) { "A stream dialog has at least one action" }
     val colors = LocalBorealisColors.current
+    val glass = LocalVideoGlass.current
     val shape = MaterialTheme.shapes.extraLarge
     DismissOnSystemBack(onDismiss)
     BoxWithConstraints(
@@ -118,7 +127,10 @@ internal fun StreamDialog(
             modifier
                 .semantics { paneTitle = title }
                 .width(BorealisDimens.dialogWidth(DialogWidth.Compact, maxWidth))
-                .background(colors.surface, shape)
+                .then(
+                    if (glass == null) Modifier.background(colors.surface, shape)
+                    else Modifier.videoGlassSurface(glass, shape)
+                )
                 .border(1.dp, colors.line, shape)
                 .clip(shape)
                 // A tap in the panel is not a tap on the scrim.
@@ -127,18 +139,23 @@ internal fun StreamDialog(
                 .padding(BorealisTokens.Space.DialogPadding),
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
-            Column(
-                Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
-                verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
-            ) {
-                Text(
-                    title,
-                    Modifier.semantics { heading() },
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                content()
+            // The colours that keep 4.5:1 over the video glass, the same composition without it.
+            CompositionLocalProvider(LocalBorealisColors provides (glass?.spec?.colors ?: colors)) {
+                Column(
+                    Modifier.semantics(mergeDescendants = true) {
+                        liveRegion = LiveRegionMode.Polite
+                    },
+                    verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
+                ) {
+                    Text(
+                        title,
+                        Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    content()
+                }
+                Actions(actions)
             }
-            Actions(actions)
         }
     }
 }

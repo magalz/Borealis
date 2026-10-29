@@ -33,9 +33,12 @@ private val HINT_TOP_OFFSET = 44.dp
  * What the chrome draws over the stream: the performance overlay, the pull handle on a device with
  * a touchscreen, the first-run hint, and the panel that is open (the in-game menu or the keyboard).
  * With nothing open and the overlay off it draws nothing but the handle.
+ *
+ * [videoGlass] is the menu glass option of the viewer (ADR 0061): true draws the in-game menu and
+ * its Quit popup over a live blurred copy of the video where the device and the accessibility
+ * settings allow it, false draws them solid.
  */
 @Composable
-@Suppress("UnusedParameter") // Not wired yet.
 fun StreamingLayer(
     appName: String,
     hostName: String,
@@ -66,7 +69,7 @@ fun StreamingLayer(
                             .padding(top = MENU_HANDLE_TOP_OFFSET_DP.dp),
                     )
                 }
-            Panel.MENU -> InGameMenu(appName, hostName, phase, perf, intents)
+            Panel.MENU -> InGameMenu(appName, hostName, phase, perf, intents, videoGlass)
             Panel.KEYBOARD -> StreamKeyboard(docked = phase.dockedKeyboard, intents)
         }
         MenuHint(

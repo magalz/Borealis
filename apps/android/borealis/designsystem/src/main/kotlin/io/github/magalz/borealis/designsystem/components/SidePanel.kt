@@ -34,6 +34,10 @@ private const val SCRIM_ALPHA = 0.35f
  * The panel has a hairline on its left edge only. The scrim is the page colour at 35%, lighter than
  * the dialog scrim so the stream stays visible.
  *
+ * The panel is the `surface` colour, or [panelBackground] where a screen draws something else
+ * behind it: the in-game menu draws the glass over the video there. A background is what the panel
+ * is drawn on, it takes the size of the panel and no more.
+ *
  * The panel clips and scrolls its content, and the focus outline of an item reaches 5dp outside it,
  * 7dp when it is the thicker one (see
  * [io.github.magalz.borealis.designsystem.focus.borealisFocusIndication]). Put at least 8dp of
@@ -44,6 +48,7 @@ private const val SCRIM_ALPHA = 0.35f
 fun SidePanel(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    panelBackground: Modifier? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalBorealisColors.current
@@ -58,7 +63,7 @@ fun SidePanel(
             Modifier.align(Alignment.CenterEnd)
                 .fillMaxHeight()
                 .width(minOf(MAX_WIDTH, maxWidth * WIDTH_FRACTION))
-                .background(colors.surface)
+                .then(panelBackground ?: Modifier.background(colors.surface))
                 .drawBehind { drawRect(colors.line, size = Size(BORDER_WIDTH.toPx(), size.height)) }
                 // Taps that no child took stop here, so they do not reach the scrim.
                 .pointerInput(Unit) { detectTapGestures() }

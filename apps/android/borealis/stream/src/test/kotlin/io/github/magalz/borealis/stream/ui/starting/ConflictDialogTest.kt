@@ -235,6 +235,16 @@ class ConflictDialogTest {
     }
 
     @Test
+    @Config(qualifiers = TV)
+    fun `Back with the focus in the dialog answers cancel`() {
+        show(sameApp(), FormFactor.Tv)
+
+        composeRule.onNodeWithText("Cancel").performKeyInput { pressKey(Key.Back) }
+
+        assertThat(intents.calls).containsExactly("answerConflict CANCEL")
+    }
+
+    @Test
     @Config(qualifiers = PHONE)
     fun `the title is a heading`() {
         show(sameApp())

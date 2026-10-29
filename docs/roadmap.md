@@ -1446,6 +1446,10 @@ Planned, not started. Owner decision of 2026-10-28.
     default in the test fixtures; and `VideoGlassSpec.kt` (`:borealis:stream`) repeats the Reduced values
     (85 percent, 48 dp) that `GlassRules` keeps private, with a comment that points at ADR 0057, so keep
     them in one place.
+  - **The test heap of `:borealis:library` and `:borealis:settings`**, from Sprint 15: under load
+    (two Gradle runs at once on 2026-10-29) their accessibility tests ran out of memory. Only `:app`
+    gets the 2 GB heap of `BorealisUnitTestHeap` (`build-logic`); decide whether these two modules
+    need it too, or whether one Gradle run at a time stays the rule.
 - **Method:** behaviour does not change. The characterization tests guide the refactor. A
   refactored place loses its suppression and its marker.
 - **Ends with a device round.**

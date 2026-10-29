@@ -16,6 +16,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.IntOffset
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.assertHalo
+import io.github.magalz.borealis.designsystem.testing.assertNoHalo
 import io.github.magalz.borealis.designsystem.testing.rootFrame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -156,6 +158,14 @@ class FrozenFrameScreenTest {
 
         composeRule.onNodeWithTag(OUTSIDE_GAME_BACKGROUND_TAG).assertIsDisplayed()
         assertThat(margin().luminance()).isLessThan(FRAME_SHOWS)
+    }
+
+    @Test
+    fun `the label of the filled button has no halo, which would smudge it, the others have it`() {
+        show()
+
+        composeRule.assertNoHalo("Try again")
+        composeRule.assertHalo("Close")
     }
 
     @Test

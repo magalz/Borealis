@@ -36,7 +36,9 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -74,14 +76,17 @@ internal class StreamDialogAction(
  * host owns the input: `StreamChromeHost.dispatchKeyEvent` routes the gamepad and the keys to the
  * chrome root, which a dialog window would bypass (gamepad B, the D-pad focus and the Back rule).
  *
- * The scrim takes the touches, so nothing under the dialog is reached. The first of [actions] has
- * the initial focus, so it is the safe one (Cancel): a stray OK changes nothing. The focus stays in
- * the dialog, Up, Down, Left and Right move between the buttons and stop at the last. The gamepad B
- * button, the Back key and Back of the system call [onDismiss] and are used up here, so neither
- * reaches what is under the dialog nor the host's callback, which closes the open panel.
+ * The scrim takes the touches, so nothing under the dialog is reached, and a tap on it calls
+ * [onDismiss], as Cancel does; a tap in the panel does not. The first of [actions] has the initial
+ * focus, so it is the safe one (Cancel): a stray OK changes nothing. The focus stays in the dialog,
+ * Up, Down, Left and Right move between the buttons and stop at the last. The gamepad B button, the
+ * Back key and Back of the system call [onDismiss] and are used up here, so neither reaches what is
+ * under the dialog nor the host's callback, which closes the open panel.
  *
- * The panel is announced by its [title], which is its heading. Three buttons or more stack on a
- * phone, where they do not fit side by side. [modifier] applies to the panel.
+ * The panel is announced by its [title]. The title and the [content] are one polite live region, so
+ * a screen reader reads the body with the title when the dialog opens; the title is the only
+ * heading. Three buttons or more stack on a phone, where they do not fit side by side. [modifier]
+ * applies to the panel.
  */
 @Composable
 internal fun StreamDialog(
@@ -98,11 +103,12 @@ internal fun StreamDialog(
     BoxWithConstraints(
         Modifier.fillMaxSize()
             .background(colors.scrim)
+            // Before the insets: the scrim takes the tap over all it draws, the strips of the
+            // system bars too, and nothing under it takes it.
+            .pointerInput(onDismiss) { detectTapGestures { onDismiss() } }
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .onGamepadB(onDismiss)
             .onBackKey(onDismiss)
-            // A tap on the scrim stays here: it does nothing, and nothing under it takes it.
-            .pointerInput(Unit) { detectTapGestures() }
             .keepFocusInside(),
         contentAlignment = Alignment.Center,
     ) {
@@ -115,16 +121,23 @@ internal fun StreamDialog(
                 .background(colors.surface, shape)
                 .border(1.dp, colors.line, shape)
                 .clip(shape)
+                // A tap in the panel is not a tap on the scrim.
+                .pointerInput(Unit) { detectTapGestures() }
                 .verticalScroll(rememberScrollState())
                 .padding(BorealisTokens.Space.DialogPadding),
             verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
         ) {
-            Text(
-                title,
-                Modifier.semantics { heading() },
-                style = MaterialTheme.typography.titleLarge,
-            )
-            content()
+            Column(
+                Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                verticalArrangement = Arrangement.spacedBy(DIALOG_GAP),
+            ) {
+                Text(
+                    title,
+                    Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                content()
+            }
             Actions(actions)
         }
     }

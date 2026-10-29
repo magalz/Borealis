@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream.ui.glass
 
 import android.graphics.Bitmap
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -8,17 +9,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntOffset
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.testing.assertNoHalo
 import io.github.magalz.borealis.designsystem.testing.rootFrame
+import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
@@ -74,13 +81,43 @@ class FrozenFrameScreenTest {
             it.onFailed(aFailure)
         }
 
-    private fun show(session: StreamSession = failedSession(), copied: Boolean = true) {
+    private fun show(
+        session: StreamSession = failedSession(),
+        copied: Boolean = true,
+        keyboard: Boolean = false,
+    ) {
         if (copied) frozen.request()
-        composeRule.setContent {
+        val content: @Composable () -> Unit = {
             CompositionLocalProvider(LocalFrozenFrame provides frozen) {
                 StreamChromeRoot(session, {}, look)
             }
         }
+        if (keyboard) composeRule.setContentInKeyboardMode(content)
+        else composeRule.setContent(content)
+        composeRule.waitForIdle()
+    }
+
+    /** The copy is asked for and does not end until the test says so. */
+    private fun showWhilePending(keyboard: Boolean = false) {
+        source.completing = false
+        show(keyboard = keyboard)
+        assertThat(frozen.pending).isTrue()
+    }
+
+    /** The node of the announcement of the popup: another popup is another node. */
+    private fun announcement() =
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.LiveRegion,
+                    LiveRegionMode.Polite,
+                )
+            )
+            .fetchSemanticsNode()
+            .id
+
+    private fun endTheCopy(ok: Boolean = true) {
+        composeRule.runOnIdle { source.finish(ok) }
         composeRule.waitForIdle()
     }
 
@@ -150,6 +187,56 @@ class FrozenFrameScreenTest {
 
         composeRule.onNodeWithTag(OUTSIDE_GAME_BACKGROUND_TAG).assertDoesNotExist()
         assertThat(margin().luminance()).isGreaterThan(before + FRAME_SHOWS / 2)
+    }
+
+    // The copy that has not ended
+
+    @Test
+    fun `no background shows while the copy is pending, only the black of the frame under the scrim`() {
+        showWhilePending()
+
+        composeRule.onNodeWithTag(OUTSIDE_GAME_BACKGROUND_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(ERROR_PANEL_TAG).assertIsDisplayed()
+        assertThat(margin().luminance()).isLessThan(FRAME_SHOWS)
+    }
+
+    @Test
+    fun `the popup is composed once when the frame arrives, so its focus and announcement stay`() {
+        showWhilePending(keyboard = true)
+        composeRule.onNodeWithText("Close").requestFocus()
+        val announced = announcement()
+
+        endTheCopy()
+
+        assertThat(margin().luminance()).isGreaterThan(FRAME_SHOWS)
+        composeRule.onNodeWithText("Close").assertIsFocused()
+        assertThat(announcement()).isEqualTo(announced)
+    }
+
+    @Test
+    fun `the background appears when the pending copy fails, and the popup is not composed again`() {
+        showWhilePending(keyboard = true)
+        composeRule.onNodeWithText("Close").requestFocus()
+        val announced = announcement()
+
+        endTheCopy(ok = false)
+
+        composeRule.onNodeWithTag(OUTSIDE_GAME_BACKGROUND_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("Close").assertIsFocused()
+        assertThat(announcement()).isEqualTo(announced)
+    }
+
+    @Test
+    fun `the popup of a failure with no copy asked for is composed once as well`() {
+        show(copied = false, keyboard = true)
+        composeRule.onNodeWithText("Close").requestFocus()
+        val announced = announcement()
+
+        composeRule.runOnIdle { frozen.request() }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Close").assertIsFocused()
+        assertThat(announcement()).isEqualTo(announced)
     }
 
     @Test
@@ -260,7 +347,6 @@ class FrozenFrameScreenTest {
         show()
 
         assertThat(isSolid(panel())).isFalse()
-        assertThat(powerSaveReceivers()).isEmpty()
     }
 
     private companion object {

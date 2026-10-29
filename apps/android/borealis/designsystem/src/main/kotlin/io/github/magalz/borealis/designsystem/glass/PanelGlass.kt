@@ -11,7 +11,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
  * What a panel inside a [GlassHost] draws where the host blurs its window: the glass [tint] (0 to
  * 1) of its surface colour, and the text [colors] that keep their contrast on that glass.
  */
-@Immutable class PanelGlass(val tint: Float, val colors: BorealisColors)
+@Immutable class PanelGlass internal constructor(val tint: Float, val colors: BorealisColors)
 
 /**
  * Opens the overlay of a panel that is in the layer of a [GlassHost], not in a window of its own,

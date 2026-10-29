@@ -2195,17 +2195,27 @@ Steps:
      The clocks of the PC and the device can differ by a second or so, so compare the spans between the
      host lines, not the wall times. Do not anchor on `CLIENT DISCONNECTED`: a user's Quit probably never
      writes it, because `/cancel` removes the peer with `enet_peer_disconnect_now`, which raises no event
-     (from the source, not run). The lines that say where the time went (contract 7.6) are
-     `Successfully requested the app to exit. Waiting up to N seconds for it to close.`, then `All app processes have successfully exited.` or `App did not fully exit within the
-     timeout. Terminating the app's remaining processes.`, `Executing Undo Cmd: [...]` (do not copy the
-     command: it can hold a path) and `Undo command timed out after N seconds`, `Display helper:
-     transactional REVERT completed and helper exited after verification.`, `Virtual display cleanup:
-     begin` and `Virtual display cleanup: finished`, and `Virtual display cleanup: helper restore was not
-     verified; restarting the helper and retrying.` A Desktop has no process to close, so its exit lines can
-     be missing. The host logs no answer time at info. In the usual case `Virtual display cleanup:
-     finished` is the last info line of the teardown (the config revert after it logs nothing), so it stands
-     for the end of `/cancel`; with no virtual display to clean, the last of the other lines stands. Expected:
-     the time of each Quit is accounted for by the span from the first line to that one, and the client's
+     (from the source, not run). The lines that say where the time went (contract 7.6) are:
+     - `Session ended`, which closes the join of the last session (the first stage of `/cancel`).
+     - `Successfully requested the app to exit. Waiting up to N seconds for it to close.`, then
+       `All app processes have successfully exited.` or `App did not fully exit within the timeout.
+       Terminating the app's remaining processes.`
+     - `Executing Undo Cmd: [...]` (do not copy the command: it can hold a path) and `Undo command
+       timed out after N seconds`.
+     - `Display helper: transactional REVERT completed and helper exited after verification.`
+     - `Virtual display cleanup: begin` and `Virtual display cleanup: finished`, and `Virtual display
+       cleanup: helper restore was not verified; restarting the helper and retrying.` A Quit of a live
+       stream can log the begin and finished pair more than once: with the reason `rtsp_session_end` from
+       the join of the last session, before the app exits (30 s deadline); with the reason
+       `app_termination` after the app is terminated, followed by `Virtual display cleanup completed
+       after app termination.`; and with the reason `cancel`, only when a virtual display is still
+       active.
+
+     A Desktop has no process to close, so its exit lines can be missing. The host logs no answer time at
+     info. Use the last `Virtual display cleanup: finished` line, whatever its reason: in the usual case it
+     is the last info line of the teardown (the config revert after it logs nothing), so it stands for the
+     end of `/cancel`. With no virtual display to clean, the last of the other lines stands. Expected: the
+     time of each Quit is accounted for by the span from the first line to that one, and the client's
      `cancel answered ms` agrees with it to about a second.
    - From Apps, with the game left running by a Disconnect: open its actions and choose Quit. Expected:
      "App quit.", with the lines `quit cancel sent`, `quit cancel answered ms=N` and `quit check answered
@@ -2231,9 +2241,10 @@ Steps:
    - Press Down from the top to Quit and Up back to the top. Expected: every row and every Send keys chip is
      reached once, in one order (the chips are a vertical list).
    - The sequence of D4 of the Sprint 12 round, adapted. The round pressed 25 Downs, OK, Right, OK on the
-     S22 and 14 Downs on the TV, and Quit was not reached. Press Down to Send keys, OK (its chips open),
-     Right, OK (they close), then Down to Quit. Expected: Quit is reached, and OK opens the popup of step 1
-     (the tests `InGameMenuFocusTest` and `UsbChromeMenuFocusTest` pin this form).
+     S22 and 14 Downs on the TV. Quit was not reached on the S22; on the TV those keys reached it (section
+     17, D4). Press Down to Send keys, OK (its chips open), Right, OK (they close), then Down to Quit.
+     Expected: Quit is reached, and OK opens the popup of step 1 (the tests `InGameMenuFocusTest` and
+     `UsbChromeMenuFocusTest` pin this form).
    - S22, touch: tap a segment of Overlay and Touch (the phone layout, no pad), and with a pad of Gamepad
      mouse and Pointer speed. Expected: the tapped value is chosen.
 4. Combos (S22, with a keyboard and a mouse; the set-up of 3.28, A9; a Notepad test file open on the PC,

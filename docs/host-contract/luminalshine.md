@@ -865,20 +865,30 @@ order (`src/nvhttp.cpp` unless a file is named):
    `/resume` in progress.
 2. `rtsp_stream::terminate_sessions()` (`3574`; `src/rtsp.cpp:1132-1135`), which calls
    `server.clear(true)` (`src/rtsp.cpp:766-796`) and so joins each session. Each join runs
-   under phase watchdogs of 10 s (`src/stream.cpp:3044-3062`).
+   under phase watchdogs of 10 s (`src/stream.cpp:3044-3062`). The join of the last session also
+   holds two longer phases. One is the session-end display cleanup, with a 30 s deadline
+   (`src/stream.cpp:3129`, `3141`; the reason is `rtsp_session_end`). The other is the frame
+   limiter phase, 60 s (`src/stream.cpp:3174-3176`). The join ends with `Session ended`
+   (`src/stream.cpp:3189`). So a display revert can run twice in one Quit: once in this join
+   (when revert-on-disconnect is on, `src/stream.cpp:3141`) and once after the app exits
+   (`display_helper_integration::revert()`, `src/process.cpp:1947-1950`).
 3. `cancel_prewarm()` and `acquire_cleanup(8s)` (`3576`, `3582`).
 4. `proc::proc.terminate()` (`3611`; `src/process.cpp:1805`). The app group gets its
    `exit-timeout` to exit, 10 s by default (`src/process.cpp:1010-1037`, `2662`, `2776`), and
    each undo command of the app's prep commands waits up to the larger of that and 15 s
    (`src/process.cpp:1852-1894`).
-5. The virtual display cleanup (`225-246`; `src/process.cpp:1917`). It waits up to 30 s for
+5. The virtual display cleanup. It can run again here, with the reason `app_termination` inside
+   `terminate()` (`src/process.cpp:1917`, followed by `Virtual display cleanup completed after app
+   termination.` at `1921`) and with the reason `cancel`, only while a virtual display is still
+   active (`225-246`, `src/nvhttp.cpp:230`, called at `3619`). It waits up to 30 s for
    the Windows helper's revert, and again up to 30 s after a helper restart when the first
    restore was not verified, with display checks of 2 to 5 s and a 5 s teardown wait
    (`src/platform/windows/virtual_display_cleanup.cpp:116-167`).
 6. The config revert (`3622-3625`).
 
 The waits that can reach 10 to 17 s are the 10 s exit timeout alone, one 15 s undo command,
-a 30 s helper revert, or a session join that passes its 10 s watchdog. The 17 s of the
+a 30 s helper revert, a session join that passes its 10 s watchdog, or the display cleanup
+or frame limiter phase of the join (30 s and 60 s deadlines). The 17 s of the
 night round of 2026-10-21 fits the exit timeout plus one undo or cleanup wait, but the
 source cannot say which one happened. **Observed:** 5 to 7 s on 26.09.1 and on
 26.10.0-beta.1 (5.5 and 6.7 s in the Sprint 10 round), and about 17 s once; in that night
@@ -889,10 +899,13 @@ Sprint 15 round times it again. The host log lines that split the time are
 `Successfully requested the app to exit. Waiting up to N seconds for it to close.`,
 `App did not fully exit within the timeout. Terminating the app's remaining processes.`,
 `Executing Undo Cmd: [...]` and `Undo command timed out after N seconds`
-(`src/process.cpp:1016`, `1024`, `1872`, `1887`), `Virtual display cleanup: begin` and
-`Virtual display cleanup: finished` (`src/platform/windows/virtual_display_cleanup.cpp:99`,
-`167`), `Cancel cleanup superseded by a newer launch` (`src/nvhttp.cpp:3584`) and, at debug
-level, `Session teardown phase: <name> (deadline=Ns)` (`src/stream.cpp:3054-3055`).
+(`src/process.cpp:1016`, `1024`, `1872`, `1887`), `Session ended` (`src/stream.cpp:3189`),
+`Virtual display cleanup: begin` and `Virtual display cleanup: finished`, which a Quit of a live
+stream can log more than once, with the reasons `rtsp_session_end`, `app_termination` and `cancel`
+(`src/platform/windows/virtual_display_cleanup.cpp:99`, `167`), `Virtual display cleanup
+completed after app termination.` (`src/process.cpp:1921`), `Cancel cleanup superseded by a
+newer launch` (`src/nvhttp.cpp:3584`) and, at debug level, `Session teardown phase: <name>
+(deadline=Ns)` (`src/stream.cpp:3054-3055`).
 
 **Filed upstream (2026-10-29): `NortheBridge/luminalshine#217`, open.** The owner filed it
 with the steps above and plans to fix it. The direction is to be agreed with the

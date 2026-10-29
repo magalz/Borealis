@@ -2211,21 +2211,23 @@ Steps:
      running on the PC.", and the game is still running (its Continue row reads "Running on `<host>`").
    - Expected in logcat: `I Borealis.APP: disconnect accepted`, `I Borealis.APP: connection stop done
      ms=N` and one `I Borealis.APP: activity finished`. The time from `disconnect accepted` to `activity
-     finished` is at least 1000 ms, and not more than about 5 s above `connection stop done`. No
-     `Duplicate finish request`, no error screen.
+     finished` is about 1 s when the stop is quick, right after `connection stop done` when the stop takes
+     1 to 5 s, and about 5 s, before `connection stop done`, when the stop takes longer. No `Duplicate
+     finish request`, no error screen.
 3. The menu with no lateral movement (TV, S22 with a pad). Source: `:borealis:stream` menu, issue #98.
-   - Open the menu. On every row (Back to stream, Keyboard, the Send keys chips, Touch, Gamepad mouse, Pointer
-     speed, Overlay, Refresh the picture, Session info, Disconnect and Quit), press Left and Right on the D-pad
+   - Open the menu. On every row (Back to stream, Keyboard, the Send keys chips, the option rows of the
+     layout, Refresh the picture, Session info, Disconnect and Quit), press Left and Right on the D-pad
      of the remote or the pad, and push the left stick left and right. Expected: the focus outline stays on
      the row, no value changes and the menu does not close.
-   - Press OK (or A) on an option row (Overlay, Touch with no pad, Gamepad mouse, Pointer speed). Expected: the
-     value changes to the next one, and after the last it goes back to the first.
+   - Press OK (or A) on an option row: Overlay, and Gamepad mouse on the TV and the handheld layout (Pointer
+     speed shows once it is on), or Touch on the phone layout. Expected: the value changes to the next one,
+     and after the last it goes back to the first.
    - Press Down from the top to Quit and Up back to the top. Expected: every row and every Send keys chip is
      reached once, in one order (the chips are a vertical list).
    - The sequence of D4 of the Sprint 12 round: Down several times, OK on a row, Right, OK, then Down to Quit.
      Expected: Quit is reached, and OK opens the popup of step 1.
-   - S22, touch: tap a segment of Overlay, Pointer speed and, with no pad, Touch. Expected: the tapped value
-     is chosen.
+   - S22, touch: tap a segment of Overlay and Touch (the phone layout, no pad), and with a pad of Gamepad
+     mouse and Pointer speed. Expected: the tapped value is chosen.
 4. Combos (S22, with a keyboard and a mouse; the set-up of 3.28, A9; a Notepad test file open on the PC,
    section 5). Source: `Game.kt` (`handleSpecialKeys`, the Back hold of the mouse), issue #102.
    - With the input grabbed, press Ctrl+Alt+Shift+M and release the keys. Expected: the menu opens when
@@ -2322,8 +2324,8 @@ Steps:
      adb -s <serial-tv> shell cmd connectivity set-chain3-enabled false
      ```
 
-     S22: the same commands (not tried there), or end the connection from the host's Web UI (the
-     disconnect of the client), as on 2026-10-29.
+     S22: the same commands (not tried there), or disconnect the client from the host's Web UI, which gave
+     an ENet -1 and a copy of the frame on 2026-10-29.
    - Stream the game, then drop it. Expected in logcat: `I Borealis.VIDEO: Frozen frame requested
      width=<w> height=<h>` (a quarter of the video size), before `E Borealis.UPSTREAM: Connection
      terminated: -1`, and then `I Borealis.VIDEO: Frozen frame copied ms=N`, with `I Borealis.APP:
@@ -2346,8 +2348,11 @@ Steps:
    - A drop before the first frame. Start a stream and block the network while the Starting screen shows (the
      start takes 10 to 20 s). Expected: the popup stands on the user's background, with its text, and the log
      has no `Frozen frame` line (the copy is asked for only after the first frame). Restore the network.
-   - A Quit and a Disconnect (steps 1 and 2) leave no `Frozen frame` line, and neither does a graceful end of
-     the stream (the app ended on the PC from the host's Web UI, 3.27 step 10).
+   - A Quit and a Disconnect (steps 1 and 2) leave no `Frozen frame` line. A stream that ends with the
+     graceful code gets no copy and no popup: the activity finishes. Whether ending the app on the PC from
+     the host's Web UI arrives as the graceful code or as a `-1` has not been observed (3.27, step 10):
+     record the code of `E Borealis.UPSTREAM: Connection terminated: <code>`. A `-1` with no Quit pending
+     is a drop, with a copy and the popup of this step; it is not a `fail`.
 8. End. Put the Appearance and Accessibility settings back, and remove the pinned shortcut if it is not
    wanted. Quit the app on the S22, and end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on
    the Streamer.
@@ -2375,7 +2380,7 @@ Steps, with the minutes that the plan gives them:
   quiet over the background? Note how long it takes to reach the Library, and whether anything looks like an
   error.
 - **U2. The menu without lateral movement (TV, 2 min).** Stream again. In the menu, press Left and Right on
-  the remote on a few rows, then OK on Overlay and Touch. Does the focus stay? Do the values change on OK
+  the remote on a few rows, then OK on Overlay and Gamepad mouse. Does the focus stay? Do the values change on OK
   and wrap? Press Down and Up through every row to Quit. Press Back to leave the menu.
 - **U3. Disconnect (TV, 1 min).** Menu, Disconnect. Is "Disconnecting from `<game>`…" long enough to read?
   Does the Library say that the game is still running?

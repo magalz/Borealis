@@ -49,7 +49,7 @@ is the record. Section 7.6 was rewritten and its references moved to `dba21a9e`.
 marked **Filed upstream (2026-10-29)** were added to sections 4, 7.3, 9.1 and 20 and to the
 appendix: the owner filed issues #216 to #220 and discussions #221 to #225 on
 `NortheBridge/luminalshine` that day, and closed #204 and #205 (read with `gh` on
-2026-10-29). Notes marked **Client behaviour (Sprint 15)** describe what Borealis does at
+2026-10-29). The 400 row of section 7.5 and item 8 of section 18 were changed to match section 7.6. Notes marked **Client behaviour (Sprint 15)** describe what Borealis does at
 `2e76dfcfb` (the head of `phase/s15-stream-screens` when this was written). The `src/`
 references inside those notes are lines at `dba21a9e`. The pairing code of section 4 was read
 again at `dba21a9e` on 2026-10-29: each of the 33 ranges that sections 4.1 to 4.3 cite
@@ -346,9 +346,11 @@ commits change `.github/`, `scripts/` and `tests/` only).
   device that typed the wrong PIN. Every Moonlight-family request carries one fixed
   `uniqueid` (section 5.1; Borealis sets the same constant on every request,
   `NvHTTP.uniqueId` in `:app`), and the pairing gate reads only whether a session with
-  that key exists and has left phase `NONE` (`src/nvhttp.cpp:2227-2251`): it does not
-  compare the certificate or the address. So a second device that starts pairing inside
-  the window gets the same 409. A second device was not tried.
+  that key exists and has left phase `NONE` (`src/nvhttp.cpp:2227-2251`). Only a retry in
+  the `getservercert` phase is then matched on the certificate, the salt and the address,
+  and a wrong PIN leaves the session in phase `SERVERCHALLENGERESP`, where nothing is
+  compared. So a second device that starts pairing inside the window gets the same 409.
+  A second device was not tried.
 - It was seen live again on 2026-10-24, in a night round: twelve attempts in a row each got
   the 409 (the issue below).
 
@@ -602,8 +604,9 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   crash is not fixed in 26.10.1. Borealis does nothing about it on the client: a `/resume`
   inside the restart window gets a connection reset, and the Library may read "Nothing
   running" for an app that was left running.
-- **Client behaviour (Sprint 5):** the Borealis error screen (a popup since Sprint 15,
-  section 7.6) classifies three
+- **Client behaviour (Sprint 5):** the Borealis error screen (a popup over the last frame of
+  the stream since Sprint 15, [roadmap](../roadmap.md#sprint-15-the-stream-screens-and-glass),
+  issue #105) classifies three
   host states: host busy (the retries of the start ran out, or the host
   reported a launch collision), host offline, and certificate changed. The
   client requests a keyframe (`LiRequestIdrFrame`, through
@@ -817,12 +820,16 @@ handles it on its own side:
 - While the user's Quit is pending (the phase is Quitting), a `-1` is the end of that Quit
   (`StreamSession.endedByQuit` in `:borealis:stream`). The log says `quit stream ended
   code=-1 since_quit_ms=N` at info, the client runs no connectivity test, shows no error
-  and finishes the activity once. Any other code during a Quit, and a `-1` with no Quit
-  pending, is a failure and gets the error popup. Before Sprint 15 the same `-1` was logged
-  as an error (`E Borealis.UPSTREAM: Connection terminated: -1`) and the system logged
+  and finishes the activity once. A `-1` with no Quit pending is a failure and gets the
+  error popup. Any other code during a Quit is logged as an error and runs the connectivity
+  test, but the phase stays Quitting and keeps how the stream ended: when the cancel then
+  succeeds the activity finishes with no popup, and when it fails the popup shows (next
+  item). Before Sprint 15 the same `-1` of a Quit was logged as an error
+  (`E Borealis.UPSTREAM: Connection terminated: -1`) and the system logged
   `Duplicate finish request` for the stream activity.
 - A Quit that fails (the cancel did not go through) shows a toast and the stream goes on,
-  or, when the stream had already ended with the `-1`, shows the error popup.
+  or, when the stream had already ended during the Quit (with the `-1` or another code),
+  shows the error popup.
 - The Quit logs its stages with the time of each: `quit accepted`, `quit cancel sent`,
   `quit cancel answered ms=N`, `quit check answered ms=N`, `quit stream ended`,
   `connection stop done ms=N` and `activity finished` (tags `Borealis.APP` and

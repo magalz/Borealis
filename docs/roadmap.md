@@ -1077,8 +1077,8 @@ Items, with what each became:
   device restarted the app that the Library shows running, Resume enters it without asking, because the
   host gives a paired client no session id. The host proposal is
   [discussion #221](https://github.com/NortheBridge/luminalshine/discussions/221). The rule is in the
-  [host contract](host-contract/luminalshine.md), section 7.6, and in
-  [UC-003](use-cases/0003-join-or-replace-a-running-app.md).
+  [host contract](host-contract/luminalshine.md), section 7.6. It changes
+  [UC-003](use-cases/0003-join-or-replace-a-running-app.md), where every choice was explicit.
 - **Disconnect gives no feedback.** Found in the Sprint 14 UAT (owner, 2026-10-28). Done in #97: the
   phase Disconnecting shows "Disconnecting from `<app>`…" for at least about 1 s and waits for the stop
   for at most 5 s, and then the Library says "Disconnected. `<app>` is still running on the PC.", the way

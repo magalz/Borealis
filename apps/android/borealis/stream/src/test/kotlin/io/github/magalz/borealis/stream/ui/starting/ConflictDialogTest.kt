@@ -1,19 +1,25 @@
 package io.github.magalz.borealis.stream.ui.starting
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -246,15 +252,57 @@ class ConflictDialogTest {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun `a tap on the scrim answers cancel, as Cancel does`() {
+        show(sameApp())
+
+        composeRule.onRoot().performTouchInput { click(Offset(10f, 10f)) }
+
+        assertThat(intents.calls).containsExactly("answerConflict CANCEL")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a tap inside the panel does not answer`() {
+        show(sameApp())
+
+        composeRule.onNodeWithText("An app is already running").performClick()
+
+        assertThat(intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun `the title is a heading`() {
+        show(sameApp())
+
+        // The unmerged tree: the title and the body are read together, but only the title is a
+        // heading.
+        composeRule
+            .onNode(
+                hasText("An app is already running") and
+                    SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading),
+                useUnmergedTree = true,
+            )
+            .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the dialog announces its body and its warning with its title when it opens`() {
         show(sameApp())
 
         composeRule
             .onNode(
-                hasText("An app is already running") and
-                    SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)
+                SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
             )
-            .assertIsDisplayed()
+            .assert(
+                hasText("An app is already running") and
+                    hasText(
+                        "Desktop is already running on this host. " +
+                            "You can join it, or quit it and start it again."
+                    ) and
+                    hasText("Quitting ends the stream on the other device.")
+            )
     }
 
     @Test

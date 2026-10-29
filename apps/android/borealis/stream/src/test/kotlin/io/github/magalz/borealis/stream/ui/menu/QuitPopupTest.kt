@@ -8,13 +8,16 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -133,18 +136,40 @@ class QuitPopupTest {
         openPopup(FormFactor.Phone)
 
         assertThat(composeRule.paneTitles()).contains("Quit Desktop?")
+        // The unmerged tree of the popup: the title and the body are read together, but only the
+        // title is a heading. The menu behind it is in this tree too, with its own Quit line.
+        val inPopup =
+            hasAnyAncestor(
+                SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, "Quit Desktop?")
+            )
         composeRule
             .onNode(
                 hasText("Quit Desktop?") and
-                    SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)
+                    SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading) and
+                    inPopup,
+                useUnmergedTree = true,
             )
             .assertIsDisplayed()
         composeRule
             .onNode(
                 hasText(DESKTOP_QUIT) and
-                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Heading)
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Heading) and
+                    inPopup,
+                useUnmergedTree = true,
             )
             .assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the popup announces its body with its title when it opens`() {
+        openPopup(FormFactor.Phone)
+
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+            )
+            .assert(hasText("Quit Desktop?") and hasText(DESKTOP_QUIT))
     }
 
     @Test
@@ -160,12 +185,49 @@ class QuitPopupTest {
 
     @Test
     @Config(qualifiers = PHONE_LANDSCAPE)
-    fun `a tap on the scrim of the popup does not reach the menu behind it`() {
+    fun `a tap on the scrim closes the popup and does not reach the menu behind it`() {
         val fixture = openPopup(FormFactor.Phone)
 
         composeRule.onRoot().performTouchInput { click(Offset(10f, 10f)) }
 
+        popup().assertDoesNotExist()
+        text("Quit Desktop").assertIsDisplayed()
+        assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    // The side panel is under the right of the scrim: its own scrim must not take this tap.
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE)
+    fun `a tap on the scrim over the side panel closes only the popup`() {
+        val fixture = openPopup(FormFactor.Phone)
+
+        composeRule.onRoot().performTouchInput { click(Offset(width - 10f, 10f)) }
+
+        popup().assertDoesNotExist()
+        text("Quit Desktop").assertIsDisplayed()
+        assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a tap inside the popup does not close it`() {
+        val fixture = openPopup(FormFactor.Phone)
+
+        text(DESKTOP_QUIT).performClick()
+
         popup().assertIsDisplayed()
+        assertThat(fixture.intents.calls).isEmpty()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a tap on the scrim puts the focus back on the Quit row, as Cancel does`() {
+        val fixture = openPopup(FormFactor.Tv)
+
+        composeRule.onRoot().performTouchInput { click(Offset(10f, 10f)) }
+
+        popup().assertDoesNotExist()
+        text("Quit Desktop").assertIsFocused()
         assertThat(fixture.intents.calls).isEmpty()
     }
 

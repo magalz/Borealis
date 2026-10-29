@@ -670,6 +670,8 @@ class DefaultSettingsOptionsRowStateTest {
                 Settings.FONT,
                 Settings.ACCENT,
                 Settings.BACKGROUND_INTENSITY,
+                Settings.STREAM_BACKGROUND,
+                Settings.STREAM_MENU_GLASS,
                 Settings.CARD_DENSITY,
                 Settings.TEXT_SPACING,
             )

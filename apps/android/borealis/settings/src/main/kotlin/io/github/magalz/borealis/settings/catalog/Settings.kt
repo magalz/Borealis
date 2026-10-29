@@ -276,6 +276,46 @@ object Settings {
         )
 
     /**
+     * The background on the screens outside the game, before and after the stream:
+     * [STREAM_BACKGROUND_MOVING], [STREAM_BACKGROUND_STILL] or [STREAM_BACKGROUND_OFF]. It shows
+     * the style of [BACKGROUND]. A stored value that no choice has stands for the default. The
+     * stream reads it once, when it starts (ADR 0061).
+     */
+    val STREAM_BACKGROUND =
+        StringSetting(
+            "borealis_stream_background",
+            default = STREAM_BACKGROUND_MOVING,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [STREAM_BACKGROUND] for the background as it moves, the default. */
+    const val STREAM_BACKGROUND_MOVING = "moving"
+
+    /** Value of [STREAM_BACKGROUND] for one still frame of the background. */
+    const val STREAM_BACKGROUND_STILL = "still"
+
+    /** Value of [STREAM_BACKGROUND] for the plain page colour. */
+    const val STREAM_BACKGROUND_OFF = "off"
+
+    /**
+     * The glass of the in-game menu in a stream: [STREAM_MENU_GLASS_BLUR] or
+     * [STREAM_MENU_GLASS_SOLID]. A stored value that no choice has stands for the default. The
+     * stream reads it once, when it starts (ADR 0061).
+     */
+    val STREAM_MENU_GLASS =
+        StringSetting(
+            "borealis_stream_menu_glass",
+            default = STREAM_MENU_GLASS_BLUR,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [STREAM_MENU_GLASS] for the live blurred copy of the video, the default. */
+    const val STREAM_MENU_GLASS_BLUR = "blur"
+
+    /** Value of [STREAM_MENU_GLASS] for a solid surface. */
+    const val STREAM_MENU_GLASS_SOLID = "solid"
+
+    /**
      * How close the cards of a screen sit: [CARD_DENSITY_COMFORTABLE], [CARD_DENSITY_COMPACT] or
      * [CARD_DENSITY_DENSE]. A stored value that no choice has stands for the default.
      */

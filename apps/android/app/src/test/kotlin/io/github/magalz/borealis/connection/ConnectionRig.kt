@@ -127,6 +127,13 @@ internal class RecordingListener : NvConnectionListener {
         return events.first { it.startsWith(prefix) }
     }
 
+    /** Waits for an event that starts with any of [prefixes]. */
+    fun awaitAny(vararg prefixes: String) {
+        waitUntil("an event that starts with one of ${prefixes.toList()}") {
+            events.any { event -> prefixes.any(event::startsWith) }
+        }
+    }
+
     /** Waits for [count] events that start with [prefix]. */
     fun awaitCount(prefix: String, count: Int) {
         waitUntil("$count events that start with \"$prefix\"") { events(prefix).size >= count }
@@ -352,6 +359,12 @@ class ConnectionRig(private val resetPlace: Boolean = true) : ExternalResource()
             providerOf(TestIdentities.clientRsa),
             serverCert,
         )
+
+    /**
+     * A connection whose user chose Resume or Continue on the app that runs: when the host runs
+     * that app, the start joins it without asking.
+     */
+    fun resumingConnection(): NvConnection = connection(config { setResumeChosen(true) })
 
     fun start(
         connection: NvConnection,

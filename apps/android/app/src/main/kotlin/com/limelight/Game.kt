@@ -1609,9 +1609,11 @@ class Game :
                 val unicodeChar = event.unicodeChar
                 if (
                     (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
-                        (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0
+                        (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
+                        Character.isValidCodePoint(unicodeChar)
                 ) {
-                    conn.sendUtf8Text("" + unicodeChar.toChar())
+                    // BOREALIS: the whole code point, as a surrogate pair outside the basic plane
+                    conn.sendUtf8Text(String(Character.toChars(unicodeChar)))
                     return true
                 }
 
@@ -1702,7 +1704,8 @@ class Game :
                 // when we get the key up event for it.
                 val unicodeChar = event.unicodeChar
                 return (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
-                    (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0
+                    (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
+                    Character.isValidCodePoint(unicodeChar)
             }
 
             conn.sendKeyboardInput(

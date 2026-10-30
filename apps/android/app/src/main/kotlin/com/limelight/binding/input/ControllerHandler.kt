@@ -2059,6 +2059,15 @@ class ControllerHandler(
         return true
     }
 
+    // The amplitude (0-255) for a motor value: its high byte, but never 0 for a motor that is not
+    // zero, so a weak rumble is not lost and only a real zero cancels the vibration.
+    private fun motorAmplitude(motor: Short): Int {
+        if (motor.toInt() == 0) {
+            return 0
+        }
+        return ((motor.toInt() shr 8) and 0xFF).coerceAtLeast(1)
+    }
+
     // This must only be called if hasDualAmplitudeControlledRumbleVibrators() is true!
     @RequiresApi(Build.VERSION_CODES.S)
     private fun rumbleDualVibrators(
@@ -2067,8 +2076,8 @@ class ControllerHandler(
         highFreqMotor: Short,
     ) {
         // Normalize motor values to 0-255 amplitudes for VibrationManager
-        val highFreqAmplitude = (highFreqMotor.toInt() shr 8) and 0xFF
-        val lowFreqAmplitude = (lowFreqMotor.toInt() shr 8) and 0xFF
+        val highFreqAmplitude = motorAmplitude(highFreqMotor)
+        val lowFreqAmplitude = motorAmplitude(lowFreqMotor)
 
         // If they're both zero, we can just call cancel().
         if (lowFreqAmplitude == 0 && highFreqAmplitude == 0) {
@@ -2135,10 +2144,10 @@ class ControllerHandler(
         rightTrigger: Short,
     ) {
         // Normalize motor values to 0-255 amplitudes for VibrationManager
-        val highFreqAmplitude = (highFreqMotor.toInt() shr 8) and 0xFF
-        val lowFreqAmplitude = (lowFreqMotor.toInt() shr 8) and 0xFF
-        val leftTriggerAmplitude = (leftTrigger.toInt() shr 8) and 0xFF
-        val rightTriggerAmplitude = (rightTrigger.toInt() shr 8) and 0xFF
+        val highFreqAmplitude = motorAmplitude(highFreqMotor)
+        val lowFreqAmplitude = motorAmplitude(lowFreqMotor)
+        val leftTriggerAmplitude = motorAmplitude(leftTrigger)
+        val rightTriggerAmplitude = motorAmplitude(rightTrigger)
 
         // If they're all zero, we can just call cancel().
         if (
@@ -2196,14 +2205,21 @@ class ControllerHandler(
         // NB: This value is now 0-255 as required by VibrationEffect.
         val lowFreqMotorMSB = (lowFreqMotor.toInt() shr 8) and 0xFF
         val highFreqMotorMSB = (highFreqMotor.toInt() shr 8) and 0xFF
-        val simulatedAmplitude =
+        val weightedAmplitude =
             min(255, ((lowFreqMotorMSB * 0.80) + (highFreqMotorMSB * 0.33)).toInt())
+
+        // The weighted amplitude can be 0 even though the inputs are not (ex: lowFreqMotor == 0 &&
+        // highFreqMotor == 1). A motor that is not zero never drops to nothing: only a real zero
+        // cancels.
+        val simulatedAmplitude =
+            if (lowFreqMotor.toInt() == 0 && highFreqMotor.toInt() == 0) {
+                0
+            } else {
+                max(1, weightedAmplitude)
+            }
 
         if (simulatedAmplitude == 0) {
             // This case is easy - just cancel the current effect and get out.
-            // NB: We cannot simply check lowFreqMotor == highFreqMotor == 0
-            // because our simulatedAmplitude could be 0 even though our inputs
-            // are not (ex: lowFreqMotor == 0 && highFreqMotor == 1).
             vibrator.cancel()
             return
         }

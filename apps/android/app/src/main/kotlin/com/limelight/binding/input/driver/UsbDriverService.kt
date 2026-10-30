@@ -88,6 +88,10 @@ class UsbDriverService : Service(), UsbDriverListener {
             // Initial attachment broadcast
             if (action == UsbManager.ACTION_USB_DEVICE_ATTACHED) {
                 val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
+                if (device == null) {
+                    LimeLog.warning("USB attach broadcast without a device")
+                    return
+                }
 
                 // shouldClaimDevice() looks at the kernel's enumerated input
                 // devices to make its decision about whether to prompt to take
@@ -100,15 +104,18 @@ class UsbDriverService : Service(), UsbDriverListener {
                     .postDelayed(
                         {
                             // Continue the state machine
-                            handleUsbDeviceState(checkNotNull(device))
+                            handleUsbDeviceState(device)
                         },
                         ATTACH_DELAY_MS,
                     )
             }
             // Subsequent permission dialog completion intent
             else if (action == ACTION_USB_PERMISSION) {
-                val device =
-                    checkNotNull(intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE))
+                val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
+                if (device == null) {
+                    LimeLog.warning("USB permission answer without a device")
+                    return
+                }
                 permissionRequests.resolved(device.deviceName) // BOREALIS
 
                 // Permission dialog is now closed

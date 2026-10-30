@@ -5,6 +5,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -195,6 +196,33 @@ class RendererThreadsTest : RendererTestBase() {
         input.result()
         assertThat(events<CodecEvent.Reset>()).hasSize(1)
         assertThat(log.lines()).contains("INFO: Decoder requires reset for IllegalStateException")
+    }
+
+    // A recovery that fails
+
+    @Test
+    fun `a recovery that throws lets go the threads that wait for it and stops the renderer`() {
+        val renderer = running(PreferenceConfiguration.FRAME_PACING_BALANCED)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1) {
+            IllegalStateException("codec state")
+        }
+        val call = onInputThread { renderer.submit(pFrame(1)) }
+        awaitQuiesced(INPUT_THREAD or RENDERER_THREAD)
+        // The choreographer is the last and does the recovery: the reset is refused, then all four
+        // tries of a new codec.
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 5) {
+            IllegalStateException("refused for good")
+        }
+
+        val thrown = assertThrows(RuntimeException::class.java) { renderer.doFrame(FRAME_TIME) }
+
+        assertThat(thrown.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(crashes).hasSize(1)
+        // The input thread waited for a recovery that was never going to end.
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+        // No codec is left: the renderer stops, and the frames that still come are dropped.
+        assertThat(renderer.submit(pFrame(2))).isEqualTo(MoonBridge.DR_OK)
+        assertThat(events<CodecEvent.Queued>()).isEmpty()
     }
 
     // An interrupted wait

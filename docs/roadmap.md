@@ -1142,17 +1142,18 @@ UAT, so none is left with no place. The owner can move any of them:
   rare, and nothing crashes. In Sprint 17, Video and the stream screens.
 - **A copy that never answers:** the pending state has no time cap; it relies on `PixelCopy` answering
   every request. If it never did, the popup would stay on black under its scrim with a solid panel, and
-  every action would work. While a copy is pending (tens of ms) the panel is solid; it turns to glass when
+  every action would work. While a copy is pending (about 0.1 to 0.3 s) the panel is solid; it turns to glass when
   the frame arrives. The copies of the round took 76 ms on the S22 and 314 ms on the TV. In Sprint 17,
   Video and the stream screens.
 - **A phone in landscape:** the three or four actions of the popup stack, and with large text the panel
   scrolls. It is covered by a test and a reference. No device round has reported it (the S22 steps of 3.29 are
-  not recorded), so it stays a check of the next device round.
+  not recorded), so it is a device check in [Sprint 17](#sprint-17-general-fixes), Video and the stream
+  screens.
 - **Not measurable in Robolectric:** whether the offscreen layer of the halo is kept across frames (its
   cost on a TV), bitmap reuse against the hardware renderer, the colour of an HDR copy, and the first copy
   after the menu opens (129.7 ms on the S22 in the spike). The owner passed the look of the menu on the S22
-  in the UAT (U4) with no note, but none of the four was measured, so they stay checks of the next device
-  round. A real `PixelCopy` at the moment of a drop is no longer open: the logs of the TV (2026-10-29) and of
+  in the UAT (U4) with no note, but none of the four was measured, so they are device checks in Sprint 17,
+  Video and the stream screens. A real `PixelCopy` at the moment of a drop is no longer open: the logs of the TV (2026-10-29) and of
   the S22 show the request before `Connection terminated` and the copy after it.
 - **`StreamChromeHost.handleBack`** still handles the Failed phase, which is unreachable while the popup is
   composed. It is a harmless fallback. Two branches have no test, `FrozenFrame.kt` (the copy worked but the
@@ -1164,8 +1165,9 @@ UAT, so none is left with no place. The owner can move any of them:
   `VideoGlassSpec.kt` repeats the Reduced values (85 percent, 48 dp) that `GlassRules` keeps private. Both
   are in Sprint 18.
 
-The two flaky tests and the duplicated pixel helpers that the owner's UAT turned up are in Sprint 18 too. The
-bottom-edge line on the TV, the owner's mouse and the orphan DataStore key are in Sprint 17. The results of the
+The two flaky tests and the duplicated pixel helpers, which the owner listed for the backlog on 2026-10-30 from the
+gates and reviews of the phase, are in Sprint 18 too. The bottom-edge line on the TV and the owner's mouse, which
+came from the UAT, and the orphan DataStore key are in Sprint 17. The results of the
 round are in [device-validation section 20](development/device-validation.md#20-results-sprint-15).
 
 Run: done on 2026-10-29 and 2026-10-30, and the results are in
@@ -1467,6 +1469,13 @@ the round are in [device-validation section 20](development/device-validation.md
 - **A time cap for the pending copy.** From Sprint 15 (the known limits). The error popup waits on black for the
   copy with no time limit, and relies on `PixelCopy` answering every request it accepts. Add a cap, and show the
   background when it runs out. The copies took 76 ms on the S22 and 314 ms on the TV in the round.
+- **Device checks left open by Sprint 15.** Four checks that Robolectric cannot make, and one that no round
+  has reported: whether the offscreen layer of the halo is kept across frames (its cost on a TV), bitmap reuse
+  against the hardware renderer, the colour of an HDR copy on the S22, and the delay of the first copy after the
+  menu opens (129.7 ms on the S22 in the spike); and the error popup on a phone in landscape, where its three or
+  four actions stack and, with large text, the panel scrolls (a test and a reference cover it). The next device
+  round looks at them, with the new scrim and panel of the popups and the screens that follow the Library
+  (device-validation section 20, "Not run and owner items").
 
 #### Accessibility and layout
 
@@ -1525,7 +1534,7 @@ Planned, not started. Owner decision of 2026-10-28.
     background Off default in the test fixtures; and `VideoGlassSpec.kt` (`:borealis:stream`) repeats the Reduced values
     (85 percent, 48 dp) that `GlassRules` keeps private, with a comment that points at ADR 0057, so keep
     them in one place.
-  - **Two flaky tests and the duplicated pixel helpers**, from Sprint 15 (the UAT round, owner, 2026-10-30).
+  - **Two flaky tests and the duplicated pixel helpers**, from Sprint 15 (the gates and reviews of the phase; the owner listed them for the backlog on 2026-10-30).
     `StreamChromeHostFrozenFrameTest` failed once under load with a Robolectric `NullPointerException` before
     the body of the test, and `StreamBackTest` "back opens the menu…" failed once on the timing of
     `menuHintShown`. The stream tests also repeat pixel helpers: `ui/glass/PixelSupport.kt` against the private

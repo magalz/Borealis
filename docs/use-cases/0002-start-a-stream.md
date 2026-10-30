@@ -192,7 +192,7 @@ says what happened and what to do next.
    surface and the blur of the look, with Stream menu style on Blurred, and a
    solid surface with Solid, Transparency Off, High contrast or below API 31.
    Reduce motion and the battery saver change nothing: the frame is still. While
-   the copy is pending, which took 76 ms to 0.3 s in the device rounds, the
+   the copy is pending, which took 76 to 314 ms in the rounds of 2026-10-29, the
    popup is on black with a solid panel, under the same scrim. When no copy
    exists or it failed, the popup is a dialog over the background of A6: it
    draws as it does with no frozen frame, with no scrim where the host blurs the

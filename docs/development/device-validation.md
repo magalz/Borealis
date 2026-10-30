@@ -2364,7 +2364,7 @@ Steps:
      stream, frozen and blurred, under a light scrim (the page at 35 %), and the panel firm (85 % of the
      surface with Blurred). A tap outside the popup does nothing (S22). Back (or
      B on a pad) closes the popup and opens the Library, which shows the game still running. Diagnostics
-     opens the diagnostics, and Close does what Back does. While the copy is pending, for tens of ms, the popup
+     opens the diagnostics, and Close does what Back does. While the copy is pending, for about 0.1 to 0.3 s, the popup
      is on black with a solid panel, then on the frame.
    - The panel follows the Stream menu style: glass with Blurred, solid with Solid, Transparency Off or High contrast.
      On a phone in landscape the actions stack, and with a large text size the panel scrolls (S22). A
@@ -5534,7 +5534,7 @@ of the 53 screenshot references of the phase (gate G1) made no other mark.
 | U4 The look | S22 | pass, with decisions 2 and 3 | The row for the background before and after the stream is dropped, and the other row is renamed: see decisions 2 and 3 below. |
 | U5 The dropped stream | S22 | pass, with decision 1 | The popup and Back were right, in the owner's words. The look of the popup: decision 1. |
 | U6 A second device | TV, S22 | pass | The tap on the running app entered directly. That is a resume choice and the design ([3.29](#329-sprint-15-checks), step 5, first bullet). The agent's later retest of the question for another app is void (see The host below). The pinned-shortcut part of the step has no result recorded. |
-| U7 The keyboard and the mouse | S22 | pass | No note. The owner's mouse is finding (b) below. |
+| U7 The keyboard and the mouse | S22 | pass | No note. |
 
 The three decisions:
 
@@ -5564,8 +5564,8 @@ because of the crash, so that step has no valid device result in this round.
 
 ### Findings for the backlog
 
-The owner found these on 2026-10-30. None is a Sprint 15 regression. Each one says where it went in the
-[roadmap](../roadmap.md).
+The owner listed these for the backlog on 2026-10-30: (a) and (b) from the UAT, (c) to (f) from the gates and
+reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md).
 
 - **(a) A line at the bottom edge of the video on the TV.** A purple and cyan line with white blocks showed at
   the bottom edge of the video, once, with Steam Big Picture, and went away by itself. The owner has a photo. In
@@ -5590,7 +5590,7 @@ The owner found these on 2026-10-30. None is a Sprint 15 regression. Each one sa
   of the halo, the frozen frame after a rotation, the pending copy with no time cap, a phone in landscape, the
   checks that Robolectric cannot make, `handleBack` for the Failed phase and the two untested branches, and the
   test fixtures. Each has a place now: roadmap, [Sprint 15](../roadmap.md#sprint-15-the-stream-screens-and-glass),
-  "Known limits of the code".
+  "Known limits of the code", which names the sprint of each.
 
 ### Not run and owner items
 

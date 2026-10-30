@@ -264,11 +264,26 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `cleanup keeps the released track, so a second cleanup is refused by the platform`() {
+    fun `a second cleanup does nothing, because the first one dropped the track`() {
         val renderer = ready()
         renderer.cleanup()
+        val callsAfterFirst = AudioPlatform.calls.size
 
-        assertThrows(IllegalStateException::class.java) { renderer.cleanup() }
+        renderer.cleanup()
+
+        assertThat(AudioPlatform.calls).hasSize(callsAfterFirst)
         assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>()).hasSize(1)
+    }
+
+    @Test
+    fun `a cleanup whose release fails still drops the track, so a second cleanup does nothing`() {
+        val renderer = ready()
+        AudioPlatform.failReleaseOf(setOf(1))
+        assertThrows(IllegalStateException::class.java) { renderer.cleanup() }
+        val callsAfterFirst = AudioPlatform.calls.size
+
+        renderer.cleanup()
+
+        assertThat(AudioPlatform.calls).hasSize(callsAfterFirst)
     }
 }

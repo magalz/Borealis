@@ -2307,8 +2307,8 @@ class ControllerHandler(
                 } else if (
                     sceManager.rumble(
                         deviceContext.inputDevice,
-                        deviceContext.lowFreqMotor.toInt(),
-                        deviceContext.highFreqMotor.toInt(),
+                        deviceContext.lowFreqMotor.toInt() and 0xffff,
+                        deviceContext.highFreqMotor.toInt() and 0xffff,
                     )
                 ) {
                     // On Shield devices, we can use their special API to rumble Shield controllers

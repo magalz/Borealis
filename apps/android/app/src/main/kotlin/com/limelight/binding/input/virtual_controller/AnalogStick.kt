@@ -199,8 +199,8 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
                 StickState.MOVED_IN_DEAD_ZONE
             }
 
-        //  trigger move event if state active
-        if (stickState == StickState.MOVED_ACTIVE) {
+        // trigger move event if state active; a stick with no way to go has no 100% to divide by
+        if (stickState == StickState.MOVED_ACTIVE && complete > 0) {
             notifyOnMovement(-correlatedX / complete, correlatedY / complete)
         }
     }

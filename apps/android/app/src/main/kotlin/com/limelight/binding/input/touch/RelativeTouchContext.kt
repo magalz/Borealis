@@ -106,9 +106,10 @@ class RelativeTouchContext(
         eventTime: Long,
         isNewFinger: Boolean,
     ): Boolean {
-        // Get the view dimensions to scale inputs on this touch
-        xFactor = referenceWidth / targetView.width.toDouble()
-        yFactor = referenceHeight / targetView.height.toDouble()
+        // Get the view dimensions to scale inputs on this touch. A view with no size has no
+        // scale (a factor of 0): touchMoveEvent sends nothing until a touch down finds a size.
+        xFactor = if (targetView.width > 0) referenceWidth / targetView.width.toDouble() else 0.0
+        yFactor = if (targetView.height > 0) referenceHeight / targetView.height.toDouble() else 0.0
 
         originalTouchX = eventX
         lastTouchX = eventX
@@ -212,6 +213,10 @@ class RelativeTouchContext(
 
             // We only send moves and drags for the primary touch point
             if (actionIndex == 0) {
+                if (xFactor == 0.0 || yFactor == 0.0) {
+                    return true
+                }
+
                 var deltaX = eventX - lastTouchX
                 var deltaY = eventY - lastTouchY
 

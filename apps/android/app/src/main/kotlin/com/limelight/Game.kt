@@ -1798,6 +1798,8 @@ class Game :
         }
     }
 
+    private fun streamViewHasSize(): Boolean = streamView.width > 0 && streamView.height > 0
+
     private fun getStreamViewRelativeNormalizedXY(
         view: View,
         event: MotionEvent,
@@ -1947,6 +1949,8 @@ class Game :
         toolType: Byte,
         pointerIndex: Int,
     ): Boolean {
+        // BOREALIS: before the first layout the stream view has no size to place the pen on
+        if (!streamViewHasSize()) return true
         var penButtons: Byte = 0
         if ((event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0) {
             penButtons = (penButtons.toInt() or MoonBridge.LI_PEN_BUTTON_PRIMARY.toInt()).toByte()
@@ -2050,6 +2054,8 @@ class Game :
         eventType: Byte,
         pointerIndex: Int,
     ): Boolean {
+        // BOREALIS: before the first layout the stream view has no size to place the touch on
+        if (!streamViewHasSize()) return true
         val normalizedCoords = getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
         val normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex)
         return conn.sendTouchEvent(

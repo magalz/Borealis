@@ -311,6 +311,10 @@ class RelativeTouchContext(
         get() = cancelled
 
     override fun setPointerCount(pointerCount: Int) {
+        // A new finger (the count rises) ends the two-finger tap that waited for the last finger
+        if (pointerCount > this.pointerCount) {
+            twoFingerTapPending = false
+        }
         this.pointerCount = pointerCount
 
         if (pointerCount > maxPointerCountInGesture) {

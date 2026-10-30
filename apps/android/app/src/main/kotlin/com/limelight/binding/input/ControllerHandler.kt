@@ -1002,6 +1002,19 @@ class ControllerHandler(
                 }
             }
         } else {
+            // From Android S the system says whether the pad has a battery: tell the host once
+            // that it has none. Before it we cannot know, and the pad claims no battery.
+            if (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    context.lastReportedBatteryStatus != BATTERY_STATUS_NOT_PRESENT
+            ) {
+                conn.sendControllerBatteryEvent(
+                    context.controllerNumber.toByte(),
+                    MoonBridge.LI_BATTERY_STATE_NOT_PRESENT,
+                    MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN,
+                )
+                context.lastReportedBatteryStatus = BATTERY_STATUS_NOT_PRESENT
+            }
             return
         }
 
@@ -3376,7 +3389,7 @@ class ControllerHandler(
         @JvmField var lightsSession: LightsManager.LightsSession? = null
         @JvmField var ledArgbValue = 0
 
-        // These are BatteryState values, not Moonlight values
+        // These are BatteryState values, not Moonlight values, or BATTERY_STATUS_NOT_PRESENT
         @JvmField var lastReportedBatteryStatus = 0
         @JvmField var lastReportedBatteryCapacity = 0f
 
@@ -3801,6 +3814,9 @@ class ControllerHandler(
         private const val MAX_GAMEPADS: Short = 16 // Limited by bits in activeGamepadMask
 
         private const val BATTERY_RECHECK_INTERVAL_MS = 120 * 1000
+
+        // Not a BatteryState status: marks a pad that reported that it has no battery
+        private const val BATTERY_STATUS_NOT_PRESENT = -1
 
         private const val REMAP_IGNORE = -1
         private const val REMAP_CONSUME = -2

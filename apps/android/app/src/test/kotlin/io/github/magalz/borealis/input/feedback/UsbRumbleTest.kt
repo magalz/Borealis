@@ -160,8 +160,9 @@ class UsbRumbleTest : FeedbackTestBase() {
         rig.rumble(0x4000, 0x4000)
         rig.rumbleTriggers(0x4000, 0x4000)
 
-        assertThat(usb.rumbles).isEmpty()
-        assertThat(usb.triggerRumbles).isEmpty()
+        // Only the zeros of the stop itself
+        assertThat(usb.rumbles).containsExactly(0 to 0)
+        assertThat(usb.triggerRumbles).containsExactly(0 to 0)
     }
 
     @Test

@@ -182,6 +182,13 @@ class XboxOneController(
         sendRumblePacket()
     }
 
+    override fun stop() {
+        // The stop's rumble(0, 0) sends the trigger motors too, so zero them first
+        leftTriggerMotor = 0
+        rightTriggerMotor = 0
+        super.stop()
+    }
+
     private class InitPacket(val vendorId: Int, val productId: Int, val data: ByteArray)
 
     companion object {

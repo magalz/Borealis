@@ -227,7 +227,14 @@ class ControllerHandler(
 
         inputDeviceContexts.forEachValue { deviceContext -> deviceContext.destroy() }
 
-        usbDeviceContexts.forEachValue { deviceContext -> deviceContext.destroy() }
+        usbDeviceContexts.forEachValue { deviceContext ->
+            // The host may never send a zero for the motors at the end of the stream
+            deviceContext.device?.let {
+                it.rumble(0, 0)
+                it.rumbleTriggers(0, 0)
+            }
+            deviceContext.destroy()
+        }
 
         // The default context is not in either list but schedules work too
         defaultContext.destroy()

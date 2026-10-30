@@ -906,6 +906,9 @@ class Game :
         // We can't guarantee the state of modifiers keys which may have
         // lifted while focus was not on us. Clear the modifier state.
         this.modifierFlags = 0
+        // BOREALIS: and drop a chord that waits for them, or the next key would do it
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+        waitingForAllModifiersUp = false
 
         // BOREALIS: the release of the mouse's Back button may come while another window has the
         // focus (stream)

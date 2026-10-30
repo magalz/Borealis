@@ -350,6 +350,28 @@ class ControllerHandler(
         return true
     }
 
+    // Takes the lowest controller number that no pad holds for the context. False when all
+    // MAX_GAMEPADS numbers are taken, which leaves the context without one.
+    private fun reserveControllerNumber(context: GenericControllerContext): Boolean {
+        for (i in 0 until MAX_GAMEPADS) {
+            if ((currentControllers.toInt() and (1 shl i)) == 0) {
+                LimeLog.info("Reserving the next available controller number")
+
+                // Found an unused controller value
+                currentControllers = (currentControllers.toInt() or (1 shl i)).toShort()
+
+                // Take this value out of the initial gamepad set
+                initialControllers = (initialControllers.toInt() and (1 shl i).inv()).toShort()
+
+                context.controllerNumber = i.toShort()
+                context.reservedControllerNumber = true
+                return true
+            }
+        }
+
+        return false
+    }
+
     // Called before sending input but after we've determined that this
     // is definitely a controller (not a keyboard, mouse, or something else)
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
@@ -359,31 +381,25 @@ class ControllerHandler(
             return
         }
 
+        // Set when all MAX_GAMEPADS numbers are taken: the pad gets none, and the host hears
+        // nothing of it, until one frees up
+        var refused = false
+
         if (context is InputDeviceContext) {
             val devContext: InputDeviceContext = context
 
-            LimeLog.info("${devContext.name} (${context.id}) needs a controller number assigned")
+            if (!context.refusedControllerNumber) {
+                LimeLog.info(
+                    "${devContext.name} (${context.id}) needs a controller number assigned"
+                )
+            }
             if (!devContext.external) {
                 LimeLog.info("Built-in buttons hardcoded as controller 0")
                 context.controllerNumber = 0
             } else if (prefConfig.multiController && devContext.hasJoystickAxes) {
                 context.controllerNumber = 0
 
-                LimeLog.info("Reserving the next available controller number")
-                for (i in 0 until MAX_GAMEPADS) {
-                    if ((currentControllers.toInt() and (1 shl i)) == 0) {
-                        // Found an unused controller value
-                        currentControllers = (currentControllers.toInt() or (1 shl i)).toShort()
-
-                        // Take this value out of the initial gamepad set
-                        initialControllers =
-                            (initialControllers.toInt() and (1 shl i).inv()).toShort()
-
-                        context.controllerNumber = i.toShort()
-                        context.reservedControllerNumber = true
-                        break
-                    }
-                }
+                refused = !reserveControllerNumber(context)
             } else if (!devContext.hasJoystickAxes) {
                 // If this device doesn't have joystick axes, it may be an input device associated
                 // with another joystick (like a PS4 touchpad). We'll propagate that joystick's
@@ -417,12 +433,17 @@ class ControllerHandler(
                         assignControllerNumberIfNeeded(associatedDeviceContext)
                     }
 
-                    // Propagate the associated controller number
-                    context.controllerNumber = associatedDeviceContext.controllerNumber
+                    if (associatedDeviceContext.assignedControllerNumber) {
+                        // Propagate the associated controller number
+                        context.controllerNumber = associatedDeviceContext.controllerNumber
 
-                    LimeLog.info(
-                        "Propagated controller number from ${associatedDeviceContext.name}"
-                    )
+                        LimeLog.info(
+                            "Propagated controller number from ${associatedDeviceContext.name}"
+                        )
+                    } else {
+                        // The joystick has none, so the touchpad waits for one as well
+                        refused = true
+                    }
                 }
             } else {
                 LimeLog.info("Not reserving a controller number")
@@ -432,7 +453,8 @@ class ControllerHandler(
             // If the gamepad doesn't have motion sensors, use the on-device sensors as a fallback
             // for player 1
             if (
-                prefConfig.gamepadMotionSensorsFallbackToDevice &&
+                !refused &&
+                    prefConfig.gamepadMotionSensorsFallbackToDevice &&
                     context.controllerNumber.toInt() == 0 &&
                     devContext.sensorManager == null
             ) {
@@ -442,25 +464,22 @@ class ControllerHandler(
             if (prefConfig.multiController) {
                 context.controllerNumber = 0
 
-                LimeLog.info("Reserving the next available controller number")
-                for (i in 0 until MAX_GAMEPADS) {
-                    if ((currentControllers.toInt() and (1 shl i)) == 0) {
-                        // Found an unused controller value
-                        currentControllers = (currentControllers.toInt() or (1 shl i)).toShort()
-
-                        // Take this value out of the initial gamepad set
-                        initialControllers =
-                            (initialControllers.toInt() and (1 shl i).inv()).toShort()
-
-                        context.controllerNumber = i.toShort()
-                        context.reservedControllerNumber = true
-                        break
-                    }
-                }
+                refused = !reserveControllerNumber(context)
             } else {
                 LimeLog.info("Not reserving a controller number")
                 context.controllerNumber = 0
             }
+        }
+
+        if (refused) {
+            if (!context.refusedControllerNumber) {
+                context.refusedControllerNumber = true
+                LimeLog.warning(
+                    "No controller number is free for device ${context.id}: " +
+                        "it sends nothing until one is"
+                )
+            }
+            return
         }
 
         LimeLog.info("Assigned as controller ${context.controllerNumber}")
@@ -1314,6 +1333,9 @@ class ControllerHandler(
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun transmitControllerInputLocked(originalContext: GenericControllerContext) {
         assignControllerNumberIfNeeded(originalContext)
+        if (!originalContext.assignedControllerNumber) {
+            return
+        }
         controllersWithInput =
             controllersWithInput or (1 shl originalContext.controllerNumber.toInt())
 
@@ -3227,6 +3249,9 @@ class ControllerHandler(
 
         @JvmField var assignedControllerNumber = false
         @JvmField var reservedControllerNumber = false
+
+        // All the numbers were taken when the pad asked: it has none and the log said so
+        @JvmField var refusedControllerNumber = false
         @JvmField var controllerNumber: Short = 0
 
         @JvmField var inputMap = 0

@@ -147,6 +147,25 @@ class KeyboardTranslatorLayoutCharacterizationTest {
     }
 
     @Test
+    fun `a place that sends a key code outside the platform's range is left out of the layout`() {
+        // A broken device can answer a key code above the highest one, or a negative one.
+        val outside =
+            mapOf(
+                KeyEvent.KEYCODE_A to KeyEvent.getMaxKeyCode() + 1,
+                KeyEvent.KEYCODE_B to -2,
+                KeyEvent.KEYCODE_Q to KeyEvent.KEYCODE_A,
+            )
+        keyboard(KEYBOARD, layout = outside)
+
+        val translator = KeyboardTranslator()
+        translator.onInputDeviceAdded(KEYBOARD)
+        translator.onInputDeviceChanged(KEYBOARD)
+
+        assertThat(translator.translate(KeyEvent.KEYCODE_A, KEYBOARD)).isEqualTo(VK_Q)
+        assertThat(translator.hasNormalizedMapping(KeyEvent.KEYCODE_B, KEYBOARD)).isFalse()
+    }
+
+    @Test
     fun `a negative key code from a keyboard with a layout is not looked up and has no code`() {
         // A key event never has a negative key code; one from a broken device is ignored.
         keyboard(KEYBOARD)

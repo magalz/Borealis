@@ -348,11 +348,6 @@ class TvChannelHelper(private val context: Context) {
             return this
         }
 
-        fun setIntentUri(uri: Uri?): PreviewProgramBuilder {
-            values.put(TvContract.PreviewPrograms.COLUMN_INTENT_URI, toValueString(uri))
-            return this
-        }
-
         fun setInternalProviderId(id: String?): PreviewProgramBuilder {
             values.put(TvContract.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID, id)
             return this

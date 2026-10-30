@@ -796,91 +796,110 @@ class MediaCodecDecoderRenderer(
 
             // This is the final thread to quiesce, so let's perform the codec recovery now.
             if (codecRecoveryThreadQuiescedFlags == CR_FLAG_ALL) {
-                // Input and output buffers are invalidated by stop() and reset().
-                nextInputBuffer = null
-                nextInputBufferIndex = -1
-                outputBufferQueue.clear()
-                // BOREALIS: stream.perf
-                synchronized(decodeTimeTracker) { decodeTimeTracker.clear() }
+                // The recovery either settles the recovery type or throws, and a thread that
+                // throws must not leave the quiesced threads waiting for it for ever.
+                var settled = false
+                try {
+                    // Input and output buffers are invalidated by stop() and reset().
+                    nextInputBuffer = null
+                    nextInputBufferIndex = -1
+                    outputBufferQueue.clear()
+                    // BOREALIS: stream.perf
+                    synchronized(decodeTimeTracker) { decodeTimeTracker.clear() }
 
-                // Count the attempt, unless prepareForStop() cancelled the recovery meanwhile
-                if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
-                    codecRecoveryAttempts++
-                    LimeLog.info("Codec recovery attempt: $codecRecoveryAttempts")
-                }
-
-                // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
-                    LimeLog.warning("Trying to restart decoder after CodecException")
-                    try {
-                        requireDecoder().stop()
-                        configureAndStartDecoder(configuredFormat.orNpe("The configured format"))
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
-
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        e.printStackTrace()
-
-                        // Something went wrong during the restart, let's use a bigger hammer
-                        // and try a reset instead.
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_RESET)
+                    // Count the attempt, unless prepareForStop() cancelled the recovery meanwhile
+                    if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
+                        codecRecoveryAttempts++
+                        LimeLog.info("Codec recovery attempt: $codecRecoveryAttempts")
                     }
-                }
 
-                // For "non-recoverable" exceptions on L+, we can call reset() to recover
-                // without having to recreate the entire decoder again.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                    LimeLog.warning("Trying to reset decoder after CodecException")
-                    try {
-                        requireDecoder().reset()
-                        configureAndStartDecoder(configuredFormat.orNpe("The configured format"))
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
+                    // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
+                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
+                        LimeLog.warning("Trying to restart decoder after CodecException")
+                        try {
+                            requireDecoder().stop()
+                            configureAndStartDecoder(
+                                configuredFormat.orNpe("The configured format")
+                            )
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
 
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        e.printStackTrace()
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            e.printStackTrace()
 
-                        // Something went wrong during the reset, we'll have to resort to
-                        // releasing and recreating the decoder now.
-                    }
-                }
-
-                // If we _still_ haven't managed to recover, go for the nuclear option and just
-                // throw away the old decoder and reinitialize a new one from scratch.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                    LimeLog.warning("Trying to recreate decoder after CodecException")
-                    requireDecoder().release()
-
-                    try {
-                        initializeDecoder(true)
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
-
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        // If we failed to recover after all of these attempts, just crash
-                        if (!reportedCrash) {
-                            reportedCrash = true
-                            crashListener.notifyCrash(e)
+                            // Something went wrong during the restart, let's use a bigger hammer
+                            // and try a reset instead.
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_RESET)
                         }
-                        throw RendererException(this, e)
                     }
-                }
 
-                // Wake all quiesced threads and allow them to begin work again
-                codecRecoveryThreadQuiescedFlags = 0
-                (codecRecoveryMonitor as Object).notifyAll()
+                    // For "non-recoverable" exceptions on L+, we can call reset() to recover
+                    // without having to recreate the entire decoder again.
+                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+                        LimeLog.warning("Trying to reset decoder after CodecException")
+                        try {
+                            requireDecoder().reset()
+                            configureAndStartDecoder(
+                                configuredFormat.orNpe("The configured format")
+                            )
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
+
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            e.printStackTrace()
+
+                            // Something went wrong during the reset, we'll have to resort to
+                            // releasing and recreating the decoder now.
+                        }
+                    }
+
+                    // If we _still_ haven't managed to recover, go for the nuclear option and just
+                    // throw away the old decoder and reinitialize a new one from scratch.
+                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+                        LimeLog.warning("Trying to recreate decoder after CodecException")
+                        requireDecoder().release()
+
+                        try {
+                            initializeDecoder(true)
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
+
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            // If we failed to recover after all of these attempts, just crash
+                            if (!reportedCrash) {
+                                reportedCrash = true
+                                crashListener.notifyCrash(e)
+                            }
+                            throw RendererException(this, e)
+                        }
+                    }
+
+                    settled = true
+                } finally {
+                    if (!settled) {
+                        // The recovery failed for good and the codec cannot be used, so the
+                        // waiting threads must not meet it again: just stop, as when our Surface
+                        // is invalid.
+                        stopping = true
+                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                    }
+
+                    // Wake all quiesced threads and allow them to begin work again
+                    codecRecoveryThreadQuiescedFlags = 0
+                    (codecRecoveryMonitor as Object).notifyAll()
+                }
             } else {
                 // If we haven't quiesced all threads yet, wait to be signalled after recovery.
                 // The final thread to be quiesced will handle the codec recovery.

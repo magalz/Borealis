@@ -110,12 +110,12 @@ class ControlListenersCharacterizationTest {
     }
 
     @Test
-    fun `Y presses the sign bit of the short`() {
+    fun `Y presses the sign bit of the short, and the PC gets the flag 0x8000`() {
         val y = rig.element(VirtualControllerElement.EID_Y)
 
         rig.press(y)
         assertThat(controller.controllerInputContext.inputMap).isEqualTo(Short.MIN_VALUE)
-        assertThat(inputMap()).isEqualTo(-0x8000)
+        assertThat(buttons()).containsExactly(ControllerPacket.Y_FLAG)
 
         rig.release(y)
         assertThat(inputMap()).isEqualTo(0)

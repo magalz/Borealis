@@ -452,13 +452,23 @@ class VirtualControllerCharacterizationTest {
     }
 
     @Test
-    fun `a button above the sign bit of the short reaches the handler with the sign extended`() {
+    fun `a button above the sign bit of the short reaches the handler as the flag, not extended`() {
         context().inputMap = ControllerPacket.Y_FLAG.toShort()
 
         controller.sendControllerInputContext()
 
-        // 0x8000 as a short is -32768, which the int parameter of the handler takes as 0xFFFF8000
-        assertThat(rig.packets.single().buttons).isEqualTo(-0x8000)
+        // 0x8000 as a short is -32768; the handler takes 0x8000, not 0xFFFF8000
+        assertThat(rig.packets.single().buttons).isEqualTo(ControllerPacket.Y_FLAG)
+    }
+
+    @Test
+    fun `the buttons of the other bits reach the handler unchanged beside the sign bit`() {
+        context().inputMap = (ControllerPacket.Y_FLAG or ControllerPacket.A_FLAG).toShort()
+
+        controller.sendControllerInputContext()
+
+        assertThat(rig.packets.single().buttons)
+            .isEqualTo(ControllerPacket.Y_FLAG or ControllerPacket.A_FLAG)
     }
 
     @Test

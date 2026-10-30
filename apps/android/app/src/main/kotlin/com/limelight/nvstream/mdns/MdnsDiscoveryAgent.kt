@@ -11,6 +11,8 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
 
     abstract fun stopDiscovery()
 
+    open fun close() = Unit
+
     protected fun reportNewComputer(
         name: String?,
         port: Int,

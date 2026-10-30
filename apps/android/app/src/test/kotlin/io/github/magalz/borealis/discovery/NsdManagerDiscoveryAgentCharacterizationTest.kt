@@ -436,6 +436,57 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
         assertThat(callbacks(found)).isEmpty()
     }
 
+    @Test
+    fun `closing the agent stops the discovery, unregisters the callbacks and shuts the executor down`() {
+        val discovery = startAndConfirm()
+        val denPc = service("Den PC")
+        val laptop = service("Laptop")
+        discovery.onServiceFound(denPc)
+        discovery.onServiceFound(laptop)
+
+        agent.close()
+
+        assertThat(discoveries()).isEmpty()
+        assertThat(callbacks(denPc)).isEmpty()
+        assertThat(callbacks(laptop)).isEmpty()
+        assertThat((platform.serviceInfoExecutors.first() as ThreadPoolExecutor).isShutdown)
+            .isTrue()
+    }
+
+    @Test
+    fun `a call after the close is harmless and asks the platform for nothing`() {
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        agent.close()
+
+        agent.close()
+        agent.stopDiscovery()
+        agent.startDiscovery(INTERVAL_MS)
+        platform.confirmStarts()
+        discovery.onServiceFound(found)
+
+        assertThat(discoveries()).isEmpty()
+        assertThat(callbacks(found)).isEmpty()
+        assertThat(listener.failures).isEmpty()
+    }
+
+    @Test
+    fun `a callback that the platform delivers after the close is dropped, not rejected`() {
+        // The platform hands the unregistration of a callback, and any update still on its way, to
+        // the executor of the agent from its own thread, where a rejection would crash the app.
+        val discovery = startAndConfirm()
+        discovery.onServiceFound(service("Den PC"))
+        val executor = platform.serviceInfoExecutors.first() as ThreadPoolExecutor
+        agent.close()
+        var ran = false
+
+        executor.execute { ran = true }
+
+        assertThat(executor.isShutdown).isTrue()
+        assertThat(ran).isFalse()
+    }
+
     private companion object {
         const val SERVICE_TYPE = "_nvstream._tcp"
         const val INTERVAL_MS = 1_000

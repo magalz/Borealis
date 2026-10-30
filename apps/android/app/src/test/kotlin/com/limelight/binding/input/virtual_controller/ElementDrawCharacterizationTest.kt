@@ -470,7 +470,7 @@ class ElementDrawCharacterizationTest {
             "down" to Shape("rect", listOf(108.9f, 158.4f, 217.8f, 231f)),
             "left up" to Shape("line", listOf(9f, 79.2f, 108.9f, 9f)),
             "up right" to Shape("line", listOf(217.8f, 9f, 321f, 79.2f)),
-            "right down" to Shape("line", listOf(326f, 158.4f, 217.8f, 231f)),
+            "right down" to Shape("line", listOf(321f, 158.4f, 217.8f, 231f)),
             "down left" to Shape("line", listOf(108.9f, 231f, 9f, 158.4f)),
         )
 
@@ -499,6 +499,16 @@ class ElementDrawCharacterizationTest {
         val left = draw(pad).of("rect")[1]
 
         assertThat(left.numbers).containsExactly(9f, 79.200005f, 108.9f, 158.40001f).inOrder()
+    }
+
+    @Test
+    fun `the right down line starts where the up right line ends, at the edge of the right side`() {
+        val lines = draw(pad).of("line")
+        val upRight = lines[1].numbers
+        val rightDown = lines[2].numbers
+
+        assertThat(rightDown[0]).isEqualTo(upRight[2])
+        assertThat(rightDown[0]).isEqualTo(draw(pad).of("rect")[3].numbers[2])
     }
 
     @Test

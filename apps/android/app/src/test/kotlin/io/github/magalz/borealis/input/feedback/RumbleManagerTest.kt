@@ -7,9 +7,9 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The rumble of a pad whose vibrator manager has two or four vibrators, as the handler sends it on
- * Android 13 and later: each motor is the high byte of its 16-bit value, a vibrator at zero is left
- * out of the combination, and all zero cancels the manager. The effect is a 60-second one-shot at
- * that amplitude, with the media usage.
+ * Android 13 and later: each motor is the high byte of its 16-bit value, or 1 when the value is not
+ * zero but its high byte is, a vibrator at zero is left out of the combination, and all zero
+ * cancels the manager. The effect is a 60-second one-shot at that amplitude, with the media usage.
  */
 @RunWith(RobolectricTestRunner::class)
 class RumbleManagerTest : FeedbackTestBase() {
@@ -95,13 +95,18 @@ class RumbleManagerTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a motor whose high byte is zero counts as zero`() {
+    fun `a motor that is not zero never gets less than the weakest amplitude`() {
         val (rig, _) = dualPad()
 
         rig.handler.handleRumble(0, 0x00FF, 0x4000)
+        rig.handler.handleRumble(0, 0x4000, 0x0001)
 
         assertThat(recorded.vibrations.map { it.combined })
-            .containsExactly(VibrationExpectations.combo(10 to 64))
+            .containsExactly(
+                VibrationExpectations.combo(10 to 64, 11 to 1),
+                VibrationExpectations.combo(10 to 1, 11 to 64),
+            )
+            .inOrder()
     }
 
     @Test
@@ -109,10 +114,20 @@ class RumbleManagerTest : FeedbackTestBase() {
         val (rig, _) = dualPad()
 
         rig.handler.handleRumble(0, 0, 0)
+
+        assertThat(recorded.cancels).isEqualTo(1)
+        assertThat(recorded.vibrations).isEmpty()
+    }
+
+    @Test
+    fun `both motors that are not zero do not cancel the manager, however weak they are`() {
+        val (rig, _) = dualPad()
+
         rig.handler.handleRumble(0, 0x00FF, 0x00FF)
 
-        assertThat(recorded.cancels).isEqualTo(2)
-        assertThat(recorded.vibrations).isEmpty()
+        assertThat(recorded.cancels).isEqualTo(0)
+        assertThat(recorded.vibrations.map { it.combined })
+            .containsExactly(VibrationExpectations.combo(10 to 1, 11 to 1))
     }
 
     @Test

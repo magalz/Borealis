@@ -9,7 +9,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * A pad whose vibrator manager has four vibrators: the high motor, the low motor, the left trigger
  * and the right trigger, in that order. The trigger values are kept by the handler, so a rumble and
- * a trigger rumble each send all four.
+ * a trigger rumble each send all four. A value that is not zero is at least 1.
  */
 @RunWith(RobolectricTestRunner::class)
 class RumbleQuadTest : FeedbackTestBase() {
@@ -100,6 +100,33 @@ class RumbleQuadTest : FeedbackTestBase() {
 
         assertThat(recorded.cancels).isEqualTo(2)
         assertThat(combos()).hasSize(1)
+    }
+
+    @Test
+    fun `a value that is not zero never gets less than the weakest amplitude`() {
+        val rig = quadPad()
+
+        rig.handler.handleRumbleTriggers(0, 0x0001, 0x00FF)
+        rig.handler.handleRumble(0, 0x0001, 0x4000)
+
+        assertThat(combos())
+            .containsExactly(
+                VibrationExpectations.combo(12 to 1, 13 to 1),
+                VibrationExpectations.combo(10 to 64, 11 to 1, 12 to 1, 13 to 1),
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `four values that are not zero do not cancel the manager, however weak they are`() {
+        val rig = quadPad()
+        rig.handler.handleRumbleTriggers(0, 0x00FF, 0x00FF)
+
+        rig.handler.handleRumble(0, 0x00FF, 0x00FF)
+
+        assertThat(recorded.cancels).isEqualTo(0)
+        assertThat(combos().last())
+            .isEqualTo(VibrationExpectations.combo(10 to 1, 11 to 1, 12 to 1, 13 to 1))
     }
 
     @Test

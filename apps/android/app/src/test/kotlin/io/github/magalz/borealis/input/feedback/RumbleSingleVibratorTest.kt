@@ -10,8 +10,8 @@ import org.robolectric.annotation.Config
 /**
  * A pad that has one vibrator, or that the phone's vibrator stands in for: the two motors become
  * one amplitude, 80% of the low motor's high byte plus 33% of the high motor's, cut at 255, and
- * truncated to an int. A vibrator without amplitude control gets the same amplitude as a duty cycle
- * of 20 ms. What the vibrator is handed depends on the Android version: the media usage of
+ * truncated to an int, but at least 1 while a motor is not zero. A vibrator without amplitude
+ * control gets the same amplitude as a duty cycle of 20 ms. What the vibrator is handed depends on the Android version: the media usage of
  * `VibrationAttributes` from Android 13, a game `AudioAttributes` before it.
  */
 abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
@@ -79,21 +79,14 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     }
 
     @Test
-    fun `an amplitude that truncates to zero cancels even when the motors are not zero`() {
+    fun `an amplitude that truncates to zero is raised to 1 while a motor is not zero`() {
         val rig = padWithOneVibrator()
 
-        rig.rumble(0, 0x0100) // 0.33
-        rig.rumble(0x0100, 0) // 0.8
-        rig.rumble(0, 0x0300) // 0.99
-        rig.rumble(0x00FF, 0x00FF)
-
-        assertThat(Hardware.calls(padVibrator))
-            .containsExactly(
-                VibratorCall.Cancel,
-                VibratorCall.Cancel,
-                VibratorCall.Cancel,
-                VibratorCall.Cancel,
-            )
+        assertThat(amplitudeOf(rig, 0, 0x0100)).isEqualTo(oneShot(1)) // 0.33
+        assertThat(amplitudeOf(rig, 0x0100, 0)).isEqualTo(oneShot(1)) // 0.8
+        assertThat(amplitudeOf(rig, 0, 0x0300)).isEqualTo(oneShot(1)) // 0.99
+        assertThat(amplitudeOf(rig, 0x00FF, 0x00FF)).isEqualTo(oneShot(1)) // high bytes at zero
+        assertThat(amplitudeOf(rig, 0, 0x0001)).isEqualTo(oneShot(1))
     }
 
     @Test

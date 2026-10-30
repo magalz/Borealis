@@ -34,7 +34,8 @@ class AbsoluteTouchContext(
     private var lastTouchDownTime = 0L
     private var lastTouchUpX = 0
     private var lastTouchUpY = 0
-    private var lastTouchUpTime = 0L
+    // Null until the first lift: with no tap before it, a touch has no double-tap window.
+    private var lastTouchUpTime: Long? = null
     private var lastTouchLocationY = 0
     private var cancelled = false
     private var confirmedLongPress = false
@@ -171,8 +172,10 @@ class AbsoluteTouchContext(
         cancelTapDownTimer()
 
         // Left button down at original position
+        val previousTouchUpTime = lastTouchUpTime
         if (
-            lastTouchDownTime - lastTouchUpTime > DOUBLE_TAP_TIME_THRESHOLD ||
+            previousTouchUpTime == null ||
+                lastTouchDownTime - previousTouchUpTime > DOUBLE_TAP_TIME_THRESHOLD ||
                 distanceExceeds(
                     lastTouchDownX - lastTouchUpX,
                     lastTouchDownY - lastTouchUpY,

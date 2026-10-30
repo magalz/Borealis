@@ -241,6 +241,20 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
+    fun `a pause that fails in cleanup is not hidden, and the track is still released once`() {
+        val renderer = ready()
+        AudioPlatform.failPauseOf(setOf(1))
+
+        assertThrows(IllegalStateException::class.java) { renderer.cleanup() }
+
+        assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>())
+            .containsExactly(AudioCall.Release(1))
+        val callsAfterFirst = AudioPlatform.calls.size
+        renderer.cleanup()
+        assertThat(AudioPlatform.calls).hasSize(callsAfterFirst)
+    }
+
+    @Test
     fun `cleanup sends no broadcast even with audio effects`() {
         val renderer = ready(audioFx = true)
 

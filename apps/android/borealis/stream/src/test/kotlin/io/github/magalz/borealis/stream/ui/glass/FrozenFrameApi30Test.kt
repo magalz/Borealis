@@ -18,12 +18,9 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.rootFrame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.stream.BackgroundMode
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.stream.StreamSession
-import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
-import io.github.magalz.borealis.stream.testing.RecordingActions
-import io.github.magalz.borealis.stream.testing.aDefaults
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
@@ -55,7 +52,11 @@ class FrozenFrameApi30Test {
     /** The frame the chrome is given: a test takes it away, to see what the popup draws without. */
     private var inUse: FrozenFrame? by mutableStateOf(frozen)
 
-    private fun show(session: StreamSession = failure(), copied: Boolean = true) {
+    private fun show(
+        session: StreamSession = failure(),
+        copied: Boolean = true,
+        look: BorealisLook = BorealisLook(),
+    ) {
         val app = ApplicationProvider.getApplicationContext<Application>()
         // A screen with the background listens for the battery saver with a receiver that older
         // systems guard.
@@ -64,23 +65,13 @@ class FrozenFrameApi30Test {
         if (copied) frozen.request()
         composeRule.setContent {
             CompositionLocalProvider(LocalFrozenFrame provides inUse) {
-                StreamChromeRoot(session, {}, BorealisLook())
+                StreamChromeRoot(session, {}, look)
             }
         }
         composeRule.waitForIdle()
     }
 
     private fun failure() = aSession().also { it.onFailed(aFailure) }
-
-    /**
-     * The same failure over a background that is held Still, so two pictures of it are the same.
-     */
-    private fun stillFailure() =
-        aSession(
-                RecordingActions(),
-                aDefaults.copy(visuals = StreamVisuals(background = BackgroundMode.STILL)),
-            )
-            .also { it.onFailed(aFailure) }
 
     /**
      * With no frame the popup is over the background, and it draws what it draws with no frozen
@@ -91,7 +82,9 @@ class FrozenFrameApi30Test {
      */
     private fun assertDrawsAsWithNoFrame(copyFails: Boolean) {
         inUse = null
-        show(stillFailure(), copied = false)
+        // Reduce motion holds the background still, as the Library does, so two pictures of the
+        // same failure are the same.
+        show(failure(), copied = false, look = BorealisLook(reduceMotion = ReduceMotion.On))
         val without = composeRule.rootFrame()
         val (x, y) = without.farthestFrom(page)
         assertThat(without[x, y].distanceFrom(page)).isGreaterThan(MIN_GLOW)

@@ -31,7 +31,6 @@ import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.Transparency
-import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.MenuGlass
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
@@ -253,13 +252,15 @@ class FrozenFrameScreenTest {
     /**
      * The popup of a failure that has no frame draws what it draws with no frozen frame at all,
      * over the background of the screens outside the game (ADR 0057, decision 8: no scrim on API 31
-     * and later, the glass of the background). The background is held Still, so two pictures of it
-     * are the same, and the test looks at the place where it is farthest from the page, so that a
-     * scrim over it would show. The popup is the same session each time; only the frame changes:
-     * none given, then one that was never asked for, or whose copy failed.
+     * and later, the glass of the background). Reduce motion holds the background still, as the
+     * Library does, so two pictures of it are the same, and the test looks at the place where it is
+     * farthest from the page, so that a scrim over it would show. The popup is the same session
+     * each time; only the frame changes: none given, then one that was never asked for, or whose
+     * copy failed.
      */
     private fun assertDrawsAsWithNoFrame(copyFails: Boolean) {
         inUse = null
+        look = BorealisLook(reduceMotion = ReduceMotion.On)
         show(stillFailure(), copied = false)
         val without = picture()
         val (x, y) = without.farthestFrom(page)
@@ -279,12 +280,7 @@ class FrozenFrameScreenTest {
         assertNear(picture()[x, y], without[x, y])
     }
 
-    private fun stillFailure() =
-        aSession(
-                actions,
-                aDefaults.copy(visuals = StreamVisuals(background = BackgroundMode.STILL)),
-            )
-            .also { it.onFailed(aFailure) }
+    private fun stillFailure() = aSession(actions).also { it.onFailed(aFailure) }
 
     @Test
     fun `with no copy asked for, the popup draws what it draws with no frozen frame`() =

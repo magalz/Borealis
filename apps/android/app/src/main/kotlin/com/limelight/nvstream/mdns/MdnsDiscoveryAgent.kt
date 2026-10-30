@@ -11,7 +11,8 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
 
     abstract fun stopDiscovery()
 
-    open fun close() = Unit
+    // The end of the agent, when its owner is done with it. The default is to stop discovery.
+    open fun close() = stopDiscovery()
 
     protected fun reportNewComputer(
         name: String?,

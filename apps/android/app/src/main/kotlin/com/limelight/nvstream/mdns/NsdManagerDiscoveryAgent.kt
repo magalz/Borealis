@@ -20,8 +20,19 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
     private var pendingListener: NsdManager.DiscoveryListener? = null
     private var activeListener: NsdManager.DiscoveryListener? = null
     private val serviceCallbacks = HashMap<String?, NsdManager.ServiceInfoCallback>()
+    private var closed = false
+
+    // The platform hands the unregistration of a callback to this executor from its own thread,
+    // after close() has shut it down, so a task that comes then is dropped, not rejected.
     private val executor =
-        ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, LinkedBlockingQueue<Runnable>())
+        ThreadPoolExecutor(
+            1,
+            1,
+            0,
+            TimeUnit.SECONDS,
+            LinkedBlockingQueue<Runnable>(),
+            ThreadPoolExecutor.DiscardPolicy(),
+        )
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     @Suppress("LongMethod")
@@ -163,8 +174,8 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
     override fun startDiscovery(discoveryIntervalMs: Int) {
         synchronized(listenerLock) {
             // Register a new service discovery listener if there's not already one starting or
-            // running
-            if (pendingListener == null && activeListener == null) {
+            // running, and the agent is not closed
+            if (!closed && pendingListener == null && activeListener == null) {
                 val discoveryListener = createDiscoveryListener()
                 pendingListener = discoveryListener
                 nsdManager.discoverServices(
@@ -202,6 +213,16 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
             }
             serviceCallbacks.clear()
         }
+    }
+
+    // The end of the agent: it stops discovery, unregisters its callbacks and frees its executor,
+    // and does not discover again. Calling it again does nothing.
+    override fun close() {
+        synchronized(listenerLock) {
+            closed = true
+            stopDiscovery()
+        }
+        executor.shutdown()
     }
 
     private companion object {

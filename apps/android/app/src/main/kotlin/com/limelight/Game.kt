@@ -2242,6 +2242,15 @@ class Game :
                 } else if (view != null) {
                     // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
                     updateMousePosition(view, event)
+                } else {
+                    // BOREALIS: an event that reaches the activity itself has window
+                    // coordinates; place it on the stream view
+                    val origin = IntArray(2)
+                    streamView.getLocationInWindow(origin)
+                    val onStreamView = MotionEvent.obtain(event)
+                    onStreamView.offsetLocation(-origin[0].toFloat(), -origin[1].toFloat())
+                    updateMousePosition(streamView, onStreamView)
+                    onStreamView.recycle()
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {

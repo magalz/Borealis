@@ -1005,11 +1005,14 @@ class ControllerHandler(
             // From Android S the system says whether the pad has a battery: tell the host once
             // that it has none, if the pad claimed a battery in its arrival (an external pad, see
             // sendControllerArrival): the host has nothing to correct for a pad that did not, and
-            // a number can be shared with a pad that has a real battery. Before S we cannot know,
-            // and the pad claims no battery.
+            // a number can be shared with a pad that has a real battery. The same goes for a
+            // device without joystick axes, the touchpad of a pad: it takes the number of its
+            // joystick, which owns the battery. Before S we cannot know, and the pad claims no
+            // battery.
+            val ownsBattery = context.external && context.hasJoystickAxes
             if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    context.external &&
+                    ownsBattery &&
                     context.lastReportedBatteryStatus != BATTERY_STATUS_NOT_PRESENT
             ) {
                 conn.sendControllerBatteryEvent(

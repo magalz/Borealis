@@ -127,6 +127,12 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
                             override fun onServiceInfoCallbackUnregistered() = Unit
                         }
 
+                    // A service that is found again replaces its callback in the map, so the old
+                    // one is unregistered first, or nothing would unregister it later
+                    serviceCallbacks.remove(nsdServiceInfo.serviceName)?.let {
+                        nsdManager.unregisterServiceInfoCallback(it)
+                    }
+
                     nsdManager.registerServiceInfoCallback(
                         nsdServiceInfo,
                         executor,

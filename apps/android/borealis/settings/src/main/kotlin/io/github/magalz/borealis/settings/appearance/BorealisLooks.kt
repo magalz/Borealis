@@ -126,6 +126,19 @@ internal object LookLists {
             ),
         )
 
+    /**
+     * The Stream menu style, the stream's own option: the stream maps the stored id to what it
+     * draws, so each choice is its own value. It is here so that the row shows the default for an
+     * id that no choice has.
+     */
+    val STREAM_MENU_GLASS =
+        LookList(
+            Settings.STREAM_MENU_GLASS,
+            listOf(Settings.STREAM_MENU_GLASS_BLUR, Settings.STREAM_MENU_GLASS_SOLID).map {
+                LookChoice(it, it)
+            },
+        )
+
     val CARD_DENSITY =
         LookList(
             Settings.CARD_DENSITY,
@@ -170,6 +183,7 @@ internal object LookLists {
             FONT,
             ACCENT,
             BACKGROUND_INTENSITY,
+            STREAM_MENU_GLASS,
             CARD_DENSITY,
             TEXT_SPACING,
             GLASS_TINT,
@@ -198,6 +212,10 @@ fun borealisLook(snapshot: SettingsSnapshot): BorealisLook =
         textSpacing = LookLists.TEXT_SPACING.valueIn(snapshot),
     )
 
+/** The background style that [snapshot] stores: the default style for what is not stored. */
+fun backgroundStyle(snapshot: SettingsSnapshot): BackgroundStyle =
+    BackgroundChoices.all.valueIn(snapshot)
+
 /**
  * What the screens of the Library draw with: the [look] of their text, colours and glass, and the
  * [background] behind them.
@@ -206,7 +224,7 @@ fun borealisLook(snapshot: SettingsSnapshot): BorealisLook =
 
 /** The looks that [snapshot] stores: the defaults for what is not stored. */
 private fun looksOf(snapshot: SettingsSnapshot): Looks =
-    Looks(borealisLook(snapshot), BackgroundChoices.all.valueIn(snapshot))
+    Looks(borealisLook(snapshot), backgroundStyle(snapshot))
 
 /**
  * The looks that the screens of the Library draw with: the ones that [settings] stores now, and the

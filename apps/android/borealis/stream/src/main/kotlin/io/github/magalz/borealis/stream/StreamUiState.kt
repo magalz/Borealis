@@ -1,18 +1,43 @@
 package io.github.magalz.borealis.stream
 
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.nativecore.LaunchCategory
 
 /**
  * What the stream chrome shows: the app and the host it streams, the phase of the session and
  * whether the activity is in picture-in-picture, which hides the chrome and leaves the phase alone.
+ * [visuals] are what the stream started with, and [decoderHeld] says whether a decoder of the
+ * stream is, or is about to be, configured.
  */
 data class StreamUiState(
     val appName: String,
     val hostName: String,
     val phase: StreamPhase,
     val inPip: Boolean = false,
+    val visuals: StreamVisuals = StreamVisuals(),
+    val decoderHeld: Boolean = false,
 )
+
+/**
+ * What the stream draws besides the video, read once when the stream starts (ADR 0061): the glass
+ * of the in-game menu, and the style of the background on the screens outside the game, the one the
+ * viewer chose in Settings, which they show as the Library does. Its intensity is the one of the
+ * look.
+ */
+data class StreamVisuals(
+    val menuGlass: MenuGlass = MenuGlass.BLUR,
+    val backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
+)
+
+/** The glass of the in-game menu in a stream. */
+enum class MenuGlass {
+    /** A live copy of the video, blurred. */
+    BLUR,
+
+    /** A solid surface. */
+    SOLID,
+}
 
 /** The phase of a stream session, from the first connection step to the stream or a failure. */
 sealed interface StreamPhase {
@@ -36,11 +61,19 @@ sealed interface StreamPhase {
     data class Failed(val failure: StreamFailure) : StreamPhase
 
     /**
-     * The user asked to quit the app and the host ended the stream before it answered: [ended] is
-     * how the stream ended. The screen is quiet; the activity finishes when the quit answers, and a
-     * quit that fails turns this into [Failed] with [ended].
+     * The user asked to quit the app and the host has not answered yet. [resumeTo] is the phase the
+     * user was in, which a quit that fails returns to while the stream still runs; [ended] is how
+     * the stream ended when the host ended it before it answered, and a quit that fails after that
+     * turns this into [Failed] with [ended]. The screen is quiet; the activity finishes when the
+     * quit answers.
      */
-    data class Quitting(val ended: StreamFailure) : StreamPhase
+    data class Quitting(val resumeTo: StreamPhase, val ended: StreamFailure? = null) : StreamPhase
+
+    /**
+     * The user disconnected: the connection ends and the app keeps running on the PC. The screen
+     * says so until the connection has stopped, and the activity finishes after it.
+     */
+    data object Disconnecting : StreamPhase
 
     /**
      * The first frame is on screen. [touchMode] is null when the device has no touchscreen and
@@ -48,6 +81,8 @@ sealed interface StreamPhase {
      * the speed of the gamepad mouse for this session. [dockedKeyboard] says whether the keyboard
      * docks under the stream (the stream keeps the keys) or covers it (the chrome takes them, and a
      * pad can use it). It is decided when the keyboard opens and means nothing while none is open.
+     * [mouseNavButtons] is the setting of that name: the Back button of the mouse opens the menu
+     * when it is held, which the first-run hint says for a stream with a keyboard or a mouse.
      */
     data class Streaming(
         val panel: Panel = Panel.NONE,
@@ -58,6 +93,7 @@ sealed interface StreamPhase {
         val showMenuHint: Boolean,
         val pointerSpeed: PointerSpeed = PointerSpeed.NORMAL,
         val dockedKeyboard: Boolean = false,
+        val mouseNavButtons: Boolean = false,
     ) : StreamPhase
 }
 

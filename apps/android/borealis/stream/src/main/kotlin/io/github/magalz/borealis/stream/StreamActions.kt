@@ -29,8 +29,11 @@ interface StreamActions {
     /** The user has seen the menu hint, so it is not shown again. */
     fun menuHintShown()
 
-    /** Ends the connection; the app keeps running on the PC. */
-    fun disconnect()
+    /**
+     * Ends the connection; the app named [appName] (blank when the name is not known) keeps running
+     * on the PC.
+     */
+    fun disconnect(appName: String)
 
     /**
      * Ends the app on the PC and the connection. [onFailed] runs on the main thread when the quit

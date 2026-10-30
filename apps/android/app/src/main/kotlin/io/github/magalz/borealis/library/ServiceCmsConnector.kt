@@ -132,6 +132,10 @@ internal class ServiceCmsBinder(private val binder: ComputerManagerBinder) : Cms
         }
     }
 
-    override fun startStream(activity: Activity, app: NvApp, computer: ComputerDetails) =
-        ServerHelper.doStart(activity, app, computer, binder)
+    override fun startStream(
+        activity: Activity,
+        app: NvApp,
+        computer: ComputerDetails,
+        resumeChosen: Boolean,
+    ) = ServerHelper.doStart(activity, app, computer, binder, resumeChosen)
 }

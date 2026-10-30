@@ -108,6 +108,7 @@ class GameStreamActionsTest {
                 builtFor += mode
                 if (mode == TouchMode.OFF) null else replacements
             },
+            stopConnection = {},
         )
 
     private fun actionsFor(target: Activity) =
@@ -230,13 +231,6 @@ class GameStreamActionsTest {
     @Test
     fun `leaving finishes the activity`() {
         actions.leave()
-
-        assertThat(activity.isFinishing).isTrue()
-    }
-
-    @Test
-    fun `disconnect finishes the activity`() {
-        actions.disconnect()
 
         assertThat(activity.isFinishing).isTrue()
     }
@@ -381,6 +375,24 @@ class GameStreamActionsTest {
     }
 
     @Test
+    fun `retrying is the choice to resume the app of this stream if it runs`() {
+        val intent = Intent().putExtra(Game.EXTRA_PC_UUID, "host-1").putExtra(Game.EXTRA_APP_ID, 42)
+
+        retryOf(intent)
+
+        assertThat(entryPoint.resumeChoice.take("host-1", 42)).isTrue()
+    }
+
+    @Test
+    fun `retrying without an app or without a host chooses nothing`() {
+        retryOf(Intent().putExtra(Game.EXTRA_PC_UUID, "host-1"))
+        retryOf(Intent().putExtra(Game.EXTRA_APP_ID, 42))
+
+        assertThat(entryPoint.resumeChoice.take("host-1", 0)).isFalse()
+        assertThat(entryPoint.resumeChoice.take("host-1", 42)).isFalse()
+    }
+
+    @Test
     fun `retrying without an app opens the apps of the host, without a host the hosts`() {
         val noApp = Intent().putExtra(Game.EXTRA_PC_UUID, "host-1")
         assertThat(LibraryLaunchRequest.fromExtras(retryOf(noApp).second?.extras))
@@ -435,11 +447,10 @@ class GameStreamActionsTest {
     private fun endReasons() = audit.filter { it.type == AuditType.SESSION_END }.map { it.detail }
 
     @Test
-    fun `disconnect writes the session end with its own reason, then finishes`() {
-        actions.disconnect()
+    fun `disconnect writes the session end with its own reason at once`() {
+        actions.disconnect("Desktop")
 
         assertThat(endReasons()).containsExactly("reason=disconnect duration_s=0")
-        assertThat(activity.isFinishing).isTrue()
     }
 
     @Test

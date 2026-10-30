@@ -276,6 +276,27 @@ object Settings {
         )
 
     /**
+     * The Stream menu style: the glass of the in-game menu in a stream, [STREAM_MENU_GLASS_BLUR] or
+     * [STREAM_MENU_GLASS_SOLID]. A stored value that no choice has stands for the default. The
+     * stream reads it once, when it starts (ADR 0061). The screens outside the game have no option
+     * of their own: they follow [BACKGROUND] as the Library does. A value that an earlier build
+     * stored under `borealis_stream_background`, the key of the option that Sprint 15 dropped, is
+     * read by nothing; the file keeps it.
+     */
+    val STREAM_MENU_GLASS =
+        StringSetting(
+            "borealis_stream_menu_glass",
+            default = STREAM_MENU_GLASS_BLUR,
+            store = SettingStore.DATASTORE,
+        )
+
+    /** Value of [STREAM_MENU_GLASS] for the live blurred copy of the video, the default. */
+    const val STREAM_MENU_GLASS_BLUR = "blur"
+
+    /** Value of [STREAM_MENU_GLASS] for a solid surface. */
+    const val STREAM_MENU_GLASS_SOLID = "solid"
+
+    /**
      * How close the cards of a screen sit: [CARD_DENSITY_COMFORTABLE], [CARD_DENSITY_COMPACT] or
      * [CARD_DENSITY_DENSE]. A stored value that no choice has stands for the default.
      */
@@ -475,6 +496,7 @@ object Settings {
             ACCENT,
             BACKGROUND,
             BACKGROUND_INTENSITY,
+            STREAM_MENU_GLASS,
             CARD_DENSITY,
             GLASS_TINT,
             GLASS_BLUR,

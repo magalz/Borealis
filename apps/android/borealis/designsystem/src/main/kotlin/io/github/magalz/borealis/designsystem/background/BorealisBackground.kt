@@ -34,7 +34,10 @@ internal object BackgroundTags {
  *   keeps 7:1 over its brightest pixel. The veil is part of the background, so the glass blurs it.
  *
  * [frozen] is how a [GlassHost] holds the background still while a dialog or a sheet is open over
- * it. [framesPerSecond] is the pace of the Compose styles; a clip plays at its own.
+ * it, or while its owner holds it. [clipsPlay] off is how the owner takes the decoder from a clip
+ * style while another decoder is up (the stream's): the player is released and the still shows, and
+ * a Compose style goes on moving. [framesPerSecond] is the pace of the Compose styles; a clip plays
+ * at its own.
  */
 @Composable
 internal fun BorealisBackground(
@@ -42,6 +45,7 @@ internal fun BorealisBackground(
     modifier: Modifier = Modifier,
     frozen: Boolean = false,
     framesPerSecond: Int = DRAWN_FRAMES_PER_SECOND,
+    clipsPlay: Boolean = true,
 ) {
     val animationsRemoved = rememberAnimationsRemoved()
     val powerSaving = rememberPowerSaveMode()
@@ -54,7 +58,7 @@ internal fun BorealisBackground(
         val fill = Modifier.fillMaxSize()
         when {
             style == BackgroundStyle.Off -> Box(fill.background(page))
-            clip != null -> VideoBackground(clip, stillOnly = still, modifier = fill)
+            clip != null -> VideoBackground(clip, stillOnly = still || !clipsPlay, modifier = fill)
             else ->
                 DrawnBackground(
                     style,

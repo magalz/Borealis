@@ -137,7 +137,7 @@ class ServiceCmsBinderTest {
         val activity = Robolectric.buildActivity(Activity::class.java).create().get()
         val computer = details(uuid = "host-1", name = "Den PC", address = "192.168.1.5")
 
-        binder.startStream(activity, NvApp("Steam", 7, true), computer)
+        binder.startStream(activity, NvApp("Steam", 7, true), computer, resumeChosen = false)
 
         val intent = shadowOf(activity).nextStartedActivity
         assertThat(intent.component?.className).isEqualTo(Game::class.java.name)
@@ -150,6 +150,19 @@ class ServiceCmsBinderTest {
         assertThat(intent.getStringExtra(Game.EXTRA_UNIQUEID)).isEqualTo(binder.uniqueId)
         assertThat(intent.getStringExtra(Game.EXTRA_PC_UUID)).isEqualTo("host-1")
         assertThat(intent.getStringExtra(Game.EXTRA_PC_NAME)).isEqualTo("Den PC")
+    }
+
+    @Test
+    fun `starting a stream passes the choice to resume on to the stream activity`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).create().get()
+        val computer = details(uuid = "host-1", name = "Den PC", address = "192.168.1.5")
+
+        binder.startStream(activity, NvApp("Steam", 7, true), computer, resumeChosen = true)
+        val chosen = shadowOf(activity).nextStartedActivity
+        binder.startStream(activity, NvApp("Steam", 7, true), computer, resumeChosen = false)
+        val asked = shadowOf(activity).nextStartedActivity
+        assertThat(chosen.getBooleanExtra(Game.EXTRA_RESUME_CHOSEN, false)).isTrue()
+        assertThat(asked.getBooleanExtra(Game.EXTRA_RESUME_CHOSEN, true)).isFalse()
     }
 
     private companion object {

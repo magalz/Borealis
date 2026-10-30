@@ -68,6 +68,13 @@ object FixedChoices {
     /** Background: the styles of the Appearance setting, with their stable ids. */
     val BACKGROUND = BackgroundChoices.all.choices.map { FixedChoice(it.id, it.value.label) }
 
+    /** Stream menu style: Blurred or Solid. */
+    val STREAM_MENU_GLASS =
+        listOf(
+            FixedChoice(Settings.STREAM_MENU_GLASS_BLUR, R.string.settings_choice_glass_blur),
+            FixedChoice(Settings.STREAM_MENU_GLASS_SOLID, R.string.settings_choice_glass_solid),
+        )
+
     /** Glass tint: 30 to 85 percent, with the percent as the stored id. */
     val GLASS_TINT =
         LookLists.GLASS_TINT.choices.map {

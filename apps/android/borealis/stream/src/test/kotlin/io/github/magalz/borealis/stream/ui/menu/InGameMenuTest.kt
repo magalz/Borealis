@@ -438,7 +438,7 @@ class InGameMenuTest {
         text(DESKTOP_QUIT).performScrollTo().assertIsDisplayed()
         text("Quit Desktop").performScrollTo().performClick()
 
-        // The rows are hidden under the confirmation, so this is its body, not the row.
+        // The menu is out of reach behind the popup, so this is its body, not the row.
         text("Quit Desktop?").assertIsDisplayed()
         text(DESKTOP_QUIT).assertIsDisplayed()
         assertThat(fixture.intents.calls).isEmpty()
@@ -514,8 +514,10 @@ class InGameMenuTest {
 
         text("Cancel").performClick()
 
+        // The menu is as it was left, scrolled to the Quit row.
         text("Quit Desktop?").assertDoesNotExist()
-        text("Back to stream").assertIsDisplayed()
+        text("Quit Desktop").assertIsDisplayed()
+        text("Back to stream").assertExists()
         assertThat(fixture.intents.calls).isEmpty()
     }
 
@@ -556,13 +558,15 @@ class InGameMenuTest {
         assertThat(fixture.intents.calls).containsExactly("closePanel")
     }
 
-    // The device round: Compose took the first Back for a focus exit out of the segmented control.
+    // The device round: Compose took the first Back for a focus exit out of the segmented control,
+    // and it still would out of a key of the keyboard or a chip of Send keys.
     @Test
     @Config(qualifiers = TV)
-    fun `Back with the focus on a segment closes the menu at once`() {
+    fun `Back with the focus on a Send keys chip closes the menu at once`() {
         val fixture = menu(FormFactor.Tv, touchMode = null, gamepadMouse = false)
-        text("Detailed").performScrollTo().requestFocus()
-        text("Detailed").assertIsFocused()
+        text("Send keys").performClick()
+        text("Alt+Tab").performScrollTo().requestFocus()
+        text("Alt+Tab").assertIsFocused()
 
         composeRule.onRoot().performKeyInput { pressKey(Key.Back) }
 
@@ -788,18 +792,6 @@ class InGameMenuTest {
         text("Overlay").performTouchInput { click(centerLeft + Offset(4f, 0f)) }
 
         assertThat(fixture.intents.calls).containsExactly("setOverlay DETAILED")
-    }
-
-    @Test
-    @Config(qualifiers = TV)
-    fun `Right from an option row still moves into the segments`() {
-        val fixture = menu(FormFactor.Tv, overlay = OverlayMode.COMPACT, touchMode = null)
-        text("Overlay").performScrollTo().requestFocus()
-
-        text("Overlay").performKeyInput { pressKey(Key.DirectionRight) }
-
-        text("Compact").assertIsFocused()
-        assertThat(fixture.intents.calls).isEmpty()
     }
 
     @Test

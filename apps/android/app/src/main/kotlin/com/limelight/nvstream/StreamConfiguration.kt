@@ -59,6 +59,11 @@ class StreamConfiguration private constructor() {
     var persistGamepadsAfterDisconnect = false
         private set
 
+    // BOREALIS: the user chose Resume, Continue or Try again for the app that runs, so a start
+    // that finds it running joins it without asking (host.launch)
+    var resumeChosen = false
+        private set
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     @Suppress("TooManyFunctions")
     class Builder {
@@ -127,6 +132,10 @@ class StreamConfiguration private constructor() {
         fun setColorRange(colorRange: Int): Builder = apply { config.colorRange = colorRange }
 
         fun setColorSpace(colorSpace: Int): Builder = apply { config.colorSpace = colorSpace }
+
+        fun setResumeChosen(resumeChosen: Boolean): Builder = apply {
+            config.resumeChosen = resumeChosen
+        }
 
         fun build(): StreamConfiguration = config
     }

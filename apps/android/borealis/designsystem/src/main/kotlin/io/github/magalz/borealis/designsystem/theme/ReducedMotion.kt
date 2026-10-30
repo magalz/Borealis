@@ -94,7 +94,7 @@ internal fun animationsRemoved(reduceMotion: ReduceMotion, systemRemoved: Boolea
  * time the system says it changed. A screen that animates for its looks rests while it is on.
  */
 @Composable
-internal fun rememberPowerSaveMode(): Boolean {
+fun rememberPowerSaveMode(): Boolean {
     val context = LocalContext.current
     val power = remember(context) { context.getSystemService(PowerManager::class.java) }
     var saving by remember(power) { mutableStateOf(power.isPowerSaveMode) }

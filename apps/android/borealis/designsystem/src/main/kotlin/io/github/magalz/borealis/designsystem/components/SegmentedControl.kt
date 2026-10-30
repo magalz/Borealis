@@ -53,6 +53,11 @@ private val SEGMENT_PADDING_VERTICAL = 4.dp
  * A segment is 48dp wide and high at least, except on a TV, which has no touch screen and keeps its
  * 32dp. [groupLabel] names what the control sets, and a screen reader says it after the name of a
  * segment, so that the Off of one control is not the Off of another.
+ *
+ * With [focusable] false the segments are not focus stops, and a tap or a screen reader still
+ * selects one: for a control at the end of a row that owns the keys, as in a [MenuRow], where OK on
+ * the row selects the next option. The control is a focus group, so a row cannot take its segments
+ * out of the focus order itself.
  */
 @Composable
 fun <T> SegmentedControl(
@@ -63,6 +68,7 @@ fun <T> SegmentedControl(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     groupLabel: String? = null,
+    focusable: Boolean = true,
 ) {
     val colors = LocalBorealisColors.current
     val touch = LocalFormFactor.current != FormFactor.Tv
@@ -74,16 +80,9 @@ fun <T> SegmentedControl(
             .border(1.dp, colors.lineStrong, MaterialTheme.shapes.medium)
             .padding(GROUP_PADDING)
             .selectableGroup()
-            // Entering the control by the D-pad lands on the selected segment, not the nearest. A
-            // request for one segment (a tap, an initial focus) is not an entry and stays on it.
-            .focusProperties {
-                onEnter = {
-                    if (hasSelected && requestedFocusDirection != FocusDirection.Enter) {
-                        selectedFocus.requestFocus()
-                    }
-                }
-            }
-            .focusGroup(),
+            .then(
+                if (focusable) Modifier.selectedOnEnter(hasSelected, selectedFocus) else Modifier
+            ),
         horizontalArrangement = Arrangement.spacedBy(SEGMENT_GAP),
     ) {
         for (option in options) {
@@ -99,6 +98,9 @@ fun <T> SegmentedControl(
                     .background(if (isSelected) colors.accentTint else Color.Transparent, shape)
                     .clip(shape)
                     .selectionBar(isSelected, vertical = false)
+                    .then(
+                        if (focusable) Modifier else Modifier.focusProperties { canFocus = false }
+                    )
                     .selectable(
                         selected = isSelected,
                         interactionSource = null,
@@ -124,3 +126,17 @@ fun <T> SegmentedControl(
         }
     }
 }
+
+/**
+ * Entering the control by the D-pad lands on the selected segment, not the nearest. A request for
+ * one segment (a tap, an initial focus) is not an entry and stays on it.
+ */
+private fun Modifier.selectedOnEnter(hasSelected: Boolean, selectedFocus: FocusRequester) =
+    focusProperties {
+        onEnter = {
+            if (hasSelected && requestedFocusDirection != FocusDirection.Enter) {
+                selectedFocus.requestFocus()
+            }
+        }
+    }
+    .focusGroup()

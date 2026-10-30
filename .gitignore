@@ -19,6 +19,10 @@ build/
 captures/
 !docs/ux/captures/
 
+# JVM crash dumps (a test worker that dies leaves them in its working directory)
+hs_err_pid*.log
+replay_pid*.log
+
 # Signing material (never commit)
 *.jks
 *.keystore

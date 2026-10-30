@@ -655,6 +655,167 @@ class GlassColoursTest(unittest.TestCase):
         self.assertEqual(out.getvalue().strip(), contrast.glass_colour_tables(self.table).strip())
 
 
+class VideoGlassModel:
+    """The text on the glass over the stream video (ADR 0061, decision 4), measured by the tool.
+
+    The glass is the viewer's 40 percent of `surface` over the video, and the video is any frame.
+    The text on it has a halo, the halo of the text on a background (3 dp wide, a blur of 2 dp) but
+    100 % opaque. This takes the lightest frame there is, a white one, and a busy bright one of
+    squares of white and black, lays the glass of the app on them (a blur of 8 dp on the copy, which
+    is a fourth of the video, and the tint), and asks the tool's own model of the halo what the text
+    keeps over its ring: the least ratio over every colour of the frame with every alpha of the
+    ring, as `halo` takes it. The segmented controls are on the `surface` colour, which no frame
+    reaches.
+
+    The model dilates the glyphs, so a small shape, the dot of an i or a bullet, has its halo whole
+    in it. Drawn with one stroke it has a hole, and the app draws it in three passes so that it has
+    none: `TextHaloTest` of the app reads the ring in what is drawn, for the strings of the menu.
+    """
+
+    TINT = 0.40
+    BLUR_PX = 4
+    # The halo that the app draws on the glass: 3 dp wide, a blur of 2 dp, and 100 % opaque.
+    HALO = (3, 2, 1.0)
+    TEXTS = ("ink", "ink-2", "accent-soft", "danger-ink")
+    DEVICES = ("phone", "tv")
+
+    def setUp(self):
+        self.colors = contrast.load_colors(TOKENS, (*WORDS, "danger-ink", "accent-tint"))
+        self.surface = contrast.parse_hex(self.colors["surface"])
+        self.page = contrast.parse_hex(self.colors["page"])
+        self.lights = {
+            token: float(contrast.relative_luminance(contrast.parse_hex(self.colors[token][:7])))
+            for token in self.TEXTS
+        }
+        white = uniform(400, 800, (1.0, 1.0, 1.0))
+        busy = white.copy()
+        busy[(np.indices(busy.shape[:2]).sum(axis=0) // 8) % 2 == 1] = 0.0
+        self.frames = {
+            name: contrast.frame_colours(contrast.glass(frame, self.surface, self.TINT, self.BLUR_PX))
+            for name, frame in (("white", white), ("busy", busy))
+        }
+
+    @staticmethod
+    def ring_alphas(text, device, stroke, blur, opacity):
+        """The alpha of a halo on each pixel of the ring of a text style, for any stroke.
+
+        `halo_geometry` has the grid only, up to 3 dp; this is the same computation for one halo.
+        """
+        density = contrast.device_density(device)
+        sigma = contrast.blur_sigma(max(contrast.HALO_BLURS_DP) * density)
+        reach = math.ceil(stroke * density + contrast.HALO_REACH_SIGMAS * sigma)
+        pad = reach + contrast.HALO_RING_PX + 1
+        ring = contrast.ring_mask(contrast.glyph_mask(text, device, pad=pad))
+        rows, columns = np.nonzero(ring)
+        box = (slice(rows.min(), rows.max() + 1), slice(columns.min(), columns.max() + 1))
+        widened = contrast.glyph_mask(text, device, stroke, pad)
+        return opacity * contrast.halo_alpha(widened, blur, 1.0, density)[box][ring[box]]
+
+    def worst(self, config):
+        """The least ratio of each text colour with `config` over every frame, device and style."""
+        found = {}
+        for device in self.DEVICES:
+            for text in contrast.HALO_TEXTS:
+                alphas = self.ring_alphas(text, device, *config)
+                for colours in self.frames.values():
+                    for token in self.TEXTS:
+                        ratio = contrast.halo_worst_ratio(
+                            colours, (alphas.min(), alphas.max()), self.page, self.lights[token]
+                        )
+                        found[token] = min(found.get(token, ratio), ratio)
+        return found
+
+
+class VideoGlassHaloTest(VideoGlassModel, unittest.TestCase):
+    """The glass of the menu panel, which is the viewer's 40 percent."""
+
+    def test_the_ring_of_a_halo_is_what_the_tool_works_out_for_the_grid(self):
+        for device in self.DEVICES:
+            geometry = contrast.halo_geometry("body", device)
+            expected = geometry.alphas[geometry.configs.index((3, 2, 1.0))]
+            np.testing.assert_allclose(
+                self.ring_alphas("body", device, 3, 2, 1.0), expected, atol=1e-6
+            )
+
+    def test_every_text_keeps_4_5_over_the_lightest_glass_with_the_halo(self):
+        for token, ratio in self.worst(self.HALO).items():
+            with self.subTest(token=token):
+                self.assertGreaterEqual(ratio, 4.5 * contrast.HALO_MARGIN)
+
+    def test_without_a_halo_the_text_falls_short_over_it(self):
+        # The check can fail: ink is 2.1:1 over the glass of 40 % over white, ink-2 1.5:1.
+        for token, ratio in self.worst((0, 2, 0.0)).items():
+            with self.subTest(token=token):
+                self.assertLess(ratio, 4.5)
+
+    def test_the_halo_of_the_text_on_a_background_falls_short_for_the_danger_ink_on_a_tv(self):
+        # The halo of the Library, 3 dp, 2 dp, 80 %, keeps ink and ink-2 but the red of the Quit row
+        # is 4.40:1 on a TV, which is why the glass takes 100 %.
+        worst = self.worst((3, 2, 0.8))
+        self.assertLess(worst["danger-ink"], 4.5)
+        self.assertGreaterEqual(worst["ink"], 4.5)
+        self.assertGreaterEqual(worst["ink-2"], 4.5)
+
+    def test_the_focus_outline_needs_a_dark_casing_over_the_lightest_glass(self):
+        # A focus outline keeps 3:1 against what is next to it (WCAG 1.4.11). Over the lightest glass
+        # the accent-soft outline is 1.39:1 and the thick one, in ink, 2.1:1, and the casing of the
+        # page colour that the app draws round it under the halo is what it stands against.
+        glass_luminance = float(contrast.relative_luminance(self.frames["white"]).max())
+        page = float(contrast.relative_luminance(self.page))
+        for token, bare in (("accent-soft", 1.39), ("ink", 2.1)):
+            light = float(contrast.relative_luminance(contrast.parse_hex(self.colors[token][:7])))
+            with self.subTest(token=token):
+                over_glass = float(contrast.contrast_ratio(light, glass_luminance))
+                self.assertAlmostEqual(over_glass, bare, delta=0.05)
+                self.assertLess(over_glass, 3.0)
+                self.assertGreaterEqual(float(contrast.contrast_ratio(light, page)), 3.0)
+
+    def test_the_labels_of_a_segmented_control_keep_4_5_over_their_solid_container(self):
+        # An unselected label is ink-3 on the surface; the selected one is accent-soft over the
+        # tint of the accent on the surface.
+        self.assertGreaterEqual(contrast.hex_contrast(self.colors["ink-3"], self.colors["surface"]), 4.5)
+        laid = contrast.over(self.colors["accent-tint"], self.surface)
+        soft = contrast.parse_hex(self.colors["accent-soft"])
+        self.assertGreaterEqual(contrast.rgb_contrast(soft, laid), 4.5)
+
+
+class PopupGlassContrastTest(VideoGlassModel, unittest.TestCase):
+    """The text on the panel of a popup over the stream, which is the firm glass (owner, 2026-10-30).
+
+    The popup is the `surface` at 85 percent (the Reduced tint of ADR 0057) over the same blurred
+    video, whatever tint the viewer chose for the menu. This is the model of `VideoGlassHaloTest`
+    with that tint, over the same white and busy frames. The panel over the lightest frame is
+    (55, 58, 61) in the values of the picture, so the text keeps 4.5:1 on its own; the halo of the
+    text on the glass stays by decision and is not needed for the ratio.
+    """
+
+    TINT = 0.85
+
+    def test_every_text_keeps_4_5_over_the_firm_panel_with_the_halo(self):
+        for token, ratio in self.worst(self.HALO).items():
+            with self.subTest(token=token):
+                self.assertGreaterEqual(ratio, 4.5 * contrast.HALO_MARGIN)
+
+    def test_every_text_keeps_4_5_over_the_firm_panel_even_without_a_halo(self):
+        # The same measure as the menu panel's, which falls short there (2.1:1 for ink): the firm
+        # panel is dark enough over a white frame that the halo is not what holds the ratio.
+        for token, ratio in self.worst((0, 2, 0.0)).items():
+            with self.subTest(token=token):
+                self.assertGreaterEqual(ratio, 4.5)
+
+    def test_the_firm_panel_over_the_lightest_frame_is_the_surface_at_85_percent_over_white(self):
+        panel = contrast.composite(np.ones(3, np.float32), self.surface, self.TINT)
+        np.testing.assert_allclose(np.rint(panel * 255), [55, 58, 61], atol=1)
+        np.testing.assert_allclose(self.frames["white"], [panel], atol=1 / 255 + 1e-6)
+
+    def test_the_ink_that_the_glass_drops_to_ink_2_is_ink_3_before_it(self):
+        # ink-3 is 3.56:1 on the firm panel over white, short of 4.5:1, so the glass keeps its
+        # rule that ink-3 and ink-4 are ink-2 on it, as `videoGlassSpec` has it.
+        glass = float(contrast.relative_luminance(self.frames["white"]).max())
+        light = float(contrast.relative_luminance(contrast.parse_hex(self.colors["ink-3"][:7])))
+        self.assertLess(float(contrast.contrast_ratio(light, glass)), 4.5)
+
+
 class HaloGridTest(unittest.TestCase):
     """The halo of text straight on the background: the grid of what is tried, and the text."""
 

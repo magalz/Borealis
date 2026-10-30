@@ -14,6 +14,7 @@ import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
+import io.github.magalz.borealis.library.shell.ResumeChoice
 import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.aHost
@@ -58,7 +59,7 @@ class AppsRouteTest {
 
     private fun show(snapshot: AppsSnapshot = snapshot()) {
         repository.emit(snapshot)
-        val viewModel = AppsViewModel("host-1", repository, shortcuts)
+        val viewModel = AppsViewModel("host-1", repository, shortcuts, ResumeChoice())
         composeRule.setContent {
             AppsRoute(
                 hostId = "host-1",
@@ -86,7 +87,8 @@ class AppsRouteTest {
         composeRule.onNodeWithContentDescription("Desktop").performClick()
         composeRule.waitForIdle()
 
-        assertThat(streams).containsExactly(StreamRequest("host-1", 1, "Desktop", false))
+        assertThat(streams)
+            .containsExactly(StreamRequest("host-1", 1, "Desktop", false, resumeChosen = true))
     }
 
     @Test
@@ -164,7 +166,8 @@ class AppsRouteTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("The host refused.").assertIsDisplayed()
-        assertThat(streams).containsExactly(StreamRequest("host-1", 1, "Desktop", false))
+        assertThat(streams)
+            .containsExactly(StreamRequest("host-1", 1, "Desktop", false, resumeChosen = true))
     }
 
     @Test

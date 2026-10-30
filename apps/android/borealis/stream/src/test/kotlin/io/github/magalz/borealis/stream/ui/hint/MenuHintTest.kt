@@ -1,16 +1,21 @@
 package io.github.magalz.borealis.stream.ui.hint
 
+import android.view.InputDevice
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.connect
+import io.github.magalz.borealis.designsystem.testing.inputDevice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.TV
+import io.github.magalz.borealis.stream.testing.setChrome
 import io.github.magalz.borealis.stream.ui.LayerFixture
 import io.github.magalz.borealis.stream.ui.aStreaming
 import org.junit.Rule
@@ -63,6 +68,139 @@ class MenuHintTest {
         layer(FormFactor.Tv)
 
         composeRule.onNodeWithText("Press Back for the menu").assertIsDisplayed()
+    }
+
+    // The keyboard and the mouse
+
+    // The mouse navigation buttons are off unless the phase says they are (the default setting).
+    private val chordHint = "Press Ctrl+Alt+Shift+M for the menu"
+    private val chordAndBackHint =
+        "Press Ctrl+Alt+Shift+M or hold the mouse Back button for the menu"
+    private val mouse = InputDevice.SOURCE_MOUSE
+    private val keyboard = InputDevice.SOURCE_KEYBOARD
+    private val letters = InputDevice.KEYBOARD_TYPE_ALPHABETIC
+
+    /** A device that Android has before the stream starts. */
+    private fun plugIn(id: Int, sources: Int, keyboardType: Int = InputDevice.KEYBOARD_TYPE_NONE) =
+        connect(
+            ApplicationProvider.getApplicationContext(),
+            inputDevice(id, sources, keyboardType = keyboardType),
+        )
+
+    /** The hint alone, told whether the Back button of the mouse opens the menu. */
+    private fun hintWith(formFactor: FormFactor, mouseNavButtons: Boolean) {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setChrome(formFactor) {
+            MenuHint(
+                show = true,
+                panelOpen = false,
+                onDismiss = {},
+                mouseNavButtons = mouseNavButtons,
+            )
+        }
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `with the mouse navigation buttons on a mouse is told about the chord and the Back button`() {
+        plugIn(3, mouse)
+
+        hintWith(FormFactor.Phone, mouseNavButtons = true)
+
+        composeRule.onNodeWithText(chordAndBackHint).assertIsDisplayed()
+        composeRule.onNodeWithText(chordHint).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `with the mouse navigation buttons off the chord is told alone`() {
+        plugIn(3, mouse)
+
+        hintWith(FormFactor.Phone, mouseNavButtons = false)
+
+        composeRule.onNodeWithText(chordHint).assertIsDisplayed()
+        composeRule.onNodeWithText(chordAndBackHint).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the mouse navigation buttons change nothing for a device with no keyboard or mouse`() {
+        hintWith(FormFactor.Phone, mouseNavButtons = true)
+
+        composeRule.onNodeWithText(phoneHint).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a mouse and no pad is told about the chord`() {
+        plugIn(3, mouse)
+
+        layer(FormFactor.Phone)
+
+        composeRule.onNodeWithText(chordHint).assertIsDisplayed()
+        composeRule.onNodeWithText(phoneHint).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a keyboard with letters and no pad is told about the chord`() {
+        plugIn(4, keyboard, letters)
+
+        layer(FormFactor.Phone)
+
+        composeRule.onNodeWithText(chordHint).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a TV that has a mouse is told about the chord`() {
+        plugIn(3, mouse)
+
+        layer(FormFactor.Tv)
+
+        composeRule.onNodeWithText(chordHint).assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `a pad wins over a keyboard and a mouse`() {
+        plugIn(3, mouse)
+        plugIn(4, keyboard, letters)
+        plugIn(5, InputDevice.SOURCE_GAMEPAD or keyboard)
+
+        layer(FormFactor.Handheld)
+
+        composeRule.onNodeWithText("Hold Select + Start for the menu").assertIsDisplayed()
+        composeRule.onNodeWithText(chordHint).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a virtual keyboard, a remote and a touchscreen are no keyboard or mouse`() {
+        // The virtual keyboard of every phone has letters; a remote has keys but no letters.
+        plugIn(-1, keyboard, letters)
+        plugIn(6, keyboard or InputDevice.SOURCE_DPAD, InputDevice.KEYBOARD_TYPE_NON_ALPHABETIC)
+        plugIn(7, InputDevice.SOURCE_TOUCHSCREEN)
+
+        layer(FormFactor.Phone)
+
+        composeRule.onNodeWithText(phoneHint).assertIsDisplayed()
+        composeRule.onNodeWithText(chordHint).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the line for the keyboard and the mouse goes after six seconds like the others`() {
+        plugIn(3, mouse)
+        val fixture = layer(FormFactor.Phone)
+
+        composeRule.mainClock.advanceTimeBy(5_900)
+        composeRule.onNodeWithText(chordHint).assertIsDisplayed()
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.mainClock.advanceTimeBy(5_000)
+
+        assertThat(fixture.intents.calls).containsExactly("dismissMenuHint")
+        composeRule.onNodeWithText(chordHint).assertDoesNotExist()
     }
 
     @Test

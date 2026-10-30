@@ -34,6 +34,27 @@ internal class GameConfigurationTest : GameTestBase() {
     }
 
     @Test
+    fun `the stream joins a running app without asking only when the intent says the user chose to`() {
+        rig.create(GameIntent(resumeChosen = true))
+
+        assertThat(config.resumeChosen).isTrue()
+    }
+
+    @Test
+    fun `an intent without the choice, as a pinned shortcut of an older version has, asks`() {
+        rig.create(GameIntent(resumeChosen = null))
+
+        assertThat(config.resumeChosen).isFalse()
+    }
+
+    @Test
+    fun `an intent that says the user did not choose to resume asks`() {
+        rig.create(GameIntent(resumeChosen = false))
+
+        assertThat(config.resumeChosen).isFalse()
+    }
+
+    @Test
     fun `the resolution, the frame rate, the bitrate and the host options come from the settings`() {
         rig.preference("list_resolution", "1920x1080")
         rig.preference("list_fps", "30")

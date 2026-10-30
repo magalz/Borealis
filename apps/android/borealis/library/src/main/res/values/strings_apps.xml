@@ -18,10 +18,6 @@
     <string name="apps_action_start">Start</string>
     <string name="apps_action_start_consequence">Start %1$s on the PC.</string>
     <string name="apps_action_quit">Quit %1$s</string>
-    <!-- %1$s is the app. A consequence of two sentences has one on each line. -->
-    <string name="apps_action_quit_consequence">Closes %1$s on the PC.\nUnsaved progress in it is lost.</string>
-    <!-- The same for Desktop, which has no program to close. -->
-    <string name="apps_action_quit_desktop_consequence">Ends the stream.\nThe display and controls go back to the PC.</string>
     <string name="apps_action_quit_and_start">Quit %1$s and start %2$s</string>
     <!-- %1$s is the running app. -->
     <string name="apps_action_quit_and_start_consequence">Closes %1$s on the PC first.\nUnsaved progress in it is lost.</string>
@@ -52,6 +48,10 @@
     <string name="apps_message_host_not_paired">This PC is not paired. Pair it first.</string>
     <string name="apps_message_host_offline">This PC is offline.</string>
     <string name="apps_message_quit_done">App quit.</string>
+    <!-- Shown on the Library after a Disconnect in the stream; %1$s is the app. -->
+    <string name="apps_message_disconnected">Disconnected. %1$s is still running on the PC.</string>
+    <!-- The same when the stream does not know the name of the app, for example after a resume. -->
+    <string name="apps_message_disconnected_unknown">Disconnected. The app is still running on the PC.</string>
     <string name="apps_message_quit_failed">Failed to quit.</string>
     <string name="apps_message_pin_failed">Your launcher did not add the shortcut.</string>
 </resources>

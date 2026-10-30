@@ -72,6 +72,8 @@ import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.host.launch.SessionAudit
 import io.github.magalz.borealis.host.video.StreamStartupGuard
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.GameStreamActions
 import io.github.magalz.borealis.stream.GamepadMouseSync
@@ -94,6 +96,7 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
@@ -116,6 +119,14 @@ class Game :
     UsbDriverService.UsbDriverStateListener,
     View.OnKeyListener {
     private var lastButtonState = 0
+
+    // BOREALIS: the Back button of the mouse, held for BACK_HOLD_MS, opens the in-game menu and
+    // sends nothing to the PC; a shorter press is X1, sent when the button comes up (stream)
+    private var backHoldOpenedMenu = false
+    private val openMenuFromBackHold = Runnable {
+        backHoldOpenedMenu = true
+        streamSession.openMenu()
+    }
 
     // Only 2 touches are supported
     private val touchContextMap = arrayOfNulls<TouchContext>(2)
@@ -228,6 +239,10 @@ class Game :
         const val EXTRA_APP_HDR = "HDR"
         const val EXTRA_SERVER_CERT = "ServerCert"
 
+        // BOREALIS: true when the user chose Resume, Continue or Try again for the app that
+        // runs; absent, as in an older shortcut, it is false (stream)
+        const val EXTRA_RESUME_CHOSEN = "ResumeChosen"
+
         private const val STYLUS_DOWN_DEAD_ZONE_DELAY = 100
         private const val STYLUS_DOWN_DEAD_ZONE_RADIUS = 20
 
@@ -257,6 +272,7 @@ class Game :
         private const val HIDE_UI_AFTER_UI_CHANGE_MS = 2000
         private const val TOGGLE_GRAB_DELAY_MS = 250L
         private const val INPUT_GRAB_DELAY_MS = 500L
+        private const val BACK_HOLD_MS = 1000L
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -397,6 +413,8 @@ class Game :
         val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
         val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
         val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT)
+        // BOREALIS: absent, as in a shortcut of an older version, it is false (stream)
+        val resumeChosen = intent.getBooleanExtra(EXTRA_RESUME_CHOSEN, false)
 
         app = NvApp(appName ?: "app", appId, appSupportsHdr)
 
@@ -574,6 +592,7 @@ class Game :
                 .setColorSpace(decoderRenderer.getPreferredColorSpace())
                 .setColorRange(decoderRenderer.getPreferredColorRange())
                 .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
+                .setResumeChosen(resumeChosen) // BOREALIS: host.launch
                 .build()
 
         // Initialize the connection
@@ -639,6 +658,7 @@ class Game :
                     streamView,
                     { streamSession.closePanel() },
                     { mode -> TouchContexts.build(mode, conn, streamView, prefConfig) },
+                    { done -> stopConnectionThen(done) },
                 ),
                 heldKeys,
             )
@@ -886,6 +906,10 @@ class Game :
         // We can't guarantee the state of modifiers keys which may have
         // lifted while focus was not on us. Clear the modifier state.
         this.modifierFlags = 0
+
+        // BOREALIS: the release of the mouse's Back button may come while another window has the
+        // focus (stream)
+        if (!hasFocus) cancelBackHold()
 
         // With Android native pointer capture, capture is lost when focus is lost,
         // so it must be requested again when focus is regained.
@@ -1197,6 +1221,7 @@ class Game :
     override fun onStop() {
         super.onStop()
         startupGuard.cancel() // BOREALIS: first-frame watchdog
+        cancelBackHold() // BOREALIS: the release of the mouse's Back button may never come (stream)
         // BOREALIS: a pending "app already running" question is a cancel (host.launch)
         if (::streamSession.isInitialized) {
             streamSession.answerConflict(ConflictChoice.CANCEL)
@@ -1272,7 +1297,8 @@ class Game :
             }
         }
 
-        finish()
+        // BOREALIS: every exit that finished the activity already asks once (leave)
+        if (!isFinishing) finish()
     }
 
     // BOREALIS: who gets the input, from the stream session; the stream gets it until the session
@@ -1286,7 +1312,8 @@ class Game :
         // The gamepad is zeroed and the game gets nothing from it
         controllerHandler.setCaptured(true)
         grabbedBeforeCapture = grabbedInput
-        streamActions.releaseHeldInput(lastButtonState)
+        // The PC is never left holding X1: Back is sent as a press and a release when it comes up
+        streamActions.releaseHeldInput(lastButtonState and MotionEvent.BUTTON_BACK.inv())
         lastButtonState = 0
         // A modifier that comes up while the chrome has the keys is never seen here
         modifierFlags = 0
@@ -1321,12 +1348,20 @@ class Game :
             }
         } else {
             inputCaptureProvider.disableCapture()
+            cancelBackHold()
         }
 
         // Grab/ungrab system keyboard shortcuts
         setMetaKeyCaptureState(grab)
 
         grabbedInput = grab
+    }
+
+    // BOREALIS: the Back button of the mouse stops waiting to open the menu: the pointer is no
+    // longer ours, so the release of the button may never be seen (stream)
+    private fun cancelBackHold() {
+        window.decorView.removeCallbacks(openMenuFromBackHold)
+        lastButtonState = lastButtonState and MotionEvent.BUTTON_BACK.inv()
     }
 
     private val toggleGrab = Runnable { setInputGrabState(!grabbedInput) }
@@ -1389,8 +1424,12 @@ class Game :
                         }
                     }
 
-                    // Quit
-                    KeyEvent.KEYCODE_Q -> finish()
+                    // Disconnect (BOREALIS: the flow of the menu's Disconnect, with its screen and
+                    // its notice, not a finish)
+                    KeyEvent.KEYCODE_Q -> streamSession.disconnect()
+
+                    // BOREALIS: open the in-game menu
+                    KeyEvent.KEYCODE_M -> streamSession.openMenu()
 
                     // Toggle cursor visibility
                     KeyEvent.KEYCODE_C -> {
@@ -1428,7 +1467,8 @@ class Game :
             when (androidKeyCode) {
                 KeyEvent.KEYCODE_Z,
                 KeyEvent.KEYCODE_Q,
-                KeyEvent.KEYCODE_C -> {
+                KeyEvent.KEYCODE_C,
+                KeyEvent.KEYCODE_M -> {
                     // Remember that a special key combo was activated, so we can consume all key
                     // events until the modifiers come up
                     specialKeyCode = androidKeyCode
@@ -2238,9 +2278,16 @@ class Game :
                 if (prefConfig.mouseNavButtons) {
                     if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
                         if ((buttonState and MotionEvent.BUTTON_BACK) != 0) {
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
+                            // BOREALIS: Back waits to see whether it is held (stream)
+                            backHoldOpenedMenu = false
+                            window.decorView.postDelayed(openMenuFromBackHold, BACK_HOLD_MS)
                         } else {
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
+                            window.decorView.removeCallbacks(openMenuFromBackHold)
+                            // BOREALIS: a short press is X1, sent now; a hold sent nothing (stream)
+                            if (!backHoldOpenedMenu) {
+                                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
+                                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
+                            }
                         }
                     }
 
@@ -2612,7 +2659,11 @@ class Game :
         }
     }
 
-    private fun stopConnection() {
+    // BOREALIS: stops the connection and runs [done] once it has stopped, from the thread that
+    // stopped it; at once when no connection runs (leave)
+    internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
+
+    private fun stopConnection(done: Runnable? = null) {
         startupGuard.cancel() // BOREALIS: first-frame watchdog
         if (connected) {
             connected = false
@@ -2631,14 +2682,37 @@ class Game :
             // during the process of stopping this one.
             object : Thread() {
                     override fun run() {
+                        val stopStarted = System.nanoTime() // BOREALIS: leave log
                         conn.stop()
+                        BorealisLog.i(
+                            LogTag.APP,
+                            "connection stop done",
+                            "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
+                        )
+                        tellConnectionStopped()
+                        done?.run()
                     }
                 }
                 .start()
+        } else {
+            // BOREALIS: a start that failed after the decoder stage holds a decoder and no
+            // connection (stream)
+            tellConnectionStopped()
+            done?.run() // BOREALIS: nothing runs, so nothing to wait for (leave)
         }
     }
 
+    // BOREALIS: the stream's decoder is released with the connection, so a clip of the background
+    // plays again; from any thread, run on the main one (stream)
+    private fun tellConnectionStopped() {
+        if (::streamSession.isInitialized) runOnUiThread { streamSession.onConnectionStopped() }
+    }
+
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
+        // BOREALIS: the last frame, copied before the connectivity test; a stage fails after the
+        // first frame only rarely. The first frame was shown, so the chrome host exists (stream)
+        if (firstFrameShown) chromeHost.freezeFrame()
+
         // Perform a connection test if the failure could be due to a blocked port
         // This does network I/O, so don't do it on the main thread.
         val portTestResult =
@@ -2684,15 +2758,34 @@ class Game :
     }
 
     override fun connectionTerminated(errorCode: Int) {
+        // BOREALIS: the host ends the stream when it gets the Quit that the user confirmed, and the
+        // control stream reports the ENet disconnect (-1); that end is the quit's, so no
+        // connectivity test and no error. Any other code is a network drop (leave)
+        val endedByQuit = ::streamSession.isInitialized && streamSession.endedByQuit(errorCode)
+
+        // BOREALIS: the last frame of a stream that ended in error is copied now, from this native
+        // thread: the decoder is released a fraction of a second from here, and the connectivity
+        // test and the stop come later. The first frame was shown, so the chrome host exists. The
+        // popup of the error stands on the copy (stream)
+        if (
+            firstFrameShown && !endedByQuit && errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION
+        ) {
+            chromeHost.freezeFrame()
+        }
+
         // Perform a connection test if the failure could be due to a blocked port
         // This does network I/O, so don't do it on the main thread.
         val portFlags = MoonBridge.getPortFlagsFromTerminationErrorCode(errorCode)
         val portTestResult =
-            MoonBridge.testClientConnectivity(
-                ServerHelper.CONNECTION_TEST_SERVER,
-                CONNECTION_TEST_PORT,
-                portFlags,
-            )
+            if (endedByQuit) {
+                MoonBridge.ML_TEST_RESULT_INCONCLUSIVE
+            } else {
+                MoonBridge.testClientConnectivity(
+                    ServerHelper.CONNECTION_TEST_SERVER,
+                    CONNECTION_TEST_PORT,
+                    portFlags,
+                )
+            }
 
         runOnUiThread {
             startupGuard.cancel() // BOREALIS: first-frame watchdog
@@ -2709,7 +2802,7 @@ class Game :
 
             if (!displayedFailureDialog) {
                 displayedFailureDialog = true
-                LimeLog.severe("Connection terminated: $errorCode")
+                if (!endedByQuit) LimeLog.severe("Connection terminated: $errorCode")
                 stopConnection()
 
                 // Display the error dialog if it was an unexpected termination.
@@ -2732,7 +2825,8 @@ class Game :
                         )
                     )
                 } else {
-                    finish()
+                    // BOREALIS: another exit may have finished the activity already (leave)
+                    if (!isFinishing) finish()
                 }
             }
         }

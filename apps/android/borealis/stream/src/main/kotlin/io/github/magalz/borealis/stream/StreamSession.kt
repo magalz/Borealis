@@ -3,6 +3,8 @@ package io.github.magalz.borealis.stream
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ConflictChoice
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.keys.KeyChord
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -10,12 +12,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-/** What a stream starts with: the user's settings when the first frame arrives. */
+/**
+ * What a stream starts with: the user's settings when the first frame arrives, and the [visuals] of
+ * the stream, which it keeps from the start. [mouseNavButtons] says whether the Back button of the
+ * mouse is a button of its own (the setting of that name) and so can open the menu.
+ */
 data class StreamDefaults(
     val overlay: OverlayMode,
     val touchMode: TouchMode?,
     val gamepadMouse: Boolean?,
     val showMenuHint: Boolean,
+    val visuals: StreamVisuals = StreamVisuals(),
+    val mouseNavButtons: Boolean = false,
 )
 
 /**
@@ -28,8 +36,10 @@ data class StreamDefaults(
  *
  * A failure is final: once the session is [StreamPhase.Failed], no later event changes it, and
  * `retry()` starts the stream again in a new activity and a new session. Cancelling a conflict
- * leaves the phase at [StreamPhase.Conflict]; the activity finishes itself. When the host ends the
- * stream while a quit is pending, the phase is [StreamPhase.Quitting] until the quit answers.
+ * leaves the phase at [StreamPhase.Conflict]; the activity finishes itself. A quit that is asked
+ * for puts the phase at [StreamPhase.Quitting] at once and keeps it there, whether or not the host
+ * ends the stream, until the quit answers. A disconnect puts it at [StreamPhase.Disconnecting] at
+ * once, and nothing that happens later changes it: the activity finishes itself.
  *
  * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
  * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
@@ -42,10 +52,16 @@ class StreamSession(
     private val defaults: StreamDefaults,
     private val dockKeyboard: () -> Boolean,
     private val actions: StreamActions,
+    private val clockMs: () -> Long = { System.nanoTime() / NANOS_PER_MS },
 ) : StreamIntents {
     private val mutableState =
         MutableStateFlow(
-            StreamUiState(appName, hostName, StreamPhase.Starting(StartStage.CONNECTING))
+            StreamUiState(
+                appName,
+                hostName,
+                StreamPhase.Starting(StartStage.CONNECTING),
+                visuals = defaults.visuals,
+            )
         )
     private val mutablePerf = MutableStateFlow<PerfSnapshot?>(null)
 
@@ -55,8 +71,8 @@ class StreamSession(
     private val firstFrameSeen = AtomicBoolean(false)
     private val pendingAnswer = AtomicReference<ConflictAnswer?>(null)
 
-    // A quit was asked for and has no answer yet; it makes the end of the stream a quiet one.
-    private val quitPending = AtomicBoolean(false)
+    // When the quit was accepted, for the time that the end of the stream is logged with.
+    @Volatile private var quitAcceptedAtMs = 0L
 
     val state: StateFlow<StreamUiState> = mutableState
 
@@ -86,9 +102,23 @@ class StreamSession(
      * A step of the start is reached; clears a retry that was showing. A step before the current
      * one is ignored, so the list of steps never goes backwards whatever order the events arrive
      * in.
+     *
+     * The first step after the app is requested is the first stage of the connection itself, which
+     * comes before the stream's decoder is configured (at the stage that establishes the video
+     * stream). A decoder is held from that step on (see [StreamUiState.decoderHeld]), so the clip
+     * of the background is released a few stages before the decoder is configured, and no handshake
+     * with the connection thread is needed.
      */
-    fun onStage(stage: StartStage) = whileStarting {
-        if (stage < it.stage) it else StreamPhase.Starting(stage)
+    fun onStage(stage: StartStage) = mutableState.update {
+        val phase = it.phase
+        when {
+            phase !is StreamPhase.Starting || stage < phase.stage -> it
+            else ->
+                it.copy(
+                    phase = StreamPhase.Starting(stage),
+                    decoderHeld = it.decoderHeld || stage >= StartStage.PREPARING_DISPLAY,
+                )
+        }
     }
 
     /** The host asked for a retry of the current stage. */
@@ -123,6 +153,7 @@ class StreamSession(
      */
     fun onConnectionStarted(info: SessionInfo) {
         sessionInfo.set(info)
+        holdDecoder()
         if (firstFrameSeen.get()) {
             startStreaming(info)
         } else {
@@ -133,6 +164,7 @@ class StreamSession(
     /** The first frame is on screen; streams once [onConnectionStarted] has reported the stream. */
     fun onFirstFrame() {
         firstFrameSeen.set(true)
+        holdDecoder()
         sessionInfo.get()?.let(::startStreaming)
     }
 
@@ -143,31 +175,67 @@ class StreamSession(
             gamepadMouse = defaults.gamepadMouse,
             info = info,
             showMenuHint = defaults.showMenuHint,
+            mouseNavButtons = defaults.mouseNavButtons,
         )
     }
 
     /**
-     * The start failed or the stream ended with an error. The first failure stays. While a quit is
-     * pending the end is the quit, not a failure: the host ends the stream before it answers the
-     * cancel, so the phase is [StreamPhase.Quitting].
+     * The start failed or the stream ended with an error. The first failure stays. While the phase
+     * is [StreamPhase.Quitting] the end is the quit, not a failure: the host ends the stream before
+     * it answers the cancel, so the phase stays and keeps how the stream ended.
      */
     fun onFailed(failure: StreamFailure) = mutableState.update {
+        val phase = it.phase
         when {
-            it.phase is StreamPhase.Failed || it.phase is StreamPhase.Quitting -> it
-            quitPending.get() -> it.copy(phase = StreamPhase.Quitting(failure))
+            phase is StreamPhase.Failed || phase is StreamPhase.Disconnecting -> it
+            phase is StreamPhase.Quitting ->
+                if (phase.ended == null) it.copy(phase = phase.copy(ended = failure)) else it
             else -> it.copy(phase = StreamPhase.Failed(failure))
         }
     }
 
-    // The quit did not happen: a stream that already ended with it ended by failing.
+    // The quit did not happen: a stream that already ended with it ended by failing, and one that
+    // still runs goes on as it was.
     private fun onQuitFailed() {
-        quitPending.set(false)
         mutableState.update {
             val phase = it.phase
-            if (phase is StreamPhase.Quitting) it.copy(phase = StreamPhase.Failed(phase.ended))
-            else it
+            if (phase is StreamPhase.Quitting) {
+                it.copy(phase = phase.ended?.let(StreamPhase::Failed) ?: phase.resumeTo)
+            } else {
+                it
+            }
         }
     }
+
+    /**
+     * The stream ended with [code], reported from the connection thread. True when that is the end
+     * of the quit the user asked for, which the log then says with the time since the quit: the
+     * host closes the stream when it gets the cancel, and the control stream reports that as the
+     * ENet disconnect, [ENET_DISCONNECT]. Any other code while a quit is pending is a network drop
+     * and goes the way of a failure.
+     */
+    fun endedByQuit(code: Int): Boolean {
+        if (code != ENET_DISCONNECT || mutableState.value.phase !is StreamPhase.Quitting) {
+            return false
+        }
+        BorealisLog.i(
+            LogTag.APP,
+            "quit stream ended",
+            "code" to code,
+            "since_quit_ms" to clockMs() - quitAcceptedAtMs,
+        )
+        return true
+    }
+
+    /**
+     * The connection has stopped, or none ever ran, and the decoder of the stream is released: a
+     * clip of the background plays again. The activity calls it on the main thread: posted from the
+     * thread that stopped the connection once the stop ends, or at once when none ran.
+     */
+    fun onConnectionStopped() = mutableState.update { it.copy(decoderHeld = false) }
+
+    // The stream is up, so its decoder is: whatever stage events came before.
+    private fun holdDecoder() = mutableState.update { it.copy(decoderHeld = true) }
 
     fun onPerf(snapshot: PerfSnapshot) {
         mutablePerf.value = snapshot
@@ -262,11 +330,32 @@ class StreamSession(
 
     override fun requestKeyframe() = actions.requestKeyframe()
 
-    override fun disconnect() = actions.disconnect()
+    override fun disconnect() {
+        if (!startLeaving { StreamPhase.Disconnecting }) return
+        BorealisLog.i(LogTag.APP, "disconnect accepted")
+        actions.disconnect(mutableState.value.appName)
+    }
 
     override fun quitApp() {
-        quitPending.set(true)
+        if (!startLeaving(StreamPhase::Quitting)) return
+        quitAcceptedAtMs = clockMs()
+        BorealisLog.i(LogTag.APP, "quit accepted")
         actions.quitApp(::onQuitFailed)
+    }
+
+    // Moves to the phase that [leaving] makes from the current one, unless the session failed or
+    // is leaving already; true when it moved. A quit and a disconnect shut each other out.
+    private inline fun startLeaving(leaving: (StreamPhase) -> StreamPhase): Boolean {
+        var started = false
+        mutableState.update {
+            val phase = it.phase
+            started =
+                phase !is StreamPhase.Failed &&
+                    phase !is StreamPhase.Quitting &&
+                    phase !is StreamPhase.Disconnecting
+            if (started) it.copy(phase = leaving(phase)) else it
+        }
+        return started
     }
 
     override fun leave() = actions.leave()
@@ -279,3 +368,11 @@ class StreamSession(
 
     override fun openDiagnostics() = actions.openDiagnostics()
 }
+
+private const val NANOS_PER_MS = 1_000_000L
+
+/**
+ * The code that the control stream of moonlight-common-c reports when its ENet peer disconnects
+ * (`ControlStream.c`, `ENET_EVENT_TYPE_DISCONNECT`), which the host causes by closing the stream.
+ */
+private const val ENET_DISCONNECT = -1

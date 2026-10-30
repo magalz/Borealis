@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- What Quit costs, one sentence a line. %1$s is the app, or "the running app" when its name is not known. -->
+    <string name="borealis_quit_consequence">Closes %1$s on the PC.\nUnsaved progress in it is lost.</string>
+    <!-- The same for Desktop, which has no program to close. -->
+    <string name="borealis_quit_consequence_desktop">Ends the stream.\nThe display and controls go back to the PC.</string>
+    <!-- The warning of the dialog about an app that already runs on the host, when that app is a game. -->
+    <string name="borealis_quit_conflict_warning">Quitting ends the stream on the other device and closes the app.\nUnsaved progress in it is lost.</string>
+    <!-- The same when that app is Desktop. -->
+    <string name="borealis_quit_conflict_warning_desktop">Quitting ends the stream on the other device.</string>
+</resources>

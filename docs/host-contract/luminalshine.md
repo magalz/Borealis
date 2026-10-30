@@ -41,8 +41,24 @@ mode with OLED Protection), which by the release notes does not alter the networ
 protocols, authentication, encoder selection or capture-start logic. An upgrade ends a
 running stream (section 18, item 18). The rest of the document was not re-verified: its
 line numbers are the ones at `5afdbdc6`, or at `46f6936d` where an item says so, except
-the references of section 7.5, which are at `dba21a9e`. The plain-HTTP responses of a
+the references of sections 4.1 to 4.3, 7.5 and 7.6, which are at `dba21a9e`. The plain-HTTP responses of a
 running 26.10.0 or 26.10.1 host were not captured.
+
+**Revision of 2026-10-29 (Sprint 15).** The host code is that of `dba21a9e`; what changed
+is the record. Section 7.6 was rewritten and its references moved to `dba21a9e`. Notes
+marked **Filed upstream (2026-10-29)** were added to sections 4, 7.3, 7.6, 9.1 and 20 and to
+the appendix: the owner filed issues #216 to #220 and discussions #221 to #225 on
+`NortheBridge/luminalshine` that day, and closed #204 and #205 (read with `gh` on
+2026-10-29). The 400 row of section 7.5 and item 8 of section 18 were changed to match
+section 7.6. Notes marked **Client behaviour (Sprint 15)** describe what Borealis does at
+`2e76dfcfb` (the head of `phase/s15-stream-screens` when this was written). The `src/`
+references inside those notes are lines at `dba21a9e`. The pairing code of section 4 was read
+again at `dba21a9e` on 2026-10-29: each of the 36 ranges that sections 4.1 to 4.3 and the
+paragraph on the wrong PIN of 26.09.1 cite (`src/nvhttp.cpp`, `src/confighttp.cpp` and
+`src/network.cpp`) holds the same lines at `5afdbdc6` and at `dba21a9e`, moved down by 0 to 118
+lines, so the claims hold at 26.10.1, and those references were moved to `dba21a9e`. The
+references of the "Changed since 26.09.1" notes were already at `46f6936d`, where
+`src/nvhttp.cpp` is the same file.
 
 Everything here comes from static reading of the host source, except the items
 marked **Observed** (runtime observations from the Sprint 2 and 3 device rounds and,
@@ -192,18 +208,18 @@ Desktop, the client treats it as any other app, which is the cautious reading.
 
 The cryptographic exchange is the standard four-phase GameStream pairing
 (`getservercert`, `clientchallenge`, `serverchallengeresp`, `clientpairingsecret`,
-then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1941-2106`, dispatched at
-`src/nvhttp.cpp:2204-2345`. The differences that matter to a client:
+then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1961-2126`, dispatched at
+`src/nvhttp.cpp:2221-2362`. The differences that matter to a client:
 
 ### 4.1 PIN and name are entered on the host
 
 - The client derives its key from a four-digit decimal PIN and the salt in the
   usual way. The PIN must be exactly four ASCII digits
-  (`src/nvhttp.cpp:1706-1710`).
+  (`src/nvhttp.cpp:1726-1730`).
 - The user enters the PIN and the client's display name in the host Web UI,
   which calls `POST /api/pin` with `{"pin","name","pairing_id"}`
-  (`src/confighttp.cpp:3988-4038`; `pairing_id` is optional). The paired name is
-  taken from that submission and trimmed (`src/nvhttp.cpp:2434`). Any
+  (`src/confighttp.cpp:4100-4150`; `pairing_id` is optional). The paired name is
+  taken from that submission and trimmed (`src/nvhttp.cpp:2451`). Any
   `devicename` the client sends is not used for the name.
 - The HTTP request for phase 1 (`phrase=getservercert`) is held open until the
   user submits the PIN. Moonlight Android already uses a client with no read
@@ -211,42 +227,42 @@ then `pairchallenge` over HTTPS): `src/nvhttp.cpp:1941-2106`, dispatched at
   (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/PairingManager.java:205-209`).
   Any other client must do the same.
 - A host that has the PIN-on-stdin flag set reads the PIN from standard input
-  instead (`src/nvhttp.cpp:2280-2282`). This is a host operator mode; it is not
+  instead (`src/nvhttp.cpp:2297-2299`). This is a host operator mode; it is not
   expected in normal installs.
 
 ### 4.2 Pairing sessions and limits
 
 | Limit | Value | Reference |
 | --- | --- | --- |
-| Pending pairing session lifetime | 5 minutes | `src/nvhttp.cpp:917` |
-| Completed-outcome retention | 5 minutes | `src/nvhttp.cpp:918` |
-| Maximum concurrent pending pairings | 32 | `src/nvhttp.cpp:919` |
-| Maximum retained outcomes | 64 | `src/nvhttp.cpp:920` |
+| Pending pairing session lifetime | 5 minutes | `src/nvhttp.cpp:918` |
+| Completed-outcome retention | 5 minutes | `src/nvhttp.cpp:919` |
+| Maximum concurrent pending pairings | 32 | `src/nvhttp.cpp:920` |
+| Maximum retained outcomes | 64 | `src/nvhttp.cpp:921` |
 
 - Concurrent pairing requests are told apart by an opaque `pairing_id` that the
-  host generates (`src/nvhttp.cpp:2243-2250`) and that the Web UI lists through
-  `GET /api/pin` (`src/confighttp.cpp:3949-3970`). The client never sees it.
+  host generates (`src/nvhttp.cpp:2260-2267`) and that the Web UI lists through
+  `GET /api/pin` (`src/confighttp.cpp:4061-4082`). The client never sees it.
   Pairing states are `pending_pin`, `awaiting_client`, `paired`, `failed`,
-  `expired` (`src/nvhttp.cpp:1661-1676`).
+  `expired` (`src/nvhttp.cpp:1681-1696`).
 - Every phase after the first must come from the same normalized IP address as
   phase 1, or the host answers 403 `Pairing request peer mismatch`
-  (`src/nvhttp.cpp:2312-2317`). The address is compared after normalization, so
+  (`src/nvhttp.cpp:2329-2334`). The address is compared after normalization, so
   an IPv4-mapped IPv6 address equals its IPv4 form
-  (`src/network.cpp:270-272`, `src/nvhttp.cpp:2173-2174`). A client that switches
+  (`src/network.cpp:270-272`, `src/nvhttp.cpp:2190-2191`). A client that switches
   between IPv4 and IPv6 between phases, for example when Android changes
   network, will fail pairing.
 - A phase 1 retry with the same certificate and salt is answered idempotently
   only after the PIN was applied, while the session is in the `getservercert`
-  phase (`last_phase == GETSERVERCERT`, `src/nvhttp.cpp:2210-2233`). Any other
+  phase (`last_phase == GETSERVERCERT`, `src/nvhttp.cpp:2227-2250`). Any other
   non-initial phase, including a same-certificate retry in a later phase, gets
-  409 `Pairing exchange already in progress` (`src/nvhttp.cpp:2230`). A retry
+  409 `Pairing exchange already in progress` (`src/nvhttp.cpp:2247`). A retry
   while the PIN is still pending re-arms the held response and answers the
   previous held request with 409 `Pairing request superseded by retry`
-  (`src/nvhttp.cpp:2184`, `src/nvhttp.cpp:2252-2271`).
+  (`src/nvhttp.cpp:2201`, `src/nvhttp.cpp:2269-2288`).
 - Any out-of-order phase, short salt, short secret, invalid certificate or
   failed hash makes the host delete the session and answer 400 with a message
   such as `Out of order call to getservercert`
-  (`src/nvhttp.cpp:1933-1939`, `1941-1950`, `2040-2060`).
+  (`src/nvhttp.cpp:1953-1959`, `1961-1970`, `2060-2080`).
 
 ### 4.3 Pairing status codes
 
@@ -255,23 +271,25 @@ noted otherwise by the web server).
 
 | Code | Message | Meaning | Reference |
 | --- | --- | --- | --- |
-| 400 | `Missing uniqueid parameter` | Client bug | `src/nvhttp.cpp:2166` |
-| 400 | `Invalid uniqueid` | Phase 2 to 4 for an unknown session (expired or reset) | `src/nvhttp.cpp:2306` |
-| 400 | various (`Out of order call to ...`, `Salt too short`, `Client pairing secret too short`, `Invalid client certificate`) | Protocol error; session deleted; restart pairing | `src/nvhttp.cpp:1933-1939` |
-| 400 | `Pairing exchange invalidated` | A held phase 1 response was invalidated by an out-of-order phase | `src/nvhttp.cpp:2191` |
-| 403 | `Pairing request peer mismatch` | A later phase came from a different IP | `src/nvhttp.cpp:2314` |
-| 404 | `Invalid pairing request` | Unknown query | `src/nvhttp.cpp:2342` |
-| 408 | `Pairing request expired` | The 5 minute window elapsed before the PIN was entered | `src/nvhttp.cpp:1908-1910` |
-| 409 | `Pairing exchange already in progress` | A phase 1 request arrived after the PIN was applied and it is not an exact retry in the `getservercert` phase (this includes a same-certificate retry in a later phase) | `src/nvhttp.cpp:2230` |
-| 409 | `Pairing request identity mismatch` | Retry used a different certificate or salt while the PIN is pending | `src/nvhttp.cpp:2265` |
-| 409 | `Pairing request superseded by retry` | The held phase 1 request was replaced by a retry | `src/nvhttp.cpp:2184` |
-| 410 | `Host pairing state was reset` | The host operator reset stored state | `src/nvhttp.cpp:3905` |
-| 503 | `Too many pending pairing requests` | 32 pending pairings exist | `src/nvhttp.cpp:2239` |
+| 400 | `Missing uniqueid parameter` | Client bug | `src/nvhttp.cpp:2183` |
+| 400 | `Invalid uniqueid` | Phase 2 to 4 for an unknown session (expired or reset) | `src/nvhttp.cpp:2323` |
+| 400 | various (`Out of order call to ...`, `Salt too short`, `Client pairing secret too short`, `Invalid client certificate`) | Protocol error; session deleted; restart pairing | `src/nvhttp.cpp:1953-1959` |
+| 400 | `Pairing exchange invalidated` | A held phase 1 response was invalidated by an out-of-order phase | `src/nvhttp.cpp:2208` |
+| 403 | `Pairing request peer mismatch` | A later phase came from a different IP | `src/nvhttp.cpp:2331` |
+| 404 | `Invalid pairing request` | Unknown query | `src/nvhttp.cpp:2359` |
+| 408 | `Pairing request expired` | The 5 minute window elapsed before the PIN was entered | `src/nvhttp.cpp:1928-1930` |
+| 409 | `Pairing exchange already in progress` | A phase 1 request arrived after the PIN was applied and it is not an exact retry in the `getservercert` phase (this includes a same-certificate retry in a later phase) | `src/nvhttp.cpp:2247` |
+| 409 | `Pairing request identity mismatch` | Retry used a different certificate or salt while the PIN is pending | `src/nvhttp.cpp:2282` |
+| 409 | `Pairing request superseded by retry` | The held phase 1 request was replaced by a retry | `src/nvhttp.cpp:2201` |
+| 410 | `Host pairing state was reset` | The host operator reset stored state | `src/nvhttp.cpp:4023` |
+| 503 | `Too many pending pairing requests` | 32 pending pairings exist | `src/nvhttp.cpp:2256` |
 
 Recommended client behaviour: do not retry 400, 403, 404 or 410 automatically;
 tell the user to restart pairing. 408 means "enter the PIN faster and restart".
 409 and 503 may be retried once after a short delay, or explained to the user
-(another device may be pairing).
+(another device may be pairing). The 409 `Pairing exchange already in progress` that a
+wrong PIN leaves behind is the exception: a retry inside its window gets the same 409
+(see "Changed since 26.09.1" below).
 
 Borealis classifies these errors in `borealis_pair_classify` (`core/README.md`),
 by status and case-insensitive message text:
@@ -286,7 +304,7 @@ by status and case-insensitive message text:
 **After a wrong PIN (LuminalShine 26.09.1).** LuminalShine has no `/unpair` route, so it keeps the
 session of the failed attempt. The next attempt's phase 1 is held until the PIN is
 typed in the Web UI, then fails with 400 `Out of order call to getservercert`;
-that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1929-1945`), so the
+that failure deletes the session (`fail_pair`, `src/nvhttp.cpp:1949-1965`), so the
 attempt after it succeeds. The automatic restart turns this into one extra PIN
 dialog instead of a raw error.
 
@@ -327,8 +345,45 @@ commits change `.github/`, `scripts/` and `tests/` only).
 - The automatic restart of Borealis never runs on that host, because 409 maps to
   "No restart" (the table above). The user waits up to 5 minutes, or restarts
   LuminalShine, before pairing again.
+- **From the source and the client code, not run:** the lockout is not limited to the
+  device that typed the wrong PIN. The host keys a pairing session on the `uniqueid` query
+  value. Moonlight Android 12.2 and Borealis send the constant `0123456789ABCDEF` on every
+  request, and the host's own comment says so
+  (`src/nvhttp.cpp:1446-1451`, section 5.1;
+  `borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:216`;
+  `borealis@2e76dfcfb:apps/android/app/src/main/kotlin/com/limelight/nvstream/http/NvHTTP.kt:72`
+  and `:395`). The pairing gate reads only whether a session with that key exists and has left
+  phase `NONE` (`src/nvhttp.cpp:2227-2251`). Only a retry in the `getservercert` phase is then
+  matched on the certificate, the salt and the address, and a wrong PIN leaves the session in
+  phase `SERVERCHALLENGERESP`, where nothing is compared. So a second device that sends the same
+  constant and starts pairing inside the window gets the same 409. A client that sends its own id
+  is not affected: Artemis at `c5cf27f4` sends a random id of its own for each install
+  (`artemis:app/src/main/java/com/limelight/nvstream/http/NvHTTP.java:204-205`,
+  `artemis:app/src/main/java/com/limelight/computers/IdentityManager.java`). Nothing is claimed here about any other client. A second device was
+  not tried.
+- **Related, with no wrong PIN at all:** while the first device waits for its PIN, a second device
+  that sends the constant gets 409 `Pairing request identity mismatch`
+  (`src/nvhttp.cpp:2272-2284`), because its certificate and salt differ from those of the held
+  session. Also from the source, not run.
+- It was seen live again on 2026-10-24, in a night round: twelve attempts in a row each got
+  the 409 (the issue below).
 
-The decision on this finding is in the roadmap, under Sprint 19 (SecOps).
+**Filed upstream (2026-10-29): `NortheBridge/luminalshine#216`, open.** The owner filed it,
+with the lines above read at `dba21a9e` (the pairing lines are the same in 26.10.0-beta.1,
+26.10.0 and 26.10.1; the gate came with PR #188, `e31d66e9`, merged 2026-10-01), and plans
+to fix it. Two fixes, which the owner plans to make:
+
+- **A.** A new phase 1 from the same peer and the same certificate, after the PIN was
+  delivered, ends the old exchange as failed and opens a new one. The gate is at
+  `src/nvhttp.cpp:2230-2231` (the retry exemption) and `2247-2248` (the 409).
+- **C.** Once the PIN was delivered, the session expires after 30 seconds instead of 5
+  minutes, which needs a second timestamp, because `session_expired` reads one `updated_at`
+  (`src/nvhttp.cpp:1733-1736`). The 5 minutes stay before the PIN is delivered.
+
+Not proposed: a `/unpair` route that cancels the exchange (an independent review advised
+against it; `/unpair` is the subject of the host's discussion #196). No fix is in 26.10.1.
+Until one ships, a client talking to 26.10.0-beta.1 or later sees the lockout as described
+above. The Borealis side is in the roadmap, under Sprint 19 (SecOps).
 
 ## 5. Client identity and per-client host settings
 
@@ -510,17 +565,32 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   comment at `src/nvhttp.cpp:3650-3652` states it. The worker serialises the three
   handlers with each other only: the RTSP setup that follows a handler's response
   is not part of its task, so the source does not show whether the race of #205
-  is closed. Borealis keeps the 3-attempt `/serverinfo` retry and the 3 s wait
-  before `/resume` for older hosts and for #205, which is still open, and keeps
-  the handling of the not-found cases for 26.09.1. In the device round of
-  2026-10-21 neither was triggered on 26.10.0-beta.1 (no retry, no wait and no
-  503, with a second device opening the host during a launch); whether the race
-  of #205 is still reachable is not tested.
+  is closed. **Filed upstream (2026-10-29): #205 is closed** (completed, with a comment
+  of the same day). The comment gives the cause on 26.09.1: RTSP keeps one
+  pending-launch slot, `session_raise` returned `void` and dropped a second raise
+  while the slot was taken, but `/resume` had already answered 200 with `sessionUrl0`,
+  so the second client was bound to the first client's pending session and its RTSP
+  messages were checked against the other key. It names two fixes: #188 (`e31d66e9`),
+  after which `session_raise` returns `bool` (`src/rtsp.cpp:595`, `1109-1110`; the `26.09.1`
+  tag has `void`, `src/rtsp.h:96`) and `/launch` and `/resume` refuse with a retryable 409
+  while another client's launch is pending (section 7.5, 409), and #203 (above). The
+  comment says #188 is in 26.10.0. The commit is also in 26.10.0-beta.1
+  and in `5afdbdc6` and is not in the `26.09.1` tag (`git merge-base --is-ancestor`,
+  2026-10-29), so the two statements agree. The comment asks to reopen the issue if the
+  race reproduces on 26.10.1 or later. Nothing here tested that: a request has to arrive
+  inside a narrow window. Borealis keeps the 3-attempt `/serverinfo` retry, the 3 s
+  wait before `/resume` and the single restart after an RTSP error -1 that follows an
+  accepted same-app `/resume` (the next item): 26.09.1 has neither fix, and the race
+  was not tested on a host with them. It keeps the handling of the not-found cases for
+  26.09.1 too. In the device round of 2026-10-21 neither the retry nor the wait was
+  triggered on 26.10.0-beta.1 (no retry, no wait and no 503, with a second device opening
+  the host during a launch).
 - **Observed, not verified in the source (Sprint 3):** when a second client's
   `/resume` is accepted while the first client's `/launch` is still setting up,
   the host logs `Failed to verify RTSP message tag` and the second client's RTSP
   `OPTIONS` fails (`Failed to decrypt RTSP response`, error -1). The first
-  client streams normally. Reported upstream as `NortheBridge/luminalshine#205`.
+  client streams normally. Reported upstream as `NortheBridge/luminalshine#205`, closed
+  on 2026-10-29 (see the item above).
   Borealis waits about 3 s before `/resume` when the host was slow to answer
   `/serverinfo`; when RTSP still fails with error -1 within 5 s of an accepted
   same-app `/resume` on a non-GFE host, it restarts the whole start once, never
@@ -530,7 +600,27 @@ for resume the equivalent is `resume` 1 (`src/nvhttp.cpp:3471-3486`).
   display cleanup of an ended session (`unhandled exception 0x20474343` in
   `KERNELBASE.dll`) and restarted about 9 s later. Requests in that window get a
   connection reset. Reported upstream as `NortheBridge/luminalshine#204`.
-- **Client behaviour (Sprint 5):** the Borealis error screen classifies three
+  **Filed upstream (2026-10-29):** the owner closed #204 as a duplicate of
+  `NortheBridge/luminalshine#212`, which is open and has the same signature on 26.10.1:
+  the same exception code (`0x20474343`), the same offset in `KERNELBASE.dll` (`+0x408a`) and
+  the same place, the line after `Virtual display cleanup: finished`. #212 counts 3 crashes
+  in about 35 disconnects on 2026-10-28 on 26.10.1 (`dba21a9e`), and 2 that day on
+  26.10.0-beta.1, the two of the Sprint 14 round
+  ([device-validation section 19](../development/device-validation.md#19-results-sprint-14)).
+  The owner found the cause in the minidumps (not read here): a `std::system_error`
+  (`EDEADLK`, "Resource deadlock avoided"). The display-helper watchdog reaps the ended
+  session through the reaping `rtsp_stream::session_count()`, so the last-session teardown
+  runs on the watchdog thread, and `display_helper_integration::stop_watchdog()` then joins
+  that same thread. 26.09.1 already has that path. A second path, from #212: with a session
+  paused, `proc::proc.running()` runs `proc_t::terminate()` on the watchdog thread once the app
+  has exited, and `terminate()` calls `stop_watchdog()` (`src/process.cpp:1950-1952`). The fix
+  is PR #213 (open); PR #215 (open) hardens the watchdog lifecycle for #214 (open). So the
+  crash is not fixed in 26.10.1. Borealis does nothing about it on the client: a `/resume`
+  inside the restart window gets a connection reset, and the Library may read "Nothing
+  running" for an app that was left running.
+- **Client behaviour (Sprint 5):** the Borealis error popup (over the last frame of the
+  stream, or over the background when there is no frame; a full-screen error before Sprint 15,
+  [roadmap](../roadmap.md#sprint-15-the-stream-screens-and-glass), issue #105) classifies three
   host states: host busy (the retries of the start ran out, or the host
   reported a launch collision), host offline, and certificate changed. The
   client requests a keyframe (`LiRequestIdrFrame`, through
@@ -623,7 +713,7 @@ revisions, so their references did not move. The codes and messages are those of
 | --- | --- | --- | --- | --- |
 | 400 | `Missing a required launch parameter` | launch `src/nvhttp.cpp:2848` | A required query parameter is missing | No retry; client bug |
 | 400 | `Missing a required resume parameter` | resume `src/nvhttp.cpp:3299` | As above | No retry; client bug |
-| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2859` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel. `/cancel` is never called without that choice (section 7.6) |
+| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2859` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice and asks on that path too, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel, unless the user chose Resume, Continue or Try again for that same app earlier, and then Borealis joins it (section 7.6). `/cancel` is never called without a choice of the user (section 7.6) |
 | 409 | `Another client launch is already pending; retry the connection.` | launch `src/nvhttp.cpp:2874-2875`, `2896-2897`, `3200-3201`; resume `3308-3309`, `3324-3325`, `3538-3539` | A previous `/launch` or `/resume` has not been claimed by an RTSP connection yet; the pending launch expires after `ping_timeout` (`src/rtsp.cpp:606`) | Retry with backoff for up to about 12 s in total (for example 1, 2, 3, 5 s), then show the host message. Do not call `/cancel`: it would also cancel another client's pending launch (`src/rtsp.cpp:1132-1136`) |
 | 503 | `The previous stream is still restoring the display; retry the connection.` | launch `src/nvhttp.cpp:2888-2889`; resume `3317-3318` | The host waited 8 s (`acquire_launch(8s)`, `src/nvhttp.cpp:2884`, `3313`) for the previous session's cleanup and gave up | Retry, 2 to 3 attempts with 2 to 5 s delays (each attempt can itself take 8 s), then show the message |
 | 503 | `GPU/display stack is not ready; retry after recovery or reboot the host.` | launch `src/nvhttp.cpp:3011-3012`; resume `3374-3375` | The D3D11 health probe failed | Limited retries (for example 2 with 5 s delay), then tell the user to restart the host or its GPU driver |
@@ -657,29 +747,173 @@ Notes on the table:
   `startApp` calls for `/resume` and, through `launchNotRunningApp`, for `/launch`
   (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:171-179`).
   It also changed the catch blocks of the start thread, so a failure goes to the
-  error screen, which never shows the exception text
+  error popup (a full-screen error before Sprint 15), which never shows the exception text
   (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:492-510`).
 
 ### 7.6 Cancel
 
+**Reference revision, 26.10.1:** every `src/` reference of this section is a line at
+`dba21a9e` (the `26.10.1` tag). They were moved from `5afdbdc6` on 2026-10-29: `cancel`
+was at `src/nvhttp.cpp:3508` and is at `3551`. The behaviour is that of 26.10.0-beta.1,
+because `src/nvhttp.cpp` is the same file at `46f6936d` and at `dba21a9e`. The Borealis
+symbols cited below are those of `2e76dfcfb`.
+
 `/cancel` always answers `cancel` 1 and status 200, terminates every RTSP
 session including a pending launch, terminates the running app and tears down
 the virtual display unless a deferred launch must be preserved
-(`src/nvhttp.cpp:3508-3586`, `src/rtsp.cpp:1132-1136`). If a successor
+(`src/nvhttp.cpp:3551-3629`, `src/rtsp.cpp:1132-1135`). The answer is written last, by a
+guard that runs when the handler returns (`src/nvhttp.cpp:3563-3569`). If a successor
 `/launch` wins the lifecycle race the cancel cleanup is skipped
-(`src/nvhttp.cpp:3540-3550`). Moonlight 12.2 answered a `currentgame` for a
+(`src/nvhttp.cpp:3579-3591`). Moonlight 12.2 answered a `currentgame` for a
 different app by cancelling then launching
 (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-399`,
 `:437-458`; the `else` branch at `:406-407` called `quitAndLaunch` directly in
-12.2). Borealis does not: it asks the user first, and never quits another
-device's app without the user's explicit choice, even when the Library has not
-seen that app (`NvConnection.resolveConflict`, section 7.5).
+12.2). Borealis does not: it never quits another device's app without the user's
+explicit choice, as the next paragraphs say.
 
 `/cancel` ends the app of any client, not only the caller's: every Moonlight-family
 client sends the same `uniqueid`, and the host does not check an owner. `/resume`
-has no owner check either (`src/nvhttp.cpp:3183-3360`). A client must therefore
+has no owner check either (`src/nvhttp.cpp:3226-3550`). A client must therefore
 never call `/cancel` or `/resume` for an app it did not start without the user's
 explicit choice.
+
+**Client behaviour (Sprint 15): a second device asks, unless the user chose.** Nothing
+tells this device's session from another device's. `/serverinfo` carries `currentgame` and
+`state` only (`src/nvhttp.cpp:2611-2612`). The host keeps the client that started the app
+(`_active_client_uuid`, `src/process.h:227`, set at `src/process.cpp:1115` and cleared at
+`1959`) and a session counter (`session_id_counter`, `src/nvhttp.cpp:930`, assigned at
+`1416`), and sends neither to a client. So a stream that finds an app running asks the
+user. The old path, which resumed the same app with no question when `/serverinfo` showed
+it, is gone (issue #101):
+
+- **Both paths ask.** When `/serverinfo` shows the app that this start asked for, and when
+  `/launch` answers 400 `An app is already running on this host` (section 7.5), the
+  stream shows the Conflict dialog: Join, Quit and relaunch (the same app) or Quit and start
+  (another app), and Cancel, with Cancel focused
+  ([UC-003](../use-cases/0003-join-or-replace-a-running-app.md)). Join sends `/resume`,
+  Quit sends `/cancel` and then `/launch`, and Cancel sends nothing that changes the
+  host. A different app that runs always asks, even when the Library never saw it. The
+  code is `NvConnection.askAboutRunning` and `NvConnection.resolveConflict` in `:app`, with
+  `LaunchConflicts.askAbout` and `LaunchConflicts.resolve` in `:borealis:host`.
+- **The user's earlier choice.** The stream joins the running app with no question when
+  the user chose Resume or Continue for it in the Library, tapped the tile of an app that
+  the Library showed running (the same choice), or chose Try again on the error popup of a
+  stream. A Resume, a Continue or a tap reaches the stream as a launch extra,
+  `Game.EXTRA_RESUME_CHOSEN`. Try again does not travel in an extra: the Library is
+  exported, so any app could send an extra and make this client resume what runs with no
+  choice of the user. It travels in the process: the stream remembers it, and the Library
+  takes it once when it handles the next launch request (`ResumeChoice`), for the host and
+  the app of that request only. A pinned shortcut or a TV poster for a running app is not a
+  choice: it asks.
+- **A restart does not ask again.** The single restart of the start after an RTSP error -1
+  that follows an accepted same-app `/resume` (section 7.3) goes straight in and never
+  quits another app.
+- **The audit trail.** The `LAUNCH_CONFLICT` event reads
+  `choice=<join|quit|cancel> running_app=<id> entry=<asked|chosen>`: `entry=asked` for each
+  answer of the dialog, `entry=chosen` for a Join that the user's earlier choice made, with
+  no dialog (`LaunchAudit`). The log line for that case is `running app joined on the
+  user's choice` (`Borealis.LAUNCH`).
+- **The risk that stays.** The Library knows that an app runs, not whose session it is. If
+  another device restarted the app that the Library showed running, Resume or Continue
+  enters it without asking: the user chose Resume for what the Library showed. Only a
+  session marker from the host closes that gap (P6, section 20; discussion #221).
+
+**Client behaviour (Sprint 15): the user's own Quit ends in `-1`.** `/cancel` stops the
+sessions first and ends the app afterwards: `session::stop` sets the session to STOPPING
+(`src/stream.cpp:2943-2972`), and the control broadcast loop erases a STOPPING session and
+disconnects its ENet peer with `enet_peer_disconnect_now(peer, 0)`, sending no termination
+message (`src/stream.cpp:1528-1537`). The only place that sends `IDX_TERMINATION` with the
+graceful code `0x80030023` is after that loop ends, when the app is gone or the server shuts
+down (`src/stream.cpp:1607-1646`). A ping timeout also disconnects with no message
+(`src/stream.cpp:1522-1525`). moonlight-common-c reports an ENet disconnect as
+`connectionTerminated(-1)` with the text "Control stream received unexpected disconnect
+event" (`borealis@2e76dfcfb:core/third_party/moonlight-common-c/src/ControlStream.c:1380-1382`),
+so the end of a stream that the user quit looks like a connection error. Borealis
+handles it on its own side:
+
+- While the user's Quit is pending (the phase is Quitting), a `-1` is the end of that Quit
+  (`StreamSession.endedByQuit` in `:borealis:stream`). The log says `quit stream ended
+  code=-1 since_quit_ms=N` at info, the client runs no connectivity test, shows no error
+  and finishes the activity once. A `-1` with no Quit pending is a failure and gets the
+  error popup. Any other code during a Quit is logged as an error and runs the connectivity
+  test, but the phase stays Quitting and keeps how the stream ended: when the cancel then
+  succeeds the activity finishes with no popup, and when it fails the popup shows (next
+  item). Before Sprint 15 the same `-1` of a Quit was logged as an error
+  (`E Borealis.UPSTREAM: Connection terminated: -1`) and the system logged
+  `Duplicate finish request` for the stream activity.
+- A Quit that fails (the cancel did not go through) shows a toast and the stream goes on,
+  or, when the stream had already ended during the Quit (with the `-1` or another code),
+  shows the error popup.
+- The Quit logs its stages with the time of each: `quit accepted`, `quit cancel sent`,
+  `quit cancel answered ms=N`, `quit check answered ms=N`, `quit stream ended`,
+  `connection stop done ms=N` and `activity finished` (tags `Borealis.APP` and
+  `Borealis.HOST`; `NvHTTP.quitApp`, `GameStreamActions`, `Game.stopConnection`). They
+  show whether the time of a slow Quit is in `/cancel` or after it.
+
+**Filed upstream (2026-10-29): `NortheBridge/luminalshine#218`, open.** The owner filed
+it from the lines above, and plans to fix it: send `IDX_TERMINATION` with `0x80030023`
+before the host disconnects a STOPPING session that still has a peer, as the normal end of
+a session already does. That an app that exits by itself ends a session gracefully is
+inferred from the source and was not run. Until a host sends the message, Borealis keeps
+the rule above. A host that sends it ends the stream through the graceful path, which
+finishes the activity with no error and needs no rule.
+
+**Why `/cancel` takes seconds.** The answer is written only after these steps, in this
+order (`src/nvhttp.cpp` unless a file is named):
+
+1. The serial launch queue (`3839-3844`): a `/cancel` waits behind a `/launch` or a
+   `/resume` in progress.
+2. `rtsp_stream::terminate_sessions()` (`3574`; `src/rtsp.cpp:1132-1135`), which calls
+   `server.clear(true)` (`src/rtsp.cpp:766-796`) and so joins each session. Each join runs
+   under phase watchdogs of 10 s (`src/stream.cpp:3044-3062`). The join of the last session also
+   holds two longer phases. One is the session-end display cleanup, with a 30 s deadline
+   (`src/stream.cpp:3129`, `3141`; the reason is `rtsp_session_end`). The other is the frame
+   limiter phase, 60 s (`src/stream.cpp:3174-3176`). The join ends with `Session ended`
+   (`src/stream.cpp:3189`). So a display revert can run twice in one Quit: once in this join
+   (when revert-on-disconnect is on, `src/stream.cpp:3141`) and once after the app exits
+   (`display_helper_integration::revert()`, `src/process.cpp:1947-1950`).
+3. `cancel_prewarm()` and `acquire_cleanup(8s)` (`3576`, `3582`).
+4. `proc::proc.terminate()` (`3611`; `src/process.cpp:1805`). The app group gets its
+   `exit-timeout` to exit, 10 s by default (`src/process.cpp:1010-1037`, `2662`, `2776`), and
+   each undo command of the app's prep commands waits up to the larger of that and 15 s
+   (`src/process.cpp:1852-1894`).
+5. The virtual display cleanup. It can run again here, with the reason `app_termination` inside
+   `terminate()` (`src/process.cpp:1917`, followed by `Virtual display cleanup completed after app
+   termination.` at `1921`) and with the reason `cancel`, only while a virtual display is still
+   active (`225-246`, `src/nvhttp.cpp:230`, called at `3619`). It waits up to 30 s for
+   the Windows helper's revert, and again up to 30 s after a helper restart when the first
+   restore was not verified, with display checks of 2 to 5 s and a 5 s teardown wait
+   (`src/platform/windows/virtual_display_cleanup.cpp:116-167`).
+6. The config revert (`3622-3625`).
+
+The waits that can reach 10 to 17 s are the 10 s exit timeout alone, one 15 s undo command,
+a 30 s helper revert, a session join that passes its 10 s watchdog, or the display cleanup
+or frame limiter phase of the join (30 s and 60 s deadlines). The 17 s of the
+night round of 2026-10-21 fits the exit timeout plus one undo or cleanup wait, but the
+source cannot say which one happened. **Observed:** 5 to 7 s on 26.09.1 and on
+26.10.0-beta.1 (5.5 and 6.7 s in the Sprint 10 round), and about 17 s once; in that night
+round the host answered `/cancel` 15 to 17 s after the stream had ended
+([device-validation section 15](../development/device-validation.md#15-results-sprint-10)).
+26.10.1 changes the display helper that step 5 waits for, so the figures may differ; the
+Sprint 15 round times it again. The host log lines that split the time are
+`Successfully requested the app to exit. Waiting up to N seconds for it to close.`,
+`App did not fully exit within the timeout. Terminating the app's remaining processes.`,
+`Executing Undo Cmd: [...]` and `Undo command timed out after N seconds`
+(`src/process.cpp:1016`, `1024`, `1872`, `1887`), `Session ended` (`src/stream.cpp:3189`),
+`Virtual display cleanup: begin` and `Virtual display cleanup: finished`, which a Quit of a live
+stream can log more than once, with the reasons `rtsp_session_end`, `app_termination` and `cancel`
+(`src/platform/windows/virtual_display_cleanup.cpp:99`, `167`), `Virtual display cleanup
+completed after app termination.` (`src/process.cpp:1921`), `Cancel cleanup superseded by a
+newer launch` (`src/nvhttp.cpp:3584`) and, at debug level, `Session teardown phase: <name>
+(deadline=Ns)` (`src/stream.cpp:3054-3055`).
+
+**Filed upstream (2026-10-29): `NortheBridge/luminalshine#217`, open.** The owner filed it
+with the steps above and plans to fix it. The direction is to be agreed with the
+maintainers: answer `/cancel` once the sessions are stopped and the app has been asked to
+exit, and let the rest of the teardown go on; or, if the maintainers prefer, add a timing log
+for each step first. Borealis waits for the answer with no read timeout
+(`NvHTTP.quitApp`), shows "Quitting `<app>`…" from the confirmation, and has no way to tell
+a slow Quit from a hung one except the host log and its own stage lines.
 
 ## 8. RTSP session setup
 
@@ -821,7 +1055,17 @@ The client selects a format with `x-nv-vqos[0].bitStreamFormat` (0 H.264, 1 HEVC
   `src/platform/windows/video_worker.cpp:846`, `:991-992`, `:1241-1242`). No
   control message is sent to the client. The comment in
   `src/yuv444_fallback.h:23-24` says the client is told; the code does not do
-  that.
+  that. **Filed upstream (2026-10-29): `NortheBridge/luminalshine#219`, open**, read at
+  `dba21a9e`: the downgrade logs `Falling back to YUV 4:2:0 for this session` and raises the
+  event (`src/video.cpp:2826-2830`, called from `2902`, `3298`, `3332` and `3734`); the only
+  consumer on the control path pops it and sets the session monitor's `yuv444` to false
+  (`src/stream.cpp:1572-1584`); the video worker only relays it inside the host
+  (`src/platform/windows/video_worker.cpp:856`, `1001-1002`, `1251-1252`); and the comments
+  that say the client is told are at `src/yuv444_fallback.h:17-26` and `90-93`. Found by
+  reading the source, not on a device. The owner starts with the comments and will propose a
+  control message separately if the maintainers want one. There is no standard message for
+  it, so it would be a LuminalShine extension that a client opts into (proposal P4,
+  section 20).
 - A PyroWave 4:4:4 session is never downgraded; the encoder build fails instead
   (`src/video.cpp:2765-2774`).
 
@@ -1248,10 +1492,13 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    not retry. Use bounded backoff for 409 and 503, no retry for 400, 403, 404 and
    -1, never call `/cancel` to clear a 409, and show the host's message text for
    503. Make the retry budget a configuration value, not a constant.
-8. **Follow the existing `currentgame` logic** when `/serverinfo` shows a running
-   app (upstream's resume or quit prompt in the app list), and **ask the user**
-   when the 400 `An app is already running` row arrives instead: Join, Quit and
-   relaunch, or Cancel (sections 7.5 and 7.6).
+8. **Ask the user before joining or replacing a running app, on both paths.** Moonlight
+   Android resumed the app that `/serverinfo` showed running and quit a different one
+   without asking. Borealis asks when `/serverinfo` shows a running app and when the 400
+   `An app is already running` row arrives: Join, Quit and relaunch (or Quit and start), or
+   Cancel. It asks for the same app too, because nothing tells this device's session from
+   another device's, and it asks no more only when the user chose Resume, Continue or Try
+   again for that app (sections 7.5 and 7.6).
 9. **Send the same native mode in `/launch` and in ANNOUNCE.** `mode=WxHxFPS`
    must equal `clientViewportWd`, `clientViewportHt` and `maxFPS`, otherwise
    the host rebuilds the virtual display (section 7.4). Moonlight Android sets
@@ -1329,6 +1576,12 @@ virtual display as a host-side policy that is always possibly active.
 These are requests Borealis would make to the LuminalShine project. They change
 nothing in this document until the host adopts them.
 
+**Filed upstream (2026-10-29).** The owner filed each proposal on `NortheBridge/luminalshine`
+as a discussion in the Ideas category, except P4, which is the bug report #219, and
+offered to implement each one if the maintainers agree with the direction. All of them
+were open with no reply when they were read on 2026-10-29. The host references inside the
+discussions are lines at `dba21a9e`.
+
 - **P1. An explicit capability and version marker in `/serverinfo`.** Add fields
   such as `LuminalShineVersion` (the release, for example `26.09.1`),
   `LuminalShineApiLevel` (an integer bumped for client-visible protocol
@@ -1341,28 +1594,67 @@ nothing in this document until the host adopts them.
   client can read the release only after it is paired, by design
   (`src/nvhttp.h:73-75`). Nothing in `src/` writes a `LuminalShineApiLevel` or a
   `Capabilities` element (a search of `src/` finds neither name), so the
-  capability list and the API level of this proposal are still open.
+  capability list and the API level of this proposal are still open. **Filed upstream:**
+  [discussion #222](https://github.com/NortheBridge/luminalshine/discussions/222), "An API
+  level and a capability list in /serverinfo": `LuminalShineApiLevel`, an integer that goes up
+  with each client-visible protocol change, and `Capabilities`, a list of feature names. Both
+  are new fields, so a client that does not read them is unchanged.
 - **P2. A client-requested PyroWave bitrate cap.** The host ignores the client's
   bitrate and always uses `pyrowave_bitrate_mbps`, default 700
   (`src/rtsp.cpp:1694`). Honour the client's `x-nv-vqos[0].bw.maximumBitrateKbps`
   or `x-ml-video.configuredBitrateKbps` as an upper bound on the host target, so a
   phone on Wi-Fi can ask for less without an operator changing host settings.
+  **Filed upstream:**
+  [discussion #223](https://github.com/NortheBridge/luminalshine/discussions/223), "PyroWave:
+  honour the client's bitrate as an upper bound". The host setting stays the ceiling, and a
+  client that sends neither field keeps the host setting as its target. The host setting
+  defaults to 700 Mbps (`src/config.h:458`) and accepts 0 to 10000 (`src/config.cpp:1636`);
+  the host overwrites the client's value at `src/rtsp.cpp:1694`.
 - **P3. A KEEP-frame replenishment capability attribute.** With
   `pyrowave_refresh_interval` above 0 the host sends KEEP frames that only
   certified clients can decode, and the wire protocol has no way for a client to
   declare support (`docs/pyrowave.md:80-88`). Add a DESCRIBE attribute (host
   supports replenishment) and an ANNOUNCE attribute (client honours code-1
-  frames) so the host can enable replenishment per session.
+  frames) so the host can enable replenishment per session. **Filed upstream:**
+  [discussion #224](https://github.com/NortheBridge/luminalshine/discussions/224), "PyroWave:
+  a capability attribute for KEEP-frame replenishment": the new attributes follow the
+  existing `x-ss-video[0].pyrowave*` names, and a client that sends none gets full-frame mode,
+  as at interval 0. The host's own documents say the same about the missing attribute
+  (`docs/configuration.md:2641-2652`, `docs/pyrowave.md:80-87`).
 - **P4. Tell the client about a 4:4:4 downgrade.** Send a control message when the
   in-session chroma changes, as `src/yuv444_fallback.h:23-24` already claims the
-  host does (section 9.1).
+  host does (section 9.1). **Filed upstream:**
+  [issue #219](https://github.com/NortheBridge/luminalshine/issues/219), "The 4:4:4 fallback
+  says it tells the client about the chroma change, but nothing is sent". The owner starts
+  with the comments and proposes the control message separately if the maintainers want it.
 - **P5. A documented, stable error vocabulary.** The launch and resume status
   messages in section 7.5 are the de facto API; document them, and add a
-  machine-readable `Retry-After` hint for 409 and 503.
+  machine-readable `Retry-After` hint for 409 and 503. **Filed upstream:**
+  [discussion #225](https://github.com/NortheBridge/luminalshine/discussions/225), "Document
+  the launch and resume status codes, and add Retry-After to 409 and 503": a short page that
+  lists each code, its message and when it happens, and a `Retry-After` header in seconds on the
+  retryable 409 and 503. No `Retry-After` is set anywhere in `src/` at `dba21a9e`, `src/nvhttp.cpp`
+  has 13 sites that answer 503, and the host documents list none of these codes. The message
+  texts stay as they are, because clients match on them (Borealis does too).
+- **P6. Let a paired client know whether the running app is its own session.**
+  `/serverinfo` reports `currentgame` and `state` only, so a client cannot tell its own running
+  app from one that another device started, or one that was restarted on the PC, and has to
+  ask the user every time, or resume with no question (section 7.6). The host keeps the owner
+  (`_active_client_uuid`) and a session counter (`session_id_counter`) and sends neither.
+  **Filed upstream:**
+  [discussion #221](https://github.com/NortheBridge/luminalshine/discussions/221), "Let a
+  paired client know whether the running app is its own session", with two open options, both
+  only in the HTTPS `/serverinfo` and both new fields: a launch id, `currentgame_launch_id`,
+  that changes on every launch and comes from `session_id_counter` (the `/launch` answer would
+  have to return it too, a design detail that is not settled); or an "opened by you" flag that
+  the host computes from the caller's verified certificate (`get_client_uuid_from_request`,
+  `src/nvhttp.cpp:1326`), which reveals no other device's identity. The owner asks which one
+  fits the protocol better. With either field Borealis could tell its own session from
+  another device's and stop asking for it.
 
 ## Appendix: host documentation drift found while verifying
 
 | Statement | Location | Actual behaviour |
 | --- | --- | --- |
-| `/cancel` does not pop the pending launch | `architecture.md:101` | `/cancel` calls `terminate_sessions`, which cancels the pending launch (`src/nvhttp.cpp:3531`, `src/rtsp.cpp:1132-1135`) |
-| The 4:4:4 fallback tells the client the chroma changed | `src/yuv444_fallback.h:23-24` | Only the session statistics are updated; no client message (`src/stream.cpp:1572-1584`) |
+| `/cancel` does not pop the pending launch | root `architecture.md:103` at `dba21a9e` (line 101 at `5afdbdc6`; `docs/architecture.md` has no such sentence). Filed upstream as [#220](https://github.com/NortheBridge/luminalshine/issues/220), open (2026-10-29) | `/cancel` calls `terminate_sessions`, which calls `cancel_pending_launch`, which pops the pending launch: `launch_event.pop(0s)` at `src/rtsp.cpp:693` (function at `673-699`), `terminate_sessions` at `1132-1135`, called by `/cancel` at `src/nvhttp.cpp:3574`. The sentence came with `0deea71e` (PR #180; cited in #220). The false "client is connecting" refusal it describes does not follow a `/cancel`, because `launch_session_pending()` reads the same `launch_event` that `/cancel` pops (`src/rtsp.cpp:665-668`, `1117-1119`). (At `5afdbdc6`: `src/nvhttp.cpp:3531`, `src/rtsp.cpp:1132-1135`) |
+| The 4:4:4 fallback tells the client the chroma changed | `src/yuv444_fallback.h:23-24`. Filed upstream as [#219](https://github.com/NortheBridge/luminalshine/issues/219), open (2026-10-29) | Only the session statistics are updated; no client message (`src/stream.cpp:1572-1584`; section 9.1) |

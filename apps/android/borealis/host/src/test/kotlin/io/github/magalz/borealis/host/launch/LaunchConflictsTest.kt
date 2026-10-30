@@ -51,36 +51,39 @@ class LaunchConflictsTest {
         ids[minOf(reads - 1, ids.size - 1)]
     }
 
+    private val actions =
+        ConflictActions(
+            prompt = { running, name, requested, _, answer ->
+                prompts += Prompt(running, name, requested)
+                answerWith?.let(answer::choose)
+            },
+            relaunch =
+                LaunchAttempt {
+                    calls += "relaunch"
+                    relaunchResult
+                },
+            join =
+                ConflictJoin {
+                    calls += "join $it"
+                    joinOutcome
+                },
+            quitAndRelaunch =
+                LaunchAttempt {
+                    calls += "quit"
+                    quitResult
+                },
+        )
+
     private fun resolve(
         reader: RunningAppReader,
         names: AppNameLookup = AppNameLookup { "Desktop" },
-    ): Boolean =
-        conflicts.resolve(
-            reader,
-            names,
-            RequestedApp(7, "Steam"),
-            ConflictActions(
-                prompt = { running, name, requested, _, answer ->
-                    prompts += Prompt(running, name, requested)
-                    answerWith?.let(answer::choose)
-                },
-                relaunch =
-                    LaunchAttempt {
-                        calls += "relaunch"
-                        relaunchResult
-                    },
-                join =
-                    ConflictJoin {
-                        calls += "join $it"
-                        joinOutcome
-                    },
-                quitAndRelaunch =
-                    LaunchAttempt {
-                        calls += "quit"
-                        quitResult
-                    },
-            ),
-        )
+        resumeChosen: Boolean = false,
+    ): Boolean = conflicts.resolve(reader, names, RequestedApp(7, "Steam", resumeChosen), actions)
+
+    private fun askAbout(
+        runningAppId: Int = 5,
+        names: AppNameLookup = AppNameLookup { "Desktop" },
+    ) = conflicts.askAbout(runningAppId, names, RequestedApp(7, "Steam"), actions)
 
     @Test
     fun `nothing running any more launches again without asking`() {
@@ -135,13 +138,67 @@ class LaunchConflictsTest {
     }
 
     @Test
-    fun `the same app running is put to the user too and never joined on its own`() {
+    fun `the same app running is put to the user too when they did not choose to resume it`() {
         answerWith = ConflictChoice.CANCEL
 
         resolve(reader(7))
 
         assertThat(prompts.single().running).isEqualTo(prompts.single().requested)
         assertThat(calls).isEmpty()
+    }
+
+    @Test
+    fun `the same app running is joined without asking when the user chose to resume it`() {
+        // A question would be answered at once, so that this test fails instead of waiting.
+        answerWith = ConflictChoice.CANCEL
+
+        val result = resolve(reader(7), resumeChosen = true)
+
+        assertThat(result).isTrue()
+        assertThat(calls).containsExactly("join 7")
+        assertThat(prompts).isEmpty()
+        assertThat(cancelCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `another app running is put to the user even when they chose to resume`() {
+        answerWith = ConflictChoice.CANCEL
+
+        val result = resolve(reader(5), resumeChosen = true)
+
+        assertThat(result).isFalse()
+        assertThat(prompts.single().running).isEqualTo(5)
+        assertThat(calls).isEmpty()
+    }
+
+    @Test
+    fun `an app that is gone is launched again without asking whatever the user chose`() {
+        val result = resolve(reader(0), resumeChosen = true)
+
+        assertThat(result).isTrue()
+        assertThat(calls).containsExactly("relaunch")
+        assertThat(prompts).isEmpty()
+    }
+
+    @Test
+    fun `a chosen join that finds nothing to resume launches the app instead`() {
+        answerWith = ConflictChoice.CANCEL
+        joinOutcome = LaunchOutcome.FALLBACK_TO_LAUNCH
+
+        val result = resolve(reader(7), resumeChosen = true)
+
+        assertThat(result).isTrue()
+        assertThat(calls).containsExactly("join 7", "relaunch").inOrder()
+        assertThat(prompts).isEmpty()
+    }
+
+    @Test
+    fun `a chosen join that the host does not take fails quietly`() {
+        answerWith = ConflictChoice.CANCEL
+        joinOutcome = LaunchOutcome.FAILED
+
+        assertThat(resolve(reader(7), resumeChosen = true)).isFalse()
+        assertThat(prompts).isEmpty()
     }
 
     @Test
@@ -353,6 +410,63 @@ class LaunchConflictsTest {
         assertThat(records.flatMap { it.fields }).contains("choice" to "QUIT_AND_RELAUNCH")
         assertThat(records.joinToString { it.message + it.fields }).doesNotContain("Desktop")
         assertThat(records.joinToString { it.message + it.fields }).doesNotContain("Steam")
+    }
+
+    @Test
+    fun `a join on the user's choice is logged without app names`() {
+        answerWith = ConflictChoice.CANCEL
+
+        resolve(reader(7), resumeChosen = true)
+
+        val records = log.records.filter { it.tag == LogTag.LAUNCH }
+        assertThat(records.map { it.message }).contains("running app joined on the user's choice")
+        assertThat(records.joinToString { it.message + it.fields }).doesNotContain("Steam")
+    }
+
+    @Test
+    fun `askAbout puts the running app to the user at once, with its name and no re-read`() {
+        answerWith = ConflictChoice.CANCEL
+
+        askAbout(runningAppId = 5)
+
+        val prompt = prompts.single()
+        assertThat(prompt.running).isEqualTo(5)
+        assertThat(prompt.runningName).isEqualTo("Desktop")
+        assertThat(prompt.requested).isEqualTo(7)
+        assertThat(reads).isEqualTo(0)
+        assertThat(slices).isEmpty()
+    }
+
+    @Test
+    fun `askAbout does what the user answers`() {
+        answerWith = ConflictChoice.JOIN
+        assertThat(askAbout(7)).isTrue()
+        answerWith = ConflictChoice.QUIT_AND_RELAUNCH
+        assertThat(askAbout(7)).isTrue()
+        answerWith = ConflictChoice.CANCEL
+        assertThat(askAbout(7)).isFalse()
+
+        assertThat(calls).containsExactly("join 7", "quit").inOrder()
+        assertThat(cancelCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun `askAbout closes the conflict path like resolve`() {
+        answerWith = ConflictChoice.CANCEL
+        assertThat(conflicts.isOpen()).isTrue()
+
+        askAbout()
+
+        assertThat(conflicts.isOpen()).isFalse()
+    }
+
+    @Test
+    fun `askAbout does not ask the user about a cancelled launch`() {
+        cancelled = true
+
+        assertThat(askAbout()).isFalse()
+        assertThat(prompts).isEmpty()
+        assertThat(calls).isEmpty()
     }
 
     @Test

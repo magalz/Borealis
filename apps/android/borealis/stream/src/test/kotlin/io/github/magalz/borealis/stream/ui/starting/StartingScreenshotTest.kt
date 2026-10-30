@@ -15,12 +15,14 @@ import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.stream.LaunchRetry
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamPhase
+import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.setChrome
 import io.github.magalz.borealis.stream.ui.ConflictDialog
 import io.github.magalz.borealis.stream.ui.StartingScreen
+import io.github.magalz.borealis.stream.ui.background.OnStillBackground
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -85,6 +87,25 @@ class StartingScreenshotTest {
         shoot("conflict_tv_same-app_focused")
     }
 
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun startingHandheldStartingApp() {
+        composeRule.setChrome(FormFactor.Handheld) {
+            Starting(StreamPhase.Starting(StartStage.STARTING_APP))
+        }
+
+        shoot("starting_handheld_starting-app")
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun conflictHandheldOtherApp() {
+        val phase = StreamPhase.Conflict("Desktop", "Hades II", sameApp = false)
+        composeRule.setChrome(FormFactor.Handheld) { Conflict(phase) }
+
+        shoot("conflict_handheld_other-app")
+    }
+
     @Composable
     private fun Starting(phase: StreamPhase.Starting) {
         Stream { StartingScreen("Desktop", "Gaming PC", phase, intents) }
@@ -95,10 +116,10 @@ class StartingScreenshotTest {
         Stream { ConflictDialog(phase, intents) }
     }
 
-    /** The chrome sits over the stream, which is black until the first frame. */
+    /** The chrome sits over the stream, on one frame of the background outside the game. */
     @Composable
     private fun Stream(content: @Composable () -> Unit) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) { content() }
+        Box(Modifier.fillMaxSize().background(Color.Black)) { OnStillBackground(content) }
     }
 
     private fun shoot(name: String) {

@@ -17,7 +17,7 @@
     <string name="audit_ui_title_tls_failure">Secure connection failed</string>
     <string name="audit_ui_title_launch_attempt">App started</string>
     <string name="audit_ui_title_launch_retry">Host asked to retry</string>
-    <string name="audit_ui_title_launch_conflict">Another app was already running</string>
+    <string name="audit_ui_title_launch_conflict">An app was already running on the PC</string>
     <string name="audit_ui_title_session_start">Stream started</string>
     <string name="audit_ui_title_session_end">Stream ended</string>
 

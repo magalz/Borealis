@@ -18,13 +18,19 @@ import io.github.magalz.borealis.library.LibraryLaunchRequest
 import io.github.magalz.borealis.library.R as LibraryR
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
+import io.github.magalz.borealis.library.shell.LeaveNotice
 import io.github.magalz.borealis.library.shell.LibraryActivity
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.host.HeldKeys
 import io.github.magalz.borealis.stream.keys.KeyChord
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** The input the stream sends to the PC. [NvConnection] backs it in the app. */
 interface InputSink {
@@ -80,6 +86,7 @@ internal constructor(
     private val hostId: String? = activity.intent.getStringExtra(Game.EXTRA_PC_UUID)
     private var retried = false
     private var quitting = false
+    private var disconnecting = false
 
     override fun send(chord: KeyChord) {
         val modifiers = chord.modifiers.toList()
@@ -158,9 +165,25 @@ internal constructor(
         preferences(activity).edit { putBoolean(KEY_MENU_HINT_SHOWN, true) }
     }
 
-    override fun disconnect() {
+    /**
+     * Stops the connection, keeps the Disconnecting screen up for at least [DISCONNECTING_MIN_MS]
+     * from the tap and waits for the stop for at most [STOP_CEILING_MS], then leaves the Library
+     * the notice that [appName] keeps running and finishes the activity. The stop runs on a thread
+     * of its own, so the main thread never waits for it.
+     */
+    override fun disconnect(appName: String) {
+        if (disconnecting) return
+        disconnecting = true
         SessionAudit.disconnected()
-        activity.finish()
+        scope.launch {
+            val stopped = CompletableDeferred<Unit>()
+            controls.stopConnection { stopped.complete(Unit) }
+            val minimum = launch { delay(DISCONNECTING_MIN_MS) }
+            withTimeoutOrNull(STOP_CEILING_MS) { stopped.await() }
+            minimum.join()
+            entryPoint().quitNotice().post(LeaveNotice.Disconnected(appName))
+            finishActivity()
+        }
     }
 
     override fun quitApp(onFailed: () -> Unit) {
@@ -176,8 +199,8 @@ internal constructor(
                 QuitResult.Quit -> {
                     SessionAudit.quit()
                     // The Library behind the stream shows the notice that the Apps sheet shows.
-                    entryPoint().quitNotice().post()
-                    activity.finish()
+                    entryPoint().quitNotice().post(LeaveNotice.Quit)
+                    finishActivity()
                 }
                 is QuitResult.Failed -> {
                     // The stream goes on, so the user can try again.
@@ -193,12 +216,22 @@ internal constructor(
         }
     }
 
-    override fun leave() = activity.finish()
+    override fun leave() = finishActivity()
+
+    // Every exit asks the system once: the activity may be finishing already, for instance because
+    // the user left the app while the screen of a Disconnect was up, or pressed Back twice.
+    private fun finishActivity() {
+        if (activity.isFinishing) return
+        activity.finish()
+        BorealisLog.i(LogTag.APP, "activity finished")
+    }
 
     /**
      * Opens the Library on the launch of this app and finishes while the stream is still in front,
      * so Android does not take it for a start from the background. The Library starts the app
-     * again, through its own apps and conflict flow.
+     * again, through its own apps and conflict flow. Trying again is the user's choice to resume
+     * that app if it runs, so it is remembered for the Library to take with the request: not in the
+     * request itself, which any app could send (host contract 7.6).
      */
     override fun retry() {
         if (retried) return
@@ -210,7 +243,10 @@ internal constructor(
             when {
                 id == null -> LibraryLaunchRequest.Hosts
                 appId == StreamConfiguration.INVALID_APP_ID -> LibraryLaunchRequest.Apps(id)
-                else -> LibraryLaunchRequest.Launch(id, appId)
+                else -> {
+                    entryPoint().resumeChoice().remember(id, appId)
+                    LibraryLaunchRequest.Launch(id, appId)
+                }
             }
         )
     }
@@ -244,7 +280,7 @@ internal constructor(
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .putExtras(request.toExtras())
         )
-        activity.finish()
+        finishActivity()
     }
 
     private fun toast(text: String) =
@@ -261,13 +297,19 @@ internal constructor(
      * the session at the question, so the activity ends here.
      */
     override fun answerConflict(choice: ConflictChoice) {
-        if (choice == ConflictChoice.CANCEL) activity.finish()
+        if (choice == ConflictChoice.CANCEL) finishActivity()
     }
 
     companion object {
         private const val KEY_PREFIX = 0x8000
         private const val PREFERENCES = "BorealisStream"
         private const val KEY_MENU_HINT_SHOWN = "menu_hint_shown"
+
+        /** The Disconnecting screen stays up this long from the tap, so it can be read. */
+        private const val DISCONNECTING_MIN_MS = 1_000L
+
+        /** A stop that does not end does not keep the user on the Disconnecting screen. */
+        private const val STOP_CEILING_MS = 5_000L
 
         // Outlives the activity: a quit that is under way must finish after the stream screen is
         // gone.

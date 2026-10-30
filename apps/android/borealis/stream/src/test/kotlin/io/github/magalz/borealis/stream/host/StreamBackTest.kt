@@ -6,11 +6,14 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
+import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.RecordingActions
+import io.github.magalz.borealis.stream.testing.aDefaults
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo
@@ -26,7 +29,13 @@ import org.robolectric.Shadows.shadowOf
 class StreamBackTest {
     private lateinit var activity: ComponentActivity
     private val actions = RecordingActions()
-    private val session: StreamSession = aSession(actions)
+    // No background, which animates on the screens outside the game: a test that ends with one
+    // still drawing leaves the frames of the next test unscheduled in the same JVM.
+    private val session: StreamSession =
+        aSession(
+            actions,
+            aDefaults.copy(visuals = StreamVisuals(backgroundStyle = BackgroundStyle.Off)),
+        )
 
     @Before
     fun setUp() {

@@ -412,6 +412,14 @@ enum class SettingsItem(
         R.string.settings_background_intensity_title,
         input = ItemInput(fixedChoices = FixedChoices.BACKGROUND_INTENSITY),
     ),
+    STREAM_MENU_GLASS(
+        SettingsGroupId.APPEARANCE,
+        SettingsItemKind.CHOICE,
+        Settings.STREAM_MENU_GLASS,
+        R.string.settings_stream_menu_glass_title,
+        R.string.settings_stream_menu_glass_summary,
+        input = ItemInput(fixedChoices = FixedChoices.STREAM_MENU_GLASS),
+    ),
     CARD_DENSITY(
         SettingsGroupId.APPEARANCE,
         SettingsItemKind.CHOICE,

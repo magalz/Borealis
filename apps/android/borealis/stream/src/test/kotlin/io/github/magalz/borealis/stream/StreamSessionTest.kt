@@ -143,6 +143,24 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `the streaming phase carries the mouse navigation buttons setting, off unless it is on`() {
+        val off = startStreaming(StreamDefaults(OverlayMode.OFF, null, null, showMenuHint = true))
+        val on =
+            startStreaming(
+                StreamDefaults(
+                    OverlayMode.OFF,
+                    null,
+                    null,
+                    showMenuHint = true,
+                    mouseNavButtons = true,
+                )
+            )
+
+        assertThat((off.state.value.phase as StreamPhase.Streaming).mouseNavButtons).isFalse()
+        assertThat((on.state.value.phase as StreamPhase.Streaming).mouseNavButtons).isTrue()
+    }
+
+    @Test
     fun `a first frame before the connection is reported starts streaming once it is`() {
         session.onFirstFrame()
         assertThat(phase).isEqualTo(StreamPhase.Starting(StartStage.CONNECTING))
@@ -255,7 +273,7 @@ class StreamSessionTest {
     @Test
     fun `no event changes a failure once it is shown`() {
         session.onFailed(aFailure)
-        val failed = session.state.value
+        val failed = session.state.value.phase
 
         session.onStage(StartStage.STARTING_APP)
         session.onLaunchRetry(LaunchRetry(LaunchCategory.PENDING, 1, 3, 1000))
@@ -266,7 +284,7 @@ class StreamSessionTest {
         session.openMenu()
         session.openKeyboard()
 
-        assertThat(session.state.value).isEqualTo(failed)
+        assertThat(session.state.value.phase).isEqualTo(failed)
     }
 
     @Test
@@ -427,13 +445,115 @@ class StreamSessionTest {
     }
 
     @Test
+    fun `confirming a quit shows Quitting at once, before the stream ends`() {
+        val started = startStreaming()
+        val streaming = started.state.value.phase
+
+        started.quitApp()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming))
+        assertThat(started.chromeMode).isEqualTo(ChromeMode.MODAL)
+        assertThat(actions.calls).containsExactly("quitApp")
+    }
+
+    @Test
+    fun `a quit that fails while the stream still runs returns to the phase the user was in`() {
+        val started = startStreaming()
+        started.openMenu()
+        val menuOpen = started.state.value.phase
+        started.quitApp()
+
+        actions.quitFailed()
+
+        assertThat(started.state.value.phase).isEqualTo(menuOpen)
+    }
+
+    @Test
+    fun `a quit that fails can be tried again`() {
+        val started = startStreaming()
+        val streaming = started.state.value.phase
+        started.quitApp()
+        actions.quitFailed()
+
+        started.quitApp()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming))
+        assertThat(actions.calls).containsExactly("quitApp", "quitApp")
+    }
+
+    @Test
+    fun `a quit that is under way is not asked for again`() {
+        val started = startStreaming()
+        started.quitApp()
+
+        started.quitApp()
+
+        assertThat(actions.calls).containsExactly("quitApp")
+    }
+
+    @Test
+    fun `disconnecting shows Disconnecting at once and tells the actions which app keeps running`() {
+        val started = startStreaming()
+
+        started.disconnect()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Disconnecting)
+        assertThat(started.chromeMode).isEqualTo(ChromeMode.MODAL)
+        assertThat(actions.calls).containsExactly("disconnect Desktop")
+    }
+
+    @Test
+    fun `a disconnect that is under way is not asked for again`() {
+        val started = startStreaming()
+        started.disconnect()
+
+        started.disconnect()
+
+        assertThat(actions.calls).containsExactly("disconnect Desktop")
+    }
+
+    @Test
+    fun `the end of the stream while disconnecting changes nothing`() {
+        val started = startStreaming()
+        started.disconnect()
+
+        started.onFailed(aFailure)
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Disconnecting)
+    }
+
+    @Test
+    fun `a quit while disconnecting is not asked for`() {
+        val started = startStreaming()
+        started.disconnect()
+
+        started.quitApp()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Disconnecting)
+        assertThat(actions.calls).containsExactly("disconnect Desktop")
+    }
+
+    @Test
+    fun `a disconnect while quitting is not asked for`() {
+        val started = startStreaming()
+        val streaming = started.state.value.phase
+        started.quitApp()
+
+        started.disconnect()
+
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming))
+        assertThat(actions.calls).containsExactly("quitApp")
+    }
+
+    @Test
     fun `an end of the stream while a quit is pending is quiet, not a failure`() {
         val started = startStreaming()
+        val streaming = started.state.value.phase
         started.quitApp()
 
         started.onFailed(aFailure)
 
-        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(aFailure))
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming, aFailure))
         assertThat(started.chromeMode).isEqualTo(ChromeMode.MODAL)
     }
 
@@ -471,12 +591,13 @@ class StreamSessionTest {
     @Test
     fun `a second end while quitting changes nothing`() {
         val started = startStreaming()
+        val streaming = started.state.value.phase
         started.quitApp()
         started.onFailed(aFailure)
 
         started.onFailed(StreamFailure(FailureKind.HOST_OFFLINE, "other", null))
 
-        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(aFailure))
+        assertThat(started.state.value.phase).isEqualTo(StreamPhase.Quitting(streaming, aFailure))
     }
 
     @Test
@@ -487,8 +608,6 @@ class StreamSessionTest {
         session.sendText("hi")
         session.openSystemKeyboard()
         session.requestKeyframe()
-        session.disconnect()
-        session.quitApp()
         session.leave()
         session.retry()
         session.wakeHost()
@@ -501,8 +620,6 @@ class StreamSessionTest {
                 "sendText hi",
                 "openSystemKeyboard",
                 "requestKeyframe",
-                "disconnect",
-                "quitApp",
                 "leave",
                 "retry",
                 "wakeHost",

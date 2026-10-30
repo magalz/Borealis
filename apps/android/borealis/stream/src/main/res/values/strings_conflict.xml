@@ -6,10 +6,6 @@
     <!-- %1$s is the running app and %2$s the app the user chose. -->
     <string name="stream_conflict_body_other">%1$s is already running on this host. You can join it, or quit it and start %2$s.</string>
     <string name="stream_conflict_another_app">Another app</string>
-    <!-- What quitting costs when the app on the other device is a game. -->
-    <string name="stream_conflict_warning">Quitting ends the stream on the other device and closes the app.\nUnsaved progress in it is lost.</string>
-    <!-- The same when that app is Desktop, which has no program to close. -->
-    <string name="stream_conflict_warning_desktop">Quitting ends the stream on the other device.</string>
     <string name="stream_conflict_cancel">Cancel</string>
     <string name="stream_conflict_join">Join</string>
     <string name="stream_conflict_quit_and_relaunch">Quit and relaunch</string>

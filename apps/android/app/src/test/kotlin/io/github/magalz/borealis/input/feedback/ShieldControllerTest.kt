@@ -162,7 +162,7 @@ abstract class ShieldContract : FeedbackTestBase() {
     }
 
     @Test
-    fun `a rumble goes to the service as signed ints and nothing else vibrates`() {
+    fun `a rumble goes to the service as unsigned values and nothing else vibrates`() {
         val own = Hardware.vibrator()
         val phone = Hardware.vibrator()
         val rig =
@@ -176,13 +176,13 @@ abstract class ShieldContract : FeedbackTestBase() {
 
         rig.rumble(0x4000, 0xC000)
 
-        assertThat(ShadowSceManager.rumbles).containsExactly(0x4000 to -0x4000)
+        assertThat(ShadowSceManager.rumbles).containsExactly(0x4000 to 0xC000)
         assertThat(Hardware.calls(own)).isEmpty()
         assertThat(Hardware.calls(phone)).isEmpty()
     }
 
     @Test
-    fun `the low motor goes to the service as a signed int too`() {
+    fun `the low motor goes to the service as an unsigned value too`() {
         val rig = rig()
         ShadowSceManager.recognized = true
         ShadowSceManager.rumbleAccepted = true
@@ -190,7 +190,7 @@ abstract class ShieldContract : FeedbackTestBase() {
 
         rig.rumble(0xC000, 0x4000)
 
-        assertThat(ShadowSceManager.rumbles).containsExactly(-0x4000 to 0x4000)
+        assertThat(ShadowSceManager.rumbles).containsExactly(0xC000 to 0x4000)
     }
 
     @Test

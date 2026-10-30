@@ -5,6 +5,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes how the renderer recovers when the codec fails: which failures it lets go, which
@@ -311,6 +312,27 @@ class RendererRecoveryTest : RendererTestBase() {
         // The baseline SPS went, the replay did not, and the frame did not follow.
         assertThat(events<CodecEvent.Queued>().map { it.flags }).containsExactly(CODEC_CONFIG)
         assertThat(log.lines()).doesNotContain("INFO: SPS replay complete")
+    }
+
+    /**
+     * The replay is not reached with an input buffer to fetch: `queueNextInputBuffer` fetches the
+     * next one before it answers true, so the fetch in `replaySps` never has to. It is called here
+     * by itself, with no buffer yet, to pin what it does when the fetch fails.
+     */
+    @Test
+    fun `a replay of the SPS that cannot get an input buffer returns false`() {
+        install(codec("omx.intel.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, transient)
+
+        val outcome = runCatching {
+            ReflectionHelpers.callInstanceMethod<Boolean>(renderer, "replaySps")
+        }
+
+        assertThat(outcome.exceptionOrNull()).isNull()
+        assertThat(outcome.getOrNull()).isFalse()
+        assertThat(events<CodecEvent.Queued>()).isEmpty()
     }
 
     @Test

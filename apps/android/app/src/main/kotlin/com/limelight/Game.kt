@@ -2234,6 +2234,10 @@ class Game :
                     }
                 } else if (view != null && trySendPenEvent(view, event)) {
                     // If our host supports pen events, send it directly
+                    // BOREALIS: a cancel ends the mouse buttons too, or the host keeps them down
+                    if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                        releaseMouseButtons()
+                    }
                     return true
                 } else if (view != null) {
                     // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
@@ -2536,6 +2540,31 @@ class Game :
     // was never filled is a NullPointerException at the call.
     private fun touchContextEntry(entry: TouchContext?): TouchContext {
         return entry ?: throw NullPointerException("The touch contexts have not been built")
+    }
+
+    // BOREALIS: releases the host buttons that the mouse holds, and forgets them
+    private fun releaseMouseButtons() {
+        if ((lastButtonState and MotionEvent.BUTTON_PRIMARY) != 0) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+        }
+        if (
+            (lastButtonState and (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) !=
+                0
+        ) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+        }
+        if (
+            (lastButtonState and
+                (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY)) != 0
+        ) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
+        }
+        if (prefConfig.mouseNavButtons && (lastButtonState and MotionEvent.BUTTON_FORWARD) != 0) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
+        }
+        // Back sent nothing yet: it waits to see whether it is held
+        cancelBackHold()
+        lastButtonState = 0
     }
 
     // BOREALIS: whether any button of a group that shares a host button is down now and was not

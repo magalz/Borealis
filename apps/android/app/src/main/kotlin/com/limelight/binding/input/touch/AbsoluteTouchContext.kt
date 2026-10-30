@@ -35,7 +35,6 @@ class AbsoluteTouchContext(
     private var lastTouchUpX = 0
     private var lastTouchUpY = 0
     private var lastTouchUpTime = 0L
-    private var lastTouchLocationX = 0
     private var lastTouchLocationY = 0
     private var cancelled = false
     private var confirmedLongPress = false
@@ -76,7 +75,6 @@ class AbsoluteTouchContext(
         }
 
         lastTouchDownX = eventX
-        lastTouchLocationX = eventX
         lastTouchDownY = eventY
         lastTouchLocationY = eventY
         lastTouchDownTime = eventTime
@@ -141,7 +139,6 @@ class AbsoluteTouchContext(
         }
 
         lastTouchUpX = eventX
-        lastTouchLocationX = eventX
         lastTouchUpY = eventY
         lastTouchLocationY = eventY
         lastTouchUpTime = eventTime
@@ -224,7 +221,6 @@ class AbsoluteTouchContext(
             )
         }
 
-        lastTouchLocationX = eventX
         lastTouchLocationY = eventY
 
         return true

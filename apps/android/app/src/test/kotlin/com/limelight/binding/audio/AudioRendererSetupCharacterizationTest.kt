@@ -360,11 +360,13 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `a packet of no samples makes the second attempt divide by zero`() {
-        // The first attempt asks for a buffer of 0 bytes and the platform refuses it. The second
-        // rounds to a whole packet of 0 bytes.
-        val failure = runCatching { renderer().setup(config(2), SAMPLE_RATE, 0) }.exceptionOrNull()
+    fun `a packet of no samples fails with -1 and severe log before the platform is asked`() {
+        // Without the check, the first attempt asks for a buffer of 0 bytes and the second
+        // divides by a packet of 0 bytes.
+        val results = listOf(0, -1).map { renderer().setup(config(2), SAMPLE_RATE, it) }
 
-        assertThat(failure).isInstanceOf(ArithmeticException::class.java)
+        assertThat(results).containsExactly(-1, -1)
+        assertThat(AudioPlatform.calls).isEmpty()
+        assertThat(log.entries).contains(Level.SEVERE to "Decoder returned no samples per frame")
     }
 }

@@ -199,6 +199,21 @@ class RelativeTouchDragAndScrollTest {
     }
 
     @Test
+    fun `a view that has no size has no scale, so two fingers send no scroll`() {
+        val rig = TouchRig(width = 0, height = 0)
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        second.touchDownEvent(300, 100, T0 + 10, true)
+
+        first.touchMoveEvent(100, 130, T0 + 20)
+        first.touchMoveEvent(100, 100, T0 + 30)
+
+        assertThat(rig.sent()).isEmpty()
+    }
+
+    @Test
     fun `two fingers that have not left the tap box do not scroll yet and the scroll starts from the last touch`() {
         val first = rig.relative(0)
         val second = rig.relative(1)

@@ -64,9 +64,6 @@ fun VirtualControllerElement.placed(): Placed {
 /** The text a button shows; the button keeps it private, and it is drawn only. */
 fun DigitalButton.label(): String = privateField("text") as String
 
-/** The drawable id a button shows instead of its text, or -1; the button keeps it private. */
-fun DigitalButton.icon(): Int = privateField("icon") as Int
-
 private fun DigitalButton.privateField(name: String): Any? =
     DigitalButton::class.java.getDeclaredField(name).apply { isAccessible = true }.get(this)
 

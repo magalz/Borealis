@@ -30,14 +30,15 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
 
             for (i in 0..maxKeyCode) {
                 val deviceKeyCode = device.getKeyCodeForKeyLocation(i)
-                if (deviceKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
+                // A broken device can answer a key code outside the platform's range.
+                if (deviceKeyCode != KeyEvent.KEYCODE_UNKNOWN && deviceKeyCode in 0..maxKeyCode) {
                     deviceKeyCodeToQwertyKeyCode[deviceKeyCode] = i
                 }
             }
         }
 
         fun getQwertyKeyCodeForDeviceKeyCode(deviceKeyCode: Int): Int {
-            if (deviceKeyCode > KeyEvent.getMaxKeyCode()) {
+            if (deviceKeyCode < 0 || deviceKeyCode > KeyEvent.getMaxKeyCode()) {
                 return KeyEvent.KEYCODE_UNKNOWN
             }
 

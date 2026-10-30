@@ -5,7 +5,6 @@ import android.graphics.Paint
 import android.view.MotionEvent
 import com.google.common.truth.Correspondence
 import com.google.common.truth.Truth.assertThat
-import com.limelight.R
 import com.limelight.binding.input.virtual_controller.VirtualController.ControllerMode
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.testing.OwnedResources
@@ -195,12 +194,11 @@ class ElementDrawCharacterizationTest {
     }
 
     @Test
-    fun `a finger exactly above the middle draws the stick below it`() {
+    fun `a finger exactly above the middle draws the stick above it`() {
         val stick = stick()
         stickTouch(stick, MotionEvent.ACTION_DOWN, 0f, -100f, 1_000)
 
-        // the same inversion as the number the stick sends: see the test of the stick itself
-        assertStickAt(stick, 150f, 250f, 30f)
+        assertStickAt(stick, 150f, 50f, 30f)
     }
 
     @Test
@@ -440,23 +438,6 @@ class ElementDrawCharacterizationTest {
     }
 
     @Test
-    fun `a button with an icon draws its oval, then the icon in place of the text`() {
-        val button = button()
-        button.setIcon(R.drawable.borealis_launcher_background)
-
-        val canvas = draw(button)
-
-        assertThat(canvas.calls.map { it.call }).containsExactly("color", "oval").inOrder()
-        assertThat(canvas.calls.last()).isEqualTo(oval(grey))
-        // the icon fills the button but 5 pixels all round, and is opaque
-        assertThat(Color.alpha(canvas.bitmap.getPixel(4, 4))).isEqualTo(0)
-        assertThat(Color.alpha(canvas.bitmap.getPixel(5, 5))).isEqualTo(255)
-        assertThat(Color.alpha(canvas.bitmap.getPixel(194, 94))).isEqualTo(255)
-        assertThat(Color.alpha(canvas.bitmap.getPixel(195, 95))).isEqualTo(0)
-        assertThat(Color.alpha(canvas.bitmap.getPixel(100, 50))).isEqualTo(255)
-    }
-
-    @Test
     fun `the pixels of a button are its oval, and the oval is blue when it is pressed`() {
         val button = button("")
 
@@ -489,7 +470,7 @@ class ElementDrawCharacterizationTest {
             "down" to Shape("rect", listOf(108.9f, 158.4f, 217.8f, 231f)),
             "left up" to Shape("line", listOf(9f, 79.2f, 108.9f, 9f)),
             "up right" to Shape("line", listOf(217.8f, 9f, 321f, 79.2f)),
-            "right down" to Shape("line", listOf(326f, 158.4f, 217.8f, 231f)),
+            "right down" to Shape("line", listOf(321f, 158.4f, 217.8f, 231f)),
             "down left" to Shape("line", listOf(108.9f, 231f, 9f, 158.4f)),
         )
 
@@ -518,6 +499,16 @@ class ElementDrawCharacterizationTest {
         val left = draw(pad).of("rect")[1]
 
         assertThat(left.numbers).containsExactly(9f, 79.200005f, 108.9f, 158.40001f).inOrder()
+    }
+
+    @Test
+    fun `the right down line starts where the up right line ends, at the edge of the right side`() {
+        val lines = draw(pad).of("line")
+        val upRight = lines[1].numbers
+        val rightDown = lines[2].numbers
+
+        assertThat(rightDown[0]).isEqualTo(upRight[2])
+        assertThat(rightDown[0]).isEqualTo(draw(pad).of("rect")[3].numbers[2])
     }
 
     @Test

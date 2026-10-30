@@ -324,6 +324,55 @@ internal class FingerTouchTest : MotionTestBase() {
         assertThat(sent()).containsExactly(moveBy(40, 0))
     }
 
+    // Two fingers at (100, 100) and (200, 200): the second goes down, then the first lifts.
+    private fun secondFingerDown(at: Long) =
+        fingerEvent(
+            MotionEvent.ACTION_POINTER_DOWN,
+            listOf(100f to 100f, 200f to 200f),
+            index = 1,
+        ) {
+            eventTime = at
+        }
+
+    private fun firstFingerUp(at: Long) =
+        fingerEvent(MotionEvent.ACTION_POINTER_UP, listOf(100f to 100f, 200f to 200f), index = 0) {
+            eventTime = at
+        }
+
+    @Test
+    fun `when the first of two fingers lifts and the second soon after, it is one right click`() {
+        streaming()
+        val right = MouseButtonPacket.BUTTON_RIGHT
+        touch(streamView, down(100f, 100f, TIME))
+        touch(streamView, secondFingerDown(TIME + 10))
+        assertThat(touch(streamView, firstFingerUp(TIME + 20))).isTrue()
+        // The tap is whole when the second finger lifts, and not before.
+        assertThat(sent()).isEmpty()
+
+        assertThat(touch(streamView, up(200f, 200f, TIME + 40))).isTrue()
+
+        assertThat(sent()).containsExactly(press(right))
+        forgetSent()
+        idle(100)
+        assertThat(sent()).containsExactly(release(right))
+    }
+
+    @Test
+    fun `when the first of two fingers lifts, a second that moves away before it lifts is no click`() {
+        streaming()
+        touch(streamView, down(100f, 100f, TIME))
+        touch(streamView, secondFingerDown(TIME + 10))
+        touch(streamView, firstFingerUp(TIME + 20))
+        touch(streamView, finger(MotionEvent.ACTION_MOVE, 260f, 200f, TIME + 30))
+        assertThat(sent()).containsExactly(moveBy(240, 0))
+        forgetSent()
+
+        assertThat(touch(streamView, up(260f, 200f, TIME + 40))).isTrue()
+        idle(200)
+
+        assertThat(sent()).isEmpty()
+    }
+
     @Test
     fun `a finger that lifts as a cancel leaves no finger to take its place`() {
         streaming()

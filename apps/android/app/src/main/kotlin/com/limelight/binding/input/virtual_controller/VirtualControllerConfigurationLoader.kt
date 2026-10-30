@@ -99,16 +99,13 @@ object VirtualControllerConfigurationLoader {
     private fun createDigitalButton(
         elementId: Int,
         keyShort: Int,
-        keyLong: Int,
         layer: Int,
         text: String,
-        icon: Int,
         controller: VirtualController,
         context: Context,
     ): DigitalButton {
         val button = DigitalButton(controller, elementId, layer, context)
         button.setText(text)
-        button.setIcon(icon)
 
         button.addDigitalButtonListener(
             object : DigitalButton.DigitalButtonListener {
@@ -118,16 +115,8 @@ object VirtualControllerConfigurationLoader {
                     controller.sendControllerInputContext()
                 }
 
-                override fun onLongClick() {
-                    controller.controllerInputContext.setFlag(keyLong, true)
-
-                    controller.sendControllerInputContext()
-                }
-
                 override fun onRelease() {
-                    val inputContext = controller.controllerInputContext
-                    inputContext.setFlag(keyShort, false)
-                    inputContext.setFlag(keyLong, false)
+                    controller.controllerInputContext.setFlag(keyShort, false)
 
                     controller.sendControllerInputContext()
                 }
@@ -140,26 +129,22 @@ object VirtualControllerConfigurationLoader {
     private fun createLeftTrigger(
         layer: Int,
         text: String,
-        icon: Int,
         controller: VirtualController,
         context: Context,
     ): DigitalButton {
         val button = LeftTrigger(controller, layer, context)
         button.setText(text)
-        button.setIcon(icon)
         return button
     }
 
     private fun createRightTrigger(
         layer: Int,
         text: String,
-        icon: Int,
         controller: VirtualController,
         context: Context,
     ): DigitalButton {
         val button = RightTrigger(controller, layer, context)
         button.setText(text)
-        button.setIcon(icon)
         return button
     }
 
@@ -170,11 +155,15 @@ object VirtualControllerConfigurationLoader {
         RightAnalogStick(controller, context)
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // The caller reads the configuration once for the whole build and passes it in.
     @Suppress("LongMethod")
     @JvmStatic
-    fun createDefaultLayout(controller: VirtualController, context: Context) {
+    fun createDefaultLayout(
+        controller: VirtualController,
+        context: Context,
+        config: PreferenceConfiguration,
+    ) {
         val screen = context.resources.displayMetrics
-        val config = PreferenceConfiguration.readPreferences(context)
 
         // Displace controls on the right by this amount of pixels to account for different aspect
         // ratios
@@ -200,10 +189,8 @@ object VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_A,
                     if (!config.flipFaceButtons) ControllerPacket.A_FLAG
                     else ControllerPacket.B_FLAG,
-                    0,
                     1,
                     if (!config.flipFaceButtons) "A" else "B",
-                    -1,
                     controller,
                     context,
                 ),
@@ -218,10 +205,8 @@ object VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_B,
                     if (config.flipFaceButtons) ControllerPacket.A_FLAG
                     else ControllerPacket.B_FLAG,
-                    0,
                     1,
                     if (config.flipFaceButtons) "A" else "B",
-                    -1,
                     controller,
                     context,
                 ),
@@ -236,10 +221,8 @@ object VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_X,
                     if (!config.flipFaceButtons) ControllerPacket.X_FLAG
                     else ControllerPacket.Y_FLAG,
-                    0,
                     1,
                     if (!config.flipFaceButtons) "X" else "Y",
-                    -1,
                     controller,
                     context,
                 ),
@@ -254,10 +237,8 @@ object VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_Y,
                     if (config.flipFaceButtons) ControllerPacket.X_FLAG
                     else ControllerPacket.Y_FLAG,
-                    0,
                     1,
                     if (config.flipFaceButtons) "X" else "Y",
-                    -1,
                     controller,
                     context,
                 ),
@@ -268,7 +249,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                createLeftTrigger(1, "LT", -1, controller, context),
+                createLeftTrigger(1, "LT", controller, context),
                 screenScale(TRIGGER_L_BASE_X, height),
                 screenScale(TRIGGER_BASE_Y, height),
                 screenScale(TRIGGER_WIDTH, height),
@@ -276,7 +257,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                createRightTrigger(1, "RT", -1, controller, context),
+                createRightTrigger(1, "RT", controller, context),
                 screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, height) + rightDisplacement,
                 screenScale(TRIGGER_BASE_Y, height),
                 screenScale(TRIGGER_WIDTH, height),
@@ -287,10 +268,8 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_LB,
                     ControllerPacket.LB_FLAG,
-                    0,
                     1,
                     "LB",
-                    -1,
                     controller,
                     context,
                 ),
@@ -304,10 +283,8 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_RB,
                     ControllerPacket.RB_FLAG,
-                    0,
                     1,
                     "RB",
-                    -1,
                     controller,
                     context,
                 ),
@@ -337,10 +314,8 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_BACK,
                     ControllerPacket.BACK_FLAG,
-                    0,
                     2,
                     "BACK",
-                    -1,
                     controller,
                     context,
                 ),
@@ -354,10 +329,8 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_START,
                     ControllerPacket.PLAY_FLAG,
-                    0,
                     START_LAYER,
                     "START",
-                    -1,
                     controller,
                     context,
                 ),
@@ -371,10 +344,8 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_LSB,
                     ControllerPacket.LS_CLK_FLAG,
-                    0,
                     1,
                     "L3",
-                    -1,
                     controller,
                     context,
                 ),
@@ -388,10 +359,8 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_RSB,
                     ControllerPacket.RS_CLK_FLAG,
-                    0,
                     1,
                     "R3",
-                    -1,
                     controller,
                     context,
                 ),
@@ -407,10 +376,8 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_GDB,
                     ControllerPacket.SPECIAL_BUTTON_FLAG,
-                    0,
                     1,
                     "GUIDE",
-                    -1,
                     controller,
                     context,
                 ),

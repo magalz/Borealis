@@ -639,12 +639,22 @@ class ElementBaseCharacterizationTest {
     }
 
     @Test
-    fun `loading a configuration that misses a number fails after the numbers before it were set`() {
+    fun `loading a configuration that misses a number fails and sets none of the numbers`() {
         val partial = JSONObject("""{"LEFT":11,"TOP":22,"WIDTH":33}""")
 
         assertThrows(JSONException::class.java) { element.loadConfiguration(partial) }
 
-        assertThat(place()).isEqualTo(listOf(11, 22, 33, 100))
+        assertThat(place()).isEqualTo(listOf(100, 50, 200, 100))
+        assertThat(element.isLayoutRequested).isFalse()
+    }
+
+    @Test
+    fun `loading a configuration whose later number is not a number sets none of the numbers`() {
+        val broken = JSONObject("""{"LEFT":11,"TOP":22,"WIDTH":"wide","HEIGHT":44}""")
+
+        assertThrows(JSONException::class.java) { element.loadConfiguration(broken) }
+
+        assertThat(place()).isEqualTo(listOf(100, 50, 200, 100))
     }
 
     // An element that is not in a layout yet

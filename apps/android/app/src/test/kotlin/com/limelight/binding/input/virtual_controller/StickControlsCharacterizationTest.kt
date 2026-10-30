@@ -146,16 +146,14 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
-    fun `a finger on the column of the middle moves the right stick the other way round, as the left one`() {
-        // The angle of a finger exactly above or below the middle is the one of the opposite side
-        // (see the test of the stick itself): 100 pixels down sends up, and 100 pixels up sends
-        // down.
+    fun `a finger on the column of the middle moves the right stick the right way, as the left one`() {
+        // 100 pixels down sends down, and 100 pixels up sends up.
         stick(right, MotionEvent.ACTION_DOWN, 0f, 100f, FIRST)
-        assertThat(rightSticks()).isEqualTo(0 to 29_255)
+        assertThat(rightSticks()).isEqualTo(0 to -29_255)
 
         stick(right, MotionEvent.ACTION_MOVE, 0f, -100f, FIRST + 10)
-        assertThat(rightSticks()).isEqualTo(0 to -29_255)
-        assertThat(kit.rig.packets.last().rightStickY).isEqualTo(-29_255)
+        assertThat(rightSticks()).isEqualTo(0 to 29_255)
+        assertThat(kit.rig.packets.last().rightStickY).isEqualTo(29_255)
     }
 
     @Test
@@ -250,14 +248,25 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
-    fun `a stick that is too small to move says not a number, which the left stick sends as zero`() {
+    fun `a stick that is too small to move says no movement, and the left stick sends nothing`() {
         val small = kit.add(LeftAnalogStick(controller, kit.rig.activity), 500, 500, 20, 20)
         small.touch(MotionEvent.ACTION_DOWN, 10f, 10f, FIRST)
 
         small.touch(MotionEvent.ACTION_MOVE, 10f, 10f, FIRST + 200)
 
         assertThat(leftSticks()).isEqualTo(0 to 0)
-        assertThat(kit.rig.packets).isNotEmpty()
+        assertThat(kit.rig.packets).isEmpty()
+    }
+
+    @Test
+    fun `a stick that is too small to move says no movement, and the right stick sends nothing`() {
+        val small = kit.add(RightAnalogStick(controller, kit.rig.activity), 500, 500, 20, 20)
+        small.touch(MotionEvent.ACTION_DOWN, 10f, 10f, FIRST)
+
+        small.touch(MotionEvent.ACTION_MOVE, 10f, 10f, FIRST + 200)
+
+        assertThat(rightSticks()).isEqualTo(0 to 0)
+        assertThat(kit.rig.packets).isEmpty()
     }
 
     @Test
@@ -306,7 +315,7 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
-    fun `a trigger held for three seconds changes nothing, where a button would long click`() {
+    fun `a trigger held for ten seconds changes nothing after the retransmits of its press`() {
         kit.rig.press(leftTrigger)
         val sent = kit.rig.packets.size
 
@@ -318,7 +327,7 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
-    fun `a right trigger held for three seconds changes nothing either`() {
+    fun `a right trigger held for ten seconds changes nothing either`() {
         kit.rig.press(rightTrigger)
         val sent = kit.rig.packets.size
 

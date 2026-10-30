@@ -184,15 +184,14 @@ class AnalogStickCharacterizationTest {
     }
 
     @Test
-    fun `a finger on the very same column as the middle, up or down, is said to be the other way round`() {
-        // Exactly above or below the middle the angle is the one of the opposite side: the finger
-        // 100 pixels up is reported as 0.89 down, and the finger 100 pixels down as 0.89 up. A
-        // finger one pixel off the column is reported the right way.
+    fun `a finger on the very same column as the middle, up or down, is reported the right way`() {
+        // The finger 100 pixels up is 0.89 up, and the finger 100 pixels down 0.89 down, as a
+        // finger one pixel off the column is.
         down(dx = 0f, dy = -100f)
-        lastMove(0f, -0.89286f)
+        lastMove(0f, 0.89286f)
 
         move(0f, 100f, FIRST + 10)
-        lastMove(0f, 0.89286f)
+        lastMove(0f, -0.89286f)
 
         move(1f, -100f, FIRST + 20)
         lastMove(0.00893f, 0.89286f)
@@ -343,14 +342,26 @@ class AnalogStickCharacterizationTest {
     }
 
     @Test
-    fun `a lift or a move that comes without a press, inside the circle, revokes and sends the middle`() {
+    fun `a lift or a move that comes without a press, inside the circle, is taken and says nothing`() {
         assertThat(up(dx = 10f)).isTrue()
-        assertThat(log.events).containsExactly("revoke", "move").inOrder()
+        assertThat(log.events).isEmpty()
 
-        log.events.clear()
         assertThat(move(10f, 0f, FIRST + 10)).isTrue()
-        assertThat(log.events).containsExactly("revoke", "move").inOrder()
+        assertThat(log.events).isEmpty()
         assertThat(stick.isPressed).isFalse()
+    }
+
+    @Test
+    fun `a lift after the lift says nothing`() {
+        down(dx = 60f)
+        up(dx = 60f)
+        log.events.clear()
+        log.moves.clear()
+
+        assertThat(up(dx = 60f, time = FIRST + 200)).isTrue()
+
+        assertThat(log.events).isEmpty()
+        assertThat(log.moves).isEmpty()
     }
 
     @Test
@@ -365,10 +376,10 @@ class AnalogStickCharacterizationTest {
     }
 
     @Test
-    fun `an action that is not a press, a move or a lift is treated as a lift when the stick is not held`() {
+    fun `an action that is not a press, a move or a lift says nothing when the stick is not held`() {
         assertThat(at(MotionEvent.ACTION_OUTSIDE, 10f, 0f, FIRST)).isTrue()
 
-        assertThat(log.events).containsExactly("revoke", "move").inOrder()
+        assertThat(log.events).isEmpty()
     }
 
     @Test
@@ -415,21 +426,36 @@ class AnalogStickCharacterizationTest {
     }
 
     @Test
-    fun `a first touch in the first 350 milliseconds is a double click, because the last click is at time 0`() {
+    fun `a first touch in the first 350 milliseconds is a click, there being no click before it`() {
         down(time = 300)
 
-        assertThat(log.events).containsExactly("double")
+        assertThat(log.events).containsExactly("click")
     }
 
     @Test
-    fun `the first touch at 350 is a double click and at 351 is a click`() {
-        down(time = 350)
-        assertThat(log.events).containsExactly("double")
+    fun `the first touch is a click at time 0, at 350 and at 351`() {
+        down(time = 0)
+        assertThat(log.events).containsExactly("click")
 
-        val other = kit.add(AnalogStick(kit.controller, kit.rig.activity, 13), 500, 500, 301, 301)
-        val otherLog = StickLog().also { other.addAnalogStickListener(it) }
-        other.touch(MotionEvent.ACTION_DOWN, MIDDLE, MIDDLE, 351)
-        assertThat(otherLog.events).containsExactly("click")
+        val at350 = kit.add(AnalogStick(kit.controller, kit.rig.activity, 13), 500, 500, 301, 301)
+        val log350 = StickLog().also { at350.addAnalogStickListener(it) }
+        at350.touch(MotionEvent.ACTION_DOWN, MIDDLE, MIDDLE, 350)
+        assertThat(log350.events).containsExactly("click")
+
+        val at351 = kit.add(AnalogStick(kit.controller, kit.rig.activity, 14), 900, 500, 301, 301)
+        val log351 = StickLog().also { at351.addAnalogStickListener(it) }
+        at351.touch(MotionEvent.ACTION_DOWN, MIDDLE, MIDDLE, 351)
+        assertThat(log351.events).containsExactly("click")
+    }
+
+    @Test
+    fun `a second touch within 350 milliseconds of a first one near the start is a double click`() {
+        down(time = 100)
+        up(time = 200)
+
+        down(time = 300)
+
+        assertThat(log.events).containsExactly("click", "revoke", "move", "double").inOrder()
     }
 
     @Test
@@ -493,18 +519,18 @@ class AnalogStickCharacterizationTest {
     // A stick whose way is nothing
 
     @Test
-    fun `when the way the stick can go is nothing, the stick says not a number`() {
+    fun `when the way the stick can go is nothing, the stick says no movement`() {
         // 20 pixels: a circle of 10 less 2 strokes of 4 is 2 pixels, the stick is 2 pixels, so the
-        // 100 percent of the way is 0. The finger can only be in the middle, which divides 0 by 0.
+        // 100 percent of the way is 0. The finger can only be in the middle, which would divide 0
+        // by 0.
         val small = kit.add(AnalogStick(kit.controller, kit.rig.activity, 13), 500, 500, 20, 20)
         val smallLog = StickLog().also { small.addAnalogStickListener(it) }
         small.touch(MotionEvent.ACTION_DOWN, 10f, 10f, FIRST)
 
         small.touch(MotionEvent.ACTION_MOVE, 10f, 10f, FIRST + 200)
 
-        assertThat(smallLog.events).containsExactly("click", "move").inOrder()
-        assertThat(smallLog.moves.single().first).isNaN()
-        assertThat(smallLog.moves.single().second).isNaN()
+        assertThat(smallLog.events).containsExactly("click")
+        assertThat(smallLog.moves).isEmpty()
     }
 
     // Listeners

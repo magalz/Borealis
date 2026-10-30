@@ -10,6 +10,7 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.preferences.PreferenceConfiguration
 
 class VirtualController(
     private val controllerHandler: ControllerHandler?,
@@ -32,8 +33,9 @@ class VirtualController(
         ResizeButtons,
     }
 
-    // The elements of the layout call it from their own listeners (Kotlin, in this package).
-    val handler: Handler = Handler(Looper.getMainLooper())
+    // Runs the delayed retransmits of the controller state, on the main looper whichever thread
+    // built the controller.
+    private val handler: Handler = Handler(Looper.getMainLooper())
 
     private val delayedRetransmitRunnable = Runnable { sendControllerInputContextInternal() }
 
@@ -134,8 +136,12 @@ class VirtualController(
         params.topMargin = CONFIGURE_BUTTON_MARGIN
         requireFrame().addView(buttonConfigure, params)
 
-        // Start with the default layout
-        VirtualControllerConfigurationLoader.createDefaultLayout(this, context)
+        // Start with the default layout, from the settings read once for this build
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+            this,
+            context,
+            PreferenceConfiguration.readPreferences(context),
+        )
 
         // Apply user preferences onto the default layout
         VirtualControllerConfigurationLoader.loadFromPreferences(this, context)
@@ -143,7 +149,8 @@ class VirtualController(
 
     private fun sendControllerInputContextInternal() {
         controllerHandler?.reportOscState(
-            controllerInputContext.inputMap.toInt(),
+            // The Y flag is the sign bit of the short: widened, it would carry 0xFFFF8000
+            controllerInputContext.inputMap.toInt() and BUTTON_FLAGS_MASK,
             controllerInputContext.leftStickX,
             controllerInputContext.leftStickY,
             controllerInputContext.rightStickX,
@@ -173,6 +180,7 @@ class VirtualController(
     private fun requireFrame(): FrameLayout = checkNotNull(frameLayout)
 
     private companion object {
+        private const val BUTTON_FLAGS_MASK = 0xFFFF
         private const val CONFIGURE_BUTTON_ALPHA = 0.25f
         private const val CONFIGURE_BUTTON_SIZE_RATIO = 0.06f
         private const val CONFIGURE_BUTTON_MARGIN = 15

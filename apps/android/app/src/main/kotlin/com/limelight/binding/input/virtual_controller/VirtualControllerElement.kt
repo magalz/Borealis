@@ -204,10 +204,16 @@ protected constructor(
     fun loadConfiguration(configuration: JSONObject) {
         val layoutParams = this.layoutParams as FrameLayout.LayoutParams
 
-        layoutParams.leftMargin = configuration.getInt("LEFT")
-        layoutParams.topMargin = configuration.getInt("TOP")
-        layoutParams.width = configuration.getInt("WIDTH")
-        layoutParams.height = configuration.getInt("HEIGHT")
+        // Read the four numbers before taking any: a missing one must leave the element as it is
+        val left = configuration.getInt("LEFT")
+        val top = configuration.getInt("TOP")
+        val width = configuration.getInt("WIDTH")
+        val height = configuration.getInt("HEIGHT")
+
+        layoutParams.leftMargin = left
+        layoutParams.topMargin = top
+        layoutParams.width = width
+        layoutParams.height = height
 
         requestLayout()
     }

@@ -19,13 +19,13 @@ class InputCaptureManagerCharacterizationTest {
     private val rig = CaptureRig()
 
     @Test
-    fun `the provider is the native pointer capture, and the manager says so in the log`() {
+    fun `the provider is the native pointer capture, and the manager names it in the log`() {
         LimeLogCapture().start().use { log ->
             val provider = InputCaptureManager.getInputCaptureProvider(rig.activity)
 
             assertThat(provider).isInstanceOf(AndroidNativePointerCaptureProvider::class.java)
             assertThat(log.entries)
-                .containsExactly(Level.INFO to "Using Android O+ native mouse capture")
+                .containsExactly(Level.INFO to "Using the native pointer capture")
         }
     }
 

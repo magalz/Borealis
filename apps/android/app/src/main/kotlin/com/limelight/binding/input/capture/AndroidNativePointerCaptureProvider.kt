@@ -56,8 +56,16 @@ class AndroidNativePointerCaptureProvider(activity: Activity, private val target
         return false
     }
 
+    // Whether hideCursor registered the device listener; showCursor undoes only what it did.
+    private var listeningForDevices = false
+
     override fun showCursor() {
         super.showCursor()
+
+        if (!listeningForDevices) {
+            return
+        }
+        listeningForDevices = false
 
         // It is important to unregister the listener *before* releasing pointer capture,
         // because releasing pointer capture can cause an onInputDeviceChanged() callback
@@ -70,7 +78,10 @@ class AndroidNativePointerCaptureProvider(activity: Activity, private val target
         super.hideCursor()
 
         // Listen for device events to enable/disable capture
-        inputManager.registerInputDeviceListener(this, null)
+        if (!listeningForDevices) {
+            inputManager.registerInputDeviceListener(this, null)
+            listeningForDevices = true
+        }
 
         // Capture now if we have a capture-compatible device
         if (hasCaptureCompatibleInputDevice()) {

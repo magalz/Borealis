@@ -158,7 +158,8 @@ internal class GameChromeInputTest : GameTestBase() {
     fun `taking the input forgets the keys that a chord ate, so the next tap of one reaches the host whole`() {
         rig.streaming()
         rig.holdCtrlAltShift()
-        // The M waits for the modifiers, and the B goes down while it waits: the host never sees it.
+        // The M waits for the modifiers, and the B goes down while it waits: the host never sees
+        // it.
         rig.down(KeyEvent.KEYCODE_M)
         rig.down(KeyEvent.KEYCODE_B)
         // The last modifier opens the menu, and the chrome takes the keys: the up of the B is its.

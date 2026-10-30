@@ -100,13 +100,13 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
             .containsExactly(
                 outputRate(),
                 trackSetup(track = 1, bufferSize = 1_920, lowLatency = true),
-                minBuffer(),
                 outputRate(),
+                minBuffer(),
                 trackSetup(track = 2, bufferSize = 5_760, lowLatency = true),
                 outputRate(),
                 trackSetup(track = 3, bufferSize = 1_920, lowLatency = false),
-                minBuffer(),
                 outputRate(),
+                minBuffer(),
                 trackSetup(track = 4, bufferSize = 5_760, lowLatency = false),
             )
             .inOrder()

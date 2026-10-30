@@ -139,6 +139,23 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
                     else -> error("Unreachable")
                 }
 
+            // BOREALIS: the skips come before the buffer size, so a skipped attempt does not ask
+            // the platform for its minimum buffer
+
+            // Skip low latency options if hardware sample rate doesn't match the content
+            if (
+                AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC) != sampleRate &&
+                    lowLatency
+            ) {
+                continue
+            }
+
+            // Skip low latency options when using audio effects, since low latency mode
+            // precludes the use of the audio effect pipeline (as of Android 13).
+            if (enableAudioFx && lowLatency) {
+                continue
+            }
+
             val bufferSize =
                 when (i) {
                     0,
@@ -161,20 +178,6 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
                     }
                     else -> error("Unreachable")
                 }
-
-            // Skip low latency options if hardware sample rate doesn't match the content
-            if (
-                AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC) != sampleRate &&
-                    lowLatency
-            ) {
-                continue
-            }
-
-            // Skip low latency options when using audio effects, since low latency mode
-            // precludes the use of the audio effect pipeline (as of Android 13).
-            if (enableAudioFx && lowLatency) {
-                continue
-            }
 
             try {
                 val created = createAudioTrack(channelConfig, sampleRate, bufferSize, lowLatency)

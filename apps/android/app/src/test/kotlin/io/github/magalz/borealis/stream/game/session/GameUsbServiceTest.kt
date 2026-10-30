@@ -151,19 +151,19 @@ internal class GameUsbServiceTest : GameTestBase() {
     }
 
     @Test
-    fun `a dialog that closes without having opened leaves the count below zero`() {
+    fun `a dialog that closes without having opened leaves the count at zero`() {
         rig.preference("checkbox_enable_pip", true)
         val parameters = rig.recordPictureInPicture()
         rig.streaming()
 
         rig.game.onUsbPermissionPromptCompleted()
 
-        // The window may not enter on its own until the count is back at zero: the next dialog
-        // that opens does that.
-        assertThat(parameters.map { it.isAutoEnterEnabled }).containsExactly(true, false).inOrder()
+        // The window may still enter on its own, and the next dialog that opens holds it back.
+        assertThat(parameters.map { it.isAutoEnterEnabled }).containsExactly(true, true).inOrder()
         rig.game.onUsbPermissionPromptStarting()
+        rig.game.onUsbPermissionPromptCompleted()
         assertThat(parameters.map { it.isAutoEnterEnabled })
-            .containsExactly(true, false, true)
+            .containsExactly(true, true, false, true)
             .inOrder()
     }
 }

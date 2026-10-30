@@ -375,6 +375,29 @@ internal class GameSpecialKeysTest : GameTestBase() {
     }
 
     @Test
+    fun `a key that goes down again forgets that its earlier key up was lost, so it reaches the host whole`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_C)
+        rig.down(KeyEvent.KEYCODE_B)
+        // The key up of the B never reaches the chord code: a virtual key goes to the system.
+        rig.game.dispatchKeyEvent(
+            keyboardKey(
+                KeyEvent.ACTION_UP,
+                KeyEvent.KEYCODE_B,
+                flags = KeyEvent.FLAG_VIRTUAL_HARD_KEY,
+            )
+        )
+        rig.releaseCtrlAltShift()
+        forgetCalls()
+
+        rig.tap(KeyEvent.KEYCODE_B)
+
+        // The key down of the new press is the host's, so its key up is too.
+        assertThat(sentKeys()).containsExactly(sent(0x8042, down, 0), sent(0x8042, up, 0)).inOrder()
+    }
+
+    @Test
     fun `a focus change drops the chord that waits, so the next key does not do it`() {
         streamingAndCapturing()
         val actions = rig.recordSession()

@@ -154,6 +154,26 @@ internal class GameChromeInputTest : GameTestBase() {
         assertThat(rig.pointerCaptured).isTrue()
     }
 
+    @Test
+    fun `taking the input forgets the keys that a chord ate, so the next tap of one reaches the host whole`() {
+        rig.streaming()
+        rig.holdCtrlAltShift()
+        // The M waits for the modifiers, and the B goes down while it waits: the host never sees it.
+        rig.down(KeyEvent.KEYCODE_M)
+        rig.down(KeyEvent.KEYCODE_B)
+        // The last modifier opens the menu, and the chrome takes the keys: the up of the B is its.
+        rig.releaseCtrlAltShift()
+        idle()
+        rig.up(KeyEvent.KEYCODE_B)
+        rig.closeChrome()
+        forgetCalls()
+
+        rig.tap(KeyEvent.KEYCODE_B)
+
+        // The key up of the first press was never seen here, so it must not eat this one's.
+        assertThat(sentKeys()).containsExactly(sent(0x8042, down), sent(0x8042, up)).inOrder()
+    }
+
     // The pointer
 
     @Test

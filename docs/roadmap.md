@@ -992,8 +992,9 @@ Items:
 
 Built in the phase branch `phase/s15-stream-screens`, one merged task per issue
 ([#97](https://github.com/magalz/Borealis/issues/97) to
-[#105](https://github.com/magalz/Borealis/issues/105)). The phase pull request is
-[#106](https://github.com/magalz/Borealis/pull/106). The device round and the owner's UAT ran on 2026-10-29
+[#105](https://github.com/magalz/Borealis/issues/105)). The owner merged the phase pull request
+[#106](https://github.com/magalz/Borealis/pull/106) on 2026-10-30 (`b2f311be7`), and the issues are closed.
+The device round and the owner's UAT ran on 2026-10-29
 and 2026-10-30, on the builds of `2e76dfcfb` and `1455bcf0a`. No step failed outright, but two UAT steps are
 partial: U6 (a second device) and U7 (the keyboard and the mouse). The owner also made three decisions at the UAT
 that changed the code (below). The checks are
@@ -1478,6 +1479,14 @@ the round are in [device-validation section 20](development/device-validation.md
   start, and the four streams of the TV part of 3.29 start with the same input crop, so the crop change is no sign
   by itself. The cause is not known. First capture the decoder log of a stream that shows it, and run the same app
   on the build before Sprint 14, as the audio follow-up did, to tell a conversion defect from an older one.
+- **A second device's Quit of a shared app, once the host keeps the app.** Found on 2026-10-30, validating the
+  fix of LuminalShine #201 ([NortheBridge/luminalshine#227](https://github.com/NortheBridge/luminalshine/pull/227),
+  on a nightly of the host). With that fix, a Quit from the second device stops only its own session
+  (`Cancel scope: requester_only`) and the app keeps running for the first device. Borealis on the second device
+  then shows the error popup ("Desktop stopped", Error -1), because the check after its Quit still sees the app
+  running and the Quitting screen treats that as a failed Quit. Once the host ships the fix, treat "my session
+  ended, the app still runs for another device" as a clean leave (the Library notice of a Disconnect, or a new
+  one), with a test first. Until then the host stops every session on a Quit, so nothing changes for users.
 - **The frozen frame after a rotation.** From Sprint 15 (the known limits). The frame is placed and scaled when
   the copy ends, so a rotation, a split-screen resize or leaving picture-in-picture after the failure leaves it
   at the old offset. It is rare, and nothing crashes.
@@ -1490,8 +1499,9 @@ the round are in [device-validation section 20](development/device-validation.md
     with the style Off, and no `Background video failed`. It checks the risk that the clip competes with the
     decoder of the stream;
   - Disconnect on the S22 (step 2);
-  - the combos other than Ctrl+Alt+Shift+M (step 4): Z, Q, a short press of the mouse Back button, and a held
-    right click;
+  - the combos other than Ctrl+Alt+Shift+M and Ctrl+Alt+Shift+Q (step 4): Z, a short press of the mouse Back
+    button, and a held right click. Ctrl+Alt+Shift+Q (Disconnect) worked on the S22 on 2026-10-30, sent with
+    `adb shell input keycombination` during the LuminalShine #201 runs;
   - the taps on the segments of the menu with touch and with a pad on the S22 (step 3);
   - the second-device question (U6, step 5): with a pinned shortcut, and with Start on another app while one
     runs, the Conflict dialog should ask;
@@ -2359,7 +2369,7 @@ and five discussions in the Ideas category, #221 to #225, from the findings of B
 open ones are #198, #201, #212, #214, #216 to #220 and the owner's pull requests #213 and #215
 (#198 and #201 were checked again on 2026-10-29 and are still open). The rows add what the Sprint 15 round saw
 on 2026-10-29 and 2026-10-30 ([device-validation section 20](development/device-validation.md#20-results-sprint-15));
-those observations were not read from GitHub, so the states stay as of 2026-10-29.
+those observations were not read from GitHub, so the states stay as of 2026-10-29, except #227, read on 2026-10-30 (open).
 
 | Item | Kind | Summary |
 | --- | --- | --- |
@@ -2367,12 +2377,12 @@ those observations were not read from GitHub, so the states stay as of 2026-10-2
 | [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. Open. See the [host contract](host-contract/README.md). |
 | [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. Shipped in 26.10.0-beta.1 (release notes). The client shows it in Sprint 20. |
 | [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Fix for #194. Shipped in 26.10.0-beta.1 (release notes). |
-| [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). Open. See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). On 2026-10-29 a run with two clients on a diagnostics build of the host (a nightly, `0.0.5-nightly`, not 26.10.1) saw the first client keep streaming through three Disconnects of the second, and the second client's Quit stop both sessions with `reason=explicit_cancel` (the first client then dropped with -1). It does not say whether the case of the issue is fixed. |
+| [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). Open. See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). On 2026-10-29 a run with two clients on a diagnostics build of the host (a nightly, `0.0.5-nightly`, not 26.10.1) saw the first client keep streaming through three Disconnects of the second, and the second client's Quit stop both sessions with `reason=explicit_cancel` (the first client then dropped with -1). It does not say whether the case of the issue is fixed. On 2026-10-30 the owner's fix, [#227](https://github.com/NortheBridge/luminalshine/pull/227) (open; a nightly, `0.0.7-nightly`, `4b55352e`), was run with the same two clients: the second client joined into an isolated capture with no delay, the first kept 56 to 60 fps with a video playing, a Quit from the second stopped only its own session (`Cancel scope: requester_only`), and a Quit from a lone client was a full teardown. See [Sprint 17](#sprint-17-general-fixes), Video and the stream screens, for what Borealis then shows on the second device. |
 | [NortheBridge/luminalshine#202](https://github.com/NortheBridge/luminalshine/issues/202) | Issue | A long `/launch` blocks every other HTTPS GameStream request until it finishes. Fixed on the host by #203, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#203](https://github.com/NortheBridge/luminalshine/pull/203) | PR | Fix for #202. Merged on 2026-10-20 and shipped in 26.10.0-beta.1 (release notes). |
 | [NortheBridge/luminalshine#204](https://github.com/NortheBridge/luminalshine/issues/204) | Issue | The host process crashes after the virtual display cleanup of an ended session. Closed on 2026-10-29 as a duplicate of #212: the same exception (`0x20474343`), at the same offset in `KERNELBASE.dll`, right after the same log line. The crash is not fixed: see #212. It was seen twice on 2026-10-28 on 26.10.0-beta.1, at 06:58:56 and 09:16:06, in the Sprint 14 round ([device-validation section 19](development/device-validation.md#19-results-sprint-14)). See the [host contract](host-contract/luminalshine.md). |
 | [NortheBridge/luminalshine#205](https://github.com/NortheBridge/luminalshine/issues/205) | Issue | A second client's resume fails the RTSP tag check while the first client's launch is still setting up. Closed on 2026-10-29 as completed, with a comment: seen on 26.09.1, fixed in 26.10.0 by #188 (a retryable 409 while another client's launch is pending) and #203. The issue is to be reopened if it reproduces on 26.10.1 or later. Borealis keeps its retries (the 3-attempt `/serverinfo` read, the 3 s wait before `/resume` and the single restart after an RTSP -1): 26.09.1 has neither fix, and the race was not tested on a host that has them. See the [host contract](host-contract/luminalshine.md). |
-| [NortheBridge/luminalshine#212](https://github.com/NortheBridge/luminalshine/issues/212) | Issue | The host crashes with an unhandled C++ exception right after "Virtual display cleanup: finished" on a client disconnect: 3 times in about 35 disconnects on 2026-10-28 on 26.10.1, and twice that day on 26.10.0-beta.1. The cause, from the minidumps: the display-helper watchdog joins its own thread. It happened again on 2026-10-30 at 00:21:40 on 26.10.1, right after the same line. It voided the agent's retest of "another app" in the Sprint 15 round. Open; the fix is #213. See the [host contract](host-contract/luminalshine.md), section 7.3. |
+| [NortheBridge/luminalshine#212](https://github.com/NortheBridge/luminalshine/issues/212) | Issue | The host crashes with an unhandled C++ exception right after "Virtual display cleanup: finished" on a client disconnect: 3 times in about 35 disconnects on 2026-10-28 on 26.10.1, and twice that day on 26.10.0-beta.1. The cause, from the minidumps: the display-helper watchdog joins its own thread. It happened again on 2026-10-30 at 00:21:40 on 26.10.1, and at 06:51:15 on the `0.0.7-nightly` of #227 (which does not carry #213), each time right after the same line. It voided the agent's retest of "another app" in the Sprint 15 round. Open; the fix is #213. See the [host contract](host-contract/luminalshine.md), section 7.3. |
 | [NortheBridge/luminalshine#213](https://github.com/NortheBridge/luminalshine/pull/213) | PR | The owner's fix for #212: the watchdog no longer joins itself on teardown. Open. |
 | [NortheBridge/luminalshine#214](https://github.com/NortheBridge/luminalshine/issues/214) | Issue | Hardens the display-helper watchdog start and stop: the thread object is not synchronized, and the watchdog's "never reap" rule has no test. Follow-up to #212. Open. |
 | [NortheBridge/luminalshine#215](https://github.com/NortheBridge/luminalshine/pull/215) | PR | The owner's fix for #214, stacked on #213. Open. |

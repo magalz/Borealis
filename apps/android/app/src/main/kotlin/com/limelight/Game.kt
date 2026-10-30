@@ -179,6 +179,8 @@ class Game :
     private var cursorVisible = false
     private var waitingForAllModifiersUp = false
     private var specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+    // BOREALIS: keys whose key down a waiting chord ate, so their key up is eaten too
+    private val keysEatenByChord = mutableSetOf<Int>()
     private lateinit var streamView: StreamView
     private var lastAbsTouchUpTime = 0L
     private var lastAbsTouchDownTime = 0L
@@ -909,6 +911,7 @@ class Game :
         // BOREALIS: and drop a chord that waits for them, or the next key would do it
         specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
         waitingForAllModifiersUp = false
+        keysEatenByChord.clear()
 
         // BOREALIS: the release of the mouse's Back button may come while another window has the
         // focus (stream)
@@ -1372,7 +1375,7 @@ class Game :
     // Returns true if the key stroke was consumed
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
-    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean): Boolean {
+    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, repeat: Boolean): Boolean {
         var modifierMask = 0
         var nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN
 
@@ -1406,6 +1409,10 @@ class Game :
             this.modifierFlags = this.modifierFlags and modifierMask.inv()
         }
 
+        // BOREALIS: the host never saw the key down of a key that a waiting chord ate, so its key
+        // up is eaten too
+        val eatenKeyUp = !down && keysEatenByChord.remove(androidKeyCode)
+
         // Handle the special combos on the key up
         if (waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
             if (specialKeyCode == androidKeyCode) {
@@ -1414,8 +1421,12 @@ class Game :
                 return true
             } else if (modifierFlags != 0) {
                 // While we're waiting for modifiers to come up, eat all key downs and allow all key
-                // ups to pass
-                return down
+                // ups to pass (BOREALIS: except those of the keys whose key down was eaten here; a
+                // repeat is of a key whose first key down the host saw)
+                if (down && !repeat) {
+                    keysEatenByChord.add(androidKeyCode)
+                }
+                return down || eatenKeyUp
             } else {
                 // When all modifiers are up, perform the special action
                 when (specialKeyCode) {
@@ -1487,7 +1498,7 @@ class Game :
         }
 
         // Not a special combo
-        return false
+        return eatenKeyUp
     }
 
     // We cannot simply use modifierFlags for all key event processing, because
@@ -1577,7 +1588,7 @@ class Game :
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
             // Let this method take duplicate key down events
-            if (handleSpecialKeys(event.keyCode, true)) {
+            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
                 return true
             }
 
@@ -1676,7 +1687,7 @@ class Game :
 
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
-            if (handleSpecialKeys(event.keyCode, false)) {
+            if (handleSpecialKeys(event.keyCode, false, false)) {
                 return true
             }
 

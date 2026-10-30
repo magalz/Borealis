@@ -165,16 +165,16 @@ internal class MouseButtonsTest : MotionTestBase() {
     }
 
     @Test
-    fun `the DeX touchpad right click comes with the left button that it did not send`() {
+    fun `the DeX touchpad right click is the right button alone`() {
         streaming()
 
         rig.game.onGenericMotion(
             streamView,
             dex(MotionEvent.ACTION_DOWN, MotionEvent.BUTTON_SECONDARY),
         )
-        assertSent(thePointer(), press(left), press(right))
+        assertSent(thePointer(), press(right))
         rig.game.onGenericMotion(streamView, dex(MotionEvent.ACTION_UP, 0))
-        assertSent(thePointer(), release(left), release(right))
+        assertSent(thePointer(), release(right))
     }
 
     @Test

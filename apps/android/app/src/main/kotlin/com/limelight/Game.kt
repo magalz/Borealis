@@ -2154,7 +2154,9 @@ class Game :
                 // sends ACTION_DOWN/UP, so we need to fix that up to look like a sane input event
                 // to process it correctly.
                 if (eventSource == SAMSUNG_DEX_MOUSE_SOURCE) {
-                    if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    // BOREALIS: only a plain touch down is the missing left click; a right click
+                    // comes down with its own button
+                    if (event.actionMasked == MotionEvent.ACTION_DOWN && buttonState == 0) {
                         buttonState = buttonState or MotionEvent.BUTTON_PRIMARY
                     } else if (event.action == MotionEvent.ACTION_UP) {
                         buttonState = buttonState and MotionEvent.BUTTON_PRIMARY.inv()

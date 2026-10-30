@@ -74,7 +74,7 @@ internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, l
                 OutsideGameBackground(
                     state.visuals,
                     state.decoderHeld,
-                    showsBackground = !(failed && (frozen.frame != null || frozen.pending)),
+                    showsBackground = !(failed && frozen.coversBackground),
                 ) {
                     if (failed) {
                         OverFrozenFrame(frozen, state.visuals.menuGlass == MenuGlass.BLUR) {

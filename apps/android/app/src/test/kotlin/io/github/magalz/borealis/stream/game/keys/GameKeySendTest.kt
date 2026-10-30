@@ -268,6 +268,22 @@ internal class GameKeySendTest : GameTestBase() {
     }
 
     @Test
+    fun `a character that is not a code point is not sent, down or up, and raises nothing`() {
+        rig.streaming()
+        forgetCalls()
+        // One past the last code point: it has no UTF-16 form, and the host has no key for it.
+        val notACodePoint = Character.MAX_CODE_POINT + 1
+        val spec = KeySpec(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_AT, unicode = notACodePoint)
+
+        val pressed = rig.game.handleKeyDown(keyboardKey(spec))
+        val released = rig.game.handleKeyUp(keyboardKey(spec.copy(action = KeyEvent.ACTION_UP)))
+
+        assertThat(pressed).isFalse()
+        assertThat(released).isFalse()
+        assertThat(sentCalls()).isEmpty()
+    }
+
+    @Test
     fun `a key up with a character that was not sent is handled only when it has one`() {
         rig.streaming()
         forgetCalls()

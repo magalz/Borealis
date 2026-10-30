@@ -994,12 +994,14 @@ Built in the phase branch `phase/s15-stream-screens`, one merged task per issue
 ([#97](https://github.com/magalz/Borealis/issues/97) to
 [#105](https://github.com/magalz/Borealis/issues/105)). The phase pull request is
 [#106](https://github.com/magalz/Borealis/pull/106). The device round and the owner's UAT ran on 2026-10-29
-and 2026-10-30, on the builds of `2e76dfcfb` and `1455bcf0a`, and no step failed. The owner made three decisions at the UAT
+and 2026-10-30, on the builds of `2e76dfcfb` and `1455bcf0a`. No step failed outright, but two UAT steps are
+partial: U6 (a second device) and U7 (the keyboard and the mouse). The owner also made three decisions at the UAT
 that changed the code (below). The checks are
 [device-validation section 3.29](development/device-validation.md#329-sprint-15-checks) and
 [section 3.30](development/device-validation.md#330-owners-20-minute-uat-sprint-15), and the results are in
 [section 20](development/device-validation.md#20-results-sprint-15). The head of the phase is `4429af309`,
-with the three UAT changes, which no device has run yet. On 2026-10-28 the owner moved the Library, Settings
+with the three UAT changes, whose only device check so far is a look at the Appearance rows on the TV. On
+2026-10-28 the owner moved the Library, Settings
 and layout items that this section held to [Sprint 17](#sprint-17-general-fixes); each says so there. The
 stream items stayed, and the code of each is done.
 
@@ -1022,9 +1024,18 @@ Owner decisions:
   dropped.
 - **The error of a running stream is a popup (2026-10-29).** It stands over the last frame, frozen and
   blurred, and the scrim stays over the blurred frame too (the scrim is the light one since the UAT).
-- **The owner's UAT (2026-10-30).** Every step passed, and the owner decided three things, which are in the
-  code ([ADR 0061](adr/0061-glass-and-the-animated-background-in-the-stream.md), decision 11; merges `4dabac9db`
-  and `1d73bc0b7`):
+- **The owner's UAT (2026-10-30).** Every step passed except two partial results, and the owner decided three
+  things, which are in the code ([ADR 0061](adr/0061-glass-and-the-animated-background-in-the-stream.md),
+  decision 11; merges `4dabac9db` and `1d73bc0b7`). The partial results first:
+  - **U6, a second device: partial.** A tap on the running app entered directly, which is the resume choice by
+    design. The path that asks (a pinned shortcut, or Start on another app while one runs) is not confirmed: the
+    owner said it "just entered directly", and it is not known which entry they used. The agent's retest of
+    "another app" was void because the host crashed and the running app was gone. A device check in Sprint 17.
+  - **U7, the keyboard and the mouse: partial.** Ctrl+Alt+Shift+M passed. The Back hold of the mouse did not
+    work with the owner's mouse, whose side Back button arrives as a right click: see the Sprint 17 item in
+    Input. It is not known whether "Mouse back and forward buttons" was on.
+
+  The three decisions:
   - **The popups over the game.** The Quit popup and the error popup over the frozen frame looked like a hole,
     a panel of 40 percent glass under a scrim of 72 percent. Now the scrim is the page at 35 percent (the side
     panel's) and the panel is 85 percent of the surface, solid where the rules say. Over the background
@@ -1176,9 +1187,10 @@ Google TV Streamer with the owner's OK, was the drop check of #105 and the TV pa
 [section 3.29](development/device-validation.md#329-sprint-15-checks) (Quit three times with the stage lines
 and the host log, Disconnect, the menu with no lateral movement, and the popup over the frozen frame). The
 owner's UAT, [section 3.30](development/device-validation.md#330-owners-20-minute-uat-sprint-15), about 20
-minutes by hand on both devices, passed every step and ended with the decisions above. The S22 steps of 3.29
-that the UAT does not repeat have no result recorded, and no device has run the changes of the UAT yet; the owner
-decides whether the next device round runs them.
+minutes by hand on both devices, passed every step except two partial ones (U6 and U7, above) and ended with the
+decisions above. The S22 steps of 3.29 that the UAT does not repeat have no result recorded, and the changes of the
+UAT have only had their Appearance rows looked at on the TV; the owner decides whether the next device round runs
+them.
 
 ### Sprint 16: fixes of the converted code
 
@@ -1372,8 +1384,9 @@ results are in
   Windows' Task View on purpose is still to do.
 
 - **The side Back button of the owner's mouse arrives as a right click.** Found by the owner in the Sprint 15
-  UAT (2026-10-30). The inherited path (`Game.handleKeyDown` and `handleKeyUp`) turns a Back key from a mouse
-  source into a right click while "Mouse back and forward buttons" is off. With it on, `handleMotionEvent` reads
+  UAT (2026-10-30), where it made the Back hold of the mouse fail (U7); it is not known whether "Mouse back and
+  forward buttons" was on. The inherited path (`Game.handleKeyDown` and `handleKeyUp`) turns a Back key from a
+  mouse source into a right click while that setting is off. With it on, `handleMotionEvent` reads
   `BUTTON_BACK`, and only that opens the menu after 1 s (Sprint 15, #102); a short press goes to the PC on
   release. A raw capture of the events of that mouse is needed first: the source, the key code and the button
   state of a press of the side button, with the setting on and off. The fix follows, with a test first.
@@ -1473,9 +1486,11 @@ the round are in [device-validation section 20](development/device-validation.md
   has reported: whether the offscreen layer of the halo is kept across frames (its cost on a TV), bitmap reuse
   against the hardware renderer, the colour of an HDR copy on the S22, and the delay of the first copy after the
   menu opens (129.7 ms on the S22 in the spike); and the error popup on a phone in landscape, where its three or
-  four actions stack and, with large text, the panel scrolls (a test and a reference cover it). The next device
-  round looks at them, with the new scrim and panel of the popups and the screens that follow the Library
-  (device-validation section 20, "Not run and owner items").
+  four actions stack and, with large text, the panel scrolls (a test and a reference cover it). Add the
+  second-device question: with a pinned shortcut, and with Start on another app while one runs, the Conflict
+  dialog should ask (the UAT step U6 did not confirm it). The next device round looks at them, with the new
+  scrim and panel of the popups and the screens that follow the Library (device-validation section 20,
+  "Not run and owner items").
 
 #### Accessibility and layout
 

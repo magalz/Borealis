@@ -5421,10 +5421,11 @@ This section holds the results of the Sprint 15 device round and of the owner's 
 agent part ran on the Google TV Streamer on 2026-10-29, with the owner's OK: the drop check of #105 at about
 19:40, and the TV part of [section 3.29](#329-sprint-15-checks) at about 21:35. A run with two clients for
 LuminalShine #201 followed at about 23:31, on both devices. The owner's UAT
-([section 3.30](#330-owners-20-minute-uat-sprint-15)) ran by hand on the TV and the S22 on 2026-10-30. No step
-failed: every step of the UAT passed except three decisions of the owner, which changed the code afterwards
-(see the UAT below). The code of those three changes, which is the head of the phase, `4429af309`, has had no
-device run yet. The findings went to [Sprint 17](../roadmap.md#sprint-17-general-fixes) and
+([section 3.30](#330-owners-20-minute-uat-sprint-15)) ran by hand on the TV and the S22, late on 2026-10-29 and
+on 2026-10-30. No step failed outright. Every step of the UAT passed except two partial results, U6 and U7, and
+three decisions of the owner, which changed the code afterwards (see the UAT below). The head of the phase,
+`4429af309`, holds those three changes, and its only device check so far is a look at the Appearance rows on the
+TV. The findings went to [Sprint 17](../roadmap.md#sprint-17-general-fixes) and
 [Sprint 18](../roadmap.md#sprint-18-refactor-of-the-converted-code), and the host data to the
 [host-side items](../roadmap.md#host-side-items-luminalshine) of the roadmap.
 
@@ -5432,17 +5433,19 @@ device run yet. The findings went to [Sprint 17](../roadmap.md#sprint-17-general
 
 - Builds:
   - The debug build of `2e76dfcfb` for the drop check of #105 on the TV.
-  - The debug build of `1455bcf0a` for the TV part of 3.29, for the #201 run and for the owner's UAT. It is
+  - The debug build of `1455bcf0a` for the TV part of 3.29, for the #201 run and for the owner's UAT. It was
+    on both devices: installed on the TV on 2026-10-29 at about 21:35, and on the S22 at about 22:44. It is
     the phase head after the docs of wave 4. Its Kotlin differs from `2e76dfcfb` only in comments, so it
     behaves as that build.
   - The TV got both builds with `install -r`, so its data stayed, and the embedded commit was checked.
 - Devices: the Google TV Streamer over wireless ADB, and the Samsung Galaxy S22 (adb over Wi-Fi in the #201
   run). They are the two devices of [section 19](#19-results-sprint-14).
 - Host:
-  - LuminalShine 26.10.1 for the drop check, the TV part of 3.29 and the owner's UAT (the host that crashed
-    on 2026-10-30 was 26.10.1).
-  - A diagnostics build of LuminalShine for the #201 run (a nightly, `0.0.5-nightly`, commit `2f3da177`),
-    with the per-client display and the debug log.
+  - LuminalShine 26.10.1 for the drop check and the TV part of 3.29.
+  - From 2026-10-29 22:30 to 2026-10-30 00:04 the PC ran a diagnostics nightly of LuminalShine
+    (`0.0.5-nightly`, commit `2f3da177`), which changes the logs only, with the per-client display and the
+    debug log. The #201 run was on it. From 00:04 the PC ran 26.10.1 again, and the crash at 00:21:40 was on
+    26.10.1. The owner's UAT ran around those hours, so its host was 26.10.1 and, before 00:04, the nightly.
   - The TV clock ran about 2.9 s ahead of the host's, so the spans between host lines are compared, not the
     wall times.
 - The drop method, as in 3.29, step 7:
@@ -5522,7 +5525,8 @@ For #105 on the S22, in that drop: `Frozen frame requested` came 8 ms before `Co
 ### Owner's UAT (3.30), 2026-10-30
 
 The owner ran the 20-minute UAT of [section 3.30](#330-owners-20-minute-uat-sprint-15) by hand on the TV and the
-S22, on the build of `1455bcf0a`. Every step passed. The owner made three decisions, which are in the code now
+S22, on the build of `1455bcf0a`, which was on both devices (see the setup). Every step passed except two partial
+results, U6 and U7, and the owner made three decisions, which are in the code now
 ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md), decision 11), and the owner's review
 of the 53 screenshot references of the phase (gate G1) made no other mark.
 
@@ -5533,8 +5537,8 @@ of the 53 screenshot references of the phase (gate G1) made no other mark.
 | U3 Disconnect | TV | pass | No note. |
 | U4 The look | S22 | pass, with decisions 2 and 3 | The row for the background before and after the stream is dropped, and the other row is renamed: see decisions 2 and 3 below. |
 | U5 The dropped stream | S22 | pass, with decision 1 | The popup and Back were right, in the owner's words. The look of the popup: decision 1. |
-| U6 A second device | TV, S22 | pass | The tap on the running app entered directly. That is a resume choice and the design ([3.29](#329-sprint-15-checks), step 5, first bullet). The agent's later retest of the question for another app is void (see The host below). The pinned-shortcut part of the step has no result recorded. |
-| U7 The keyboard and the mouse | S22 | pass | No note. |
+| U6 A second device | TV, S22 | partial | A tap on the running app entered directly. That is a resume choice and the design ([3.29](#329-sprint-15-checks), step 5, first bullet), so that part passes. The path that asks (a pinned shortcut, or Start on another app while one runs) is not confirmed: the owner said it "just entered directly", and it is not known which entry they used. The agent's retest of the question for another app is void: the host crashed and the running app was gone (see The host below). A device check in Sprint 17. |
+| U7 The keyboard and the mouse | S22 | partial | Ctrl+Alt+Shift+M opens the menu: pass. The Back hold of the mouse did not work with the owner's mouse: its side Back button arrives as a right click, which is finding (b) below. It is not known whether "Mouse back and forward buttons" was on. The raw-event capture is in Sprint 17. |
 
 The three decisions:
 
@@ -5552,8 +5556,8 @@ The three decisions:
    the same.
 
 The code of these three changes is the merges `4dabac9db` (decision 1) and `1d73bc0b7` (decisions 2 and 3), and
-the phase head `4429af309`. No device has run them, so the next device round looks at the new scrim, the new
-panel and the screens that now follow the Library.
+the phase head `4429af309`. The only device check of them is the Appearance rows on the TV (see Not run), so the
+next device round looks at the new scrim, the new panel and the screens that now follow the Library.
 
 ### The host
 
@@ -5572,9 +5576,10 @@ reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md
   the TV logs of the agent part, the decoder's output format and crop change at the start of every stream, so
   that change alone does not set the stream with the line apart. The cause is not known.
   [Sprint 17](../roadmap.md#sprint-17-general-fixes), Video and the stream screens.
-- **(b) The side Back button of the owner's mouse arrives as a right click.** The inherited path turns a Back
-  key from a mouse source into a right click while "Mouse back and forward buttons" is off. With it on, only a
-  real `BUTTON_BACK` opens the menu after 1 s. A raw capture of the events of that mouse is needed. Roadmap,
+- **(b) The side Back button of the owner's mouse arrives as a right click.** It is why the Back hold of U7 did
+  not work with that mouse. The inherited path turns a Back key from a mouse source into a right click while
+  "Mouse back and forward buttons" is off. With it on, only a real `BUTTON_BACK` opens the menu after 1 s. It is
+  not known whether the setting was on in U7. A raw capture of the events of that mouse is needed. Roadmap,
   [Sprint 17](../roadmap.md#sprint-17-general-fixes), Input.
 - **(c) Two flaky tests, seen once each under load.** `StreamChromeHostFrozenFrameTest` (a Robolectric
   `NullPointerException` before the body of the test) and `StreamBackTest` "back opens the menu…" (the timing of
@@ -5600,6 +5605,10 @@ reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md
   contrast and an HDR stream by eye, the drop before the first frame, and a drop on the S22 by
   `cmd connectivity`. The owner decides whether the next device round runs them.
 - The question for another app (step 5, third bullet), because of the host crash.
-- The pinned-shortcut part of U6.
-- The new look of decision 11, and the screens that follow the Library (see the UAT above).
+- The path of the second device that asks (a pinned shortcut, or Start on another app while one runs), which U6
+  did not confirm.
+- The Back hold of the mouse with a mouse that sends a real `BUTTON_BACK` (U7).
+- The look of `4429af309`, which holds the UAT adjustments, on a device. It was checked on the TV only for the
+  Appearance rows: the TV shows "Stream menu style", Blurred, and no stream background row. The new scrim and
+  panel, and the screens that follow the Library, are the owner's next check.
 - Left on the devices: the build of `1455bcf0a`.

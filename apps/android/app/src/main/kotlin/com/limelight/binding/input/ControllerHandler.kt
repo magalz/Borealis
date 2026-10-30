@@ -4134,11 +4134,11 @@ class ControllerHandler(
             val deviceName = dev.name
             if (
                 // This is the back button on Shield portable consoles
-                deviceName.contains("gpio") ||
+                deviceName.contains("gpio", true) ||
                     // These are the gamepad buttons on the Archos Gamepad 2
-                    deviceName.contains("joy_key") ||
+                    deviceName.contains("joy_key", true) ||
                     // These are gamepad buttons on the XPERIA Play
-                    deviceName.contains("keypad") ||
+                    deviceName.contains("keypad", true) ||
                     // Gamepad on Shield Portable
                     deviceName.equals("NVIDIA Corporation NVIDIA Controller v01.01", true) ||
                     // Gamepad on Shield Portable (?)

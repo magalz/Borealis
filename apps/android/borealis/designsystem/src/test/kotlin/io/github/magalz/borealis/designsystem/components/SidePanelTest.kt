@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
@@ -45,6 +47,30 @@ class SidePanelTest {
         composeRule.onRoot().performTouchInput { click(Offset(10f, 10f)) }
 
         assertThat(dismissed).isEqualTo(1)
+    }
+
+    // The popups that the stream draws over the game take this scrim, so it is pinned at 35
+    // percent.
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the scrim is the page colour at 35 percent, over whatever is behind the panel`() {
+        composeRule.setContent {
+            BorealisTheme(FormFactor.Phone) {
+                Box(Modifier.fillMaxSize().testTag(FRAME).background(Color.White)) {
+                    SidePanel(onDismiss = {}) { Text("Inside") }
+                }
+            }
+        }
+
+        // The left edge of the 360dp window is scrim, as the tap test says.
+        composeRule
+            .onNodeWithTag(FRAME)
+            .assertPixel(
+                x = 10f,
+                y = 10f,
+                BorealisTokens.Color.Page.copy(alpha = 0.35f).compositeOver(Color.White),
+            )
+        assertThat(STREAM_SCRIM_ALPHA).isEqualTo(0.35f)
     }
 
     @Test

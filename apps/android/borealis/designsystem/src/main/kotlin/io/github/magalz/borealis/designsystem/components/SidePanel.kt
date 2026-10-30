@@ -22,7 +22,13 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 private val MAX_WIDTH = 360.dp
 private val BORDER_WIDTH = 1.dp
 private const val WIDTH_FRACTION = 0.52f
-private const val SCRIM_ALPHA = 0.35f
+
+/**
+ * The alpha of the page colour that dims what is behind a panel or a popup over the stream: lighter
+ * than the dialog scrim (`scrim` in the tokens, the page at 72%), so the game stays visible. The
+ * side panel takes it, and so do the popups that the stream chrome draws over the game.
+ */
+const val STREAM_SCRIM_ALPHA = 0.35f
 
 /**
  * A panel over the right of its parent: it fills the parent, with a scrim over the part the panel
@@ -53,11 +59,12 @@ fun SidePanel(
 ) {
     val colors = LocalBorealisColors.current
     BoxWithConstraints(
-        modifier.fillMaxSize().background(colors.page.copy(alpha = SCRIM_ALPHA)).pointerInput(
-            onDismiss
-        ) {
-            detectTapGestures(onTap = { onDismiss() })
-        }
+        modifier
+            .fillMaxSize()
+            .background(colors.page.copy(alpha = STREAM_SCRIM_ALPHA))
+            .pointerInput(onDismiss) {
+                detectTapGestures(onTap = { onDismiss() })
+            }
     ) {
         Column(
             Modifier.align(Alignment.CenterEnd)

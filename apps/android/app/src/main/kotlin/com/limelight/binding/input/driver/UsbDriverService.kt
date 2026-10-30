@@ -185,11 +185,9 @@ class UsbDriverService : Service(), UsbDriverListener {
                     XboxOneController(device, connection, nextDeviceId++, this)
                 } else if (Xbox360Controller.canClaimDevice(device)) {
                     Xbox360Controller(device, connection, nextDeviceId++, this)
-                } else if (Xbox360WirelessDongle.canClaimDevice(device)) {
-                    Xbox360WirelessDongle(device, connection, nextDeviceId++, this)
                 } else {
-                    // Unreachable
-                    return
+                    // shouldClaimDevice() accepted the device, so this is the wireless dongle
+                    Xbox360WirelessDongle(device, connection, nextDeviceId++, this)
                 }
 
             // Start the controller

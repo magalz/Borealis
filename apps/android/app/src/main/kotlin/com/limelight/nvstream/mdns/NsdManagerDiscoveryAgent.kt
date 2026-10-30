@@ -22,8 +22,9 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
     private val serviceCallbacks = HashMap<String?, NsdManager.ServiceInfoCallback>()
     private var closed = false
 
-    // The platform hands the unregistration of a callback to this executor from its own thread,
-    // after close() has shut it down, so a task that comes then is dropped, not rejected.
+    // NsdManager runs the callbacks, among them the confirmation that a callback was unregistered,
+    // on this executor from its own thread, so one can come after close() has shut it down. It is
+    // dropped, not rejected: a rejection would throw on that thread.
     private val executor =
         ThreadPoolExecutor(
             1,

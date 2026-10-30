@@ -146,7 +146,7 @@ class DigitalPad(controller: VirtualController, context: Context) :
             }
         paint.style = Paint.Style.STROKE
         canvas.drawLine(
-            w - paint.strokeWidth,
+            w - (paint.strokeWidth + DPAD_MARGIN),
             getPercent(h, TWO_THIRDS_PERCENT),
             getPercent(w, TWO_THIRDS_PERCENT),
             h - (paint.strokeWidth + DPAD_MARGIN),

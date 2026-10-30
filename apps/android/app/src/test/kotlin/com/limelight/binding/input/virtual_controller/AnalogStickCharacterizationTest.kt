@@ -184,15 +184,14 @@ class AnalogStickCharacterizationTest {
     }
 
     @Test
-    fun `a finger on the very same column as the middle, up or down, is said to be the other way round`() {
-        // Exactly above or below the middle the angle is the one of the opposite side: the finger
-        // 100 pixels up is reported as 0.89 down, and the finger 100 pixels down as 0.89 up. A
-        // finger one pixel off the column is reported the right way.
+    fun `a finger on the very same column as the middle, up or down, is reported the right way`() {
+        // The finger 100 pixels up is 0.89 up, and the finger 100 pixels down 0.89 down, as a
+        // finger one pixel off the column is.
         down(dx = 0f, dy = -100f)
-        lastMove(0f, -0.89286f)
+        lastMove(0f, 0.89286f)
 
         move(0f, 100f, FIRST + 10)
-        lastMove(0f, 0.89286f)
+        lastMove(0f, -0.89286f)
 
         move(1f, -100f, FIRST + 20)
         lastMove(0.00893f, 0.89286f)

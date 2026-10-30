@@ -181,8 +181,10 @@ object MoonBridge {
             get() = (channelMask shl SHORT_BITS) or channelCount
 
         override fun equals(other: Any?): Boolean {
+            // BOREALIS: the two fields, not the packed int, which a wide count and a mask can
+            // share. The hash code stays the packed int, which equal values still share.
             if (other is AudioConfiguration) {
-                return this.toInt() == other.toInt()
+                return channelCount == other.channelCount && channelMask == other.channelMask
             }
 
             return false

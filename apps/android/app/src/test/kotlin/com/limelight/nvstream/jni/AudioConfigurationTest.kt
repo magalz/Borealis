@@ -111,13 +111,14 @@ class AudioConfigurationTest {
     }
 
     @Test
-    fun `equality is decided by the packed int, not by the two fields`() {
-        // A count of 0x100 and a mask of 1 pack to the same int: 0x000100CA
+    fun `equality is decided by the two fields, not by the packed int`() {
+        // A count of 0x100 and a mask of 1 pack to the same int, 0x000100CA, and are not equal
         val wide = AudioConfiguration(0x100, 0)
         val masked = AudioConfiguration(0, 1)
 
-        assertThat(wide).isEqualTo(masked)
-        assertThat(wide.hashCode()).isEqualTo(masked.hashCode())
+        assertThat(wide.toInt()).isEqualTo(masked.toInt())
+        assertThat(wide).isNotEqualTo(masked)
+        assertThat(AudioConfiguration(6, 0x3F)).isEqualTo(AudioConfiguration(6, 0x3F))
     }
 
     // The test is about equals(null) itself; a Truth assertion would not call it

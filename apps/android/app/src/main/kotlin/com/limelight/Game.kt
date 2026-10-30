@@ -179,6 +179,8 @@ class Game :
     private var cursorVisible = false
     private var waitingForAllModifiersUp = false
     private var specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+    // BOREALIS: keys whose key down a waiting chord ate, so their key up is eaten too
+    private val keysEatenByChord = mutableSetOf<Int>()
     private lateinit var streamView: StreamView
     private var lastAbsTouchUpTime = 0L
     private var lastAbsTouchDownTime = 0L
@@ -906,6 +908,10 @@ class Game :
         // We can't guarantee the state of modifiers keys which may have
         // lifted while focus was not on us. Clear the modifier state.
         this.modifierFlags = 0
+        // BOREALIS: and drop a chord that waits for them, or the next key would do it
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+        waitingForAllModifiersUp = false
+        keysEatenByChord.clear()
 
         // BOREALIS: the release of the mouse's Back button may come while another window has the
         // focus (stream)
@@ -1319,6 +1325,8 @@ class Game :
         modifierFlags = 0
         specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
         waitingForAllModifiersUp = false
+        // The key up of a key that the chord ate comes to the chrome, so it never clears the entry
+        keysEatenByChord.clear()
         setInputGrabState(false)
     }
 
@@ -1369,7 +1377,7 @@ class Game :
     // Returns true if the key stroke was consumed
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
-    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean): Boolean {
+    private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, repeat: Boolean): Boolean {
         var modifierMask = 0
         var nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN
 
@@ -1403,16 +1411,32 @@ class Game :
             this.modifierFlags = this.modifierFlags and modifierMask.inv()
         }
 
+        // BOREALIS: the host never saw the key down of a key that a waiting chord ate, so its key
+        // up is eaten too
+        val eatenKeyUp = !down && keysEatenByChord.remove(androidKeyCode)
+
+        // A key that goes down again while no chord waits came up without this code seeing it (the
+        // chrome or another window had the keys): its earlier key up is lost, and this key down is
+        // the host's, so its key up is too
+        val chordWaits = waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN
+        if (down && !repeat && !chordWaits) {
+            keysEatenByChord.remove(androidKeyCode)
+        }
+
         // Handle the special combos on the key up
-        if (waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
+        if (chordWaits) {
             if (specialKeyCode == androidKeyCode) {
                 // If this is a key up for the special key itself, eat that because the host never
                 // saw the original key down
                 return true
             } else if (modifierFlags != 0) {
                 // While we're waiting for modifiers to come up, eat all key downs and allow all key
-                // ups to pass
-                return down
+                // ups to pass (BOREALIS: except those of the keys whose key down was eaten here; a
+                // repeat is of a key whose first key down the host saw)
+                if (down && !repeat) {
+                    keysEatenByChord.add(androidKeyCode)
+                }
+                return down || eatenKeyUp
             } else {
                 // When all modifiers are up, perform the special action
                 when (specialKeyCode) {
@@ -1484,7 +1508,7 @@ class Game :
         }
 
         // Not a special combo
-        return false
+        return eatenKeyUp
     }
 
     // We cannot simply use modifierFlags for all key event processing, because
@@ -1574,7 +1598,7 @@ class Game :
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
             // Let this method take duplicate key down events
-            if (handleSpecialKeys(event.keyCode, true)) {
+            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
                 return true
             }
 
@@ -1595,9 +1619,11 @@ class Game :
                 val unicodeChar = event.unicodeChar
                 if (
                     (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
-                        (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0
+                        (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
+                        Character.isValidCodePoint(unicodeChar)
                 ) {
-                    conn.sendUtf8Text("" + unicodeChar.toChar())
+                    // BOREALIS: the whole code point, as a surrogate pair outside the basic plane
+                    conn.sendUtf8Text(String(Character.toChars(unicodeChar)))
                     return true
                 }
 
@@ -1673,7 +1699,7 @@ class Game :
 
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
-            if (handleSpecialKeys(event.keyCode, false)) {
+            if (handleSpecialKeys(event.keyCode, false, false)) {
                 return true
             }
 
@@ -1688,7 +1714,8 @@ class Game :
                 // when we get the key up event for it.
                 val unicodeChar = event.unicodeChar
                 return (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
-                    (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0
+                    (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
+                    Character.isValidCodePoint(unicodeChar)
             }
 
             conn.sendKeyboardInput(
@@ -1780,6 +1807,8 @@ class Game :
             else -> -1
         }
     }
+
+    private fun streamViewHasSize(): Boolean = streamView.width > 0 && streamView.height > 0
 
     private fun getStreamViewRelativeNormalizedXY(
         view: View,
@@ -1930,6 +1959,8 @@ class Game :
         toolType: Byte,
         pointerIndex: Int,
     ): Boolean {
+        // BOREALIS: before the first layout the stream view has no size to place the pen on
+        if (!streamViewHasSize()) return true
         var penButtons: Byte = 0
         if ((event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0) {
             penButtons = (penButtons.toInt() or MoonBridge.LI_PEN_BUTTON_PRIMARY.toInt()).toByte()
@@ -2033,6 +2064,8 @@ class Game :
         eventType: Byte,
         pointerIndex: Int,
     ): Boolean {
+        // BOREALIS: before the first layout the stream view has no size to place the touch on
+        if (!streamViewHasSize()) return true
         val normalizedCoords = getStreamViewRelativeNormalizedXY(view, event, pointerIndex)
         val normalizedContactArea = getStreamViewNormalizedContactArea(event, pointerIndex)
         return conn.sendTouchEvent(
@@ -2137,7 +2170,9 @@ class Game :
                 // sends ACTION_DOWN/UP, so we need to fix that up to look like a sane input event
                 // to process it correctly.
                 if (eventSource == SAMSUNG_DEX_MOUSE_SOURCE) {
-                    if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    // BOREALIS: only a plain touch down is the missing left click; a right click
+                    // comes down with its own button
+                    if (event.actionMasked == MotionEvent.ACTION_DOWN && buttonState == 0) {
                         buttonState = buttonState or MotionEvent.BUTTON_PRIMARY
                     } else if (event.action == MotionEvent.ACTION_UP) {
                         buttonState = buttonState and MotionEvent.BUTTON_PRIMARY.inv()
@@ -2215,10 +2250,23 @@ class Game :
                     }
                 } else if (view != null && trySendPenEvent(view, event)) {
                     // If our host supports pen events, send it directly
+                    // BOREALIS: a cancel ends the mouse buttons too, or the host keeps them down
+                    if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                        releaseMouseButtons()
+                    }
                     return true
                 } else if (view != null) {
                     // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
                     updateMousePosition(view, event)
+                } else {
+                    // BOREALIS: an event that reaches the activity itself has window
+                    // coordinates; place it on the stream view
+                    val origin = IntArray(2)
+                    streamView.getLocationInWindow(origin)
+                    val onStreamView = MotionEvent.obtain(event)
+                    onStreamView.offsetLocation(-origin[0].toFloat(), -origin[1].toFloat())
+                    updateMousePosition(streamView, onStreamView)
+                    onStreamView.recycle()
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
@@ -2244,9 +2292,12 @@ class Game :
                 }
 
                 // Mouse secondary or stylus primary is right click (stylus down is left click)
+                // BOREALIS: the two share one host button, which changes only when the group does
                 if (
-                    (changedButtons and
-                        (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) != 0
+                    groupChanged(
+                        buttonState,
+                        MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY,
+                    )
                 ) {
                     if (
                         (buttonState and
@@ -2261,8 +2312,10 @@ class Game :
 
                 // Mouse tertiary or stylus secondary is middle click
                 if (
-                    (changedButtons and
-                        (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY)) != 0
+                    groupChanged(
+                        buttonState,
+                        MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY,
+                    )
                 ) {
                     if (
                         (buttonState and
@@ -2513,6 +2566,36 @@ class Game :
     private fun touchContextEntry(entry: TouchContext?): TouchContext {
         return entry ?: throw NullPointerException("The touch contexts have not been built")
     }
+
+    // BOREALIS: releases the host buttons that the mouse holds, and forgets them
+    private fun releaseMouseButtons() {
+        if ((lastButtonState and MotionEvent.BUTTON_PRIMARY) != 0) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+        }
+        if (
+            (lastButtonState and
+                (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) != 0
+        ) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+        }
+        if (
+            (lastButtonState and
+                (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY)) != 0
+        ) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
+        }
+        if (prefConfig.mouseNavButtons && (lastButtonState and MotionEvent.BUTTON_FORWARD) != 0) {
+            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
+        }
+        // Back sent nothing yet: it waits to see whether it is held
+        cancelBackHold()
+        lastButtonState = 0
+    }
+
+    // BOREALIS: whether any button of a group that shares a host button is down now and was not
+    // before, or the other way round
+    private fun groupChanged(buttonState: Int, group: Int): Boolean =
+        ((buttonState and group) != 0) != ((lastButtonState and group) != 0)
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
         return handleMotionEvent(null, event) || super.onGenericMotionEvent(event)
@@ -3057,7 +3140,9 @@ class Game :
     }
 
     override fun onUsbPermissionPromptCompleted() {
-        suppressPipRefCount--
+        // BOREALIS: a completion can come without its starting call (the service tells its
+        // listener with ?.), so the count stops at zero
+        suppressPipRefCount = (suppressPipRefCount - 1).coerceAtLeast(0)
         updatePipAutoEnter()
     }
 

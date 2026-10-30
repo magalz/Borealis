@@ -27,7 +27,12 @@ private const val NO_AUDIO_TRACK = -2
 class AndroidAudioRenderer(private val context: Context, private val enableAudioFx: Boolean) :
     AudioRenderer {
 
-    private var track: AudioTrack? = null
+    // The native audio threads read it while setup and cleanup write it.
+    @Volatile private var track: AudioTrack? = null
+
+    // Set by cleanup, cleared when setup keeps a track: a repeated cleanup must not fail, while a
+    // cleanup without any track still does.
+    @Volatile private var cleanedUp = false
 
     // The inherited Java used the track without a check, so a call before a successful setup failed
     // with a NullPointerException at that point. Keep the exception.
@@ -93,12 +98,25 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
                 }
             }
 
+        // BOREALIS: a packet of no samples has no buffer size; the second attempt divided by it
+        if (samplesPerFrame <= 0) {
+            LimeLog.severe("Decoder returned no samples per frame")
+            return -1
+        }
+
         // The default locale, as `String.format(String, Object...)` used it in the inherited Java.
         val hexConfig =
             String.format(Locale.getDefault(Locale.Category.FORMAT), "0x%X", channelConfig)
         LimeLog.info("Audio channel config: $hexConfig")
 
         val bytesPerFrame = audioConfiguration.channelCount * samplesPerFrame * 2
+
+        // BOREALIS: a second setup releases the track of the first, which nothing would release
+        val previous = track
+        track = null
+        try {
+            previous?.release()
+        } catch (ignored: Exception) {}
 
         // We're not supposed to request less than the minimum
         // buffer size for our buffer, but it appears that we can
@@ -121,6 +139,23 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
                     3 -> false
                     else -> error("Unreachable")
                 }
+
+            // BOREALIS: the skips come before the buffer size, so a skipped attempt does not ask
+            // the platform for its minimum buffer
+
+            // Skip low latency options if hardware sample rate doesn't match the content
+            if (
+                AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC) != sampleRate &&
+                    lowLatency
+            ) {
+                continue
+            }
+
+            // Skip low latency options when using audio effects, since low latency mode
+            // precludes the use of the audio effect pipeline (as of Android 13).
+            if (enableAudioFx && lowLatency) {
+                continue
+            }
 
             val bufferSize =
                 when (i) {
@@ -145,20 +180,6 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
                     else -> error("Unreachable")
                 }
 
-            // Skip low latency options if hardware sample rate doesn't match the content
-            if (
-                AudioTrack.getNativeOutputSampleRate(AudioManager.STREAM_MUSIC) != sampleRate &&
-                    lowLatency
-            ) {
-                continue
-            }
-
-            // Skip low latency options when using audio effects, since low latency mode
-            // precludes the use of the audio effect pipeline (as of Android 13).
-            if (enableAudioFx && lowLatency) {
-                continue
-            }
-
             try {
                 val created = createAudioTrack(channelConfig, sampleRate, bufferSize, lowLatency)
                 track = created
@@ -170,12 +191,12 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
             } catch (e: Exception) {
                 // Try to release the AudioTrack if we got far enough
                 e.printStackTrace()
+                // BOREALIS: the track is dropped whatever the release does, so a track that never
+                // played is not kept
+                val kept = track
+                track = null
                 try {
-                    val kept = track
-                    if (kept != null) {
-                        kept.release()
-                        track = null
-                    }
+                    kept?.release()
                 } catch (ignored: Exception) {}
             }
         }
@@ -185,20 +206,23 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
             return NO_AUDIO_TRACK
         }
 
+        cleanedUp = false
         return 0
     }
 
     override fun playDecodedAudio(audioData: ShortArray?) {
         // Only queue up to 40 ms of pending audio data in addition to what AudioTrack is buffering
         // for us.
-        if (MoonBridge.getPendingAudioDuration() < PENDING_AUDIO_LIMIT_MS) {
+        // BOREALIS: read once, so the log shows the value that the check saw
+        val pendingAudioMs = MoonBridge.getPendingAudioDuration()
+        if (pendingAudioMs < PENDING_AUDIO_LIMIT_MS) {
             // This will block until the write is completed. That can cause a backlog
             // of pending audio data, so we do the above check to be able to bound
             // latency at 40 ms in that situation.
             val samples = audioData ?: throw NullPointerException("No audio data to play")
             requireTrack().write(samples, 0, samples.size)
         } else {
-            LimeLog.info("Too much pending audio data: ${MoonBridge.getPendingAudioDuration()} ms")
+            LimeLog.info("Too much pending audio data: $pendingAudioMs ms")
         }
     }
 
@@ -224,12 +248,20 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
     }
 
     override fun cleanup() {
+        // BOREALIS: the first cleanup drops the track, so a second one does nothing. Before any
+        // setup that kept a track, cleanup still fails as in the inherited Java.
+        if (cleanedUp) return
         val current = requireTrack()
+        track = null
+        cleanedUp = true
 
-        // Immediately drop all pending data
-        current.pause()
-        current.flush()
-
-        current.release()
+        // BOREALIS: the track is released even when it cannot be paused or flushed
+        try {
+            // Immediately drop all pending data
+            current.pause()
+            current.flush()
+        } finally {
+            current.release()
+        }
     }
 }

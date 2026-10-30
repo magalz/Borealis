@@ -220,7 +220,7 @@ internal class GameKeySendTest : GameTestBase() {
     }
 
     @Test
-    fun `a character is sent as UTF-8 text, and one outside the basic plane loses its high bits`() {
+    fun `a character is sent as UTF-8 text, and one outside the basic plane keeps its code point`() {
         rig.streaming()
         forgetCalls()
 
@@ -230,8 +230,10 @@ internal class GameKeySendTest : GameTestBase() {
             assertThat(rig.game.dispatchKeyEvent(event)).isTrue()
         }
 
-        // The Java narrows the code point to a char: U+1F600 arrives as U+F600.
-        assertThat(sentTexts()).containsExactly("é", "€", Char(0xF600).toString()).inOrder()
+        // U+1F600 is sent as its surrogate pair, not narrowed to U+F600.
+        assertThat(sentTexts())
+            .containsExactly("é", "€", String(Character.toChars(0x1F600)))
+            .inOrder()
     }
 
     @Test
@@ -256,6 +258,22 @@ internal class GameKeySendTest : GameTestBase() {
         // The accent bit of the character says that it waits for the next key.
         val dead = KeyCharacterMap.COMBINING_ACCENT or '´'.code
         val spec = KeySpec(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_AT, unicode = dead)
+
+        val pressed = rig.game.handleKeyDown(keyboardKey(spec))
+        val released = rig.game.handleKeyUp(keyboardKey(spec.copy(action = KeyEvent.ACTION_UP)))
+
+        assertThat(pressed).isFalse()
+        assertThat(released).isFalse()
+        assertThat(sentCalls()).isEmpty()
+    }
+
+    @Test
+    fun `a character that is not a code point is not sent, down or up, and raises nothing`() {
+        rig.streaming()
+        forgetCalls()
+        // One past the last code point: it has no UTF-16 form, and the host has no key for it.
+        val notACodePoint = Character.MAX_CODE_POINT + 1
+        val spec = KeySpec(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_AT, unicode = notACodePoint)
 
         val pressed = rig.game.handleKeyDown(keyboardKey(spec))
         val released = rig.game.handleKeyUp(keyboardKey(spec.copy(action = KeyEvent.ACTION_UP)))

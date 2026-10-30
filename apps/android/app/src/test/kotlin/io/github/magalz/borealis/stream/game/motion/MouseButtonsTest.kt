@@ -121,20 +121,20 @@ internal class MouseButtonsTest : MotionTestBase() {
     }
 
     @Test
-    fun `two buttons of a group share the host button, which is pressed again at every change`() {
+    fun `two buttons of a group share the host button, which is down while either is down`() {
         streaming()
 
         mouse(MotionEvent.ACTION_DOWN, MotionEvent.BUTTON_SECONDARY)
         assertSent(thePointer(), press(right))
-        // The stylus button joins the mouse button: the host button is pressed again.
+        // The stylus button joins the mouse button: the host button is already down.
         mouse(
             MotionEvent.ACTION_MOVE,
             MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY,
         )
-        assertSent(thePointer(), press(right))
-        // The mouse button goes up while the stylus button is down: pressed again, not released.
+        assertSent(thePointer())
+        // The mouse button goes up while the stylus button is down: the host button stays down.
         mouse(MotionEvent.ACTION_MOVE, MotionEvent.BUTTON_STYLUS_PRIMARY)
-        assertSent(thePointer(), press(right))
+        assertSent(thePointer())
         mouse(MotionEvent.ACTION_UP, 0)
         assertSent(thePointer(), release(right))
     }
@@ -165,16 +165,16 @@ internal class MouseButtonsTest : MotionTestBase() {
     }
 
     @Test
-    fun `the DeX touchpad right click comes with the left button that it did not send`() {
+    fun `the DeX touchpad right click is the right button alone`() {
         streaming()
 
         rig.game.onGenericMotion(
             streamView,
             dex(MotionEvent.ACTION_DOWN, MotionEvent.BUTTON_SECONDARY),
         )
-        assertSent(thePointer(), press(left), press(right))
+        assertSent(thePointer(), press(right))
         rig.game.onGenericMotion(streamView, dex(MotionEvent.ACTION_UP, 0))
-        assertSent(thePointer(), release(left), release(right))
+        assertSent(thePointer(), release(right))
     }
 
     @Test

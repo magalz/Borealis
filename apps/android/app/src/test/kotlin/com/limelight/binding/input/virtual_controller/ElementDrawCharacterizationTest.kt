@@ -194,12 +194,11 @@ class ElementDrawCharacterizationTest {
     }
 
     @Test
-    fun `a finger exactly above the middle draws the stick below it`() {
+    fun `a finger exactly above the middle draws the stick above it`() {
         val stick = stick()
         stickTouch(stick, MotionEvent.ACTION_DOWN, 0f, -100f, 1_000)
 
-        // the same inversion as the number the stick sends: see the test of the stick itself
-        assertStickAt(stick, 150f, 250f, 30f)
+        assertStickAt(stick, 150f, 50f, 30f)
     }
 
     @Test

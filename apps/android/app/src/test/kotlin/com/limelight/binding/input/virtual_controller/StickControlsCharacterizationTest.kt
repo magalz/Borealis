@@ -146,16 +146,14 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
-    fun `a finger on the column of the middle moves the right stick the other way round, as the left one`() {
-        // The angle of a finger exactly above or below the middle is the one of the opposite side
-        // (see the test of the stick itself): 100 pixels down sends up, and 100 pixels up sends
-        // down.
+    fun `a finger on the column of the middle moves the right stick the right way, as the left one`() {
+        // 100 pixels down sends down, and 100 pixels up sends up.
         stick(right, MotionEvent.ACTION_DOWN, 0f, 100f, FIRST)
-        assertThat(rightSticks()).isEqualTo(0 to 29_255)
+        assertThat(rightSticks()).isEqualTo(0 to -29_255)
 
         stick(right, MotionEvent.ACTION_MOVE, 0f, -100f, FIRST + 10)
-        assertThat(rightSticks()).isEqualTo(0 to -29_255)
-        assertThat(kit.rig.packets.last().rightStickY).isEqualTo(-29_255)
+        assertThat(rightSticks()).isEqualTo(0 to 29_255)
+        assertThat(kit.rig.packets.last().rightStickY).isEqualTo(29_255)
     }
 
     @Test

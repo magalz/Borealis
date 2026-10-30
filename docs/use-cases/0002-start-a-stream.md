@@ -184,13 +184,19 @@ says what happened and what to do next.
    graceful end.
 3. The frame is blurred where the device can blur and the settings allow it
    (API 31 or later, Transparency not Off, no High contrast). Otherwise it
-   shows sharp. The scrim stays over it in both cases. The panel is the glass of
-   the menu over the frame with Stream menu style on Blurred, and a solid
-   surface with Solid, Transparency Off, High contrast or below API 31. Reduce
-   motion and the battery saver change nothing: the frame is still. While the
-   copy is pending, which took about 0.2 to 0.3 s in the device rounds, the
-   popup is on black with a solid panel. When no copy exists or it failed, the
-   popup stands on the background of A6.
+   shows sharp. The scrim over it is the page colour at 35 %, the scrim of the
+   side panel of the menu, in both cases and around a solid panel too, so the
+   frame stays visible around the popup (owner decision of 2026-10-30: the first
+   version had the dialog scrim, the page at 72 %, and the popup looked like a
+   hole). The panel is the glass of the menu over the frame, at 85 % of the
+   surface and the blur of the look, with Stream menu style on Blurred, and a
+   solid surface with Solid, Transparency Off, High contrast or below API 31.
+   Reduce motion and the battery saver change nothing: the frame is still. While
+   the copy is pending, which took 76 ms to 0.3 s in the device rounds, the
+   popup is on black with a solid panel, under the same scrim. When no copy
+   exists or it failed, the popup is a dialog over the background of A6: it
+   draws as it does with no frozen frame, with no scrim where the host blurs the
+   background and the dialog scrim where it does not.
 4. The system writes SESSION_END with outcome FAILURE and `reason=error
    code=-1`. A graceful end (code 0) is `reason=host_ended`. A quit that the
    user chose is `reason=quit` ([UC-004](0004-use-the-in-game-menu.md)).
@@ -235,10 +241,11 @@ after the failure does not place it again.
 | UC-002-T18 | Given a clip style, when the start reaches the stage Preparing the display, then the player is released and the still shows; when the connection has stopped, the clip plays again; a drawn style keeps moving. | UI, unit | exists (Sprint 15): `OutsideGameClipTest`, `StreamSessionDecoderTest` |
 | UC-002-T19 | Given a style of the user, the style Off, Reduce motion, the battery saver, Transparency Off or High contrast, when a screen outside the game shows, then it moves, stands still or is the plain page as A6 says, as the Library's does. | UI | exists (Sprint 15, UI): `OutsideGameBackgroundTest`, `OutsideGameAccessibilityTest`, `StreamSessionVisualsTest`, `StreamSessionFactoryVisualsTest` |
 | UC-002-T20 | Given an error, when it shows, then it is a popup with Try again focused, the action of the error, Diagnostics and Close, a tap outside does nothing, and Back and gamepad B close it. | UI | exists (Sprint 15, UI): `ConnectionErrorScreenTest`, `StreamDialogBackTest` |
-| UC-002-T21 | Given a stream that ended in error after its first frame, when the popup shows, then it stands on the frozen last frame under its scrim, and with no frame, or with a copy that failed, on the background. | UI | exists (Sprint 15, UI): `FrozenFrameScreenTest`, `FrozenFrameTest`, `StreamChromeHostFrozenFrameTest` |
+| UC-002-T21 | Given a stream that ended in error after its first frame, when the popup shows, then it stands on the frozen last frame under a scrim of the page at 35 %, and with no frame, or with a copy that failed, on the background. | UI | exists (Sprint 15, UI): `FrozenFrameScreenTest`, `FrozenFrameTest`, `StreamChromeHostFrozenFrameTest` |
 | UC-002-T22 | Given the stream ends in error, when `connectionTerminated` or `stageFailed` is called, then the copy is asked for before the connectivity test and the stop, and not before the first frame, for the first-frame watchdog, for the end of the user's Quit or for a graceful end. | unit | exists (Sprint 15, unit): `GameFrozenFrameTest` |
-| UC-002-T23 | Given the menu glass option, the transparency, High contrast and the API level, when the popup stands on the frame, then the frame and the panel are blurred, sharp or solid as E5 says. | UI | exists (Sprint 15, UI): `FrozenFrameScreenTest`, `FrozenFrameLookTest`, `FrozenFrameApi30Test`, `ConnectionErrorFrameScreenshotTest` |
+| UC-002-T23 | Given the Stream menu style, the transparency, High contrast and the API level, when the popup stands on the frame, then the frame and the panel are blurred, sharp or solid as E5 says. | UI | exists (Sprint 15, UI): `FrozenFrameScreenTest`, `FrozenFrameLookTest`, `FrozenFrameApi30Test`, `ConnectionErrorFrameScreenshotTest` |
 | UC-002-T24 | Given the error popup over the background, when the host blurs the background, then no scrim dims it and the panel is the glass tint; on API 28 to 30 the scrim and a solid panel stay. | UI | exists (Sprint 15, UI): `DialogOverBackgroundTest`, `DialogOverBackgroundApi30Test` |
+| UC-002-T25 | Given the error popup while the frozen frame, or the black of a pending copy, is behind it, when it shows, then its scrim is the page at 35 % over a blurred frame, a sharp one, a solid panel and the black alike, and a glass panel is 85 % of the surface over the blurred frame; with no copy asked for, or with a copy that failed, it draws as with no frozen frame. | UI | exists (Sprint 15, UI, owner decision of 2026-10-30): `FrozenFrameScreenTest`, `FrozenFrameApi30Test`, `FrozenFrameTest`, `PopupOverGameTest` |
 
 Sprint 5 built the stream screens and their logic. A test marked "exists
 (Sprint 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a
@@ -246,14 +253,16 @@ Compose test that runs on Robolectric. "device round" marks a check that the
 Sprint 5 device round of 2026-10-16 ran on a TV or a phone (see
 [device validation](../development/device-validation.md), section 10).
 
-UC-002-T16 to T24 are Sprint 15 rows. They are Compose tests on Robolectric
+UC-002-T16 to T25 are Sprint 15 rows. They are Compose tests on Robolectric
 unless the level says unit, and `GameFrozenFrameTest` runs on the `Game` rig.
-What no test sees is how the frozen frame looks. No round has recorded it,
-and the owner's device round checks it. A real `PixelCopy` at the moment of a
-drop was read on the TV in the log only: `Frozen frame requested` came before
-`Connection terminated`, and `Frozen frame copied` after it
+What no test sees is how the frozen frame looks. The owner saw it in the
+acceptance test of 2026-10-30, on the build of `1455bcf0a`, and what they saw
+led to T25: no device round has seen the new scrim and panel. A real `PixelCopy`
+at the moment of a drop was read in the logs: on the TV `Frozen frame requested`
+came before `Connection terminated`, and `Frozen frame copied` after it, and on
+the S22 the copy ended in 76 ms
 ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md),
-the measurements of 2026-10-29).
+the measurements of 2026-10-29 and 2026-10-30).
 
 Partly covered:
 
@@ -304,4 +313,4 @@ cannot be resolved ([section 7.3](../host-contract/luminalshine.md)).
   `StreamSessionDecoderTest`, `StreamSessionVisualsTest`,
   `StreamSessionFactoryVisualsTest`, `StreamDialogTest`, `StreamDialogBackTest`,
   `FrozenFrameTest`, `FrozenFrameScreenTest`, `FrozenFrameLookTest`,
-  `StreamChromeHostFrozenFrameTest`, `GameFrozenFrameTest`.
+  `StreamChromeHostFrozenFrameTest`, `GameFrozenFrameTest`, `PopupOverGameTest`.

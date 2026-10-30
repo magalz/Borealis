@@ -302,6 +302,16 @@ class AbsoluteTouchContextTest {
             .inOrder()
     }
 
+    @Test
+    fun `a first tap has no tap before it, so it moves the pointer, whatever its time and place`() {
+        val context = rig.absolute()
+        context.start(10, 10, 100) // 100 ms after time 0 and 14 px from (0, 0)
+
+        rig.advance(100)
+
+        assertThat(rig.sent()).containsExactly(position(10, 10), "down LEFT").inOrder()
+    }
+
     // The long press
 
     @Test

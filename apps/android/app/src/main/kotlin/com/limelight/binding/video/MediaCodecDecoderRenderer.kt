@@ -963,7 +963,7 @@ class MediaCodecDecoderRenderer(
                     ) {
                         error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
                     }
-                } else if (!e.isRecoverable) {
+                } else {
                     if (
                         codecRecoveryType.compareAndSet(
                             CR_RECOVERY_TYPE_NONE,

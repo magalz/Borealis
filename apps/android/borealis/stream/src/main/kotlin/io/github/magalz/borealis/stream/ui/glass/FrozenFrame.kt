@@ -51,6 +51,10 @@ internal class FrozenFrame(
     var pending: Boolean by mutableStateOf(false)
         private set
 
+    /** Whether the popup is over the game: the frame is there, or the copy is still pending. */
+    val coversBackground: Boolean
+        get() = false
+
     private val asked = AtomicBoolean(false)
     @Volatile private var released = false
 

@@ -77,7 +77,10 @@ accident.
    and Quit sit side by side, also on a phone, and Cancel has the focus. Cancel,
    a tap outside the panel, gamepad B and Back close only the popup, and the
    focus goes back to the Quit row. The menu stays drawn behind the popup but is
-   out of reach of the focus, the touch and the screen reader. A screen reader
+   out of reach of the focus, the touch and the screen reader. The game stays
+   visible around the popup: its scrim is the page colour at 35 %, the same as
+   the side panel's, and the panel is the firm element, solid or the `surface`
+   colour at 85 % over the blurred video (A10). A screen reader
    announces the title with the body when the popup opens. The words come from
    `QuitCopy`, the one text that the actions sheet of the Library, this popup
    and the question about a running app ([UC-003](0003-join-or-replace-a-running-app.md))
@@ -199,12 +202,19 @@ for it.
 2. The glass is solid, and no copy is made, with Solid, with Transparency Off,
    with High contrast, with Reduce motion, with the battery saver on (followed
    live, while the menu is open), below API 31, and where there is no stream view
-   to copy. The tint and the blur are those of the viewer's Transparency: 40 % at 8
-   dp at Standard, 85 % at 48 dp at Reduced.
+   to copy. The tint and the blur of the side panel are those of the viewer's
+   Transparency: 40 % at 8 dp at Standard, 85 % at 48 dp at Reduced. The Quit
+   popup takes the blur of the look and always the 85 % tint, so it is firmer than
+   the panel behind it. Where the glass is solid the popup is solid, and its scrim
+   is the page at 35 % all the same (owner decision of 2026-10-30: in the
+   acceptance test the popup over a 72 % scrim looked like a hole, lighter than
+   all around it).
 3. Every text on the glass has a halo of 3 dp, so it keeps 4.5:1 over any frame,
    and ink-3 and ink-4 are ink-2 there. The segmented controls sit on a solid
    container of the `surface` colour. The focus outline has a casing in the
-   `page` colour, which keeps its 3:1 over the lightest glass. The measures are in
+   `page` colour, which keeps its 3:1 over the lightest glass. On the popup's 85 %
+   panel every text keeps 4.5:1 over the lightest frame, with the halo and also
+   without it; the halo stays. The measures are in
    [ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md),
    decision 10, and in [accessibility](../ux/accessibility.md).
 4. The stream reads the option, the transparency and the other look settings
@@ -281,6 +291,7 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T41 | Given a Quit that is under way, when the host ends the stream with -1, then no connectivity test runs, the end is logged at info with the time since the quit, and the screen stays on Quitting; any other code is a network drop. | unit | exists (Sprint 15, unit): `GameQuitEndTest`, `StreamSessionLeaveLogTest`, `QuitLogTest` |
 | UC-004-T42 | Given Menu glass in the stream on Blur, the transparency, High contrast, Reduce motion, the battery saver and the API level, when the menu opens, then the panel and the Quit popup are glass or solid as A10 says, the copies run only while the menu is open and the activity is started, and the Solid option and API 28 to 30 register no battery saver listener. | UI, unit | exists (Sprint 15): `MenuGlassRulesTest`, `MenuGlassOptionTest`, `MenuGlassCopiesTest`, `MenuGlassDrawTest`, `MenuGlassApi30Test`, `VideoGlassSpecTest`, `VideoGlassFramesTest`, `PixelCopySourceTest`, `StreamAppearanceTest` |
 | UC-004-T43 | Given the glass, when text stands on it, then every text colour of the menu and the popup keeps 4.5:1 on the ring of its halo over the lightest glass, the segmented controls keep 4.5:1 on their solid container, and the focus outline keeps 3:1 with its casing. | UI, tool | exists (Sprint 15): `TextHaloTest`, `MenuGlassHaloTest`, `MenuGlassCasingTest`, `MenuGlassFocusTest`, `FocusOverGlassTest`, `VideoGlassHaloTest` in `design/accessibility/test_contrast.py` |
+| UC-004-T44 | Given the Quit popup over the game, when it opens, then its scrim is the page colour at 35 % over what was there, with the glass, with Transparency Off, with the Solid option and with High contrast alike; its panel is the `surface` colour at 85 % over a white frame whatever tint the viewer chose for the menu, and every text colour keeps 4.5:1 on it; the side panel keeps its own tint. | UI, tool | exists (Sprint 15, owner decision of 2026-10-30): `PopupOverGameTest`, `MenuGlassDrawTest`, `SidePanelTest`, `PopupGlassContrastTest` in `design/accessibility/test_contrast.py` |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test
@@ -311,7 +322,7 @@ T27), and `SystemPadQuitComboTest` checks the Start hold on a system pad (T28).
 Sprint 9 device round checks the quit combo on the S22 with a pad
 ([device validation](../development/device-validation.md#322-sprint-9-checks)).
 
-UC-004-T35 to T43 are Sprint 15 rows (issues #97, #98, #100, #102 and #104).
+UC-004-T35 to T44 are Sprint 15 rows (issues #97, #98, #100, #102 and #104).
 The error popup over the frozen frame (#105, E1) is pinned by UC-002-T20 to
 UC-002-T23. The unit tests of the keys, the hold and the end of a Quit run on
 the `Game` rig of `:app`. No test sees the live copy of a real video, and no
@@ -387,4 +398,4 @@ Until then the row is disabled.
   `MenuHintTest`, `StreamingLayerHintTest`, `DisconnectingScreenTest`,
   `GameStreamActionsLeaveTest`, `GameQuitEndTest`, `StreamSessionLeaveLogTest`,
   `QuitLogTest`, `MenuGlassRulesTest`, `MenuGlassOptionTest`,
-  `MenuGlassCopiesTest`, `TextHaloTest`, `FocusOverGlassTest`.
+  `MenuGlassCopiesTest`, `TextHaloTest`, `FocusOverGlassTest`, `PopupOverGameTest`.

@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -30,6 +31,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.Transparency
+import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.MenuGlass
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
@@ -54,7 +56,9 @@ import org.robolectric.annotation.Config
  * settings allow it, and the panel is the glass of the menu or the solid surface by the rules of
  * `frozenFrameLook`. With no copy the popup is on the background of the screens outside the game.
  * The fake video is a strip of black down the left edge of a light grey frame, so a blur shows as a
- * soft edge, and the frame is light, so the glass and the scrim show in the pixels.
+ * soft edge, and the frame is light, so the glass and the scrim show in the pixels. Over the frame
+ * the scrim is the page at 35 percent and the glass of the panel is the surface at 85 percent, the
+ * firm popup of the stream (owner, 2026-10-30); those are read over a frame of one grey.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE_LANDSCAPE)
@@ -65,7 +69,11 @@ class FrozenFrameScreenTest {
     private var look by mutableStateOf(BorealisLook())
     private val source = FakeVideoSource(completing = true, paint = ::paintFrame)
     private val frozen = FrozenFrame(source, { IntOffset.Zero })
+
+    /** The frame the chrome is given: a test takes it away, to see what the popup draws without. */
+    private var inUse: FrozenFrame? by mutableStateOf(frozen)
     private val surface = BorealisColors().surface
+    private val page = BorealisColors().page
 
     @After fun `the battery saver is off again`() = setPowerSave(false)
 
@@ -88,7 +96,7 @@ class FrozenFrameScreenTest {
     ) {
         if (copied) frozen.request()
         val content: @Composable () -> Unit = {
-            CompositionLocalProvider(LocalFrozenFrame provides frozen) {
+            CompositionLocalProvider(LocalFrozenFrame provides inUse) {
                 StreamChromeRoot(session, {}, look)
             }
         }
@@ -125,6 +133,23 @@ class FrozenFrameScreenTest {
 
     /** A pixel of the margin beside the popup, over the light grey of the frame. */
     private fun margin(): Color = picture()[MARGIN_X, 2]
+
+    /**
+     * The frame is one grey from edge to edge, so the pixels over it are the colour to the digit.
+     */
+    private fun greyFrame() {
+        source.paint = { it.eraseColor(LIGHT_GREY) }
+    }
+
+    /** The scrim over [behind]: the page of the look at 35 percent, not the 72 of the dialogs. */
+    private fun scrimOver(behind: Color) =
+        BorealisColors().page.copy(alpha = SCRIM).compositeOver(behind)
+
+    private fun assertNear(pixel: Color, expected: Color) {
+        assertThat(pixel.red).isWithin(TOLERANCE).of(expected.red)
+        assertThat(pixel.green).isWithin(TOLERANCE).of(expected.green)
+        assertThat(pixel.blue).isWithin(TOLERANCE).of(expected.blue)
+    }
 
     /** The largest step in luminance between neighbouring pixels across the strip at the edge. */
     private fun edgeStep(): Float {
@@ -188,6 +213,86 @@ class FrozenFrameScreenTest {
         composeRule.onNodeWithTag(OUTSIDE_GAME_BACKGROUND_TAG).assertDoesNotExist()
         assertThat(margin().luminance()).isGreaterThan(before + FRAME_SHOWS / 2)
     }
+
+    // The scrim
+
+    @Test
+    fun `the scrim over the blurred frame is the page at 35 percent`() {
+        greyFrame()
+        show()
+
+        assertNear(margin(), scrimOver(Color(LIGHT_GREY)))
+    }
+
+    @Test
+    fun `the scrim is the same over a frame that shows sharp`() {
+        greyFrame()
+        look = BorealisLook(transparency = Transparency.Off)
+        show()
+
+        assertNear(margin(), scrimOver(Color(LIGHT_GREY)))
+    }
+
+    @Test
+    fun `the scrim is the same around a solid panel`() {
+        greyFrame()
+        show(failedSession(MenuGlass.SOLID))
+
+        assertNear(margin(), scrimOver(Color(LIGHT_GREY)))
+    }
+
+    @Test
+    fun `the scrim is over the black of the frame while the copy is pending`() {
+        showWhilePending()
+
+        assertNear(margin(), scrimOver(Color.Black))
+    }
+
+    // Not over the game: no frame, so the popup is over the background
+
+    /**
+     * The popup of a failure that has no frame draws what it draws with no frozen frame at all,
+     * over the background of the screens outside the game (ADR 0057, decision 8: no scrim on API 31
+     * and later, the glass of the background). The background is held Still, so two pictures of it
+     * are the same, and the test looks at the place where it is farthest from the page, so that a
+     * scrim over it would show. The popup is the same session each time; only the frame changes:
+     * none given, then one that was never asked for, or whose copy failed.
+     */
+    private fun assertDrawsAsWithNoFrame(copyFails: Boolean) {
+        inUse = null
+        show(stillFailure(), copied = false)
+        val without = picture()
+        val (x, y) = without.farthestFrom(page)
+        assertThat(without[x, y].distanceFrom(page)).isGreaterThan(MIN_GLOW)
+
+        composeRule.runOnIdle {
+            inUse = frozen
+            if (copyFails) {
+                source.bounds = null
+                frozen.request()
+            }
+        }
+        composeRule.waitForIdle()
+
+        assertThat(frozen.frame).isNull()
+        assertThat(frozen.pending).isFalse()
+        assertNear(picture()[x, y], without[x, y])
+    }
+
+    private fun stillFailure() =
+        aSession(
+                actions,
+                aDefaults.copy(visuals = StreamVisuals(background = BackgroundMode.STILL)),
+            )
+            .also { it.onFailed(aFailure) }
+
+    @Test
+    fun `with no copy asked for, the popup draws what it draws with no frozen frame`() =
+        assertDrawsAsWithNoFrame(copyFails = false)
+
+    @Test
+    fun `with a copy that failed, the popup draws what it draws with no frozen frame`() =
+        assertDrawsAsWithNoFrame(copyFails = true)
 
     // The copy that has not ended
 
@@ -303,11 +408,12 @@ class FrozenFrameScreenTest {
     // The panel
 
     @Test
-    fun `the panel is the glass of the menu over the blurred frame`() {
+    fun `the panel is the surface at 85 percent over the blurred frame`() {
+        greyFrame()
         show()
 
         assertThat(isSolid(panel())).isFalse()
-        assertThat(panel().luminance()).isGreaterThan(GLASS_OVER_LIGHT)
+        assertNear(panel(), surface.copy(alpha = POPUP_TINT).compositeOver(Color(LIGHT_GREY)))
     }
 
     @Test
@@ -359,7 +465,10 @@ class FrozenFrameScreenTest {
         const val EDGE_REACH = 70
         const val FRAME_SHOWS = 0.035f
         const val SHARP_EDGE = 0.01f
-        const val GLASS_OVER_LIGHT = 0.12f
+        const val MIN_GLOW = 0.05f
+        const val SCRIM = 0.35f
+        const val POPUP_TINT = 0.85f
+        const val TOLERANCE = 0.012f
         const val SOLID = 0.01f
     }
 }

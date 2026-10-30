@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.BorealisButton
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.LocalTextHalo
+import io.github.magalz.borealis.designsystem.components.STREAM_SCRIM_ALPHA
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.glass.rememberPanelGlass
@@ -58,8 +59,10 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
+import io.github.magalz.borealis.stream.ui.glass.LocalPopupOverGame
 import io.github.magalz.borealis.stream.ui.glass.LocalVideoGlass
 import io.github.magalz.borealis.stream.ui.glass.OnVideoGlass
+import io.github.magalz.borealis.stream.ui.glass.POPUP_TINT_PERCENT
 import io.github.magalz.borealis.stream.ui.glass.glassContentLayer
 import io.github.magalz.borealis.stream.ui.glass.videoGlassSurface
 import kotlinx.coroutines.flow.filter
@@ -92,12 +95,16 @@ internal class StreamDialogAction(
  * Back key and Back of the system call [onDismiss] and are used up here, so neither reaches what is
  * under the dialog nor the host's callback, which closes the open panel.
  *
- * In the Streaming phase the panel is glass over the video (the menu provides it, see
- * `InGameMenu`): the same panel on the blurred copy of the video behind the tint, with the text
- * colours that keep 4.5:1 over it. The scrim stays. Over the background of the screens outside the
- * game the dialog does what a dialog window does in the Library (ADR 0057, decision 8): the
- * background is blurred and held on its still frame, the dialog draws no scrim, and the panel takes
- * the glass tint and the glass text colours; on API 28 to 30 the scrim and the solid panel stay.
+ * Over the game ([LocalPopupOverGame]: the Quit popup of the menu, and the error popup over the
+ * last frame of the stream) the scrim is the page at 35 percent, the one of the side panel of the
+ * menu, so the game stays visible around the dialog, and the panel is the firm element: where it is
+ * glass (the menu provides it, see `InGameMenu`, and the frozen frame does for the error popup) it
+ * is [POPUP_TINT_PERCENT] of the surface over the blurred copy of the video, with the text colours
+ * that keep 4.5:1 over it; where the rules make it solid it is the `surface` colour and the scrim
+ * is the same. Over the background of the screens outside the game the dialog does what a dialog
+ * window does in the Library (ADR 0057, decision 8): the background is blurred and held on its
+ * still frame, the dialog draws no scrim, and the panel takes the glass tint and the glass text
+ * colours; on API 28 to 30 the dialog scrim (the page at 72 percent) and the solid panel stay.
  * Elsewhere, and where the glass is solid, the panel is the `surface` colour.
  *
  * The panel is announced by its [title]. The title and the [content] are one polite live region, so
@@ -121,6 +128,7 @@ internal fun StreamDialog(
     require(actions.isNotEmpty()) { "A stream dialog has at least one action" }
     val colors = LocalBorealisColors.current
     val glass = LocalVideoGlass.current
+    val overGame = LocalPopupOverGame.current
     // Over the background of the screens outside the game, the dialog opens the overlay of ADR
     // 0057, decision 8: no scrim, the tinted panel; elsewhere this is null.
     val overlay = rememberPanelGlass()
@@ -128,7 +136,13 @@ internal fun StreamDialog(
     DismissOnSystemBack(onDismiss)
     BoxWithConstraints(
         Modifier.fillMaxSize()
-            .then(if (overlay == null) Modifier.background(colors.scrim) else Modifier)
+            .then(
+                when {
+                    overGame -> Modifier.background(colors.page.copy(alpha = STREAM_SCRIM_ALPHA))
+                    overlay == null -> Modifier.background(colors.scrim)
+                    else -> Modifier
+                }
+            )
             // Before the insets: the scrim takes the tap over all it draws, the strips of the
             // system bars too, and nothing under it takes it.
             .pointerInput(onDismiss, dismissOnScrimTap) {
@@ -148,7 +162,12 @@ internal fun StreamDialog(
                 .width(BorealisDimens.dialogWidth(width, maxWidth))
                 .then(
                     when {
-                        glass != null -> Modifier.videoGlassSurface(glass, shape)
+                        glass != null ->
+                            Modifier.videoGlassSurface(
+                                glass,
+                                shape,
+                                if (overGame) POPUP_TINT_PERCENT else glass.spec.tintPercent,
+                            )
                         overlay != null ->
                             Modifier.background(colors.surface.copy(alpha = overlay.tint), shape)
                         else -> Modifier.background(colors.surface, shape)

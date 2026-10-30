@@ -51,6 +51,14 @@ internal class FrozenFrame(
     var pending: Boolean by mutableStateOf(false)
         private set
 
+    /**
+     * Whether the frame, or the black that it is copied over, stands behind the popup in place of
+     * the background of the screens outside the game: the frame is there, or the copy is pending.
+     * Then the popup is over the game. A failed copy, or none asked for, leaves the background.
+     */
+    val coversBackground: Boolean
+        get() = frame != null || pending
+
     private val asked = AtomicBoolean(false)
     @Volatile private var released = false
 

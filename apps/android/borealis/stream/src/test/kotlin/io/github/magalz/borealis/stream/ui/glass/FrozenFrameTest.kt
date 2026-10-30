@@ -142,6 +142,46 @@ class FrozenFrameTest {
         assertThat(frozen.frame).isNull()
     }
 
+    // What covers the background
+
+    @Test
+    fun `nothing covers the background until a copy is asked for`() {
+        assertThat(frozen.coversBackground).isFalse()
+    }
+
+    @Test
+    fun `a pending copy covers the background, with its black, and so does the frame`() {
+        frozen.request()
+        assertThat(frozen.coversBackground).isTrue()
+
+        source.finish()
+
+        assertThat(frozen.frame).isNotNull()
+        assertThat(frozen.coversBackground).isTrue()
+    }
+
+    @Test
+    fun `a copy that failed, or that had nothing to copy, covers nothing`() {
+        frozen.request()
+        source.finish(ok = false)
+        assertThat(frozen.coversBackground).isFalse()
+
+        val nothing = FrozenFrame(FakeVideoSource(bounds = null), { IntOffset.Zero }, { nanos })
+        nothing.request()
+
+        assertThat(nothing.coversBackground).isFalse()
+    }
+
+    @Test
+    fun `release uncovers the background`() {
+        frozen.request()
+        source.finish()
+
+        frozen.release()
+
+        assertThat(frozen.coversBackground).isFalse()
+    }
+
     @Test
     fun `nothing has been asked for until a request is made`() {
         assertThat(frozen.requested).isFalse()

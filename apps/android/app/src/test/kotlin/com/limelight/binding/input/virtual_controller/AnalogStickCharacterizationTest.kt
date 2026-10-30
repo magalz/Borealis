@@ -342,14 +342,26 @@ class AnalogStickCharacterizationTest {
     }
 
     @Test
-    fun `a lift or a move that comes without a press, inside the circle, revokes and sends the middle`() {
+    fun `a lift or a move that comes without a press, inside the circle, is taken and says nothing`() {
         assertThat(up(dx = 10f)).isTrue()
-        assertThat(log.events).containsExactly("revoke", "move").inOrder()
+        assertThat(log.events).isEmpty()
 
-        log.events.clear()
         assertThat(move(10f, 0f, FIRST + 10)).isTrue()
-        assertThat(log.events).containsExactly("revoke", "move").inOrder()
+        assertThat(log.events).isEmpty()
         assertThat(stick.isPressed).isFalse()
+    }
+
+    @Test
+    fun `a lift after the lift says nothing`() {
+        down(dx = 60f)
+        up(dx = 60f)
+        log.events.clear()
+        log.moves.clear()
+
+        assertThat(up(dx = 60f, time = FIRST + 200)).isTrue()
+
+        assertThat(log.events).isEmpty()
+        assertThat(log.moves).isEmpty()
     }
 
     @Test
@@ -364,10 +376,10 @@ class AnalogStickCharacterizationTest {
     }
 
     @Test
-    fun `an action that is not a press, a move or a lift is treated as a lift when the stick is not held`() {
+    fun `an action that is not a press, a move or a lift says nothing when the stick is not held`() {
         assertThat(at(MotionEvent.ACTION_OUTSIDE, 10f, 0f, FIRST)).isTrue()
 
-        assertThat(log.events).containsExactly("revoke", "move").inOrder()
+        assertThat(log.events).isEmpty()
     }
 
     @Test

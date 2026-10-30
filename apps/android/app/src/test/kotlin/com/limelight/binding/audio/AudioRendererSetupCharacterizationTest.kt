@@ -312,20 +312,20 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `a track that cannot be released stays, and setup answers 0 without a track that played`() {
+    fun `a track that cannot be released is dropped, and setup answers -2 when none played`() {
         AudioPlatform.failStartOf(AudioPlatform.everyTrack)
         AudioPlatform.failReleaseOf(AudioPlatform.everyTrack)
 
         val result = renderer().setUpStereo()
 
-        // Every attempt created a track, none played and none could be released: the last one stays
-        assertThat(result).isEqualTo(0)
+        // Every attempt created a track, none played and none could be released: none is kept
+        assertThat(result).isEqualTo(-2)
         assertThat(AudioPlatform.setups).hasSize(4)
         assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>()).hasSize(4)
     }
 
     @Test
-    fun `a creation that fails releases the track that an earlier attempt could not release`() {
+    fun `a track that could not be released is tried once and not again by the next attempt`() {
         AudioPlatform.failStartOf(setOf(1))
         AudioPlatform.failReleaseOf(setOf(1))
         AudioPlatform.onSetup = { if (it == 2) -1 else 0 }
@@ -334,8 +334,7 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
 
         assertThat(result).isEqualTo(0)
         assertThat(AudioPlatform.calls.filter { it is AudioCall.Release })
-            .containsExactly(AudioCall.Release(1), AudioCall.Release(1))
-            .inOrder()
+            .containsExactly(AudioCall.Release(1))
     }
 
     @Test

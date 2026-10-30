@@ -8,9 +8,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * What the trackpad context sends to the host for a tap and for the right button of the second
- * finger: the thresholds of the tap box (20 px), of the cumulative move (25 px) and of the time
- * (250 ms), the release 100 ms later, and the pending release that a second tap replaces.
+ * What the trackpad context sends to the host for a tap and for the right button of a two-finger
+ * tap (whichever finger lifts first): the thresholds of the tap box (20 px), of the cumulative move
+ * (25 px) and of the time (250 ms), the release 100 ms later, and the pending release that a second
+ * tap replaces.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowRecordingBridge::class])
@@ -209,6 +210,96 @@ class RelativeTouchTapTest {
         setPointerCount(0, first, second)
 
         assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
+    fun `a two-finger tap whose first finger lifts first is one right click`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        twoFingers(first, second)
+
+        liftFirstOfTwoFingers(first, second, T0 + 100)
+        // The tap is whole when the second finger lifts, and not before.
+        assertThat(rig.sent()).isEmpty()
+
+        first.touchUpEvent(300, 100, T0 + 120)
+        assertThat(rig.sent()).containsExactly("down RIGHT")
+        rig.advance(99)
+        assertThat(rig.sent()).containsExactly("down RIGHT")
+        rig.advance(1)
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+        setPointerCount(0, first, second)
+        rig.advance(2000) // neither a second click nor a drag
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
+    fun `a two-finger tap that lasts more than 250 ms from the first touch is no click`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        twoFingers(first, second)
+
+        liftFirstOfTwoFingers(first, second, T0 + 100)
+        first.touchUpEvent(300, 100, T0 + 251)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).isEmpty()
+    }
+
+    @Test
+    fun `a two-finger tap whose last finger moves away before it lifts is no click`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        twoFingers(first, second)
+
+        liftFirstOfTwoFingers(first, second, T0 + 100)
+        first.moveTo(340, 100)
+        first.touchUpEvent(340, 100, T0 + 120)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("sendMouseMove(40, 0)")
+    }
+
+    @Test
+    fun `a two-finger tap whose first finger moved before it lifted is no click`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        twoFingers(first, second)
+
+        first.moveTo(125, 100)
+        liftFirstOfTwoFingers(first, second, T0 + 100)
+        first.touchUpEvent(300, 100, T0 + 120)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).isEmpty()
+    }
+
+    @Test
+    fun `a cancel after the first finger lifted ends the two-finger tap`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        twoFingers(first, second)
+
+        liftFirstOfTwoFingers(first, second, T0 + 100)
+        first.cancelTouch()
+        first.touchUpEvent(300, 100, T0 + 120)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).isEmpty()
+    }
+
+    @Test
+    fun `a new touch after the first finger lifted starts over as a left click`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        twoFingers(first, second)
+        liftFirstOfTwoFingers(first, second, T0 + 100)
+        setPointerCount(0, first, second)
+
+        first.start(500, 500, T0 + 1000)
+        first.touchUpEvent(500, 500, T0 + 1050)
+
+        assertThat(rig.sent()).containsExactly("down LEFT")
     }
 
     @Test

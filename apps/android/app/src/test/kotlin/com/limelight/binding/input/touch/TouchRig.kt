@@ -111,3 +111,18 @@ internal fun twoFingers(first: RelativeTouchContext, second: RelativeTouchContex
     setPointerCount(2, first, second)
     assertThat(second.touchDownEvent(300, 100, T0 + 10, true)).isTrue()
 }
+
+/**
+ * The first finger of [twoFingers] lifts, as `Game` handles it: the lift, the new pointer count for
+ * all the contexts, and the second finger, which is at (300, 100), taking the place of the first (a
+ * touch down that is not a new finger, so the time of the first touch stays).
+ */
+internal fun liftFirstOfTwoFingers(
+    first: RelativeTouchContext,
+    second: RelativeTouchContext,
+    time: Long,
+) {
+    first.touchUpEvent(100, 100, time)
+    setPointerCount(1, first, second)
+    assertThat(first.touchDownEvent(300, 100, time, false)).isTrue()
+}

@@ -63,15 +63,13 @@ class RelativeTouchContext(
         conn.sendMouseButtonDown(getMouseButtonIndex())
     }
 
-    // Indexed by MouseButtonPacket.BUTTON_XXX - 1
-    private val buttonUpRunnables =
-        arrayOf(
-            Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT) },
-            Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE) },
-            Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT) },
-            Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1) },
-            Runnable { conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2) },
-        )
+    // A tap gives only the left or the right button (getMouseButtonIndex).
+    private val leftButtonUpRunnable = Runnable {
+        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+    }
+    private val rightButtonUpRunnable = Runnable {
+        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+    }
 
     private fun isWithinTapBounds(touchX: Int, touchY: Int): Boolean {
         val xDelta = abs(touchX - originalTouchX)
@@ -154,7 +152,12 @@ class RelativeTouchContext(
 
             // Release the mouse button in 100ms to allow for apps that use polling
             // to detect mouse button presses.
-            val buttonUpRunnable = buttonUpRunnables[buttonIndex - 1]
+            val buttonUpRunnable =
+                if (buttonIndex == MouseButtonPacket.BUTTON_RIGHT) {
+                    rightButtonUpRunnable
+                } else {
+                    leftButtonUpRunnable
+                }
             handler.removeCallbacks(buttonUpRunnable)
             handler.postDelayed(buttonUpRunnable, BUTTON_RELEASE_DELAY)
         }

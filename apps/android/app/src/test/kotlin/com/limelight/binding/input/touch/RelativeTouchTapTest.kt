@@ -188,21 +188,6 @@ class RelativeTouchTapTest {
         assertThat(rig.sent()).containsExactly("down LEFT", "down LEFT", "up LEFT").inOrder()
     }
 
-    @Test
-    fun `the release runnables are indexed by the button number minus one`() {
-        val context = rig.relative()
-        val field = RelativeTouchContext::class.java.getDeclaredField("buttonUpRunnables")
-        field.isAccessible = true
-        val runnables = field.get(context) as Array<*>
-
-        runnables.forEach { (it as Runnable).run() }
-
-        assertThat(runnables).hasLength(5)
-        assertThat(rig.sent())
-            .containsExactly("up LEFT", "up MIDDLE", "up RIGHT", "up X1", "up X2")
-            .inOrder()
-    }
-
     // The right button
 
     @Test

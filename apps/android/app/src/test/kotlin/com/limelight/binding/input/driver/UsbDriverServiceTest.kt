@@ -447,6 +447,27 @@ class UsbDriverServiceTest {
     }
 
     @Test
+    fun `a pad removed while the listener is replayed does not break the replay`() {
+        // The input thread of a failing pad removes it while the main thread replays the list.
+        plugIn(xbox360(name = "/dev/first"))
+        plugIn(xbox360(name = "/dev/second"))
+        createService()
+        binder.start()
+        val replayed = mutableListOf<AbstractController>()
+        val removing =
+            object : UsbDriverListener by RecordingListener() {
+                override fun deviceAdded(controller: AbstractController) {
+                    replayed += controller
+                    service.deviceRemoved(controller)
+                }
+            }
+
+        binder.setListener(removing)
+
+        assertThat(replayed).hasSize(2)
+    }
+
+    @Test
     fun `stopping a service that never started does nothing`() {
         createService()
 

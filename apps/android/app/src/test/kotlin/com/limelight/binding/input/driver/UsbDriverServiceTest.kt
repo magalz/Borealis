@@ -472,6 +472,37 @@ class UsbDriverServiceTest {
     }
 
     @Test
+    fun `an attach broadcast that names no device is ignored`() {
+        plugIn(xbox360())
+        createService()
+        binder.start()
+        val before = connections().size
+
+        context.sendBroadcast(
+            Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).setPackage(context.packageName)
+        )
+        idle(1000)
+
+        assertThat(connections()).hasSize(before)
+    }
+
+    @Test
+    fun `a permission answer that names no device is ignored`() {
+        createService()
+        binder.start()
+
+        context.sendBroadcast(
+            Intent("com.limelight.USB_PERMISSION")
+                .setPackage(context.packageName)
+                .putExtra(UsbManager.EXTRA_PERMISSION_GRANTED, true)
+        )
+        idle()
+
+        assertThat(connections()).isEmpty()
+        assertThat(promptEvents).isEmpty()
+    }
+
+    @Test
     fun `a device that wakes and that no driver claims is ignored`() {
         createService()
         binder.start()

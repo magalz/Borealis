@@ -288,10 +288,13 @@ class UsbDriverService : Service(), UsbDriverListener {
         // Stop the attachment receiver
         unregisterReceiver(receiver)
 
-        // Stop all controllers
-        while (controllers.isNotEmpty()) {
+        // Stop all controllers. A pad whose reader fails removes itself from the list on its own
+        // thread, so walk the snapshot of the copy-on-write list instead of testing it for empty
+        // and then removing the first element.
+        for (controller in controllers) {
             // Stop and remove the controller
-            controllers.removeAt(0).stop()
+            controllers.remove(controller)
+            controller.stop()
         }
     }
 

@@ -63,16 +63,16 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `40 milliseconds of pending audio drops the samples and logs the duration read again`() {
+    fun `40 milliseconds of pending audio drops the samples and logs the duration it read`() {
         val renderer = ready()
-        // The check reads 40; the log reads the duration a second time and shows what it found
+        // The duration is read once, and the log shows the value that the check saw
         ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(40, 77)
 
         renderer.playDecodedAudio(samples)
 
         assertThat(writes()).isEmpty()
-        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(2)
-        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 77 ms")
+        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(1)
+        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 40 ms")
     }
 
     @Test

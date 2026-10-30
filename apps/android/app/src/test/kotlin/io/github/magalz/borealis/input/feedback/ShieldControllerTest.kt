@@ -150,15 +150,6 @@ abstract class ShieldContract : FeedbackTestBase() {
     }
 
     @Test
-    fun `a pad the service does not know reports no battery`() {
-        val rig = rig()
-        ShadowSceManager.batteryPercentage = 80
-        rig.wake(rig.connectPad())
-
-        assertThat(batteryEvents).isEmpty()
-    }
-
-    @Test
     fun `a pad the service knows reports a rumble and a battery on arrival, whatever its vibrators`() {
         val rig = rig()
         ShadowSceManager.recognized = true
@@ -269,6 +260,16 @@ class ShieldControllerTest : ShieldContract() {
     }
 
     @Test
+    fun `a pad the service does not know reports that it has no battery`() {
+        val rig = rig()
+        ShadowSceManager.batteryPercentage = 80
+        rig.wake(rig.connectPad())
+
+        assertThat(batteryEvents)
+            .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_NOT_PRESENT.toInt(), -1))
+    }
+
+    @Test
     fun `the vibrators of Android win over the service for a pad that has a manager`() {
         val manager = Hardware.vibratorManager(List(2) { Hardware.vibrator() })
         val rig = rig()
@@ -286,4 +287,13 @@ class ShieldControllerTest : ShieldContract() {
 /** Android 11, which has no battery state on input devices: the service is the only source. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
-class ShieldControllerAndroid11Test : ShieldContract()
+class ShieldControllerAndroid11Test : ShieldContract() {
+    @Test
+    fun `a pad the service does not know reports no battery`() {
+        val rig = rig()
+        ShadowSceManager.batteryPercentage = 80
+        rig.wake(rig.connectPad())
+
+        assertThat(batteryEvents).isEmpty()
+    }
+}

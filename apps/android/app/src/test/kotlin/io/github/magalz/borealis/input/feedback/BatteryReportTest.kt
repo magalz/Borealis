@@ -12,7 +12,7 @@ import org.robolectric.annotation.Config
  * The battery of a pad, as the handler's own thread reports it to the host from Android 12: once
  * when the pad arrives, then every 120 seconds, and only when the status or the capacity changed
  * since the last report. The status becomes the host's battery state, and the capacity its
- * percentage from 0 to 100, rounded; 255 means unknown.
+ * percentage from 0 to 100, rounded; 255 means unknown. A pad that has no battery says so once.
  */
 @RunWith(RobolectricTestRunner::class)
 class BatteryReportTest : FeedbackTestBase() {
@@ -138,13 +138,56 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a pad without a battery reports nothing`() {
+    fun `a pad without a battery reports that none is present, once`() {
         val rig = rig()
 
         padWith(rig, battery(present = false))
         poll(rig)
+        poll(rig)
 
-        assertThat(events()).isEmpty()
+        assertThat(events()).containsExactly(BatteryEvent(0, NOT_PRESENT, -1))
+    }
+
+    @Test
+    fun `a battery that shows up later is reported as the battery it is`() {
+        val rig = rig()
+        val battery = battery(present = false)
+        padWith(rig, battery)
+
+        with(Hardware.batteryState(battery)) {
+            present = true
+            batteryStatus = BatteryState.STATUS_CHARGING
+            batteryCapacity = 0.25f
+        }
+        poll(rig)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, NOT_PRESENT, -1), BatteryEvent(0, 3, 25))
+    }
+
+    @Test
+    fun `a battery that goes away is reported as not present, once`() {
+        val rig = rig()
+        val battery = battery()
+        padWith(rig, battery)
+
+        Hardware.batteryState(battery).present = false
+        poll(rig)
+        poll(rig)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, 2, 50), BatteryEvent(0, NOT_PRESENT, -1))
+    }
+
+    @Test
+    fun `each pad without a battery reports that none is present`() {
+        val rig = rig { multiController = true }
+
+        padWith(rig, battery(present = false), id = 5)
+        padWith(rig, battery(present = false), id = 6)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, NOT_PRESENT, -1), BatteryEvent(1, NOT_PRESENT, -1))
     }
 
     @Test
@@ -285,12 +328,13 @@ class BatteryReportTest : FeedbackTestBase() {
 
     private companion object {
         const val POLL_MS = 120_000L
+        val NOT_PRESENT = MoonBridge.LI_BATTERY_STATE_NOT_PRESENT.toInt()
     }
 }
 
 /**
  * Before Android 12 `InputDevice` has no battery state, so nothing is reported (the SHIELD API is
- * not here).
+ * not here), not even that no battery is present: the pad claims no battery either.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])

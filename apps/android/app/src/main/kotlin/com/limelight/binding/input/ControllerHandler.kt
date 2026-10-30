@@ -856,7 +856,7 @@ class ControllerHandler(
                 // so we increase the deadzone on them to minimize this
                 context.triggerDeadzone = MAX_TRIGGER_DEADZONE
             } else if (devName.contains("SHIELD") || devName.contains("NVIDIA Controller")) {
-                // SHIELD controllers will use small stick deadzones
+                // SHIELD controllers: only the Search button needs a fix-up
 
                 // The big Nvidia button on the Shield controllers acts like a Search button. It
                 // summons the Google Assistant on the Shield TV. On my Pixel 4, it seems to do

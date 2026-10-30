@@ -102,13 +102,11 @@ object VirtualControllerConfigurationLoader {
         keyLong: Int,
         layer: Int,
         text: String,
-        icon: Int,
         controller: VirtualController,
         context: Context,
     ): DigitalButton {
         val button = DigitalButton(controller, elementId, layer, context)
         button.setText(text)
-        button.setIcon(icon)
 
         button.addDigitalButtonListener(
             object : DigitalButton.DigitalButtonListener {
@@ -140,26 +138,22 @@ object VirtualControllerConfigurationLoader {
     private fun createLeftTrigger(
         layer: Int,
         text: String,
-        icon: Int,
         controller: VirtualController,
         context: Context,
     ): DigitalButton {
         val button = LeftTrigger(controller, layer, context)
         button.setText(text)
-        button.setIcon(icon)
         return button
     }
 
     private fun createRightTrigger(
         layer: Int,
         text: String,
-        icon: Int,
         controller: VirtualController,
         context: Context,
     ): DigitalButton {
         val button = RightTrigger(controller, layer, context)
         button.setText(text)
-        button.setIcon(icon)
         return button
     }
 
@@ -203,7 +197,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     if (!config.flipFaceButtons) "A" else "B",
-                    -1,
                     controller,
                     context,
                 ),
@@ -221,7 +214,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     if (config.flipFaceButtons) "A" else "B",
-                    -1,
                     controller,
                     context,
                 ),
@@ -239,7 +231,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     if (!config.flipFaceButtons) "X" else "Y",
-                    -1,
                     controller,
                     context,
                 ),
@@ -257,7 +248,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     if (config.flipFaceButtons) "X" else "Y",
-                    -1,
                     controller,
                     context,
                 ),
@@ -268,7 +258,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                createLeftTrigger(1, "LT", -1, controller, context),
+                createLeftTrigger(1, "LT", controller, context),
                 screenScale(TRIGGER_L_BASE_X, height),
                 screenScale(TRIGGER_BASE_Y, height),
                 screenScale(TRIGGER_WIDTH, height),
@@ -276,7 +266,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                createRightTrigger(1, "RT", -1, controller, context),
+                createRightTrigger(1, "RT", controller, context),
                 screenScale(TRIGGER_R_BASE_X + TRIGGER_DISTANCE, height) + rightDisplacement,
                 screenScale(TRIGGER_BASE_Y, height),
                 screenScale(TRIGGER_WIDTH, height),
@@ -290,7 +280,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     "LB",
-                    -1,
                     controller,
                     context,
                 ),
@@ -307,7 +296,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     "RB",
-                    -1,
                     controller,
                     context,
                 ),
@@ -340,7 +328,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     2,
                     "BACK",
-                    -1,
                     controller,
                     context,
                 ),
@@ -357,7 +344,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     START_LAYER,
                     "START",
-                    -1,
                     controller,
                     context,
                 ),
@@ -374,7 +360,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     "L3",
-                    -1,
                     controller,
                     context,
                 ),
@@ -391,7 +376,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     "R3",
-                    -1,
                     controller,
                     context,
                 ),
@@ -410,7 +394,6 @@ object VirtualControllerConfigurationLoader {
                     0,
                     1,
                     "GUIDE",
-                    -1,
                     controller,
                     context,
                 ),

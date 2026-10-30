@@ -194,7 +194,7 @@ class DefaultLayoutCharacterizationTest {
     }
 
     @Test
-    fun `the buttons are labelled and have no icon`() {
+    fun `the buttons are labelled`() {
         val rig = defaultLayout(OscRig.PHONE)
 
         val labels =
@@ -217,13 +217,6 @@ class DefaultLayoutCharacterizationTest {
                     VirtualControllerElement.EID_GDB to "GUIDE",
                 )
             )
-        assertThat(
-                rig.controller.elements
-                    .filterIsInstance<DigitalButton>()
-                    .map { it.icon() }
-                    .distinct()
-            )
-            .containsExactly(-1)
     }
 
     @Test

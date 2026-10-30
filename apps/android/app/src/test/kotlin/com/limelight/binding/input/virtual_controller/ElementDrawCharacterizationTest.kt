@@ -5,7 +5,6 @@ import android.graphics.Paint
 import android.view.MotionEvent
 import com.google.common.truth.Correspondence
 import com.google.common.truth.Truth.assertThat
-import com.limelight.R
 import com.limelight.binding.input.virtual_controller.VirtualController.ControllerMode
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.testing.OwnedResources
@@ -437,23 +436,6 @@ class ElementDrawCharacterizationTest {
             .comparingElementsUsing(near)
             .containsExactly(150f, 126f)
             .inOrder()
-    }
-
-    @Test
-    fun `a button with an icon draws its oval, then the icon in place of the text`() {
-        val button = button()
-        button.setIcon(R.drawable.borealis_launcher_background)
-
-        val canvas = draw(button)
-
-        assertThat(canvas.calls.map { it.call }).containsExactly("color", "oval").inOrder()
-        assertThat(canvas.calls.last()).isEqualTo(oval(grey))
-        // the icon fills the button but 5 pixels all round, and is opaque
-        assertThat(Color.alpha(canvas.bitmap.getPixel(4, 4))).isEqualTo(0)
-        assertThat(Color.alpha(canvas.bitmap.getPixel(5, 5))).isEqualTo(255)
-        assertThat(Color.alpha(canvas.bitmap.getPixel(194, 94))).isEqualTo(255)
-        assertThat(Color.alpha(canvas.bitmap.getPixel(195, 95))).isEqualTo(0)
-        assertThat(Color.alpha(canvas.bitmap.getPixel(100, 50))).isEqualTo(255)
     }
 
     @Test

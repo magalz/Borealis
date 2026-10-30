@@ -37,7 +37,6 @@ open class DigitalButton(
 
     private val listeners = ArrayList<DigitalButtonListener>()
     private var text = ""
-    private var icon = -1
     private val longClickRunnable = Runnable { onLongClickCallback() }
 
     private val paint = Paint()
@@ -110,14 +109,6 @@ open class DigitalButton(
         invalidate()
     }
 
-    fun setIcon(id: Int) {
-        this.icon = id
-        invalidate()
-    }
-
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    // The icon is read with the deprecated Resources.getDrawable(int), as the Java did.
-    @Suppress("DEPRECATION")
     override fun onElementDraw(canvas: Canvas) {
         // set transparent background
         canvas.drawColor(Color.TRANSPARENT)
@@ -136,20 +127,14 @@ open class DigitalButton(
 
         canvas.drawOval(rect, paint)
 
-        if (icon != -1) {
-            val d = resources.getDrawable(icon)
-            d.setBounds(ICON_MARGIN, ICON_MARGIN, width - ICON_MARGIN, height - ICON_MARGIN)
-            d.draw(canvas)
-        } else {
-            paint.style = Paint.Style.FILL_AND_STROKE
-            paint.strokeWidth = (defaultStrokeWidth / 2).toFloat()
-            canvas.drawText(
-                text,
-                getPercent(width.toFloat(), TEXT_X_PERCENT),
-                getPercent(height.toFloat(), TEXT_Y_PERCENT),
-                paint,
-            )
-        }
+        paint.style = Paint.Style.FILL_AND_STROKE
+        paint.strokeWidth = (defaultStrokeWidth / 2).toFloat()
+        canvas.drawText(
+            text,
+            getPercent(width.toFloat(), TEXT_X_PERCENT),
+            getPercent(height.toFloat(), TEXT_Y_PERCENT),
+            paint,
+        )
     }
 
     private fun onClickCallback() {
@@ -216,8 +201,5 @@ open class DigitalButton(
         private const val TEXT_SIZE_PERCENT = 25f
         private const val TEXT_X_PERCENT = 50f
         private const val TEXT_Y_PERCENT = 63f
-
-        // The icon is drawn this many pixels inside the button
-        private const val ICON_MARGIN = 5
     }
 }

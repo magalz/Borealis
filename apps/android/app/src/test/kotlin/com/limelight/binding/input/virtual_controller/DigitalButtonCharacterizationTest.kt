@@ -408,24 +408,18 @@ class DigitalButtonCharacterizationTest {
         assertThat(bLog.events).isEmpty()
     }
 
-    // Text and icon
+    // Text
 
     @Test
-    fun `a button has no text and no icon until it is given them`() {
+    fun `a button has no text until it is given one`() {
         assertThat(a.label()).isEmpty()
-        assertThat(a.icon()).isEqualTo(-1)
     }
 
     @Test
-    fun `the text and the icon are kept, and the button is redrawn`() {
+    fun `the text is kept, and the button is redrawn`() {
         shadowOf(a).clearWasInvalidated()
         a.setText("GO")
         assertThat(a.label()).isEqualTo("GO")
-        assertThat(shadowOf(a).wasInvalidated()).isTrue()
-
-        shadowOf(a).clearWasInvalidated()
-        a.setIcon(1234)
-        assertThat(a.icon()).isEqualTo(1234)
         assertThat(shadowOf(a).wasInvalidated()).isTrue()
     }
 }

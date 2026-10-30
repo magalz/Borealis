@@ -295,7 +295,8 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
         private fun getAngle(wayX: Float, wayY: Float): Double {
             // prevent divisions by zero for corner cases
             if (wayX == 0f) {
-                return if (wayY < 0) Math.PI else 0.0
+                // straight above the centre (and on it) is 0, straight below is half a turn
+                return if (wayY > 0) Math.PI else 0.0
             } else if (wayY == 0f) {
                 if (wayX > 0) {
                     return Math.PI * QUARTER_TURNS_RIGHT / 2

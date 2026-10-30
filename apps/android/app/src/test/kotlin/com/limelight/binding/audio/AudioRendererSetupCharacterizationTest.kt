@@ -348,14 +348,15 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `a second setup creates another track and leaves the first one alone`() {
+    fun `a second setup releases the first track before it creates another`() {
         val renderer = renderer()
 
         renderer.setUpStereo()
         renderer.setUpStereo()
 
         assertThat(AudioPlatform.setups.map { it.track }).containsExactly(1, 2).inOrder()
-        assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>()).isEmpty()
+        assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>())
+            .containsExactly(AudioCall.Release(1))
     }
 
     @Test

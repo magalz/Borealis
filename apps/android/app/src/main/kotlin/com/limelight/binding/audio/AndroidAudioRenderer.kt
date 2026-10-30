@@ -93,6 +93,12 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
                 }
             }
 
+        // BOREALIS: a packet of no samples has no buffer size; the second attempt divided by it
+        if (samplesPerFrame <= 0) {
+            LimeLog.severe("Decoder returned no samples per frame")
+            return -1
+        }
+
         // The default locale, as `String.format(String, Object...)` used it in the inherited Java.
         val hexConfig =
             String.format(Locale.getDefault(Locale.Category.FORMAT), "0x%X", channelConfig)

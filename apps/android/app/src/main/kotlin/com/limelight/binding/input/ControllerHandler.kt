@@ -2388,13 +2388,15 @@ class ControllerHandler(
                     deviceContext.rightTriggerMotor = rightTrigger
 
                     if (deviceContext.quadVibrators) {
-                        rumbleQuadVibrators(
-                            checkNotNull(deviceContext.vibratorManager),
-                            deviceContext.lowFreqMotor,
-                            deviceContext.highFreqMotor,
-                            deviceContext.leftTriggerMotor,
-                            deviceContext.rightTriggerMotor,
-                        )
+                        deviceContext.vibratorManager?.let { manager ->
+                            rumbleQuadVibrators(
+                                manager,
+                                deviceContext.lowFreqMotor,
+                                deviceContext.highFreqMotor,
+                                deviceContext.leftTriggerMotor,
+                                deviceContext.rightTriggerMotor,
+                            )
+                        }
                     }
                 }
             }

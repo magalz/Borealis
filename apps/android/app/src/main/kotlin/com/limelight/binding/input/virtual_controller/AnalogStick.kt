@@ -82,6 +82,9 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
     private val listeners = ArrayList<AnalogStickListener>()
     private var timeLastClick = 0L
 
+    /** Whether the stick was pressed before: the first press has no click to double. */
+    private var hasClicked = false
+
     init {
         // reset stick position
         positionStickX = (width / 2).toFloat()
@@ -232,7 +235,8 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
                 stickState = StickState.MOVED_IN_DEAD_ZONE
                 // check for double click
                 if (
-                    lastClickState == ClickState.SINGLE &&
+                    hasClicked &&
+                        lastClickState == ClickState.SINGLE &&
                         event.eventTime - timeLastClick <= TIMEOUT_DOUBLE_CLICK
                 ) {
                     clickState = ClickState.DOUBLE
@@ -243,6 +247,7 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
                 }
                 // reset last click timestamp
                 timeLastClick = event.eventTime
+                hasClicked = true
                 // set item pressed and update
                 isPressed = true
             }

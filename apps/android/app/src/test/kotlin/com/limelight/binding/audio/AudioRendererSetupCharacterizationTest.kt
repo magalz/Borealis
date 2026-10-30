@@ -195,11 +195,11 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
 
         val result = renderer().setUpStereo()
 
+        // A skipped attempt does not ask the platform for its minimum buffer.
         assertThat(result).isEqualTo(0)
         assertThat(AudioPlatform.calls)
             .containsExactly(
                 outputRate(),
-                minBuffer(),
                 outputRate(),
                 outputRate(),
                 trackSetup(track = 1, bufferSize = 1_920, lowLatency = false),
@@ -218,7 +218,6 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
         assertThat(AudioPlatform.calls)
             .containsExactly(
                 outputRate(),
-                minBuffer(),
                 outputRate(),
                 outputRate(),
                 trackSetup(track = 1, bufferSize = 1_920, lowLatency = false),

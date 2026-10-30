@@ -100,11 +100,13 @@ says what happened and what to do next.
 1. Every screen outside the game stands on one background: Starting, the
    question about a running app ([UC-003](0003-join-or-replace-a-running-app.md)),
    an error, Quitting and Disconnecting. It is the style that the user chose in
-   Settings, Background, at the strength of Background intensity. The
-   Appearance row Background before and after the stream says how it behaves:
-   Moving (the default), Still (one frame of the style) or Off (the plain page).
-   The stream reads the row when it starts, so a change shows in the next
-   stream.
+   Settings, Background, at the strength of Background intensity, exactly as
+   the Library shows it: the style Off is the plain page, and any other style
+   moves where the Library's background moves and stands still where the
+   Library holds it still (step 3). There is no row of its own for the stream:
+   the first version of Sprint 15 had Background before and after the stream
+   (Moving, Still or Off), and the owner dropped it on 2026-10-30. The stream
+   reads the style when it starts, so a change shows in the next stream.
 2. A clip style (Northern lights, Light mist, Flowing light or Starfield) plays
    only while no decoder of the stream is held. The session holds the decoder
    from the stage Preparing the display, so the clip is released there and its
@@ -116,7 +118,8 @@ says what happened and what to do next.
    style too ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md),
    decision 6).
 3. Reduce motion and the battery saver hold every style still and make no
-   player, whatever the row says. With Transparency Off or High contrast the
+   player, as they do in the Library ([ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md)).
+   With Transparency Off or High contrast the
    panel of the steps is a solid surface. Below API 31 it has the Reduced tint
    and no blur.
 4. The title, the host name and the note stand on the background, so they have
@@ -182,7 +185,7 @@ says what happened and what to do next.
 3. The frame is blurred where the device can blur and the settings allow it
    (API 31 or later, Transparency not Off, no High contrast). Otherwise it
    shows sharp. The scrim stays over it in both cases. The panel is the glass of
-   the menu over the frame with Menu glass in the stream on Blur, and a solid
+   the menu over the frame with Stream menu style on Blurred, and a solid
    surface with Solid, Transparency Off, High contrast or below API 31. Reduce
    motion and the battery saver change nothing: the frame is still. While the
    copy is pending, which took about 0.2 to 0.3 s in the device rounds, the
@@ -230,7 +233,7 @@ after the failure does not place it again.
 | UC-002-T16 | Given the Starting screen, when it shows, then it stands on the background of the user, the title and the note have its halo, and the four steps are on a glass panel. | UI | exists (Sprint 15, UI): `OutsideGameBackgroundTest`, `OutsideGameAccessibilityTest`, `StartingScreenTest` |
 | UC-002-T17 | Given the phase becomes Streaming, then the background goes, and it does not go when only the connection reports the stream. | UI | exists (Sprint 15, UI): `OutsideGameBackgroundTest` |
 | UC-002-T18 | Given a clip style, when the start reaches the stage Preparing the display, then the player is released and the still shows; when the connection has stopped, the clip plays again; a drawn style keeps moving. | UI, unit | exists (Sprint 15): `OutsideGameClipTest`, `StreamSessionDecoderTest` |
-| UC-002-T19 | Given Moving, Still or Off, Reduce motion, the battery saver, Transparency Off or High contrast, when a screen outside the game shows, then it moves, stands still or is the plain page as A6 says. | UI | exists (Sprint 15, UI): `OutsideGameBackgroundTest`, `OutsideGameAccessibilityTest`, `StreamSessionVisualsTest`, `StreamSessionFactoryVisualsTest` |
+| UC-002-T19 | Given a style of the user, the style Off, Reduce motion, the battery saver, Transparency Off or High contrast, when a screen outside the game shows, then it moves, stands still or is the plain page as A6 says, as the Library's does. | UI | exists (Sprint 15, UI): `OutsideGameBackgroundTest`, `OutsideGameAccessibilityTest`, `StreamSessionVisualsTest`, `StreamSessionFactoryVisualsTest` |
 | UC-002-T20 | Given an error, when it shows, then it is a popup with Try again focused, the action of the error, Diagnostics and Close, a tap outside does nothing, and Back and gamepad B close it. | UI | exists (Sprint 15, UI): `ConnectionErrorScreenTest`, `StreamDialogBackTest` |
 | UC-002-T21 | Given a stream that ended in error after its first frame, when the popup shows, then it stands on the frozen last frame under its scrim, and with no frame, or with a copy that failed, on the background. | UI | exists (Sprint 15, UI): `FrozenFrameScreenTest`, `FrozenFrameTest`, `StreamChromeHostFrozenFrameTest` |
 | UC-002-T22 | Given the stream ends in error, when `connectionTerminated` or `stageFailed` is called, then the copy is asked for before the connectivity test and the stop, and not before the first frame, for the first-frame watchdog, for the end of the user's Quit or for a graceful end. | unit | exists (Sprint 15, unit): `GameFrozenFrameTest` |

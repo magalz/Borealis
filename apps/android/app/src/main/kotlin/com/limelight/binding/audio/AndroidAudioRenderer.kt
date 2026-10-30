@@ -32,7 +32,7 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
 
     // Set by cleanup, cleared when setup keeps a track: a repeated cleanup must not fail, while a
     // cleanup without any track still does.
-    private var cleanedUp = false
+    @Volatile private var cleanedUp = false
 
     // The inherited Java used the track without a check, so a call before a successful setup failed
     // with a NullPointerException at that point. Keep the exception.
@@ -255,10 +255,13 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
         track = null
         cleanedUp = true
 
-        // Immediately drop all pending data
-        current.pause()
-        current.flush()
-
-        current.release()
+        // BOREALIS: the track is released even when it cannot be paused or flushed
+        try {
+            // Immediately drop all pending data
+            current.pause()
+            current.flush()
+        } finally {
+            current.release()
+        }
     }
 }

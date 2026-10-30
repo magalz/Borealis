@@ -74,6 +74,20 @@ class StreamSessionFactoryVisualsTest {
     }
 
     @Test
+    fun `a stored Background before and after the stream is not read, the style rules`() {
+        for (stored in listOf("still", "off", "moving", "paused")) {
+            assertThat(visualsOf(Settings.STREAM_BACKGROUND to stored)).isEqualTo(visualsOf())
+        }
+        assertThat(
+                visualsOf(
+                    Settings.STREAM_BACKGROUND to "off",
+                    Settings.BACKGROUND to "starfield",
+                )
+            )
+            .isEqualTo(visualsOf(Settings.BACKGROUND to "starfield"))
+    }
+
+    @Test
     fun `the background style is the one of the Background setting, off included`() {
         assertThat(visualsOf(Settings.BACKGROUND to "starfield").backgroundStyle)
             .isEqualTo(BackgroundStyle.Starfield)

@@ -138,6 +138,17 @@ internal class PenEventsTest : MotionTestBase() {
     }
 
     @Test
+    fun `a stylus is consumed and sends nothing while the stream view has no size`() {
+        streaming(width = 0)
+
+        val handled = send(stylus(MotionEvent.ACTION_DOWN))
+
+        // Before the first layout there is no place to put the pen, and no NaN goes to the host.
+        assertThat(handled).isTrue()
+        assertThat(pens()).isEmpty()
+    }
+
+    @Test
     fun `a cancel of a mouse also releases the buttons that are down`() {
         streaming()
         send(mouseEvent(MotionEvent.ACTION_DOWN, 10f, 20f, MotionEvent.BUTTON_PRIMARY))

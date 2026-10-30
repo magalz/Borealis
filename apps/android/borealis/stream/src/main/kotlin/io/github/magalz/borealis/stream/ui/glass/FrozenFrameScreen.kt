@@ -29,7 +29,9 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
  *
  * The one call site of [content] is the same in all three, so the popup is composed once, and keeps
  * its focus and what a screen reader has said of it, when the frame arrives or the copy fails. The
- * scrim of the popup stays over the frame.
+ * popup is over the game while the frame is there or pending ([LocalPopupOverGame]): its scrim is
+ * the page at 35 percent over the frame, and its glass panel is firmer than the menu's. With no
+ * copy it is a popup over the background, and the glass of the background decides.
  *
  * The glass is [LocalVideoGlass] for [content], as the menu provides it for its Quit popup, so the
  * popup is drawn with the one code. The copy never changes, and the glass records it again only
@@ -53,6 +55,7 @@ internal fun OverFrozenFrame(
     Box(Modifier.fillMaxSize().frozenFrameBackdrop(frame, frozen.pending, glass)) {
         CompositionLocalProvider(
             LocalVideoGlass provides glass.takeIf { rules.panelIsGlass },
+            LocalPopupOverGame provides (frame != null || frozen.pending),
             content = content,
         )
     }

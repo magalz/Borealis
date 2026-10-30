@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +53,16 @@ private const val PERCENT = 100f
 internal val LocalVideoGlass = staticCompositionLocalOf<VideoGlass?> { null }
 
 /**
+ * Whether a popup that is composed here is over the game, which a glass or not: the Quit popup of
+ * the menu, and the error popup over the frozen last frame of the stream (or the black that the
+ * frame is copied over). The scrim of such a popup is the page at 35 percent
+ * (`STREAM_SCRIM_ALPHA`), so the game stays visible around it, and its glass panel is
+ * [POPUP_TINT_PERCENT]; elsewhere it is the dialog scrim, or the glass of the background (ADR 0057,
+ * decision 8).
+ */
+internal val LocalPopupOverGame = compositionLocalOf { false }
+
+/**
  * The glass behind a panel over the stream video: the copy of the video that [current] answers (the
  * last of the live copies behind the in-game menu and its Quit popup, or the one frozen copy behind
  * the error popup), a blurred copy of it in [small], and [spec], what to draw it with. The panels
@@ -91,9 +102,15 @@ internal class VideoGlass(
     /**
      * Draws what is behind a panel whose corner is at [position] in the chrome: the [surface]
      * colour while there is no copy; else the blurred copy of the video where the video is, black
-     * where it is not, and the tint of the surface over it.
+     * where it is not, and [tintPercent] of the surface over it (the tint of the spec, unless the
+     * panel is a popup, which is firmer).
      */
-    fun drawBackdrop(scope: DrawScope, position: Offset, surface: Color) {
+    fun drawBackdrop(
+        scope: DrawScope,
+        position: Offset,
+        surface: Color,
+        tintPercent: Int = spec.tintPercent,
+    ) {
         with(scope) {
             val frame = current()
             if (frame == null) {
@@ -101,7 +118,7 @@ internal class VideoGlass(
                 return@with
             }
             drawBlurredCopy(frame, position)
-            drawRect(surface.copy(alpha = spec.tintPercent / PERCENT))
+            drawRect(surface.copy(alpha = tintPercent / PERCENT))
         }
     }
 
@@ -185,16 +202,21 @@ internal fun Modifier.recordsVideoBackdrop(glass: VideoGlass?): Modifier =
 
 /**
  * The surface of a panel of [shape] over the [glass]: the region of the blurred video behind it
- * under the tint, or the solid surface colour until a copy has arrived. It reads where the panel is
- * in the chrome, which is where the video is behind it.
+ * under [tintPercent] of the surface (the tint of the glass, unless the panel is a popup), or the
+ * solid surface colour until a copy has arrived. It reads where the panel is in the chrome, which
+ * is where the video is behind it.
  */
 @Composable
-internal fun Modifier.videoGlassSurface(glass: VideoGlass, shape: Shape): Modifier {
+internal fun Modifier.videoGlassSurface(
+    glass: VideoGlass,
+    shape: Shape,
+    tintPercent: Int = glass.spec.tintPercent,
+): Modifier {
     val surface = LocalBorealisColors.current.surface
     var position by remember { mutableStateOf(Offset.Zero) }
     return clip(shape)
         .onGloballyPositioned { position = it.positionInRoot() }
-        .drawBehind { glass.drawBackdrop(this, position, surface) }
+        .drawBehind { glass.drawBackdrop(this, position, surface, tintPercent) }
 }
 
 /**

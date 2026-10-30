@@ -13,6 +13,15 @@ private const val REDUCED_BLUR_DP = 48
 private const val PERCENT = 100
 
 /**
+ * The tint of the panel of a popup over the game (owner, 2026-10-30): the Reduced tint again, with
+ * the blur of the look, whatever tint the viewer chose for the panel of the menu. The scrim of a
+ * popup leaves the game visible around it ([LocalPopupOverGame]), so the panel is the firm element:
+ * 85 percent of the surface leaves the text 4.5:1 over the lightest frame with or without its halo
+ * (`PopupGlassContrastTest` in `design/accessibility`).
+ */
+internal const val POPUP_TINT_PERCENT = REDUCED_TINT_PERCENT
+
+/**
  * The halo of the text on the glass: 3 dp wide, blurred by 2 dp, 100 percent opaque and filled. The
  * halo of a text on a background is 80 percent and one pass, which keeps ink and ink-2 but leaves
  * the danger ink of the Quit row at 4.40:1 on a TV over the lightest glass in the model of

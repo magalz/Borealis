@@ -3074,7 +3074,9 @@ class Game :
     }
 
     override fun onUsbPermissionPromptCompleted() {
-        suppressPipRefCount--
+        // BOREALIS: a completion can come without its starting call (the service tells its
+        // listener with ?.), so the count stops at zero
+        suppressPipRefCount = (suppressPipRefCount - 1).coerceAtLeast(0)
         updatePipAutoEnter()
     }
 

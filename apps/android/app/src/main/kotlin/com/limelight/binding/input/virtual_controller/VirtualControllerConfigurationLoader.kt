@@ -154,21 +154,16 @@ object VirtualControllerConfigurationLoader {
     private fun createRightStick(controller: VirtualController, context: Context): AnalogStick =
         RightAnalogStick(controller, context)
 
-    // Stub for the test of O11: the configuration is not used yet.
-    @Suppress("UnusedParameter")
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // The caller reads the configuration once for the whole build and passes it in.
+    @Suppress("LongMethod")
     @JvmStatic
     fun createDefaultLayout(
         controller: VirtualController,
         context: Context,
         config: PreferenceConfiguration,
-    ) = createDefaultLayout(controller, context)
-
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("LongMethod")
-    @JvmStatic
-    fun createDefaultLayout(controller: VirtualController, context: Context) {
+    ) {
         val screen = context.resources.displayMetrics
-        val config = PreferenceConfiguration.readPreferences(context)
 
         // Displace controls on the right by this amount of pixels to account for different aspect
         // ratios

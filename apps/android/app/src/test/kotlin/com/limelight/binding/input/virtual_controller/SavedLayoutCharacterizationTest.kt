@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.graphics.Canvas
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
+import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.testing.OwnedResources
 import java.io.File
@@ -78,7 +79,11 @@ class SavedLayoutCharacterizationTest {
     fun `loading puts the saved layout over the default one and nothing else`() {
         installFixture()
         rig.settings()
-        VirtualControllerConfigurationLoader.createDefaultLayout(rig.controller, rig.activity)
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+            rig.controller,
+            rig.activity,
+            PreferenceConfiguration.readPreferences(rig.activity),
+        )
 
         VirtualControllerConfigurationLoader.loadFromPreferences(rig.controller, rig.activity)
 
@@ -129,7 +134,11 @@ class SavedLayoutCharacterizationTest {
     @Test
     fun `saving the default layout writes the four numbers of each element under its id`() {
         rig.settings()
-        VirtualControllerConfigurationLoader.createDefaultLayout(rig.controller, rig.activity)
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+            rig.controller,
+            rig.activity,
+            PreferenceConfiguration.readPreferences(rig.activity),
+        )
 
         VirtualControllerConfigurationLoader.saveProfile(rig.controller, rig.activity)
 

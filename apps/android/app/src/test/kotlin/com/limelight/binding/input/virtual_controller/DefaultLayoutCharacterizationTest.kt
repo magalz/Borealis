@@ -34,7 +34,11 @@ class DefaultLayoutCharacterizationTest {
     ): OscRig {
         val rig = owned.own(OscRig(screen))
         rig.settings(onlyL3R3, flipFaceButtons, showGuideButton, opacity)
-        VirtualControllerConfigurationLoader.createDefaultLayout(rig.controller, rig.activity)
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+            rig.controller,
+            rig.activity,
+            PreferenceConfiguration.readPreferences(rig.activity),
+        )
         return rig
     }
 
@@ -349,7 +353,9 @@ class DefaultLayoutCharacterizationTest {
         )
 
         assertThat(rig.layout())
-            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, onlyL3R3 = true, guide = false))
+            .containsExactlyElementsIn(
+                GoldenLayouts.of(OscRig.PHONE, onlyL3R3 = true, guide = false)
+            )
             .inOrder()
         rig.controller.elements.forEach { assertThat(it.defaultColor).isEqualTo(0x66888888) }
     }
@@ -373,11 +379,11 @@ class DefaultLayoutCharacterizationTest {
 
         assertThat(
                 listOf(
-                    VirtualControllerElement.EID_A,
-                    VirtualControllerElement.EID_B,
-                    VirtualControllerElement.EID_X,
-                    VirtualControllerElement.EID_Y,
-                )
+                        VirtualControllerElement.EID_A,
+                        VirtualControllerElement.EID_B,
+                        VirtualControllerElement.EID_X,
+                        VirtualControllerElement.EID_Y,
+                    )
                     .map { (rig.element(it) as DigitalButton).label() }
             )
             .containsExactly("B", "A", "Y", "X")

@@ -10,6 +10,7 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
+import com.limelight.preferences.PreferenceConfiguration
 
 class VirtualController(
     private val controllerHandler: ControllerHandler?,
@@ -134,8 +135,12 @@ class VirtualController(
         params.topMargin = CONFIGURE_BUTTON_MARGIN
         requireFrame().addView(buttonConfigure, params)
 
-        // Start with the default layout
-        VirtualControllerConfigurationLoader.createDefaultLayout(this, context)
+        // Start with the default layout, from the settings read once for this build
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+            this,
+            context,
+            PreferenceConfiguration.readPreferences(context),
+        )
 
         // Apply user preferences onto the default layout
         VirtualControllerConfigurationLoader.loadFromPreferences(this, context)

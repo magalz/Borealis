@@ -30,8 +30,8 @@ import org.junit.Test
  * these tests cannot rely on, so what it does is not checked here.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
- * ones about a port out of range (Sprint 16, S12-05): the Java class and the first conversion
- * threw an `IllegalArgumentException` from the whole wake, and now the port is skipped.
+ * ones about a port out of range (Sprint 16, S12-05): the Java class and the first conversion threw
+ * an `IllegalArgumentException` from the whole wake, and now the port is skipped.
  */
 class WakeOnLanSenderCharacterizationTest {
     @get:Rule val log = LimeLogCapture()
@@ -369,7 +369,9 @@ class WakeOnLanSenderCharacterizationTest {
                 ?: throw AssumptionViolatedException("no free ports near 65535 to listen on")
         val skipped = ports.httpPort + LAST_DYNAMIC_OFFSET
 
-        val failure = runCatching { WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort)) }
+        val failure = runCatching {
+            WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
+        }
 
         assertThat(failure.exceptionOrNull()).isNull()
         ports.sockets.forEach { assertThat(it.take(ownPacket)).isEqualTo(ownPacket) }

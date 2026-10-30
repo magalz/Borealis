@@ -1831,7 +1831,9 @@ class MediaCodecDecoderRenderer(
     }
 
     private fun replaySps(): Boolean {
-        fetchNextInputBuffer()
+        if (!fetchNextInputBuffer()) {
+            return false
+        }
 
         // Write the Annex B header
         requireInputBuffer().put(byteArrayOf(0x00, 0x00, 0x00, 0x01, SPS_NAL_HEADER))

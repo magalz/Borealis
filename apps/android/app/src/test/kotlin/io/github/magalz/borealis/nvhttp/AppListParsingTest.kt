@@ -212,7 +212,7 @@ class AppListParsingTest {
         // No app has started yet, so the text belongs to none.
         assertThat(parse("""<root status_code="200"><note>hello</note></root>""")).isEmpty()
 
-        // White space between the root and the first app is text too, and the apps after it are read.
+        // White space before the first app is text too, and the apps after it are read.
         val pretty = parse("<root status_code=\"200\">\n  ${app("Pretty", "1")}\n</root>")
         assertThat(pretty.map { it.summary() }).containsExactly("Pretty/1/false")
 

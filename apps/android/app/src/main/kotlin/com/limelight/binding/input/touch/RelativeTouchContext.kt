@@ -233,7 +233,8 @@ class RelativeTouchContext(
                 }
 
                 if (pointerCount == 2) {
-                    if (confirmedScroll) {
+                    // A move along x alone, or a y delta that scaled to zero, scrolls nothing
+                    if (confirmedScroll && deltaY != 0) {
                         conn.sendMouseHighResScroll((deltaY * SCROLL_SPEED_FACTOR).toShort())
                     }
                 } else {

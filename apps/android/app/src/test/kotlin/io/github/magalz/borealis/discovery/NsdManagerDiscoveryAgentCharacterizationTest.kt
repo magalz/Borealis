@@ -420,18 +420,20 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     }
 
     @Test
-    fun `a service found again leaves its first callback registered after the stop`() {
-        // Inherited quirk: the callbacks are kept by name, so the second one replaces the first in
-        // the map and only the second is unregistered. A fix belongs to the backlog.
+    fun `a service found again has its first callback unregistered`() {
+        // The callbacks are kept by name, so the second one replaces the first in the map: the
+        // first is unregistered then, or nothing would unregister it.
         val discovery = startAndConfirm()
         val found = service("Den PC")
         discovery.onServiceFound(found)
-        discovery.onServiceFound(found)
-        assertThat(callbacks(found)).hasSize(2)
+        val first = callbacks(found).single()
 
-        agent.stopDiscovery()
+        discovery.onServiceFound(found)
 
         assertThat(callbacks(found)).hasSize(1)
+        assertThat(callbacks(found)).doesNotContain(first)
+        agent.stopDiscovery()
+        assertThat(callbacks(found)).isEmpty()
     }
 
     private companion object {

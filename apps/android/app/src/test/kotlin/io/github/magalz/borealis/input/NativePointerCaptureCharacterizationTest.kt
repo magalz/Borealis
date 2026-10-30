@@ -87,12 +87,13 @@ class NativePointerCaptureCharacterizationTest {
     }
 
     @Test
-    fun `hiding the cursor twice listens once, and one show stops it and releases once`() {
+    fun `hiding the cursor twice and showing it twice releases once`() {
         rig.connect(MOUSE, Sources.MOUSE)
         rig.provider.hideCursor()
         rig.provider.hideCursor()
 
         rig.provider.showCursor()
+        // A repeated registration is ignored anyway; the flag makes this second show a no-op.
         rig.provider.showCursor()
 
         assertThat(rig.listening()).isFalse()

@@ -187,12 +187,12 @@ says what happened and what to do next.
    shows sharp. The scrim over it is the page colour at 35 %, the scrim of the
    side panel of the menu, in both cases and around a solid panel too, so the
    frame stays visible around the popup (owner decision of 2026-10-30: the first
-   version had the dialog scrim, the page at 72 %, and the popup looked like a
-   hole). The panel is the glass of the menu over the frame, at 85 % of the
+   version had the dialog scrim, the page at 72 %, and the Quit popup looked like
+   a hole; this popup changes the same way because it shares the dialog). The panel is the glass of the menu over the frame, at 85 % of the
    surface and the blur of the look, with Stream menu style on Blurred, and a
    solid surface with Solid, Transparency Off, High contrast or below API 31.
    Reduce motion and the battery saver change nothing: the frame is still. While
-   the copy is pending, which took 76 to 314 ms in the rounds of 2026-10-29, the
+   the copy is pending, which takes about 0.1 to 0.3 s (76 ms on the S22, 314 ms on the TV), the
    popup is on black with a solid panel, under the same scrim. When no copy
    exists or it failed, the popup is a dialog over the background of A6: it
    draws as it does with no frozen frame, with no scrim where the host blurs the

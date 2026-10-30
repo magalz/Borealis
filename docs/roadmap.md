@@ -1036,12 +1036,13 @@ Owner decisions:
     Input. It is not known whether "Mouse back and forward buttons" was on.
 
   The three decisions:
-  - **The popups over the game.** The Quit popup and the error popup over the frozen frame looked like a hole,
-    a panel of 40 percent glass under a scrim of 72 percent. Now the scrim is the page at 35 percent (the side
-    panel's) and the panel is 85 percent of the surface, solid where the rules say. Over the background
-    outside the game, the glass of ADR 0057 decision 8 is unchanged. On the 85 percent panel over white, ink is
-    9.50:1, ink-2 6.74:1, accent-soft 6.20:1 and danger-ink 5.01:1 without the halo. The halo stays, and the
-    owner may drop it later.
+  - **The popups over the game.** The Quit popup looked like a hole (U1): its panel of 40 percent glass was
+    almost transparent, and the scrim of 72 percent turned the background black. The owner chose, separately, to
+    change the error popup over the frozen frame the same way, because it shares `StreamDialog`. Now the
+    scrim is the page at 35 percent (the side panel's) and the panel is 85 percent of the surface, solid
+    where the rules say. Over the background outside the game, the glass of ADR 0057 decision 8 is unchanged.
+    On the 85 percent panel over white, ink is 9.50:1, ink-2 6.74:1, accent-soft 6.20:1 and danger-ink 5.01:1
+    without the halo. The halo stays, and the owner may drop it later.
   - **No option for the background outside the game.** "Background before and after the stream" is dropped.
     The screens outside the game follow the Background of the Library (style, Off, Reduce motion, the battery
     saver). A clip still shows its still while the stream holds the decoder, and every style is held still
@@ -1153,9 +1154,9 @@ UAT, so none is left with no place. The owner can move any of them:
   rare, and nothing crashes. In Sprint 17, Video and the stream screens.
 - **A copy that never answers:** the pending state has no time cap; it relies on `PixelCopy` answering
   every request. If it never did, the popup would stay on black under its scrim with a solid panel, and
-  every action would work. While a copy is pending (about 0.1 to 0.3 s) the panel is solid; it turns to glass when
-  the frame arrives. The copies of the round took 76 ms on the S22 and 314 ms on the TV. In Sprint 17,
-  Video and the stream screens.
+  every action would work. While a copy is pending (about 0.1 to 0.3 s: 76 ms on the S22, 314 ms on the
+  TV) the panel is solid; it turns to glass when the frame arrives. In Sprint 17, Video and the stream
+  screens.
 - **A phone in landscape:** the three or four actions of the popup stack, and with large text the panel
   scrolls. It is covered by a test and a reference. No device round has reported it (the S22 steps of 3.29 are
   not recorded), so it is a device check in [Sprint 17](#sprint-17-general-fixes), Video and the stream
@@ -1164,8 +1165,8 @@ UAT, so none is left with no place. The owner can move any of them:
   cost on a TV), bitmap reuse against the hardware renderer, the colour of an HDR copy, and the first copy
   after the menu opens (129.7 ms on the S22 in the spike). The owner passed the look of the menu on the S22
   in the UAT (U4) with no note, but none of the four was measured, so they are device checks in Sprint 17,
-  Video and the stream screens. A real `PixelCopy` at the moment of a drop is no longer open: the logs of the TV (2026-10-29) and of
-  the S22 show the request before `Connection terminated` and the copy after it.
+  Video and the stream screens. A real `PixelCopy` at the moment of a drop is no longer open: the logs of
+  the TV (2026-10-29) and of the S22 show the request before `Connection terminated` and the copy after it.
 - **`StreamChromeHost.handleBack`** still handles the Failed phase, which is unreachable while the popup is
   composed. It is a harmless fallback. Two branches have no test, `FrozenFrame.kt` (the copy worked but the
   view has no bounds when it ends) and `VideoSource.kt` (a refused `PixelCopy` request); the patch
@@ -1189,8 +1190,8 @@ and the host log, Disconnect, the menu with no lateral movement, and the popup o
 owner's UAT, [section 3.30](development/device-validation.md#330-owners-20-minute-uat-sprint-15), about 20
 minutes by hand on both devices, passed every step except two partial ones (U6 and U7, above) and ended with the
 decisions above. The S22 steps of 3.29 that the UAT does not repeat have no result recorded, and the changes of the
-UAT have only had their Appearance rows looked at on the TV; the owner decides whether the next device round runs
-them.
+UAT have only had their Appearance rows looked at on the TV. They are for the owner's next device check, and the
+owner decides which to run.
 
 ### Sprint 16: fixes of the converted code
 
@@ -1472,25 +1473,34 @@ the round are in [device-validation section 20](development/device-validation.md
 
 - **A purple and cyan line at the bottom edge of the video on the TV.** Found by the owner in the Sprint 15
   UAT: once, with Steam Big Picture, a purple and cyan line with white blocks showed at the bottom edge of the
-  video, and went away by itself. The owner has a photo. In the TV logs of the agent part, the decoder's output
-  format and crop change at the start of every stream, so that change alone does not set this stream apart. The
-  cause is not known. First look at the decoder log of a stream that shows it, and run the same app on the
-  build before Sprint 14, as the audio follow-up did, to tell a conversion defect from an older one.
+  video, and went away by itself. The owner has a photo. The stream that showed the line has no log. The decoder
+  log of the #105 stream on the TV shows an input crop of 319 x 239 and then a format change to 1280 x 720 at its
+  start, and the four streams of the TV part of 3.29 start with the same input crop, so the crop change is no sign
+  by itself. The cause is not known. First capture the decoder log of a stream that shows it, and run the same app
+  on the build before Sprint 14, as the audio follow-up did, to tell a conversion defect from an older one.
 - **The frozen frame after a rotation.** From Sprint 15 (the known limits). The frame is placed and scaled when
   the copy ends, so a rotation, a split-screen resize or leaving picture-in-picture after the failure leaves it
   at the old offset. It is rare, and nothing crashes.
 - **A time cap for the pending copy.** From Sprint 15 (the known limits). The error popup waits on black for the
   copy with no time limit, and relies on `PixelCopy` answering every request it accepts. Add a cap, and show the
-  background when it runs out. The copies took 76 ms on the S22 and 314 ms on the TV in the round.
-- **Device checks left open by Sprint 15.** Four checks that Robolectric cannot make, and one that no round
-  has reported: whether the offscreen layer of the halo is kept across frames (its cost on a TV), bitmap reuse
-  against the hardware renderer, the colour of an HDR copy on the S22, and the delay of the first copy after the
-  menu opens (129.7 ms on the S22 in the spike); and the error popup on a phone in landscape, where its three or
-  four actions stack and, with large text, the panel scrolls (a test and a reference cover it). Add the
-  second-device question: with a pinned shortcut, and with Start on another app while one runs, the Conflict
-  dialog should ask (the UAT step U6 did not confirm it). The next device round looks at them, with the new
-  scrim and panel of the popups and the screens that follow the Library (device-validation section 20,
-  "Not run and owner items").
+  background when it runs out. The copy takes about 0.1 to 0.3 s (76 ms on the S22, 314 ms on the TV).
+- **Device checks left open by Sprint 15.** No round has reported these. They are the owner's next device
+  check (device-validation section 20, "Not run and owner items"):
+  - the start with a clip style on the TV (3.29, step 6, first bullet): three starts with the clip and three
+    with the style Off, and no `Background video failed`. It checks the risk that the clip competes with the
+    decoder of the stream;
+  - Disconnect on the S22 (step 2);
+  - the combos other than Ctrl+Alt+Shift+M (step 4): Z, Q, a short press of the mouse Back button, and a held
+    right click;
+  - the taps on the segments of the menu with touch and with a pad on the S22 (step 3);
+  - the second-device question (U6, step 5): with a pinned shortcut, and with Start on another app while one
+    runs, the Conflict dialog should ask;
+  - the error popup on a phone in landscape, where its three or four actions stack and, with large text, the
+    panel scrolls (a test and a reference cover it);
+  - four checks that Robolectric cannot make: whether the offscreen layer of the halo is kept across frames
+    (its cost on a TV), bitmap reuse against the hardware renderer, the colour of an HDR copy on the S22, and
+    the delay of the first copy after the menu opens (129.7 ms on the S22 in the spike);
+  - the new scrim and panel of the popups, and the screens that follow the Library.
 
 #### Accessibility and layout
 
@@ -1546,15 +1556,16 @@ Planned, not started. Owner decision of 2026-10-28.
   - **Test fixtures and the Reduced glass values**, from [Sprint 15](#sprint-15-the-stream-screens-and-glass)
     (the reviews of #104): other tests that end on a screen outside the game with the default look (the
     default background style, which moves) have the order hazard that `StreamBackTest` had, so consider a
-    background Off default in the test fixtures; and `VideoGlassSpec.kt` (`:borealis:stream`) repeats the Reduced values
-    (85 percent, 48 dp) that `GlassRules` keeps private, with a comment that points at ADR 0057, so keep
-    them in one place.
-  - **Two flaky tests and the duplicated pixel helpers**, from Sprint 15 (the gates and reviews of the phase; the owner listed them for the backlog on 2026-10-30).
-    `StreamChromeHostFrozenFrameTest` failed once under load with a Robolectric `NullPointerException` before
-    the body of the test, and `StreamBackTest` "back opens the menu…" failed once on the timing of
-    `menuHintShown`. The stream tests also repeat pixel helpers: `ui/glass/PixelSupport.kt` against the private
-    copies in `DialogOverBackgroundTest` and `DialogOverBackgroundApi30Test`, and the private `assertNear`
-    copies in four stream tests. Make the two tests deterministic, and keep the helpers in one place.
+    background Off default in the test fixtures; and `VideoGlassSpec.kt` (`:borealis:stream`) repeats the
+    Reduced values (85 percent, 48 dp) that `GlassRules` keeps private, with a comment that points at
+    ADR 0057, so keep them in one place.
+  - **Two flaky tests and the duplicated pixel helpers**, from Sprint 15 (the gates and reviews of the phase;
+    the owner listed them for the backlog on 2026-10-30). `StreamChromeHostFrozenFrameTest` failed once under
+    load with a Robolectric `NullPointerException` before the body of the test, and `StreamBackTest` "back
+    opens the menu…" failed once on the timing of `menuHintShown`. The stream tests also repeat pixel helpers:
+    `ui/glass/PixelSupport.kt` against the private copies in `DialogOverBackgroundTest` and
+    `DialogOverBackgroundApi30Test`, and the private `assertNear` copies in four stream tests. Make the two
+    tests deterministic, and keep the helpers in one place.
   - **The Failed phase of `StreamChromeHost.handleBack` and two untested branches**, from Sprint 15 (the known
     limits): the branch is unreachable while the popup is composed, and `FrozenFrame.kt` (the copy worked but
     the view has no bounds when it ends) and `VideoSource.kt` (a refused `PixelCopy` request) have no test.

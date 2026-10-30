@@ -2167,7 +2167,8 @@ Steps:
      glass, with "Closes `<game>` on the PC." and "Unsaved progress in it is lost."; Cancel has the focus. The
      game shows around it under a light scrim (the page at 35 %), and the panel is firmer than the menu
      behind it (an `owner check`, since the UAT of 2026-10-30). B or Back closes only the popup, and the focus
-     returns to the Quit row. On the S22 a tap outside the popup is Cancel. With TalkBack on (S22), opening the popup announces its title and its body.
+     returns to the Quit row. On the S22 a tap outside the popup is Cancel. With TalkBack on (S22),
+     opening the popup announces its title and its body.
    - Choose Quit. Expected: "Quitting `<game>`…" shows at once, at the confirmation, over the user's
      background, with the Borealis loader. It does not wait for the stream to end. Then the Library shows
      "App quit." and "Nothing running".
@@ -2364,8 +2365,8 @@ Steps:
      stream, frozen and blurred, under a light scrim (the page at 35 %), and the panel firm (85 % of the
      surface with Blurred). A tap outside the popup does nothing (S22). Back (or
      B on a pad) closes the popup and opens the Library, which shows the game still running. Diagnostics
-     opens the diagnostics, and Close does what Back does. While the copy is pending, for about 0.1 to 0.3 s, the popup
-     is on black with a solid panel, then on the frame.
+     opens the diagnostics, and Close does what Back does. While the copy is pending, for about 0.1 to 0.3 s (76 ms
+     on the S22, 314 ms on the TV), the popup is on black with a solid panel, then on the frame.
    - The panel follows the Stream menu style: glass with Blurred, solid with Solid, Transparency Off or High contrast.
      On a phone in landscape the actions stack, and with a large text size the panel scrolls (S22). A
      rotation after the drop leaves the frozen frame at its old place: known.
@@ -2415,8 +2416,8 @@ Steps, with the minutes that the plan gives them:
   to Solid, and Reduce motion to On, and look again (does the background stand still?). Put them back.
 - **U5. The dropped stream (S22, 3 min).** Stream a game. The orchestrator drops the connection. Look at the
   popup: is the last frame of the stream behind it, frozen and blurred, under a light scrim, with a firm panel
-  that does not look like a hole, and does it look right? A tap outside does nothing. Press Back: does the Library show the game still running? This is
-  the check that no capture can make: the judgement is yours.
+  that does not look like a hole, and does it look right? A tap outside does nothing. Press Back: does the
+  Library show the game still running? This is the check that no capture can make: the judgement is yours.
 - **U6. A second device (TV and S22, 4 min).** Start the game on the S22 and Disconnect. On the TV, tap the
   running game: it resumes with no question. Disconnect on the TV. On the S22, tap the pinned shortcut of the
   game (or, if you have none, choose Start on another app): does the dialog ask, with Cancel focused? Choose
@@ -5434,7 +5435,9 @@ TV. The findings went to [Sprint 17](../roadmap.md#sprint-17-general-fixes) and
 - Builds:
   - The debug build of `2e76dfcfb` for the drop check of #105 on the TV.
   - The debug build of `1455bcf0a` for the TV part of 3.29, for the #201 run and for the owner's UAT. It was
-    on both devices: installed on the TV on 2026-10-29 at about 21:35, and on the S22 at about 22:44. It is
+    on both devices: installed on the TV on 2026-10-29 at about 21:35, and on the S22 at about 22:44 (the package
+    manager's `lastUpdateTime`, 22:44:38, read right after the install; the S22 log of the #201 run starts the
+    app on `commit=1455bcf0ac18` at 23:29). It is
     the phase head after the docs of wave 4. Its Kotlin differs from `2e76dfcfb` only in comments, so it
     behaves as that build.
   - The TV got both builds with `install -r`, so its data stayed, and the embedded commit was checked.
@@ -5532,22 +5535,24 @@ of the 53 screenshot references of the phase (gate G1) made no other mark.
 
 | Step | Device | Result | Notes |
 | --- | --- | --- | --- |
-| U1 Quit and the popup | TV | pass, with decision 1 | The look of the popup: see decision 1 below. |
+| U1 Quit and the popup | TV | pass, with decision 1 | The Quit popup looked like a hole: see decision 1 below. |
 | U2 The menu without lateral movement | TV | pass | No note. |
 | U3 Disconnect | TV | pass | No note. |
 | U4 The look | S22 | pass, with decisions 2 and 3 | The row for the background before and after the stream is dropped, and the other row is renamed: see decisions 2 and 3 below. |
-| U5 The dropped stream | S22 | pass, with decision 1 | The popup and Back were right, in the owner's words. The look of the popup: decision 1. |
+| U5 The dropped stream | S22 | pass | The popup over the frame and Back were right, in the owner's words. |
 | U6 A second device | TV, S22 | partial | A tap on the running app entered directly. That is a resume choice and the design ([3.29](#329-sprint-15-checks), step 5, first bullet), so that part passes. The path that asks (a pinned shortcut, or Start on another app while one runs) is not confirmed: the owner said it "just entered directly", and it is not known which entry they used. The agent's retest of the question for another app is void: the host crashed and the running app was gone (see The host below). A device check in Sprint 17. |
 | U7 The keyboard and the mouse | S22 | partial | Ctrl+Alt+Shift+M opens the menu: pass. The Back hold of the mouse did not work with the owner's mouse: its side Back button arrives as a right click, which is finding (b) below. It is not known whether "Mouse back and forward buttons" was on. The raw-event capture is in Sprint 17. |
 
 The three decisions:
 
-1. **The popups over the game.** The Quit popup and the error popup over the frozen frame looked like a hole: a
-   panel of 40 % glass under a scrim of 72 %. Now the scrim of a popup over the game is the page at 35 %
-   (`STREAM_SCRIM_ALPHA`, the scrim of the side panel), and the panel is 85 % of the surface (`POPUP_TINT_PERCENT`),
-   solid where the rules say. Over the background outside the game, ADR 0057 decision 8 is unchanged. On the
-   85 % panel over white, the text keeps 4.5:1 without any halo (ink 9.50:1, ink-2 6.74:1, accent-soft 6.20:1,
-   danger-ink 5.01:1). The halo stays, and the owner may drop it later.
+1. **The popups over the game.** The Quit popup looked like a hole (U1): its panel of 40 % glass was almost
+   transparent, and the scrim of 72 % turned the background black. The owner chose, separately, to change the
+   error popup over the frozen frame the same way, because it shares `StreamDialog`. Now the scrim of a
+   popup over the game is the page at 35 % (`STREAM_SCRIM_ALPHA`, the scrim of the side panel), and the panel
+   is 85 % of the surface (`POPUP_TINT_PERCENT`), solid where the rules say. Over the background outside the
+   game, ADR 0057 decision 8 is unchanged. On the 85 % panel over white, the text keeps 4.5:1 without any halo
+   (ink 9.50:1, ink-2 6.74:1, accent-soft 6.20:1, danger-ink 5.01:1). The halo stays, and the owner may drop it
+   later.
 2. **The option "Background before and after the stream" is dropped.** The screens outside the game follow the
    Background of the Library: its style, Off, Reduce motion and the battery saver. A clip still shows its still
    while the stream holds the decoder, and every style is held still under the conflict dialog and the error
@@ -5557,7 +5562,7 @@ The three decisions:
 
 The code of these three changes is the merges `4dabac9db` (decision 1) and `1d73bc0b7` (decisions 2 and 3), and
 the phase head `4429af309`. The only device check of them is the Appearance rows on the TV (see Not run), so the
-next device round looks at the new scrim, the new panel and the screens that now follow the Library.
+owner's next device check looks at the new scrim, the new panel and the screens that now follow the Library.
 
 ### The host
 
@@ -5572,9 +5577,10 @@ The owner listed these for the backlog on 2026-10-30: (a) and (b) from the UAT, 
 reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md).
 
 - **(a) A line at the bottom edge of the video on the TV.** A purple and cyan line with white blocks showed at
-  the bottom edge of the video, once, with Steam Big Picture, and went away by itself. The owner has a photo. In
-  the TV logs of the agent part, the decoder's output format and crop change at the start of every stream, so
-  that change alone does not set the stream with the line apart. The cause is not known.
+  the bottom edge of the video, once, with Steam Big Picture, and went away by itself. The owner has a photo. The
+  stream that showed the line has no log. The decoder log of the #105 stream on the TV shows an input crop of
+  319 x 239 and then a format change to 1280 x 720 at its start, and the four streams of the TV part of 3.29
+  start with the same input crop, so the crop change is no sign by itself. The cause is not known.
   [Sprint 17](../roadmap.md#sprint-17-general-fixes), Video and the stream screens.
 - **(b) The side Back button of the owner's mouse arrives as a right click.** It is why the Back hold of U7 did
   not work with that mouse. The inherited path turns a Back key from a mouse source into a right click while
@@ -5600,15 +5606,25 @@ reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md
 ### Not run and owner items
 
 - No result is recorded here for these steps of 3.29, which the TV part of the agent did not run and the UAT
-  does not repeat: the S22 Quit with TalkBack and its tap outside, the S22 Quit timings, the hint with the
-  keyboard and the mouse, the second device in both orders and the Try again flows, Transparency Off, High
-  contrast and an HDR stream by eye, the drop before the first frame, and a drop on the S22 by
-  `cmd connectivity`. The owner decides whether the next device round runs them.
+  does not repeat. They are for the owner's next device check, and the owner decides which to run:
+  - the start with a clip style on the TV (step 6, first bullet): three starts with the clip and three with the
+    style Off, and no `W Borealis.APP: Background video failed`. It is the check of the risk that the clip
+    competes with the decoder of the stream;
+  - Disconnect on the S22 (step 2);
+  - the combos other than Ctrl+Alt+Shift+M (step 4): Ctrl+Alt+Shift+Z and Q, a short press of the mouse Back
+    button, and a held right click;
+  - the taps on the segments of the menu with touch and with a pad on the S22 (step 3);
+  - the S22 Quit with TalkBack and its tap outside, and the S22 Quit timings;
+  - the hint with the keyboard and the mouse;
+  - the second device in both orders and the Try again flows;
+  - Transparency Off, High contrast and an HDR stream by eye;
+  - the drop before the first frame, and a drop on the S22 by `cmd connectivity`.
 - The question for another app (step 5, third bullet), because of the host crash.
 - The path of the second device that asks (a pinned shortcut, or Start on another app while one runs), which U6
   did not confirm.
 - The Back hold of the mouse with a mouse that sends a real `BUTTON_BACK` (U7).
 - The look of `4429af309`, which holds the UAT adjustments, on a device. It was checked on the TV only for the
   Appearance rows: the TV shows "Stream menu style", Blurred, and no stream background row. The new scrim and
-  panel, and the screens that follow the Library, are the owner's next check.
-- Left on the devices: the build of `1455bcf0a`.
+  panel, and the screens that follow the Library, are the owner's next device check.
+- Left on the devices: the S22 has the build of `1455bcf0a`, and the TV has the debug build of `4429af309`, which
+  was installed for the check of the Appearance rows on 2026-10-30 (the TV log reads `commit=4429af30927e`).

@@ -9,7 +9,7 @@ Definition of Done. These pages hold the details.
 | [tdd.md](tdd.md) | Red-green-refactor, commit order, characterization tests, what counts as a behaviour test. |
 | [upstream-sync.md](upstream-sync.md) | Upstream cherry-picks: procedure for moonlight-android and moonlight-common-c fixes (ADR 0054). |
 | [release.md](release.md) | Step-by-step procedure for cutting a release. |
-| [device-validation.md](device-validation.md) | Phase 1 and Sprints 2 to 10 runbook for the checks on a Galaxy S22 and a Google TV Streamer against LuminalShine. Sections 6 to 15 record the device rounds. |
+| [device-validation.md](device-validation.md) | Phase 1 and Sprints 2 to 15 runbook for the checks on a Galaxy S22 and a Google TV Streamer against LuminalShine. Sections 6 to 20 record the device rounds. |
 | [orchestration.md](orchestration.md) | How AI agents are orchestrated: roles, worktrees, hand-offs. |
 | [task-brief.md](task-brief.md) | Template for briefing an implementer on one task. |
 | [decoder-errata.md](decoder-errata.md) | Known MediaCodec hardware decoder quirks, inherited from Moonlight. |

@@ -208,8 +208,8 @@ for it.
    popup takes the blur of the look and always the 85 % tint, so it is firmer than
    the panel behind it. Where the glass is solid the popup is solid, and its scrim
    is the page at 35 % all the same (owner decision of 2026-10-30: in the
-   acceptance test the popup over a 72 % scrim looked like a hole, lighter than
-   all around it).
+   acceptance test the Quit popup over a 72 % scrim looked like a hole, its panel
+   almost transparent on a black background).
 3. Every text on the glass has a halo of 3 dp, so it keeps 4.5:1 over any frame,
    and ink-3 and ink-4 are ink-2 there. The segmented controls sit on a solid
    container of the `surface` colour. The focus outline has a casing in the

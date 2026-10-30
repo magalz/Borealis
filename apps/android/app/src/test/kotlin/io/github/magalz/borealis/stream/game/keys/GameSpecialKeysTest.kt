@@ -342,7 +342,7 @@ internal class GameSpecialKeysTest : GameTestBase() {
     // While the chord waits
 
     @Test
-    fun `while the chord waits for the modifiers, the keys down are eaten and the keys up go through`() {
+    fun `while the chord waits for the modifiers, the keys down are eaten and so are their keys up`() {
         streamingAndCapturing()
         rig.holdCtrlAltShift()
         rig.down(KeyEvent.KEYCODE_Z)
@@ -357,7 +357,20 @@ internal class GameSpecialKeysTest : GameTestBase() {
         assertThat(otherDown).isTrue()
         assertThat(otherUp).isTrue()
         assertThat(specialUp).isTrue()
-        // The host sees the key up of the B whose key down it never saw.
+        // The host never saw the key down of the B, so it does not see its key up either.
+        assertThat(sentKeys()).isEmpty()
+    }
+
+    @Test
+    fun `while the chord waits, the key up of a key that was down before the chord goes through`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_B)
+        rig.down(KeyEvent.KEYCODE_Z)
+        forgetCalls()
+
+        rig.up(KeyEvent.KEYCODE_B)
+
         assertThat(sentKeys()).containsExactly(sent(0x8042, up, ctrl or alt or shift))
     }
 

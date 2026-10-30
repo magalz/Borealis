@@ -20,6 +20,7 @@ import com.limelight.R
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.input.NativeGamepadSupport
 import io.github.magalz.borealis.input.UsbPermissionRequests
+import java.util.concurrent.CopyOnWriteArrayList
 
 class UsbDriverService : Service(), UsbDriverListener {
     private var usbManager: UsbManager? = null
@@ -29,7 +30,9 @@ class UsbDriverService : Service(), UsbDriverListener {
     private val receiver = UsbEventReceiver()
     private val binder = UsbDriverBinder()
 
-    private val controllers = ArrayList<AbstractController>()
+    // The input thread of a failing pad removes it (deviceRemoved) while the main thread replays or
+    // stops the list.
+    private val controllers = CopyOnWriteArrayList<AbstractController>()
 
     // BOREALIS: the permission dialog waits for the first frame of the stream (see
     // UsbPermissionRequests)

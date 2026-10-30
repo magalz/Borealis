@@ -18,7 +18,7 @@ abstract class AbstractXboxController(
     listener: UsbDriverListener,
 ) : AbstractController(deviceId, listener, device.vendorId, device.productId) {
     private var inputThread: Thread? = null
-    private var stopped = false
+    @Volatile private var stopped = false
 
     @JvmField protected var inEndpt: UsbEndpoint? = null
     @JvmField protected var outEndpt: UsbEndpoint? = null

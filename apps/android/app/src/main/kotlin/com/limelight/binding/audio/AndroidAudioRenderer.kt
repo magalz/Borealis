@@ -176,12 +176,12 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
             } catch (e: Exception) {
                 // Try to release the AudioTrack if we got far enough
                 e.printStackTrace()
+                // BOREALIS: the track is dropped whatever the release does, so a track that never
+                // played is not kept
+                val kept = track
+                track = null
                 try {
-                    val kept = track
-                    if (kept != null) {
-                        kept.release()
-                        track = null
-                    }
+                    kept?.release()
                 } catch (ignored: Exception) {}
             }
         }

@@ -235,16 +235,14 @@ class SavedLayoutCharacterizationTest {
     }
 
     @Test
-    fun `an entry that misses a number is removed after the numbers before it were applied`() {
+    fun `an entry that misses a number is removed and moves nothing`() {
         rig.saved.edit().putString("6", """{"LEFT":1,"TOP":2,"WIDTH":3}""").commit()
 
         refresh()
 
-        // LEFT and TOP were read before the missing HEIGHT was found
-        val defaults = GoldenLayouts.of(OscRig.PHONE, onlyL3R3 = false, guide = true)
-        val a = defaults.first { it.id == 6 }
-        val expected = defaults.map { if (it.id == 6) Placed(6, 1, 2, 3, a.height) else it }
-        assertThat(rig.layout()).containsExactlyElementsIn(expected).inOrder()
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, false, true))
+            .inOrder()
         assertThat(rig.saved.contains("6")).isFalse()
     }
 

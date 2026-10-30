@@ -231,7 +231,9 @@ internal class GameKeySendTest : GameTestBase() {
         }
 
         // U+1F600 is sent as its surrogate pair, not narrowed to U+F600.
-        assertThat(sentTexts()).containsExactly("é", "€", String(Character.toChars(0x1F600))).inOrder()
+        assertThat(sentTexts())
+            .containsExactly("é", "€", String(Character.toChars(0x1F600)))
+            .inOrder()
     }
 
     @Test

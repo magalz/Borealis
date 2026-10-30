@@ -2563,8 +2563,8 @@ class Game :
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
         }
         if (
-            (lastButtonState and (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) !=
-                0
+            (lastButtonState and
+                (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) != 0
         ) {
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
         }

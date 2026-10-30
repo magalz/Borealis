@@ -123,14 +123,14 @@ abstract class ShieldContract : FeedbackTestBase() {
     }
 
     @Test
-    fun `a percentage goes through a float, which loses one at 53 and at 59`() {
+    fun `a percentage goes through a float and comes back the same`() {
         val results =
             listOf(1, 29, 53, 57, 59, 99).map {
                 reported(Reading(it, SceConnectionType.WIRELESS, SceChargingState.CHARGING))
                     .percentage
             }
 
-        assertThat(results).containsExactly(1, 29, 52, 57, 58, 99).inOrder()
+        assertThat(results).containsExactly(1, 29, 53, 57, 59, 99).inOrder()
     }
 
     @Test

@@ -2364,7 +2364,7 @@ Steps:
      B on a pad) closes the popup and opens the Library, which shows the game still running. Diagnostics
      opens the diagnostics, and Close does what Back does. While the copy is pending, for tens of ms, the popup
      is on black with a solid panel, then on the frame.
-   - The panel follows the menu glass: glass with Blur, solid with Solid, Transparency Off or High contrast.
+   - The panel follows the Stream menu style: glass with Blurred, solid with Solid, Transparency Off or High contrast.
      On a phone in landscape the actions stack, and with a large text size the panel scrolls (S22). A
      rotation after the drop leaves the frozen frame at its old place: known.
    - A drop before the first frame. Start a stream and block the network while the Starting screen shows (the
@@ -2435,7 +2435,7 @@ what you saw in the notes. A `fail` needs a note.
 | U1 Quit and the popup | TV | popup centred and readable; Quitting at once; the Library | | | |
 | U2 The menu without lateral movement | TV | Left and Right do nothing; OK cycles; Quit reached | | | |
 | U3 Disconnect | TV | the screen is readable; "still running" notice | | | |
-| U4 The look | S22 | Moving, Still, Blur, Solid, Reduce motion; readable text | | | |
+| U4 The look | S22 | the background moves and, with Reduce motion, stands still; Blurred, Solid; readable text | | | |
 | U5 The dropped stream | S22 | last frame frozen and blurred behind the popup; Back to the Library | | | |
 | U6 A second device | TV, S22 | a tap on the running game resumes; the shortcut asks | | | |
 | U7 The keyboard and the mouse | S22 | the chord opens the menu; the Back hold opens it; a short press goes back | | | |

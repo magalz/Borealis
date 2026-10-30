@@ -212,14 +212,16 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
     override fun playDecodedAudio(audioData: ShortArray?) {
         // Only queue up to 40 ms of pending audio data in addition to what AudioTrack is buffering
         // for us.
-        if (MoonBridge.getPendingAudioDuration() < PENDING_AUDIO_LIMIT_MS) {
+        // BOREALIS: read once, so the log shows the value that the check saw
+        val pendingAudioMs = MoonBridge.getPendingAudioDuration()
+        if (pendingAudioMs < PENDING_AUDIO_LIMIT_MS) {
             // This will block until the write is completed. That can cause a backlog
             // of pending audio data, so we do the above check to be able to bound
             // latency at 40 ms in that situation.
             val samples = audioData ?: throw NullPointerException("No audio data to play")
             requireTrack().write(samples, 0, samples.size)
         } else {
-            LimeLog.info("Too much pending audio data: ${MoonBridge.getPendingAudioDuration()} ms")
+            LimeLog.info("Too much pending audio data: $pendingAudioMs ms")
         }
     }
 

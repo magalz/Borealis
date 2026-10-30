@@ -78,13 +78,13 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     @Test
     fun `successive packets each ask for the pending duration again`() {
         val renderer = ready()
-        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0, 100, 100, 10)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0, 100, 10)
 
         repeat(3) { renderer.playDecodedAudio(samples) }
 
-        // The second packet is dropped (two reads); the first and the third are written
+        // The second packet is dropped; the first and the third are written; one read each
         assertThat(writes()).hasSize(2)
-        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(4)
+        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(3)
     }
 
     @Test

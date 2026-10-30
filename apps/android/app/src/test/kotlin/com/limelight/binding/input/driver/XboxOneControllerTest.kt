@@ -607,7 +607,7 @@ class XboxOneControllerTest {
     }
 
     @Test
-    fun `stopping the pad cuts the main motors, leaves the trigger motors and closes it`() {
+    fun `stopping the pad cuts every motor, the trigger motors too, and closes it`() {
         val pad = pad()
         pad.start()
         pad.controller.rumbleTriggers(0x7FFF, 0x7FFF)
@@ -616,11 +616,11 @@ class XboxOneControllerTest {
         pad.controller.stop()
         pad.controller.stop()
 
-        // The 2015 init, two rumbles, then the stop's rumble with the main motors at zero: the
-        // trigger motors keep the value they had.
+        // The 2015 init, two rumbles, then the stop's rumble with every motor at zero, so the
+        // trigger motors do not go on vibrating after the stream.
         assertThat(pad.writtenBytes().last())
             .isEqualTo(
-                listOf(0x09, 0x00, 3, 0x09, 0x00, 0x0F, 0x3F, 0x3F, 0x00, 0x00, 0xFF, 0x00, 0xFF)
+                listOf(0x09, 0x00, 3, 0x09, 0x00, 0x0F, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF)
             )
         assertThat(pad.usb.writes).hasSize(4)
         assertThat(pad.usb.closes).isEqualTo(1)

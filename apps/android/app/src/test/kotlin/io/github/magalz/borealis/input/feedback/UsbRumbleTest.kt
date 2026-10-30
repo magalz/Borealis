@@ -115,6 +115,19 @@ class UsbRumbleTest : FeedbackTestBase() {
     }
 
     @Test
+    fun `the end of the stream stops every motor of a pad the driver holds`() {
+        val rig = rig()
+        val usb = usbPad(rig)
+        rig.rumble(0x4000, 0x4000)
+        rig.rumbleTriggers(0x7FFF, 0x7FFF)
+
+        rig.handler.stop()
+
+        assertThat(usb.rumbles.last()).isEqualTo(0 to 0)
+        assertThat(usb.triggerRumbles.last()).isEqualTo(0 to 0)
+    }
+
+    @Test
     fun `a trigger rumble reaches the driver with the values as they came`() {
         val rig = rig()
         val usb = usbPad(rig)

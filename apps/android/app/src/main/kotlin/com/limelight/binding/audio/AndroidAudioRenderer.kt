@@ -29,6 +29,10 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
 
     private var track: AudioTrack? = null
 
+    // Set by cleanup, cleared when setup keeps a track: a repeated cleanup must not fail, while a
+    // cleanup without any track still does.
+    private var cleanedUp = false
+
     // The inherited Java used the track without a check, so a call before a successful setup failed
     // with a NullPointerException at that point. Keep the exception.
     private fun requireTrack(): AudioTrack =
@@ -198,6 +202,7 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
             return NO_AUDIO_TRACK
         }
 
+        cleanedUp = false
         return 0
     }
 
@@ -237,7 +242,12 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
     }
 
     override fun cleanup() {
+        // BOREALIS: the first cleanup drops the track, so a second one does nothing. Before any
+        // setup that kept a track, cleanup still fails as in the inherited Java.
+        if (cleanedUp) return
         val current = requireTrack()
+        track = null
+        cleanedUp = true
 
         // Immediately drop all pending data
         current.pause()

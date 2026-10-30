@@ -208,6 +208,7 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
     override fun onElementTouchEvent(event: MotionEvent): Boolean {
         // save last click state
         val lastClickState = clickState
+        val wasPressed = isPressed
 
         // get absolute way for each axis
         relativeX = -(width / 2 - event.x)
@@ -263,10 +264,14 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
             updatePosition(event.eventTime)
         } else {
             stickState = StickState.NO_MOVEMENT
-            notifyOnRevoke()
 
-            // not longer pressed reset analog stick
-            notifyOnMovement(0f, 0f)
+            // only a stick that was pressed has something to revoke and to reset
+            if (wasPressed) {
+                notifyOnRevoke()
+
+                // not longer pressed reset analog stick
+                notifyOnMovement(0f, 0f)
+            }
         }
         // refresh view
         invalidate()

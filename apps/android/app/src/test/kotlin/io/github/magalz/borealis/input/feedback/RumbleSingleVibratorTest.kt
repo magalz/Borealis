@@ -293,6 +293,27 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     }
 
     @Test
+    fun `a motor that is not zero is not scaled down to zero by the fallback strength`() {
+        val results = mutableListOf<List<VibratorCall>>()
+        for ((low, high) in listOf(0x0001 to 0, 0 to 0x0001, 0x0001 to 0x0001)) {
+            val phone = Hardware.vibrator()
+            val rig =
+                rig(phoneVibrator = phone) {
+                    vibrateFallbackToDevice = true
+                    vibrateFallbackToDeviceStrength = 50
+                }
+            rig.wake(rig.connectPad())
+            rig.rumble(low, high)
+            results += Hardware.calls(phone).toList()
+        }
+
+        // 1 * 50 / 100 is 0, which would cancel the phone
+        assertThat(results)
+            .containsExactly(listOf(oneShot(1)), listOf(oneShot(1)), listOf(oneShot(1)))
+            .inOrder()
+    }
+
+    @Test
     fun `a fallback strength of zero cancels the phone`() {
         val phone = Hardware.vibrator()
         val rig =
@@ -303,6 +324,21 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
         rig.wake(rig.connectPad())
 
         rig.rumble(0xFFFF, 0xFFFF)
+
+        assertThat(Hardware.calls(phone)).containsExactly(VibratorCall.Cancel)
+    }
+
+    @Test
+    fun `a fallback strength of zero cancels the phone for a weak motor too`() {
+        val phone = Hardware.vibrator()
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 0
+            }
+        rig.wake(rig.connectPad())
+
+        rig.rumble(0x0001, 0x0001)
 
         assertThat(Hardware.calls(phone)).containsExactly(VibratorCall.Cancel)
     }

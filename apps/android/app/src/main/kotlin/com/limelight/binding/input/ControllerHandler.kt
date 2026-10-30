@@ -1003,9 +1003,13 @@ class ControllerHandler(
             }
         } else {
             // From Android S the system says whether the pad has a battery: tell the host once
-            // that it has none. Before it we cannot know, and the pad claims no battery.
+            // that it has none, if the pad claimed a battery in its arrival (an external pad, see
+            // sendControllerArrival): the host has nothing to correct for a pad that did not, and
+            // a number can be shared with a pad that has a real battery. Before S we cannot know,
+            // and the pad claims no battery.
             if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    context.external &&
                     context.lastReportedBatteryStatus != BATTERY_STATUS_NOT_PRESENT
             ) {
                 conn.sendControllerBatteryEvent(
@@ -3644,7 +3648,7 @@ class ControllerHandler(
                 // performs a Binder transaction that can cause ANRs on some devices.
                 // To avoid this, we will just claim we can report battery state for all
                 // external gamepad devices on Android S. If it turns out that no battery
-                // is actually present, we'll just report unknown battery state to the host.
+                // is actually present, we'll just report that no battery is present.
                 if (external) {
                     capabilities =
                         (capabilities.toInt() or MoonBridge.LI_CCAP_BATTERY_STATE.toInt()).toShort()

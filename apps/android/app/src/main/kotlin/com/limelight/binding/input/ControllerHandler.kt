@@ -2326,7 +2326,11 @@ class ControllerHandler(
         }
 
         usbDeviceContexts.forEachValue { deviceContext ->
-            if (deviceContext.controllerNumber == controllerNumber) {
+            // A pad that has sent no input has no controller number yet, and answers to none
+            if (
+                deviceContext.assignedControllerNumber &&
+                    deviceContext.controllerNumber == controllerNumber
+            ) {
                 vibrated = true
                 foundMatchingDevice = true
                 checkNotNull(deviceContext.device).rumble(lowFreqMotor, highFreqMotor)
@@ -2397,7 +2401,10 @@ class ControllerHandler(
         }
 
         usbDeviceContexts.forEachValue { deviceContext ->
-            if (deviceContext.controllerNumber == controllerNumber) {
+            if (
+                deviceContext.assignedControllerNumber &&
+                    deviceContext.controllerNumber == controllerNumber
+            ) {
                 checkNotNull(deviceContext.device).rumbleTriggers(leftTrigger, rightTrigger)
             }
         }

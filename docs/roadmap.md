@@ -1189,8 +1189,8 @@ Google TV Streamer with the owner's OK, was the drop check of #105 and the TV pa
 and the host log, Disconnect, the menu with no lateral movement, and the popup over the frozen frame). The
 owner's UAT, [section 3.30](development/device-validation.md#330-owners-20-minute-uat-sprint-15), about 20
 minutes by hand on both devices, passed every step except two partial ones (U6 and U7, above) and ended with the
-decisions above. The S22 steps of 3.29 that the UAT does not repeat have no result recorded, and the changes of the
-UAT have only had their Appearance rows looked at on the TV. They are for the owner's next device check, and the
+decisions above. The steps of 3.29 that neither the TV part nor the UAT ran have no result recorded, and the
+changes of the UAT have only had their Appearance rows looked at on the TV. They are for the owner's next device check, and the
 owner decides which to run.
 
 ### Sprint 16: fixes of the converted code

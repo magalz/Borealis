@@ -188,7 +188,8 @@ says what happened and what to do next.
    side panel of the menu, in both cases and around a solid panel too, so the
    frame stays visible around the popup (owner decision of 2026-10-30: the first
    version had the dialog scrim, the page at 72 %, and the Quit popup looked like
-   a hole; this popup changes the same way because it shares the dialog). The panel is the glass of the menu over the frame, at 85 % of the
+   a hole; this popup changes the same way because it shares the dialog). The
+   panel is the glass of the menu over the frame, at 85 % of the
    surface and the blur of the look, with Stream menu style on Blurred, and a
    solid surface with Solid, Transparency Off, High contrast or below API 31.
    Reduce motion and the battery saver change nothing: the frame is still. While

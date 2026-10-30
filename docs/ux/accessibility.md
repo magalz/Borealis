@@ -1807,8 +1807,9 @@ blurred by the blur of the look (8 dp at Standard, 48 dp at Reduced), whatever t
 viewer chose for the side panel, and the `surface` colour itself where the panel is solid.
 The first version had the dialog scrim and the viewer's 40 %, and in the acceptance test of
 2026-10-30 the Quit popup looked like a hole to the owner, its panel almost transparent on a black
-background. The error popup over the frame changes the same way, because it shares `StreamDialog`. An error popup with no frame, or
-with a copy that failed, is a dialog over the background and follows the paragraph above.
+background. The error popup over the frame changes the same way, because it shares `StreamDialog`.
+An error popup with no frame, or with a copy that failed, is a dialog over the background and
+follows the paragraph above.
 
 The glass of the side panel of the menu takes the tint and the blur of the viewer's
 Transparency and is never raised. Standard is Glass tint and Glass blur (40 % and 8 dp by

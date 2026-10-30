@@ -13,7 +13,8 @@ import org.junit.Test
 /**
  * The chords of Ctrl, Alt and Shift with Z, Q, C and M: the client keeps them for itself (the grab,
  * the disconnect, the cursor and the menu) and eats the key, and while it waits for the modifiers
- * to come up it eats every key down and lets every key up pass.
+ * to come up it eats every key down. A key up passes, except that of a key whose key down it ate:
+ * the host never saw that key go down, so it does not see it come up either.
  */
 internal class GameSpecialKeysTest : GameTestBase() {
     private val down = KeyboardPacket.KEY_DOWN

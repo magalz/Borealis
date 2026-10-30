@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Build
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -28,8 +29,9 @@ import org.robolectric.annotation.Config
 
 /**
  * Below API 31 nothing blurs: the error popup shows the last frame sharp, under the scrim, and its
- * panel is the solid surface, as the owner decided on 2026-10-29. `FrozenFrameLookTest` has the
- * rule; this is that the chrome asks the device it runs on.
+ * panel is the solid surface, as the owner decided on 2026-10-29. The scrim is the page at 35
+ * percent, as it is over the blurred frame (owner, 2026-10-30). `FrozenFrameLookTest` has the rule;
+ * this is that the chrome asks the device it runs on.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [Build.VERSION_CODES.R], qualifiers = PHONE_LANDSCAPE)
@@ -64,6 +66,17 @@ class FrozenFrameApi30Test {
     }
 
     @Test
+    fun `the scrim over the sharp frame is the page at 35 percent`() {
+        show()
+
+        val expected = BorealisColors().page.copy(alpha = SCRIM).compositeOver(Color(LIGHT_GREY))
+        val margin = composeRule.rootFrame()[MARGIN_X, 2]
+        assertThat(margin.red).isWithin(TOLERANCE).of(expected.red)
+        assertThat(margin.green).isWithin(TOLERANCE).of(expected.green)
+        assertThat(margin.blue).isWithin(TOLERANCE).of(expected.blue)
+    }
+
+    @Test
     fun `the panel is the solid surface`() {
         show()
 
@@ -82,6 +95,8 @@ class FrozenFrameApi30Test {
         const val LIGHT_GREY = 0xFFC0C0C0.toInt()
         const val MARGIN_X = 60
         const val FRAME_SHOWS = 0.035f
+        const val SCRIM = 0.35f
+        const val TOLERANCE = 0.012f
         const val SOLID = 0.01f
     }
 }

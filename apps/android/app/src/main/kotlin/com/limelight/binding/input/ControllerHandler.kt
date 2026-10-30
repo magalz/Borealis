@@ -282,8 +282,12 @@ class ControllerHandler(
 
         // If this device sent data as a gamepad, zero the values before removing.
         // We must do this after clearing the currentControllers entry so this
-        // causes the device to be removed on the server PC.
-        if (context.assignedControllerNumber) {
+        // causes the device to be removed on the server PC. A pad that only shares its number
+        // leaves the number to the others: the zero packet would drop what they hold.
+        if (
+            context.assignedControllerNumber &&
+                (context.reservedControllerNumber || !sharesControllerNumber(context))
+        ) {
             conn.sendControllerInput(
                 context.controllerNumber,
                 getActiveControllerMask(),
@@ -296,6 +300,20 @@ class ControllerHandler(
                 0,
             )
         }
+    }
+
+    // Whether another pad is on the controller number of the context. The default context is not
+    // one: it is the on-screen controller, which is always on number 0.
+    private fun sharesControllerNumber(context: GenericControllerContext): Boolean {
+        fun isOnItsNumber(other: GenericControllerContext) =
+            other !== context &&
+                other.assignedControllerNumber &&
+                other.controllerNumber == context.controllerNumber
+
+        var shares = false
+        inputDeviceContexts.forEachValue { shares = shares || isOnItsNumber(it) }
+        usbDeviceContexts.forEachValue { shares = shares || isOnItsNumber(it) }
+        return shares
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).

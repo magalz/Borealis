@@ -2065,7 +2065,8 @@ class ControllerHandler(
         if (motor.toInt() == 0) {
             return 0
         }
-        return ((motor.toInt() shr 8) and 0xFF).coerceAtLeast(1)
+        val highByte = (motor.toInt() shr 8) and 0xFF
+        return highByte.coerceAtLeast(1)
     }
 
     // This must only be called if hasDualAmplitudeControlledRumbleVibrators() is true!
@@ -2283,6 +2284,10 @@ class ControllerHandler(
                 val contextVibratorManager = deviceContext.vibratorManager
                 val contextVibrator = deviceContext.vibrator
 
+                // The SHIELD service takes each motor as an unsigned value, like the fallback below
+                val sceLowFreqMotor = deviceContext.lowFreqMotor.toInt() and 0xffff
+                val sceHighFreqMotor = deviceContext.highFreqMotor.toInt() and 0xffff
+
                 // Prefer the documented Android 12 rumble API which can handle dual vibrators on
                 // PS/Xbox controllers
                 if (
@@ -2305,11 +2310,7 @@ class ControllerHandler(
                         )
                     }
                 } else if (
-                    sceManager.rumble(
-                        deviceContext.inputDevice,
-                        deviceContext.lowFreqMotor.toInt() and 0xffff,
-                        deviceContext.highFreqMotor.toInt() and 0xffff,
-                    )
+                    sceManager.rumble(deviceContext.inputDevice, sceLowFreqMotor, sceHighFreqMotor)
                 ) {
                     // On Shield devices, we can use their special API to rumble Shield controllers
                     vibrated = true

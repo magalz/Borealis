@@ -29,8 +29,8 @@ class RumbleQuadTest : FeedbackTestBase() {
     private fun combos() = recorded.vibrations.map { it.combined }
 
     /**
-     * The handler marks a context quad only together with its manager, so no pad reaches this
-     * state by itself: take the manager of the woken pad's context away.
+     * The handler marks a context quad only together with its manager, so no pad reaches this state
+     * by itself: take the manager of the woken pad's context away.
      */
     private fun dropManagerOfPad(rig: FeedbackRig, id: Int) {
         val contexts =
@@ -181,10 +181,9 @@ class RumbleQuadTest : FeedbackTestBase() {
         val rig = quadPad()
         dropManagerOfPad(rig, FeedbackRig.PAD_ID)
 
-        val failure =
-            runCatching { rig.handler.handleRumbleTriggers(0, 0x4000, 0x4000) }.exceptionOrNull()
+        val result = runCatching { rig.handler.handleRumbleTriggers(0, 0x4000, 0x4000) }
 
-        assertThat(failure).isNull()
+        assertThat(result.exceptionOrNull()).isNull()
         assertThat(combos()).isEmpty()
     }
 

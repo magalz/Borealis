@@ -11,8 +11,9 @@ import org.robolectric.annotation.Config
  * A pad that has one vibrator, or that the phone's vibrator stands in for: the two motors become
  * one amplitude, 80% of the low motor's high byte plus 33% of the high motor's, cut at 255, and
  * truncated to an int, but at least 1 while a motor is not zero. A vibrator without amplitude
- * control gets the same amplitude as a duty cycle of 20 ms. What the vibrator is handed depends on the Android version: the media usage of
- * `VibrationAttributes` from Android 13, a game `AudioAttributes` before it.
+ * control gets the same amplitude as a duty cycle of 20 ms. What the vibrator is handed depends on
+ * the Android version: the media usage of `VibrationAttributes` from Android 13, a game
+ * `AudioAttributes` before it.
  */
 abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     /** What a vibrator is handed for a one-shot of [amplitude]. */

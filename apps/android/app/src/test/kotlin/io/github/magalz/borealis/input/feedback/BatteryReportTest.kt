@@ -11,8 +11,8 @@ import org.robolectric.annotation.Config
 /**
  * The battery of a pad, as the handler's own thread reports it to the host from Android 12: once
  * when the pad arrives, then every 120 seconds, and only when the status or the capacity changed
- * since the last report. The status becomes the host's battery state, and the capacity a signed
- * byte of its percentage, truncated; 255 means unknown.
+ * since the last report. The status becomes the host's battery state, and the capacity its
+ * percentage from 0 to 100, rounded; 255 means unknown.
  */
 @RunWith(RobolectricTestRunner::class)
 class BatteryReportTest : FeedbackTestBase() {
@@ -68,7 +68,7 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `the percentage is the capacity times a hundred, truncated`() {
+    fun `the percentage is the capacity times a hundred, rounded`() {
         val capacities = listOf(0f, 1f, 0.555f, 0.995f, 0.5f, 0.07f, 0.9999f, 0.53f, 0.59f)
 
         val percentages = capacities.map { capacity ->
@@ -77,8 +77,8 @@ class BatteryReportTest : FeedbackTestBase() {
             events().single().percentage
         }
 
-        // 0.53f and 0.59f times 100 come out a hair under 53 and 59, and the cast truncates them
-        assertThat(percentages).containsExactly(0, 100, 55, 99, 50, 7, 99, 52, 58).inOrder()
+        // 0.53f and 0.59f times 100 come out a hair under 53 and 59, which a truncation would lose
+        assertThat(percentages).containsExactly(0, 100, 56, 100, 50, 7, 100, 53, 59).inOrder()
     }
 
     @Test
@@ -93,16 +93,16 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a capacity out of range wraps in the byte`() {
+    fun `a capacity out of range is cut to the percentage range`() {
         val high = rig()
         padWith(high, battery(capacity = 1.5f))
-        val high150 = events().single().percentage
+        val tooHigh = events().single().percentage
         val low = rig()
         padWith(low, battery(capacity = -0.5f))
-        val lowMinus50 = events().single().percentage
+        val tooLow = events().single().percentage
 
-        assertThat(high150).isEqualTo(-106)
-        assertThat(lowMinus50).isEqualTo(-50)
+        assertThat(tooHigh).isEqualTo(100)
+        assertThat(tooLow).isEqualTo(0)
     }
 
     @Test

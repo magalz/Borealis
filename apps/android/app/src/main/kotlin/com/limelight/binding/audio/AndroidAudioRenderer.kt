@@ -27,7 +27,8 @@ private const val NO_AUDIO_TRACK = -2
 class AndroidAudioRenderer(private val context: Context, private val enableAudioFx: Boolean) :
     AudioRenderer {
 
-    private var track: AudioTrack? = null
+    // The native audio threads read it while setup and cleanup write it.
+    @Volatile private var track: AudioTrack? = null
 
     // Set by cleanup, cleared when setup keeps a track: a repeated cleanup must not fail, while a
     // cleanup without any track still does.

@@ -21,6 +21,7 @@ import org.junit.Test
 internal class MouseBackHoldTest : MotionTestBase() {
     private val back = MouseButtonPacket.BUTTON_X1
     private val forward = MouseButtonPacket.BUTTON_X2
+    private val middle = MouseButtonPacket.BUTTON_MIDDLE
     private val right = MouseButtonPacket.BUTTON_RIGHT
 
     /** The mouse reports [buttons] as down, at (10, 20) of the stream view. */
@@ -147,6 +148,34 @@ internal class MouseBackHoldTest : MotionTestBase() {
         idle(1_000)
 
         assertThat(panel()).isEqualTo(Panel.NONE)
+    }
+
+    @Test
+    fun `a cancel of the mouse lets go of the buttons it holds, and the Back that waits never opens the menu`() {
+        streamingWithNavigationButtons()
+        val held =
+            MotionEvent.BUTTON_SECONDARY or
+                MotionEvent.BUTTON_TERTIARY or
+                MotionEvent.BUTTON_FORWARD or
+                MotionEvent.BUTTON_BACK
+        mouse(MotionEvent.ACTION_DOWN, held)
+        forgetSent()
+
+        mouse(MotionEvent.ACTION_CANCEL, 0)
+        idle(1_000)
+
+        // The host holds no button now, and Back, which sent nothing yet, sends nothing: not the
+        // X1 of a short press either.
+        assertThat(buttonsSent())
+            .containsExactly(release(right), release(middle), release(forward))
+            .inOrder()
+        assertThat(panel()).isEqualTo(Panel.NONE)
+        // The activity forgot the buttons, so the next press of each is a press again.
+        forgetSent()
+        mouse(MotionEvent.ACTION_DOWN, held)
+        assertThat(buttonsSent())
+            .containsExactly(press(right), press(middle), press(forward))
+            .inOrder()
     }
 
     // ----- A short press -----

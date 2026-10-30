@@ -362,7 +362,7 @@ internal class GameSpecialKeysTest : GameTestBase() {
     }
 
     @Test
-    fun `a chord that waits is done by the next key when the focus change forgot the modifiers`() {
+    fun `a focus change drops the chord that waits, so the next key does not do it`() {
         streamingAndCapturing()
         val actions = rig.recordSession()
         rig.holdCtrlAltShift()
@@ -373,7 +373,9 @@ internal class GameSpecialKeysTest : GameTestBase() {
         // The modifiers came up while the window had no focus, so the activity does not know them.
         rig.game.onWindowFocusChanged(false)
         rig.up(KeyEvent.KEYCODE_SHIFT_LEFT)
+        rig.down(KeyEvent.KEYCODE_B)
+        rig.up(KeyEvent.KEYCODE_B)
 
-        assertThat(actions.calls).containsExactly("disconnect Desktop")
+        assertThat(actions.calls).isEmpty()
     }
 }

@@ -31,6 +31,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.Transparency
+import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.MenuGlass
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
@@ -68,7 +69,11 @@ class FrozenFrameScreenTest {
     private var look by mutableStateOf(BorealisLook())
     private val source = FakeVideoSource(completing = true, paint = ::paintFrame)
     private val frozen = FrozenFrame(source, { IntOffset.Zero })
+
+    /** The frame the chrome is given: a test takes it away, to see what the popup draws without. */
+    private var inUse: FrozenFrame? by mutableStateOf(frozen)
     private val surface = BorealisColors().surface
+    private val page = BorealisColors().page
 
     @After fun `the battery saver is off again`() = setPowerSave(false)
 
@@ -91,7 +96,7 @@ class FrozenFrameScreenTest {
     ) {
         if (copied) frozen.request()
         val content: @Composable () -> Unit = {
-            CompositionLocalProvider(LocalFrozenFrame provides frozen) {
+            CompositionLocalProvider(LocalFrozenFrame provides inUse) {
                 StreamChromeRoot(session, {}, look)
             }
         }
@@ -242,6 +247,52 @@ class FrozenFrameScreenTest {
 
         assertNear(margin(), scrimOver(Color.Black))
     }
+
+    // Not over the game: no frame, so the popup is over the background
+
+    /**
+     * The popup of a failure that has no frame draws what it draws with no frozen frame at all,
+     * over the background of the screens outside the game (ADR 0057, decision 8: no scrim on API 31
+     * and later, the glass of the background). The background is held Still, so two pictures of it
+     * are the same, and the test looks at the place where it is farthest from the page, so that a
+     * scrim over it would show. The popup is the same session each time; only the frame changes:
+     * none given, then one that was never asked for, or whose copy failed.
+     */
+    private fun assertDrawsAsWithNoFrame(copyFails: Boolean) {
+        inUse = null
+        show(stillFailure(), copied = false)
+        val without = picture()
+        val (x, y) = without.farthestFrom(page)
+        assertThat(without[x, y].distanceFrom(page)).isGreaterThan(MIN_GLOW)
+
+        composeRule.runOnIdle {
+            inUse = frozen
+            if (copyFails) {
+                source.bounds = null
+                frozen.request()
+            }
+        }
+        composeRule.waitForIdle()
+
+        assertThat(frozen.frame).isNull()
+        assertThat(frozen.pending).isFalse()
+        assertNear(picture()[x, y], without[x, y])
+    }
+
+    private fun stillFailure() =
+        aSession(
+                actions,
+                aDefaults.copy(visuals = StreamVisuals(background = BackgroundMode.STILL)),
+            )
+            .also { it.onFailed(aFailure) }
+
+    @Test
+    fun `with no copy asked for, the popup draws what it draws with no frozen frame`() =
+        assertDrawsAsWithNoFrame(copyFails = false)
+
+    @Test
+    fun `with a copy that failed, the popup draws what it draws with no frozen frame`() =
+        assertDrawsAsWithNoFrame(copyFails = true)
 
     // The copy that has not ended
 
@@ -414,6 +465,7 @@ class FrozenFrameScreenTest {
         const val EDGE_REACH = 70
         const val FRAME_SHOWS = 0.035f
         const val SHARP_EDGE = 0.01f
+        const val MIN_GLOW = 0.05f
         const val SCRIM = 0.35f
         const val POPUP_TINT = 0.85f
         const val TOLERANCE = 0.012f

@@ -1,10 +1,12 @@
 package io.github.magalz.borealis.input.feedback
 
+import android.util.SparseArray
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * A pad whose vibrator manager has four vibrators: the high motor, the low motor, the left trigger
@@ -25,6 +27,16 @@ class RumbleQuadTest : FeedbackTestBase() {
     }
 
     private fun combos() = recorded.vibrations.map { it.combined }
+
+    /**
+     * The handler marks a context quad only together with its manager, so no pad reaches this
+     * state by itself: take the manager of the woken pad's context away.
+     */
+    private fun dropManagerOfPad(rig: FeedbackRig, id: Int) {
+        val contexts =
+            ReflectionHelpers.getField<SparseArray<Any>>(rig.handler, "inputDeviceContexts")
+        ReflectionHelpers.setField(checkNotNull(contexts.get(id)), "vibratorManager", null)
+    }
 
     @Test
     fun `a rumble drives the first two vibrators and the triggers stay at their last value`() {
@@ -161,6 +173,18 @@ class RumbleQuadTest : FeedbackTestBase() {
 
         rig.handler.handleRumbleTriggers(1, 0x4000, 0x4000)
 
+        assertThat(combos()).isEmpty()
+    }
+
+    @Test
+    fun `a trigger rumble for a pad marked quad that has no manager does not throw`() {
+        val rig = quadPad()
+        dropManagerOfPad(rig, FeedbackRig.PAD_ID)
+
+        val failure =
+            runCatching { rig.handler.handleRumbleTriggers(0, 0x4000, 0x4000) }.exceptionOrNull()
+
+        assertThat(failure).isNull()
         assertThat(combos()).isEmpty()
     }
 

@@ -303,6 +303,25 @@ class RelativeTouchTapTest {
     }
 
     @Test
+    fun `a third finger that taps after the first finger lifted is the only right click`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        twoFingers(first, second)
+        liftFirstOfTwoFingers(first, second, T0 + 20)
+
+        // A new finger goes down in the place of the second context and lifts as a tap: its own
+        // right click. The finger that is left lifts soon after.
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(500, 100, T0 + 30, true)).isTrue()
+        second.touchUpEvent(500, 100, T0 + 40)
+        setPointerCount(1, first, second)
+        first.touchUpEvent(300, 100, T0 + 50)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
     fun `a second finger that moves 24 px in small steps still taps`() {
         val first = rig.relative(0)
         val second = rig.relative(1)

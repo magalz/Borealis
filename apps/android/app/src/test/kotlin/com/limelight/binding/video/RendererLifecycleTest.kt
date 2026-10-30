@@ -4,7 +4,6 @@ import android.os.Process
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
-import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -145,11 +144,12 @@ class RendererLifecycleTest : RendererTestBase() {
     }
 
     @Test
-    fun `stop before start fails with a null pointer after it has told the decoder to stop`() {
+    fun `stop before start tells the renderer to stop and returns`() {
         val renderer = ready()
 
-        assertThrows(NullPointerException::class.java) { renderer.stop() }
+        val outcome = runCatching { renderer.stop() }
 
+        assertThat(outcome.exceptionOrNull()).isNull()
         assertThat(renderer.submit(pFrame(1))).isEqualTo(MoonBridge.DR_OK)
         assertThat(events<CodecEvent.Queued>()).isEmpty()
     }
@@ -200,10 +200,13 @@ class RendererLifecycleTest : RendererTestBase() {
     }
 
     @Test
-    fun `cleanup before setup fails with a null pointer`() {
+    fun `cleanup before setup has nothing to release and returns`() {
         install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
 
-        assertThrows(NullPointerException::class.java) { renderer().cleanup() }
+        val outcome = runCatching { renderer().cleanup() }
+
+        assertThat(outcome.exceptionOrNull()).isNull()
+        assertThat(events<CodecEvent.Released>()).isEmpty()
     }
 
     private companion object {

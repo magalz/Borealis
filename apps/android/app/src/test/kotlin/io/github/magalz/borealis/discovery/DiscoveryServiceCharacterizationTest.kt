@@ -179,6 +179,21 @@ class DiscoveryServiceCharacterizationTest {
     }
 
     @Test
+    fun `destroying the service closes the agent, so nothing stays with the platform`() {
+        binder.startDiscovery(INTERVAL_MS)
+        val found = foundService("Den PC")
+        discoveries().single().onServiceFound(found)
+
+        service.onDestroy()
+
+        assertThat(discoveries()).isEmpty()
+        assertThat(platform.getServiceInfoCallbacks(found).orEmpty()).isEmpty()
+        // A closed agent does not discover again, even through a binder that is still held.
+        binder.startDiscovery(INTERVAL_MS)
+        assertThat(discoveries()).isEmpty()
+    }
+
+    @Test
     @Config(sdk = [ANDROID_14])
     fun `on Android 14 the service discovers with the platform`() {
         binder.startDiscovery(INTERVAL_MS)
@@ -198,6 +213,20 @@ class DiscoveryServiceCharacterizationTest {
         service.onUnbind(Intent())
 
         assertThat(awaitThreads(0)).isEmpty()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_13])
+    fun `before Android 14 destroying the service ends the jmDNS discovery`() {
+        binder.startDiscovery(INTERVAL_MS)
+        assertThat(awaitThreads(1)).hasSize(1)
+
+        service.onDestroy()
+
+        val left = awaitThreads(0)
+        // Ends the thread when the destroy did not, so that it does not outlive the test.
+        service.onUnbind(Intent())
+        assertThat(left).isEmpty()
     }
 
     private companion object {

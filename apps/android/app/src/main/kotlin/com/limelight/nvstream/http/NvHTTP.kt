@@ -632,7 +632,7 @@ constructor(
         } else {
             openHttpConnection(httpClientLongConnectTimeout, getHttpsUrl(true), "applist").use {
                 resp ->
-                return getAppListByReader(InputStreamReader(resp.byteStream()))
+                return getAppListByReader(InputStreamReader(resp.byteStream(), Charsets.UTF_8))
             }
         }
     }

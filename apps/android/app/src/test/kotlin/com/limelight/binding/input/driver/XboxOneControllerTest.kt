@@ -311,7 +311,7 @@ class XboxOneControllerTest {
     }
 
     @Test
-    fun `the triggers are signed shorts over 1023 and are not clamped`() {
+    fun `the triggers are signed shorts over 1023 and are clamped to zero and one`() {
         val pad = pad()
         val raws = listOf(0, 1023, 512, 2046, -1, 32767, -32768)
         pad.play(
@@ -324,14 +324,16 @@ class XboxOneControllerTest {
 
         val states = pad.listener.states(raws.size)
         assertThat(states.map { it.leftTrigger })
-            .containsExactlyElementsIn(raws.map { it / 1023.0f })
+            .containsExactlyElementsIn(raws.map { (it / 1023.0f).coerceIn(0.0f, 1.0f) })
             .inOrder()
         assertThat(states.map { it.rightTrigger })
-            .containsExactlyElementsIn(raws.map { (1023 - it).toShort() / 1023.0f })
+            .containsExactlyElementsIn(
+                raws.map { ((1023 - it).toShort() / 1023.0f).coerceIn(0.0f, 1.0f) }
+            )
             .inOrder()
         assertThat(states[1].leftTrigger).isEqualTo(1.0f)
-        assertThat(states[3].leftTrigger).isEqualTo(2.0f)
-        assertThat(states[4].leftTrigger).isLessThan(0.0f)
+        assertThat(states[3].leftTrigger).isEqualTo(1.0f)
+        assertThat(states[4].leftTrigger).isEqualTo(0.0f)
     }
 
     @Test

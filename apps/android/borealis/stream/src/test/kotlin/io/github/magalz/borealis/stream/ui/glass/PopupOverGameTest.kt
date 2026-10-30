@@ -59,7 +59,7 @@ class PopupOverGameTest {
     }
 
     @Test
-    fun `the scrim of the popup is the page at 35 percent over the game, glass or not`() {
+    fun `the scrim of the popup is the page at 35 percent over the game and the glass`() {
         assertScrim(menu())
     }
 

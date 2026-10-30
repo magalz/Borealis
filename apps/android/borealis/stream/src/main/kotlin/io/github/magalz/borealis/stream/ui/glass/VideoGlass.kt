@@ -102,15 +102,10 @@ internal class VideoGlass(
     /**
      * Draws what is behind a panel whose corner is at [position] in the chrome: the [surface]
      * colour while there is no copy; else the blurred copy of the video where the video is, black
-     * where it is not, and [tintPercent] of the surface over it (the tint of the spec, unless the
-     * panel is a popup, which is firmer).
+     * where it is not, and [tintPercent] of the surface over it: the tint of the spec for a panel,
+     * and the firmer [POPUP_TINT_PERCENT] for a popup.
      */
-    fun drawBackdrop(
-        scope: DrawScope,
-        position: Offset,
-        surface: Color,
-        tintPercent: Int = spec.tintPercent,
-    ) {
+    fun drawBackdrop(scope: DrawScope, position: Offset, surface: Color, tintPercent: Int) {
         with(scope) {
             val frame = current()
             if (frame == null) {

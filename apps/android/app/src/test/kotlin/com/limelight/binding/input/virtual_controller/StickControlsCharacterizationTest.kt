@@ -248,14 +248,25 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
-    fun `a stick that is too small to move says not a number, which the left stick sends as zero`() {
+    fun `a stick that is too small to move says no movement, and the left stick sends nothing`() {
         val small = kit.add(LeftAnalogStick(controller, kit.rig.activity), 500, 500, 20, 20)
         small.touch(MotionEvent.ACTION_DOWN, 10f, 10f, FIRST)
 
         small.touch(MotionEvent.ACTION_MOVE, 10f, 10f, FIRST + 200)
 
         assertThat(leftSticks()).isEqualTo(0 to 0)
-        assertThat(kit.rig.packets).isNotEmpty()
+        assertThat(kit.rig.packets).isEmpty()
+    }
+
+    @Test
+    fun `a stick that is too small to move says no movement, and the right stick sends nothing`() {
+        val small = kit.add(RightAnalogStick(controller, kit.rig.activity), 500, 500, 20, 20)
+        small.touch(MotionEvent.ACTION_DOWN, 10f, 10f, FIRST)
+
+        small.touch(MotionEvent.ACTION_MOVE, 10f, 10f, FIRST + 200)
+
+        assertThat(rightSticks()).isEqualTo(0 to 0)
+        assertThat(kit.rig.packets).isEmpty()
     }
 
     @Test

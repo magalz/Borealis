@@ -507,18 +507,18 @@ class AnalogStickCharacterizationTest {
     // A stick whose way is nothing
 
     @Test
-    fun `when the way the stick can go is nothing, the stick says not a number`() {
+    fun `when the way the stick can go is nothing, the stick says no movement`() {
         // 20 pixels: a circle of 10 less 2 strokes of 4 is 2 pixels, the stick is 2 pixels, so the
-        // 100 percent of the way is 0. The finger can only be in the middle, which divides 0 by 0.
+        // 100 percent of the way is 0. The finger can only be in the middle, which would divide 0
+        // by 0.
         val small = kit.add(AnalogStick(kit.controller, kit.rig.activity, 13), 500, 500, 20, 20)
         val smallLog = StickLog().also { small.addAnalogStickListener(it) }
         small.touch(MotionEvent.ACTION_DOWN, 10f, 10f, FIRST)
 
         small.touch(MotionEvent.ACTION_MOVE, 10f, 10f, FIRST + 200)
 
-        assertThat(smallLog.events).containsExactly("click", "move").inOrder()
-        assertThat(smallLog.moves.single().first).isNaN()
-        assertThat(smallLog.moves.single().second).isNaN()
+        assertThat(smallLog.events).containsExactly("click")
+        assertThat(smallLog.moves).isEmpty()
     }
 
     // Listeners

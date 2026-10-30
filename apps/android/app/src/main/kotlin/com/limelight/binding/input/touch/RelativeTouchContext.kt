@@ -45,6 +45,10 @@ class RelativeTouchContext(
     private var pointerCount = 0
     private var maxPointerCountInGesture = 0
 
+    // A view with no size gives a factor of 0 (touchDownEvent): there is no scale to send with.
+    private val hasScale: Boolean
+        get() = xFactor != 0.0 && yFactor != 0.0
+
     private val handler = Handler(Looper.getMainLooper())
 
     private val dragTimerRunnable = Runnable {
@@ -213,7 +217,7 @@ class RelativeTouchContext(
 
             // We only send moves and drags for the primary touch point
             if (actionIndex == 0) {
-                if (xFactor == 0.0 || yFactor == 0.0) {
+                if (!hasScale) {
                     return true
                 }
 

@@ -194,11 +194,12 @@ for it.
 
 ### A10: The menu is glass over the video (Sprint 15; branches from step 2)
 
-1. With Menu glass in the stream on Blur, the default, the side panel of the
+1. With Stream menu style on Blurred, the default, the side panel of the
    menu and the Quit popup are glass over a live copy of the video: a quarter of
    its size, blurred, refreshed 30 times a second while the menu is open and the
    activity is started. Until the first copy arrives the panel is solid. With
-   Solid it is a solid panel and no copy is made.
+   Solid it is a solid panel and no copy is made. (The row was named Menu glass
+   in the stream, with Blur and Solid, until the acceptance test of 2026-10-30.)
 2. The glass is solid, and no copy is made, with Solid, with Transparency Off,
    with High contrast, with Reduce motion, with the battery saver on (followed
    live, while the menu is open), below API 31, and where there is no stream view
@@ -207,8 +208,8 @@ for it.
    popup takes the blur of the look and always the 85 % tint, so it is firmer than
    the panel behind it. Where the glass is solid the popup is solid, and its scrim
    is the page at 35 % all the same (owner decision of 2026-10-30: in the
-   acceptance test the popup over a 72 % scrim looked like a hole, lighter than
-   all around it).
+   acceptance test the Quit popup over a 72 % scrim looked like a hole, its panel
+   almost transparent on a black background).
 3. Every text on the glass has a halo of 3 dp, so it keeps 4.5:1 over any frame,
    and ink-3 and ink-4 are ink-2 there. The segmented controls sit on a solid
    container of the `surface` colour. The focus outline has a casing in the
@@ -289,7 +290,7 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T39 | Given Left, Right, Up, Down, OK and A on every row and chip, when the menu is open, then Left and Right do nothing, Up and Down walk the rows and chips in drawing order and stop at the ends, and Quit is reached with Down and OK alone. | UI, unit | exists (Sprint 15): `InGameMenuFocusTest`, `UsbChromeMenuFocusTest`, `SegmentedControlTest` |
 | UC-004-T40 | Given Disconnect, when the user chooses it, then the phase is Disconnecting at once, the screen names the app, it stays up about a second at least and five seconds at most, Back does nothing, the activity finishes once, and the Library shows the Disconnected notice once. | unit, UI | exists (Sprint 15): `StreamSessionTest`, `DisconnectingScreenTest`, `GameStreamActionsLeaveTest`, `BackWhileDisconnectingTest`, `LibraryQuitNoticeTest`, `QuitNoticeTest` |
 | UC-004-T41 | Given a Quit that is under way, when the host ends the stream with -1, then no connectivity test runs, the end is logged at info with the time since the quit, and the screen stays on Quitting; any other code is a network drop. | unit | exists (Sprint 15, unit): `GameQuitEndTest`, `StreamSessionLeaveLogTest`, `QuitLogTest` |
-| UC-004-T42 | Given Menu glass in the stream on Blur, the transparency, High contrast, Reduce motion, the battery saver and the API level, when the menu opens, then the panel and the Quit popup are glass or solid as A10 says, the copies run only while the menu is open and the activity is started, and the Solid option and API 28 to 30 register no battery saver listener. | UI, unit | exists (Sprint 15): `MenuGlassRulesTest`, `MenuGlassOptionTest`, `MenuGlassCopiesTest`, `MenuGlassDrawTest`, `MenuGlassApi30Test`, `VideoGlassSpecTest`, `VideoGlassFramesTest`, `PixelCopySourceTest`, `StreamAppearanceTest` |
+| UC-004-T42 | Given Stream menu style on Blurred, the transparency, High contrast, Reduce motion, the battery saver and the API level, when the menu opens, then the panel and the Quit popup are glass or solid as A10 says, the copies run only while the menu is open and the activity is started, and the Solid option and API 28 to 30 register no battery saver listener. | UI, unit | exists (Sprint 15): `MenuGlassRulesTest`, `MenuGlassOptionTest`, `MenuGlassCopiesTest`, `MenuGlassDrawTest`, `MenuGlassApi30Test`, `VideoGlassSpecTest`, `VideoGlassFramesTest`, `PixelCopySourceTest`, `StreamAppearanceTest` |
 | UC-004-T43 | Given the glass, when text stands on it, then every text colour of the menu and the popup keeps 4.5:1 on the ring of its halo over the lightest glass, the segmented controls keep 4.5:1 on their solid container, and the focus outline keeps 3:1 with its casing. | UI, tool | exists (Sprint 15): `TextHaloTest`, `MenuGlassHaloTest`, `MenuGlassCasingTest`, `MenuGlassFocusTest`, `FocusOverGlassTest`, `VideoGlassHaloTest` in `design/accessibility/test_contrast.py` |
 | UC-004-T44 | Given the Quit popup over the game, when it opens, then its scrim is the page colour at 35 % over what was there, with the glass, with Transparency Off, with the Solid option and with High contrast alike; its panel is the `surface` colour at 85 % over a white frame whatever tint the viewer chose for the menu, and every text colour keeps 4.5:1 on it; the side panel keeps its own tint. | UI, tool | exists (Sprint 15, owner decision of 2026-10-30): `PopupOverGameTest`, `MenuGlassDrawTest`, `SidePanelTest`, `PopupGlassContrastTest` in `design/accessibility/test_contrast.py` |
 

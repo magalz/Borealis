@@ -196,6 +196,13 @@ When the second device leaves, the first device's session can end (LuminalShine
 issue #201). The cause in the issue is not confirmed. Join is therefore a
 host limitation, not only a client choice. The issue is still open.
 
+Dated note (2026-10-30): in a two-client run on the evening of 2026-10-29, on a
+diagnostics nightly of the host (`0.0.5-nightly`, which changes the logs only),
+three Disconnects of the second device did not end the first device's session,
+while a Quit (`/cancel`) of the second device ended both, which is expected for this build. Issue #201
+stays open. The run is in [device validation](../development/device-validation.md#20-results-sprint-15),
+section 20.
+
 LuminalShine issue #205 (a second client's `/resume` fails the RTSP tag check
 while the first client's launch is still setting up) was closed upstream on
 2026-10-29. Borealis still has the 3 s wait before `/resume` and the single

@@ -24,6 +24,9 @@ README says how to run it again. The decisions that follow from the numbers are 
   numbers come from the commits of the video glass and from
   [ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md); the
   tool's own check of them is `VideoGlassHaloTest` in `design/accessibility/test_contrast.py`.
+  It was amended on 2026-10-30 at `4429af309`, after the owner's acceptance test: the stream has one
+  option, Stream menu style, and no option for the background; the popups over the game are a firm
+  panel under a light scrim, with the numbers of `PopupGlassContrastTest`.
 - Revision measured: `fedc4ce0`. It widens the grid of the glass candidates of
   `fec048bb`, the first measurement. The frames are those of that first
   measurement, taken with the app code of `109e7dff`, the Sprint 9 merge: the
@@ -1762,45 +1765,64 @@ Sprint 15 puts the animated background and the glass into the stream
 ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md)). The stream
 draws its chrome over a hardware video, so two things differ from the Library: the
 glass behind the in-game menu is a live blurred copy of the video, which is any frame,
-and the screens outside the game stand on the background of the user. This section
-records what the settings of ADR 0057 do there, how the text keeps its contrast, and what
-a D-pad and a screen reader find in the popups and the menu. The numbers of the
-contrast are in the ADR (decision 10, and the measurements of 2026-10-29).
+and the screens outside the game stand on the background of the user, as the Library
+shows it. This section records what the settings of ADR 0057 do there, how the text keeps
+its contrast, and what a D-pad and a screen reader find in the popups and the menu. The
+numbers of the contrast are in the ADR (decision 10, and the measurements of 2026-10-29 and
+2026-10-30).
 
 ### What the settings do in the stream
 
-The stream reads the look, the two stream options of Appearance (Menu glass in the
-stream, and Background before and after the stream) and the background style once, when
-it starts, so a change shows in the next stream. The battery saver is the exception: it
-is followed live.
+The stream reads the look, the one stream option of Appearance (Stream menu style, Blurred
+or Solid) and the background style once, when it starts, so a change shows in the next
+stream. The battery saver is the exception: it is followed live. There is no option for the
+background outside the game: the first version of Sprint 15 had one, Background before and
+after the stream, and the owner dropped it on 2026-10-30. Those screens follow the
+Background of the Library, with its intensity, Reduce motion, the battery saver and the
+dialogs that hold it still.
 
 | Setting or device | The menu and its Quit popup | The screens outside the game and their dialogs | The error popup over the last frame |
 | --- | --- | --- | --- |
-| Menu glass on Solid | A solid panel. No copy of the video is made. | No effect. | The panel is solid. The frame is still blurred. |
-| Background on Still or Off | No effect. | Still: one frame of the style, and no player. Off: the plain page, so the panels are solid and a dialog keeps its scrim. | No effect: the frame is behind the popup, not the background. |
-| Transparency Off | A solid panel, no copy. | The background is drawn, the panel of the steps is solid, and a dialog keeps its scrim over it: nothing blurs or holds the background. | The frame shows sharp under the scrim. The panel is solid. |
+| Stream menu style on Solid | A solid panel. No copy of the video is made. The scrim is the same light one. | No effect. | The panel is solid, under the same scrim. The frame is still blurred. |
+| Background on Off (the Library's setting) | No effect. | The plain page, so the panels are solid and a dialog keeps its dialog scrim. | No effect while the frame, or its black, is behind the popup. With no frame the popup is on the plain page, with a solid panel and the dialog scrim. |
+| Transparency Off | A solid panel, no copy, under the light scrim. | The background is drawn, the panel of the steps is solid, and a dialog keeps its dialog scrim over it: nothing blurs or holds the background. | The frame shows sharp under the light scrim. The panel is solid. |
 | High contrast | As Transparency Off. | As Transparency Off. | As Transparency Off. |
 | Reduce motion | A solid panel, no copy. | Every style is held still. A clip makes no player. | No change: the frame is still and was copied once. |
 | Battery saver | A solid panel, no copy, followed live while the menu is open. | As Reduce motion, followed live. | No change. |
-| API 28 to 30 | A solid panel, no copy (nothing blurs). | The panel of the steps is the Reduced tint on the sharp background. A dialog keeps its scrim and its solid panel. | The frame shows sharp under the scrim. The panel is solid. |
+| API 28 to 30 | A solid panel, no copy (nothing blurs), under the light scrim. | The panel of the steps is the Reduced tint on the sharp background. A dialog keeps its dialog scrim and its solid panel. | The frame shows sharp under the light scrim. The panel is solid. |
 
 Where the host blurs (API 31 or later, Transparency Standard or Reduced, no High
 contrast, and a background style that is not Off), the conflict dialog and the error
 popup over the background blur the background alone, at 24 dp, hold it still, draw no
 scrim and take the tint of the glass, with the tint floor of the background as in the
-Library (ADR 0057, decision 4). The popup over the frozen frame keeps its scrim, also over
-a blurred frame. The glass over the video, which is the menu and the popups over the frame,
-takes the tint and the blur of the viewer's Transparency and is never raised. Standard is
-Glass tint and Glass blur (40 % and 8 dp by default), and Reduced is 85 % and 48 dp.
+Library (ADR 0057, decision 4). Where the host does not blur, the dialog has the dialog
+scrim, the page at 72 % (the `scrim` token), and a solid panel.
+
+A popup over the game is different. The Quit popup, and the error popup while the frozen
+frame (or its black, while the copy is pending) is behind it, have a scrim of the page
+colour at 35 %, which is the scrim of the side panel (`STREAM_SCRIM_ALPHA`), so the game
+stays visible around them. The scrim is the same over a blurred frame, a sharp one and a
+solid panel. Their panel is the firm element: the `surface` colour at 85 % over the video
+blurred by the blur of the look (8 dp at Standard, 48 dp at Reduced), whatever tint the
+viewer chose for the side panel, and the `surface` colour itself where the panel is solid.
+The first version had the dialog scrim and the viewer's 40 %, and in the acceptance test of
+2026-10-30 the Quit popup looked like a hole to the owner, its panel almost transparent on a black
+background. The error popup over the frame changes the same way, because it shares `StreamDialog`.
+An error popup with no frame, or with a copy that failed, is a dialog over the background and
+follows the paragraph above.
+
+The glass of the side panel of the menu takes the tint and the blur of the viewer's
+Transparency and is never raised. Standard is Glass tint and Glass blur (40 % and 8 dp by
+default), and Reduced is 85 % and 48 dp.
 
 A clip style shows its still, and not its video, while a decoder of the stream is held. That
 is from the stage Preparing the display until the connection has stopped.
 
 The listener of the battery saver for the menu glass is registered only where there can be
-a glass: the menu glass on Blur, a stream view to copy and API 31 or later. The Solid option
+a glass: the Stream menu style on Blurred, a stream view to copy and API 31 or later. The Solid option
 and API 28 to 30 register none (`MenuGlassRulesTest`, `MenuGlassApi30Test`). The background
 outside the game follows the battery saver on every screen that shows it, whatever the API
-level or the option, so those screens listen while one of them is composed.
+level, as the Library does, so those screens listen while one of them is composed.
 
 ### The halo and the casing over the video glass
 
@@ -1819,6 +1841,15 @@ the glass of 40 %. Over it ink is 2.1:1 and ink-2 1.5:1 without a halo.
 - **The colours.** Ink, ink-2, accent-soft and danger-ink keep 4.5:1 on the ring. Ink-3
   and ink-4 are ink-2 on the glass. The label of a primary button, which has the accent fill,
   stands on its fill and has no halo.
+- **The panel of a popup over the game.** It is the `surface` colour at 85 % over the video
+  (see above), which over the lightest frame, a white one, is (55, 58, 61) in the values of the
+  picture. There, without any halo, ink is 9.50:1, ink-2 6.74:1, accent-soft 6.20:1 and
+  danger-ink 5.01:1, so every text keeps 4.5:1 on its own colours. With the halo, in the tool's
+  model over a white frame and a busy bright one, the worst ratios are 14.83:1, 10.52:1, 9.68:1
+  and 7.83:1. Ink-3 is 3.56:1 on that panel, so ink-3 and ink-4 are still ink-2 on it. The halo
+  stays by the owner's decision, not for the ratio, and the owner may drop it later.
+  `PopupGlassContrastTest` in `design/accessibility/test_contrast.py` runs the model, and
+  `PopupOverGameTest` reads the panel and the text on it in what is drawn.
 - **Segmented controls.** They sit on a container in the `surface` colour, in the colours
   of the look and with no halo, so a label never stands on the video. The unselected label
   (ink-3) and the selected one (accent-soft on the accent tint) keep 4.5:1 on it.
@@ -1830,8 +1861,10 @@ the glass of 40 %. Over it ink is 2.1:1 and ink-2 1.5:1 without a halo.
   at its edges; the ring and 1 dp of the casing stay whole.
 - **Not covered.** The faint tail of the halo is cut at the 2 dp bleed of the layer that
   holds the text of the popup, which is cosmetic. The tests read pixels on Robolectric,
-  not a device. The colour of an HDR copy on the S22 was not judged, and no round has
-  recorded how the frozen frame behind the error popup looks.
+  not a device. The colour of an HDR copy on the S22 was not judged. The owner saw the
+  frozen frame behind the error popup in the acceptance test of 2026-10-30, on the build of
+  `1455bcf0a`, and the look it had then led to the light scrim and the firm panel: no
+  device round has seen that new look yet.
 - **Text on a panel.** The steps of the Starting screen, the conflict dialog and the error
   popup over the background stand on a panel, with the text colours of the glass and no
   halo. The title, the host name and the note of the Starting screen, and the texts of
@@ -1887,7 +1920,7 @@ and AAA (1.4.6) for the text of High contrast.
 | --- | --- | --- |
 | 1.3.1 Info and Relationships | A | Headings, pane titles, one sentence for a host card and a pairing step, a role and an Expanded or Collapsed state for the sections of the phone Settings (`*TalkBackTest`). |
 | 1.4.1 Use of Color | A | A shape for each status of the dot, and a text beside it. The palettes keep the colours apart for dichromats (`StatusDotTest`, `ColourVisionPaletteTest`), and the accent from the status colours (`AccentPaletteVariantsTest`). The Online shadow of Sprint 11 is a contrast aid, not a status cue. The Running badge of a cover is the dot and its label when the label fits on one line. On a phone with 4 columns the label never fits, so the badge is the dot alone: its shape and presence, the tile's TalkBack state "Running" and the Apps header "`<app>` running" carry the status. |
-| 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), in the Add host field (Tables L and M), and over the video glass of the stream through its halo (the stream section). |
+| 1.4.3 Contrast (Minimum) | AA | Text on the opaque surfaces (Table B), on glass through the tint floors and the adapted secondary ink (Table C and the floors), on the background through the halo (Tables D to F), in the Add host field (Tables L and M), and over the video glass of the stream through its halo, and on the firm panel of the popups over the game also without it (the stream section). |
 | 1.4.4 Resize Text | AA | Text size 100, 115 or 130 % times the system scale, and tests at a font scale of 2.0 (`LargeTextFitTest`). |
 | 1.4.6 Contrast (Enhanced) | AAA | High contrast: 7:1 or more for the text roles on every fill, and for the loose text over every background (Tables G and H). |
 | 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal, Wide and Wider, and at 2.0 Wider is drawn as Wide, with a dialog and a line in the row that say so (see text spacing: the limit at a very large font). |

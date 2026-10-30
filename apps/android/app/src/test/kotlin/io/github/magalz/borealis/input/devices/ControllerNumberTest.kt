@@ -299,22 +299,100 @@ class ControllerNumberTest : DevicesTestBase() {
     }
 
     @Test
-    fun `removing a pad that shares controller 0 zeroes it for the pad that is left`() {
+    fun `removing a pad that shares controller 0 sends nothing for the pad that is left`() {
         val rig = rig(multiController = false)
         val first = pad(1)
         val second = pad(2)
         listOf(first, second).forEach(rig::connect)
         rig.press(first, KEYCODE_BUTTON_A)
         rig.press(second, KEYCODE_BUTTON_B)
+        val sent = rig.connection.packets.size
 
         rig.disconnect(second)
 
-        // The first pad still holds A, but the zero packet is for controller 0 as a whole
-        assertThat(rig.connection.packets.last())
-            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = 0))
-        // Its next event brings its state back
+        // A zero packet is for controller 0 as a whole: it would drop the A the first pad holds. The
+        // B of the pad that went stays down on the PC until the next event of the pad that is left
+        assertThat(rig.connection.packets).hasSize(sent)
+        assertThat(rig.connection.packets.last().buttons).isEqualTo(a or b)
         rig.press(first, KEYCODE_BUTTON_X)
         assertThat(rig.connection.packets.last().buttons).isEqualTo(a or ControllerPacket.X_FLAG)
+    }
+
+    @Test
+    fun `removing a USB pad that shares controller 0 sends nothing for the pad that is left`() {
+        val rig = rig(multiController = false)
+        val first = FakeUsbController(8, rig.handler).also { rig.handler.deviceAdded(it) }
+        val second = FakeUsbController(9, rig.handler).also { rig.handler.deviceAdded(it) }
+        first.report(a)
+        second.report(a)
+        val sent = rig.connection.packets.size
+
+        rig.handler.deviceRemoved(second)
+
+        assertThat(rig.connection.packets).hasSize(sent)
+    }
+
+    @Test
+    fun `removing the last pad of controller 0 still zeroes it`() {
+        val rig = rig(multiController = false)
+        val first = pad(1)
+        val second = pad(2)
+        listOf(first, second).forEach(rig::connect)
+        rig.press(first, KEYCODE_BUTTON_A)
+        rig.press(second, KEYCODE_BUTTON_B)
+        rig.disconnect(second)
+
+        rig.disconnect(first)
+
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = 0))
+    }
+
+    @Test
+    fun `removing the touchpad of a pad sends nothing for its joystick`() {
+        val rig = rig(multiController = true)
+        val other = pad(1)
+        val joystick = pad(5) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
+        listOf(other, joystick, touchpad).forEach(rig::connect)
+        rig.press(other, KEYCODE_BUTTON_A)
+        rig.press(touchpad, KEYCODE_BUTTON_A)
+        rig.press(joystick, KEYCODE_BUTTON_B)
+        val sent = rig.connection.packets.size
+
+        rig.disconnect(touchpad)
+
+        assertThat(rig.connection.packets).hasSize(sent)
+    }
+
+    @Test
+    fun `removing the joystick of a pad zeroes its controller on the host whatever its touchpad does`() {
+        val rig = rig(multiController = true)
+        val other = pad(1)
+        val joystick = pad(5) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
+        listOf(other, joystick, touchpad).forEach(rig::connect)
+        rig.press(other, KEYCODE_BUTTON_A)
+        rig.press(touchpad, KEYCODE_BUTTON_A)
+        rig.press(joystick, KEYCODE_BUTTON_B)
+
+        // The joystick holds the number the pair reported; letting it go removes the controller
+        rig.disconnect(joystick)
+
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 1, activeMask = 0b1, buttons = 0))
     }
 
     @Test

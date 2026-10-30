@@ -143,7 +143,8 @@ class VirtualController(
 
     private fun sendControllerInputContextInternal() {
         controllerHandler?.reportOscState(
-            controllerInputContext.inputMap.toInt(),
+            // The Y flag is the sign bit of the short: widened, it would carry 0xFFFF8000
+            controllerInputContext.inputMap.toInt() and BUTTON_FLAGS_MASK,
             controllerInputContext.leftStickX,
             controllerInputContext.leftStickY,
             controllerInputContext.rightStickX,
@@ -173,6 +174,7 @@ class VirtualController(
     private fun requireFrame(): FrameLayout = checkNotNull(frameLayout)
 
     private companion object {
+        private const val BUTTON_FLAGS_MASK = 0xFFFF
         private const val CONFIGURE_BUTTON_ALPHA = 0.25f
         private const val CONFIGURE_BUTTON_SIZE_RATIO = 0.06f
         private const val CONFIGURE_BUTTON_MARGIN = 15

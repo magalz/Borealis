@@ -106,6 +106,13 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
 
         val bytesPerFrame = audioConfiguration.channelCount * samplesPerFrame * 2
 
+        // BOREALIS: a second setup releases the track of the first, which nothing would release
+        val previous = track
+        track = null
+        try {
+            previous?.release()
+        } catch (ignored: Exception) {}
+
         // We're not supposed to request less than the minimum
         // buffer size for our buffer, but it appears that we can
         // do this on many devices and it lowers audio latency.

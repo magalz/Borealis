@@ -37,7 +37,7 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
         }
 
         fun getQwertyKeyCodeForDeviceKeyCode(deviceKeyCode: Int): Int {
-            if (deviceKeyCode > KeyEvent.getMaxKeyCode()) {
+            if (deviceKeyCode < 0 || deviceKeyCode > KeyEvent.getMaxKeyCode()) {
                 return KeyEvent.KEYCODE_UNKNOWN
             }
 

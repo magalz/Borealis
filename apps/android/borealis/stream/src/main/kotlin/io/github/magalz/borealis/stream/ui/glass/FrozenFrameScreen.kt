@@ -55,7 +55,7 @@ internal fun OverFrozenFrame(
     Box(Modifier.fillMaxSize().frozenFrameBackdrop(frame, frozen.pending, glass)) {
         CompositionLocalProvider(
             LocalVideoGlass provides glass.takeIf { rules.panelIsGlass },
-            LocalPopupOverGame provides (frame != null || frozen.pending),
+            LocalPopupOverGame provides frozen.coversBackground,
             content = content,
         )
     }

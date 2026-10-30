@@ -10,10 +10,10 @@ import org.junit.Test
 
 /**
  * What the error popup draws over the frozen last frame of the stream (the owner's decision of
- * 2026-10-29): the panel is the glass of the menu where that would be glass, and the solid surface
- * otherwise; the frame is blurred wherever the device can blur and the accessibility settings allow
- * it, whatever the panel is, and shows sharp where they do not. The frame is still and copied once,
- * so Reduce motion and the battery saver change nothing.
+ * 2026-10-29): the panel is the glass of the menu (at the firm tint of a popup) where that would be
+ * glass, and the solid surface otherwise; the frame is blurred wherever the device can blur and the
+ * accessibility settings allow it, whatever the panel is, and shows sharp where they do not. The
+ * frame is still and copied once, so Reduce motion and the battery saver change nothing.
  */
 class FrozenFrameLookTest {
     private fun look(
@@ -33,14 +33,12 @@ class FrozenFrameLookTest {
     }
 
     @Test
-    fun `the glass has the tint and the blur of the viewer's transparency, as the menu has`() {
-        val standard = look().blur!!
-        val reduced = look(BorealisLook(transparency = Transparency.Reduced)).blur!!
-
-        assertThat(standard.tintPercent).isEqualTo(40)
-        assertThat(standard.blurDp).isEqualTo(8)
-        assertThat(reduced.tintPercent).isEqualTo(85)
-        assertThat(reduced.blurDp).isEqualTo(48)
+    fun `the frame is blurred as the menu glass is, 8 dp at Standard and 48 dp at Reduced`() {
+        // The tint is not asked here: the frame is blurred with no tint, and the panel of the popup
+        // takes the firm tint of a popup (VideoGlassSpecTest has the tints of the glass).
+        assertThat(look().blur!!.blurDp).isEqualTo(8)
+        assertThat(look(BorealisLook(transparency = Transparency.Reduced)).blur!!.blurDp)
+            .isEqualTo(48)
     }
 
     // Solid around a solid panel

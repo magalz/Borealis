@@ -163,7 +163,11 @@ internal fun StreamDialog(
                 .then(
                     when {
                         glass != null ->
-                            Modifier.videoGlassSurface(glass, shape, POPUP_TINT_PERCENT)
+                            Modifier.videoGlassSurface(
+                                glass,
+                                shape,
+                                if (overGame) POPUP_TINT_PERCENT else glass.spec.tintPercent,
+                            )
                         overlay != null ->
                             Modifier.background(colors.surface.copy(alpha = overlay.tint), shape)
                         else -> Modifier.background(colors.surface, shape)

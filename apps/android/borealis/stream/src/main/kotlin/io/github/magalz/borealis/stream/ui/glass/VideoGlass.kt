@@ -53,8 +53,8 @@ private const val PERCENT = 100f
 internal val LocalVideoGlass = staticCompositionLocalOf<VideoGlass?> { null }
 
 /**
- * Whether a popup that is composed here is over the game, which a glass or not: the Quit popup of
- * the menu, and the error popup over the frozen last frame of the stream (or the black that the
+ * Whether a popup composed here is over the game, with a glass panel or a solid one: the Quit popup
+ * of the menu, and the error popup over the frozen last frame of the stream (or the black that the
  * frame is copied over). The scrim of such a popup is the page at 35 percent
  * (`STREAM_SCRIM_ALPHA`), so the game stays visible around it, and its glass panel is
  * [POPUP_TINT_PERCENT]; elsewhere it is the dialog scrim, or the glass of the background (ADR 0057,

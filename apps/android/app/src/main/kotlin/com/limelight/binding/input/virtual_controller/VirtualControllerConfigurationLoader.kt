@@ -154,6 +154,15 @@ object VirtualControllerConfigurationLoader {
     private fun createRightStick(controller: VirtualController, context: Context): AnalogStick =
         RightAnalogStick(controller, context)
 
+    // Stub for the test of O11: the configuration is not used yet.
+    @Suppress("UnusedParameter")
+    @JvmStatic
+    fun createDefaultLayout(
+        controller: VirtualController,
+        context: Context,
+        config: PreferenceConfiguration,
+    ) = createDefaultLayout(controller, context)
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
     @Suppress("LongMethod")
     @JvmStatic

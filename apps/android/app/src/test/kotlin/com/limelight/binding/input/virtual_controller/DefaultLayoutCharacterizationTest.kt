@@ -3,6 +3,7 @@ package com.limelight.binding.input.virtual_controller
 import android.widget.FrameLayout
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
+import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.testing.OwnedResources
 import org.junit.Rule
@@ -328,6 +329,59 @@ class DefaultLayoutCharacterizationTest {
         assertThat(rig.controller.controllerInputContext.rightTrigger).isEqualTo(0xFF.toByte())
         rig.release(rig.element(VirtualControllerElement.EID_RT))
         assertThat(rig.controller.controllerInputContext.rightTrigger).isEqualTo(0)
+    }
+
+    @Test
+    fun `the layout follows the configuration it is given, not the settings`() {
+        val rig = owned.own(OscRig(OscRig.PHONE))
+        rig.settings(onlyL3R3 = false, flipFaceButtons = false, showGuideButton = true)
+        val config =
+            PreferenceConfiguration().apply {
+                onlyL3R3 = true
+                showGuideButton = false
+                oscOpacity = 40
+            }
+
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+            rig.controller,
+            rig.activity,
+            config,
+        )
+
+        assertThat(rig.layout())
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, onlyL3R3 = true, guide = false))
+            .inOrder()
+        rig.controller.elements.forEach { assertThat(it.defaultColor).isEqualTo(0x66888888) }
+    }
+
+    @Test
+    fun `the face buttons follow the flip of the configuration it is given`() {
+        val rig = owned.own(OscRig(OscRig.PHONE))
+        rig.settings(flipFaceButtons = false)
+        val config =
+            PreferenceConfiguration().apply {
+                flipFaceButtons = true
+                showGuideButton = true
+                oscOpacity = 90
+            }
+
+        VirtualControllerConfigurationLoader.createDefaultLayout(
+            rig.controller,
+            rig.activity,
+            config,
+        )
+
+        assertThat(
+                listOf(
+                    VirtualControllerElement.EID_A,
+                    VirtualControllerElement.EID_B,
+                    VirtualControllerElement.EID_X,
+                    VirtualControllerElement.EID_Y,
+                )
+                    .map { (rig.element(it) as DigitalButton).label() }
+            )
+            .containsExactly("B", "A", "Y", "X")
+            .inOrder()
     }
 
     @Test

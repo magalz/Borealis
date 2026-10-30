@@ -14,7 +14,6 @@ import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
@@ -49,10 +48,15 @@ class DialogOverBackgroundTest {
     private var open by mutableStateOf(false)
     private var dialog: @Composable () -> Unit = { Question() }
 
-    private fun show(background: BackgroundMode = BackgroundMode.STILL) {
+    /** The background of the stream's screens, moving, or held on one frame by the test. */
+    private fun show(moving: Boolean = false) {
         composeRule.setChrome(FormFactor.Phone) {
-            OutsideGameBackground(StreamVisuals(background = background), decoderHeld = false) {
-                if (open) dialog()
+            if (moving) {
+                OutsideGameBackground(StreamVisuals(), decoderHeld = false) {
+                    if (open) dialog()
+                }
+            } else {
+                OnStillBackground { if (open) dialog() }
             }
         }
         composeRule.waitForIdle()
@@ -107,7 +111,7 @@ class DialogOverBackgroundTest {
 
     private fun assertFrozen() {
         composeRule.mainClock.autoAdvance = false
-        show(BackgroundMode.MOVING)
+        show(moving = true)
         assertThat(moves()).isTrue()
 
         composeRule.runOnUiThread { open = true }

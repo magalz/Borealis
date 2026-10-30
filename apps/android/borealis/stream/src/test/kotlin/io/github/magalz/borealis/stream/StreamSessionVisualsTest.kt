@@ -17,7 +17,6 @@ class StreamSessionVisualsTest {
     private val chosen =
         StreamVisuals(
             menuGlass = MenuGlass.SOLID,
-            background = BackgroundMode.STILL,
             backgroundStyle = BackgroundStyle.NorthernLights,
         )
 
@@ -25,11 +24,9 @@ class StreamSessionVisualsTest {
         aSession(defaults = aDefaults.copy(visuals = visuals))
 
     @Test
-    fun `a stream with nothing chosen is Blur over a moving background of the default style`() {
+    fun `a stream with nothing chosen is Blur over a background of the default style`() {
         assertThat(StreamVisuals())
-            .isEqualTo(
-                StreamVisuals(MenuGlass.BLUR, BackgroundMode.MOVING, BackgroundStyle.Default)
-            )
+            .isEqualTo(StreamVisuals(MenuGlass.BLUR, BackgroundStyle.Default))
         assertThat(aSession().state.value.visuals).isEqualTo(StreamVisuals())
     }
 

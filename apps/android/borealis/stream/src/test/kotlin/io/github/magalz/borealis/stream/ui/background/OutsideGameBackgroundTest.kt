@@ -17,7 +17,7 @@ import io.github.magalz.borealis.designsystem.testing.isNear
 import io.github.magalz.borealis.designsystem.theme.BackgroundIntensity
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.stream.BackgroundMode
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.PHONE
@@ -31,8 +31,9 @@ import org.robolectric.annotation.Config
 
 /**
  * The background on the screens outside the game (ADR 0061, decisions 1 and 2): every one of them
- * sits on it, with no difference between them, it goes when the phase becomes Streaming, and the
- * option of the viewer says whether it moves, stands still or is the plain page colour.
+ * sits on it, with no difference between them, it goes when the phase becomes Streaming, and it is
+ * the style that the viewer chose as the Library shows it: it moves, and the plain page colour is
+ * the style Off. Reduce motion, the battery saver and a dialog hold it still as they do there.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
@@ -81,9 +82,9 @@ class OutsideGameBackgroundTest {
     }
 
     @Test
-    fun `a moving background moves`() {
+    fun `the background moves, as the Library's does, on the screens outside the game`() {
         composeRule.mainClock.autoAdvance = false
-        show(sessionAt(visuals = StreamVisuals(background = BackgroundMode.MOVING)))
+        show(sessionAt())
         composeRule.mainClock.advanceTimeBy(1_000)
         val first = frame()
 
@@ -93,9 +94,10 @@ class OutsideGameBackgroundTest {
     }
 
     @Test
-    fun `a still background is one frame that never changes`() {
+    fun `with Reduce motion on it is one frame that never changes, as in the Library`() {
         composeRule.mainClock.autoAdvance = false
-        show(sessionAt(visuals = StreamVisuals(background = BackgroundMode.STILL)))
+        look = BorealisLook(reduceMotion = ReduceMotion.On)
+        show(sessionAt())
         composeRule.mainClock.advanceTimeBy(1_000)
         val first = frame()
 
@@ -105,14 +107,7 @@ class OutsideGameBackgroundTest {
     }
 
     @Test
-    fun `with the background off the screens stand on the page colour`() {
-        show(sessionAt(visuals = StreamVisuals(background = BackgroundMode.OFF)))
-
-        assertThat(frame()[CORNER, CORNER].isNear(BorealisColors().page)).isTrue()
-    }
-
-    @Test
-    fun `a style of the viewer that is off is the page colour, whatever the option`() {
+    fun `the style Off is the page colour`() {
         show(sessionAt(visuals = StreamVisuals(backgroundStyle = BackgroundStyle.Off)))
 
         assertThat(frame()[CORNER, CORNER].isNear(BorealisColors().page)).isTrue()
@@ -120,11 +115,16 @@ class OutsideGameBackgroundTest {
 
     @Test
     fun `the intensity of the look dims the background as it does in the Library`() {
-        show(sessionAt(visuals = StreamVisuals(background = BackgroundMode.STILL)))
+        look = BorealisLook(reduceMotion = ReduceMotion.On)
+        show(sessionAt())
         val full = frame().distanceFromPage()
 
         composeRule.runOnIdle {
-            look = BorealisLook(backgroundIntensity = BackgroundIntensity.Quarter)
+            look =
+                BorealisLook(
+                    reduceMotion = ReduceMotion.On,
+                    backgroundIntensity = BackgroundIntensity.Quarter,
+                )
         }
         composeRule.waitForIdle()
         val dimmed = frame().distanceFromPage()

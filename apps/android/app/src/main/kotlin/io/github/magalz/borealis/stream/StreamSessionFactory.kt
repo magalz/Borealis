@@ -90,8 +90,8 @@ object StreamSessionFactory {
 
     /**
      * What the stream draws besides the video, from [snapshot] (ADR 0061): the glass of the menu,
-     * how the background behaves outside the game, and the style that the viewer chose for it. A
-     * stored id that no choice has stands for the default of its setting.
+     * and the style that the viewer chose for the background outside the game. A stored id that no
+     * choice has stands for the default of its setting.
      */
     internal fun visuals(snapshot: SettingsSnapshot): StreamVisuals =
         StreamVisuals(
@@ -99,12 +99,6 @@ object StreamSessionFactory {
                 when (snapshot[Settings.STREAM_MENU_GLASS]) {
                     Settings.STREAM_MENU_GLASS_SOLID -> MenuGlass.SOLID
                     else -> MenuGlass.BLUR
-                },
-            background =
-                when (snapshot[Settings.STREAM_BACKGROUND]) {
-                    Settings.STREAM_BACKGROUND_STILL -> BackgroundMode.STILL
-                    Settings.STREAM_BACKGROUND_OFF -> BackgroundMode.OFF
-                    else -> BackgroundMode.MOVING
                 },
             backgroundStyle = backgroundStyle(snapshot),
         )

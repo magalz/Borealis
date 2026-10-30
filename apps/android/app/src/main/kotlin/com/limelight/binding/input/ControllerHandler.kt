@@ -3741,6 +3741,9 @@ class ControllerHandler(
             this.gyroReportRateHz = oldContext.gyroReportRateHz
             this.accelReportRateHz = oldContext.accelReportRateHz
 
+            // destroy() turns the gamepad mouse off, and the pad keeps it across the change
+            val mouseEmulation = oldContext.mouseEmulationActive
+
             // Don't release the controller number, because we will carry it over if it is present.
             // We also want to make sure the change is invisible to the host PC to avoid an
             // add/remove cycle for the gamepad which may break some games.
@@ -3750,6 +3753,15 @@ class ControllerHandler(
             this.assignedControllerNumber = oldContext.assignedControllerNumber
             this.reservedControllerNumber = oldContext.reservedControllerNumber
             this.controllerNumber = oldContext.controllerNumber
+
+            // The buttons the pad holds stay held, with the flags of the ones it emulates, so the
+            // PC does not see them come up; the click the gamepad mouse has down too
+            this.inputMap = oldContext.inputMap
+            this.emulatingButtonFlags = oldContext.emulatingButtonFlags
+            this.mouseEmulationLastInputMap = oldContext.mouseEmulationLastInputMap
+            if (mouseEmulation) {
+                setMouseEmulation(true, false)
+            }
 
             // We may have set this device to use the built-in sensor manager. If so, do that again.
             if (oldContext.sensorManager === deviceSensorManager) {

@@ -1376,9 +1376,9 @@ class MediaCodecDecoderRenderer(
             }
         }
 
-        // Wait for the renderer thread to shut down
+        // Wait for the renderer thread to shut down (if start() ever ran)
         try {
-            rendererThread.orNpe("The renderer thread").join()
+            rendererThread?.join()
         } catch (e: InterruptedException) {
             e.printStackTrace()
 
@@ -1390,7 +1390,8 @@ class MediaCodecDecoderRenderer(
     }
 
     override fun cleanup() {
-        requireDecoder().release()
+        // Nothing to release if setup() never made a decoder
+        videoDecoder?.release()
     }
 
     override fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {

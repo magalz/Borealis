@@ -67,6 +67,7 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import org.cgutman.shieldcontrollerextensions.SceChargingState
 import org.cgutman.shieldcontrollerextensions.SceConnectionType
 import org.cgutman.shieldcontrollerextensions.SceManager
@@ -1026,7 +1027,8 @@ class ControllerHandler(
             if (currentBatteryCapacity.isNaN()) {
                 percentage = MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN
             } else {
-                percentage = (currentBatteryCapacity * PERCENT).toInt().toByte()
+                percentage =
+                    (currentBatteryCapacity * PERCENT).roundToInt().coerceIn(0, PERCENT).toByte()
             }
 
             conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), state, percentage)

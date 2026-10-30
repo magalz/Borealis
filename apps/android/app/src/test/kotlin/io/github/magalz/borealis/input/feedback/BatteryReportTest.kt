@@ -12,7 +12,8 @@ import org.robolectric.annotation.Config
  * The battery of a pad, as the handler's own thread reports it to the host from Android 12: once
  * when the pad arrives, then every 120 seconds, and only when the status or the capacity changed
  * since the last report. The status becomes the host's battery state, and the capacity its
- * percentage from 0 to 100, rounded; 255 means unknown. A pad that has no battery says so once.
+ * percentage from 0 to 100, rounded; 255 means unknown. An external pad that has no battery says so
+ * once; a pad that is not external claims no battery, and says nothing.
  */
 @RunWith(RobolectricTestRunner::class)
 class BatteryReportTest : FeedbackTestBase() {
@@ -22,8 +23,18 @@ class BatteryReportTest : FeedbackTestBase() {
         present: Boolean = true,
     ) = Hardware.battery(present, status, capacity)
 
-    private fun padWith(rig: FeedbackRig, battery: Any, id: Int = FeedbackRig.PAD_ID): Pad {
-        val pad = rig.connectPad(id = id, features = DeviceFeatures(batteryState = battery))
+    private fun padWith(
+        rig: FeedbackRig,
+        battery: Any,
+        id: Int = FeedbackRig.PAD_ID,
+        external: Boolean = true,
+    ): Pad {
+        val pad =
+            rig.connectPad(
+                id = id,
+                external = external,
+                features = DeviceFeatures(batteryState = battery),
+            )
         rig.wake(pad)
         rig.awaitBackground()
         return pad
@@ -146,6 +157,31 @@ class BatteryReportTest : FeedbackTestBase() {
         poll(rig)
 
         assertThat(events()).containsExactly(BatteryEvent(0, NOT_PRESENT, -1))
+    }
+
+    @Test
+    fun `a pad that is not external claims no battery and reports none`() {
+        val rig = rig()
+
+        padWith(rig, battery(present = false), external = false)
+        poll(rig)
+
+        assertThat(events()).isEmpty()
+        val flag = MoonBridge.LI_CCAP_BATTERY_STATE.toInt()
+        assertThat(rig.connection.arrivals.single().capabilities and flag).isEqualTo(0)
+    }
+
+    @Test
+    fun `a pad that is not external does not overwrite the battery of an external pad`() {
+        val rig = rig()
+        padWith(rig, battery(), id = 5)
+
+        // The built-in controls and the external pad are both controller 0
+        padWith(rig, battery(present = false), id = 6, external = false)
+        poll(rig)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
     }
 
     @Test

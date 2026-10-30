@@ -220,7 +220,7 @@ internal class GameKeySendTest : GameTestBase() {
     }
 
     @Test
-    fun `a character is sent as UTF-8 text, and one outside the basic plane loses its high bits`() {
+    fun `a character is sent as UTF-8 text, and one outside the basic plane keeps its code point`() {
         rig.streaming()
         forgetCalls()
 
@@ -230,8 +230,8 @@ internal class GameKeySendTest : GameTestBase() {
             assertThat(rig.game.dispatchKeyEvent(event)).isTrue()
         }
 
-        // The Java narrows the code point to a char: U+1F600 arrives as U+F600.
-        assertThat(sentTexts()).containsExactly("é", "€", Char(0xF600).toString()).inOrder()
+        // U+1F600 is sent as its surrogate pair, not narrowed to U+F600.
+        assertThat(sentTexts()).containsExactly("é", "€", String(Character.toChars(0x1F600))).inOrder()
     }
 
     @Test

@@ -105,7 +105,7 @@ counts, sizes, times, a code, a choice and a fixed reason word.
   (`borealis_colour_vision`). They hold stable ids and switches, and nothing
   else ([ADR 0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md)).
 - The five Appearance settings of Sprint 11 are stored in the same file. Together with
-  the eleven above, the file holds 16 settings, 18 with the two stream options of Sprint 15 below,
+  the eleven above, the file holds 16 settings, 17 with the stream option of Sprint 15 below,
   and it is excluded from backup too:
   Font (`borealis_font`), Accent colour (`borealis_accent`), Background intensity
   (`borealis_background_intensity`), Card density (`borealis_card_density`) and Text
@@ -113,13 +113,16 @@ counts, sizes, times, a code, a choice and a fixed reason word.
   ([ADR 0058](../adr/0058-appearance-and-reading-options.md)). They are not uploaded,
   and they are not put in diagnostics: no value of them is in a log line, in the audit
   trail or in the diagnostic bundle.
-- The two stream options of Sprint 15 are stored in the same file, so it holds 18 settings
-  and is excluded from backup: Background before and after the stream
-  (`borealis_stream_background`: `moving`, `still` or `off`) and Menu glass in the stream
-  (`borealis_stream_menu_glass`: `blur` or `solid`). They hold stable ids and nothing
-  personal ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md)). They
-  follow the same rule: they are never uploaded, and no value of them is in a log line, in the
-  audit trail or in the diagnostic bundle.
+- The stream option of Sprint 15 is stored in the same file, so it holds 17 settings
+  and is excluded from backup: Stream menu style (`borealis_stream_menu_glass`: `blur`
+  or `solid`). It holds a stable id and nothing personal
+  ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md)). It
+  follows the same rule: it is never uploaded, and no value of it is in a log line, in the
+  audit trail or in the diagnostic bundle. A second option, Background before and after the
+  stream (`borealis_stream_background`), was added in the same sprint and dropped on
+  2026-10-30. It is no longer a setting, so the key is not read and not written. A value
+  already stored under it stays in the file of the user, unused, until the app data is
+  cleared. It was a stable id too (`moving`, `still` or `off`), and nothing personal.
 - Accessibility choices can reveal a disability, so they are never uploaded and
   never put in diagnostics: no value of them is in a log line, in the audit trail or in
   the diagnostic bundle. The `manifest.json` of the bundle lists only the two

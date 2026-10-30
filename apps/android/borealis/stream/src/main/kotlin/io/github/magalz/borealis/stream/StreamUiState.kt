@@ -21,12 +21,12 @@ data class StreamUiState(
 
 /**
  * What the stream draws besides the video, read once when the stream starts (ADR 0061): the glass
- * of the in-game menu, how the background behaves on the screens outside the game, and the style of
- * that background, the one the viewer chose in Settings. Its intensity is the one of the look.
+ * of the in-game menu, and the style of the background on the screens outside the game, the one the
+ * viewer chose in Settings, which they show as the Library does. Its intensity is the one of the
+ * look.
  */
 data class StreamVisuals(
     val menuGlass: MenuGlass = MenuGlass.BLUR,
-    val background: BackgroundMode = BackgroundMode.MOVING,
     val backgroundStyle: BackgroundStyle = BackgroundStyle.Default,
 )
 
@@ -37,18 +37,6 @@ enum class MenuGlass {
 
     /** A solid surface. */
     SOLID,
-}
-
-/** How the background behaves on the screens outside the game. */
-enum class BackgroundMode {
-    /** The style as it moves. */
-    MOVING,
-
-    /** One still frame of the style. */
-    STILL,
-
-    /** The plain page colour. */
-    OFF,
 }
 
 /** The phase of a stream session, from the first connection step to the stream or a failure. */

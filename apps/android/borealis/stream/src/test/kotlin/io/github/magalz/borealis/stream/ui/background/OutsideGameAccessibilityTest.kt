@@ -18,7 +18,6 @@ import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.designsystem.theme.borealisColors
-import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.PHONE
@@ -112,8 +111,11 @@ class OutsideGameAccessibilityTest {
     /** The colour at the top edge of the steps panel, in the middle, away from its corners. */
     private fun panelEdge(): Color = composeRule.frame(STARTING_PANEL_TAG)[PANEL_MIDDLE, EDGE]
 
-    private fun showSteps(shown: BorealisLook) =
-        show(sessionAt(visuals = StreamVisuals(background = BackgroundMode.STILL)), shown)
+    /**
+     * The steps on the background of the viewer, held still by Reduce motion in [shown], so that a
+     * test does not end with a moving background still drawing.
+     */
+    private fun showSteps(shown: BorealisLook) = show(sessionAt(), shown)
 
     private fun assertSolidPanel(shown: BorealisLook) {
         showSteps(shown)
@@ -126,18 +128,22 @@ class OutsideGameAccessibilityTest {
 
     @Test
     fun `Transparency Off gives the steps a solid surface`() =
-        assertSolidPanel(BorealisLook(transparency = Transparency.Off))
+        assertSolidPanel(
+            BorealisLook(reduceMotion = ReduceMotion.On, transparency = Transparency.Off)
+        )
 
     @Test
     fun `High contrast gives the steps a solid surface`() =
-        assertSolidPanel(BorealisLook(highContrast = true))
+        assertSolidPanel(BorealisLook(reduceMotion = ReduceMotion.On, highContrast = true))
 
     @Test
     fun `with the default glass the steps panel is a tint over the background, not the solid one`() {
-        showSteps(BorealisLook())
+        showSteps(BorealisLook(reduceMotion = ReduceMotion.On))
         val glass = panelEdge()
 
-        composeRule.runOnIdle { look = BorealisLook(transparency = Transparency.Off) }
+        composeRule.runOnIdle {
+            look = BorealisLook(reduceMotion = ReduceMotion.On, transparency = Transparency.Off)
+        }
         composeRule.waitForIdle()
 
         assertWithMessage("the panel edge with glass is $glass, as solid as with Transparency Off")

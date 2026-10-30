@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.apps.common.testing.accessibility.framework.checks.TextContrastCheck
 import com.google.android.apps.common.testing.accessibility.framework.checks.TouchTargetSizeCheck
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.AcceptedFinding
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
@@ -20,7 +21,6 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.nativecore.LaunchCategory
-import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.LaunchRetry
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
@@ -239,7 +239,7 @@ class StreamAccessibilityChecksTest {
     private fun showOutside(formFactor: FormFactor, screen: @Composable () -> Unit) {
         composeRule.setContent {
             BorealisTheme(formFactor) {
-                OutsideGameBackground(StreamVisuals(background = BackgroundMode.OFF), false) {
+                OutsideGameBackground(StreamVisuals(backgroundStyle = BackgroundStyle.Off), false) {
                     Box(Modifier.fillMaxSize()) { screen() }
                 }
             }

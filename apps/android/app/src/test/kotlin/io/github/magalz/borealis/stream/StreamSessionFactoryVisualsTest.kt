@@ -15,8 +15,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * What the stream draws besides the video is what the settings store when the stream starts (ADR
- * 0061, decisions 1 and 3): the glass of the menu, the background outside the game and the style of
- * that background. The session reads them once and keeps them.
+ * 0061, decisions 1 and 3): the glass of the menu and the style of the background outside the game,
+ * which is the Background of the Library. The session reads them once and keeps them.
  */
 @RunWith(RobolectricTestRunner::class)
 class StreamSessionFactoryVisualsTest {
@@ -37,11 +37,9 @@ class StreamSessionFactoryVisualsTest {
         }
 
     @Test
-    fun `nothing stored gives Blur, Moving and the default style`() {
+    fun `nothing stored gives Blur and the default style`() {
         assertThat(visualsOf())
-            .isEqualTo(
-                StreamVisuals(MenuGlass.BLUR, BackgroundMode.MOVING, BackgroundStyle.AuroraCurtains)
-            )
+            .isEqualTo(StreamVisuals(MenuGlass.BLUR, BackgroundStyle.AuroraCurtains))
     }
 
     @Test
@@ -49,28 +47,19 @@ class StreamSessionFactoryVisualsTest {
         val visuals =
             visualsOf(
                 Settings.STREAM_MENU_GLASS to "solid",
-                Settings.STREAM_BACKGROUND to "still",
                 Settings.BACKGROUND to "northern_lights",
             )
 
         assertThat(visuals)
-            .isEqualTo(
-                StreamVisuals(MenuGlass.SOLID, BackgroundMode.STILL, BackgroundStyle.NorthernLights)
-            )
+            .isEqualTo(StreamVisuals(MenuGlass.SOLID, BackgroundStyle.NorthernLights))
     }
 
     @Test
-    fun `each choice of the two options is read`() {
+    fun `each choice of the menu glass is read`() {
         assertThat(visualsOf(Settings.STREAM_MENU_GLASS to "blur").menuGlass)
             .isEqualTo(MenuGlass.BLUR)
         assertThat(visualsOf(Settings.STREAM_MENU_GLASS to "solid").menuGlass)
             .isEqualTo(MenuGlass.SOLID)
-        assertThat(visualsOf(Settings.STREAM_BACKGROUND to "moving").background)
-            .isEqualTo(BackgroundMode.MOVING)
-        assertThat(visualsOf(Settings.STREAM_BACKGROUND to "still").background)
-            .isEqualTo(BackgroundMode.STILL)
-        assertThat(visualsOf(Settings.STREAM_BACKGROUND to "off").background)
-            .isEqualTo(BackgroundMode.OFF)
     }
 
     @Test
@@ -86,7 +75,6 @@ class StreamSessionFactoryVisualsTest {
         val visuals =
             visualsOf(
                 Settings.STREAM_MENU_GLASS to "tint",
-                Settings.STREAM_BACKGROUND to "paused",
                 Settings.BACKGROUND to "bogus",
             )
 
@@ -97,27 +85,23 @@ class StreamSessionFactoryVisualsTest {
     fun `a session starts with what the settings store at that moment`() {
         val settings = SettingsSnapshots.repository(activity)
         settings.setNow(Settings.STREAM_MENU_GLASS, "solid")
-        settings.setNow(Settings.STREAM_BACKGROUND, "off")
         settings.setNow(Settings.BACKGROUND, "light_mist")
 
         assertThat(newSession().state.value.visuals)
-            .isEqualTo(
-                StreamVisuals(MenuGlass.SOLID, BackgroundMode.OFF, BackgroundStyle.LightMist)
-            )
+            .isEqualTo(StreamVisuals(MenuGlass.SOLID, BackgroundStyle.LightMist))
     }
 
     @Test
     fun `a session reads them once, so a change shows in the next stream`() {
         val settings = SettingsSnapshots.repository(activity)
-        settings.setNow(Settings.STREAM_BACKGROUND, "still")
+        settings.setNow(Settings.STREAM_MENU_GLASS, "solid")
         val session = newSession()
 
-        settings.setNow(Settings.STREAM_BACKGROUND, "off")
-        settings.setNow(Settings.STREAM_MENU_GLASS, "solid")
+        settings.setNow(Settings.STREAM_MENU_GLASS, "blur")
+        settings.setNow(Settings.BACKGROUND, "starfield")
 
-        assertThat(session.state.value.visuals)
-            .isEqualTo(StreamVisuals(background = BackgroundMode.STILL))
+        assertThat(session.state.value.visuals).isEqualTo(StreamVisuals(MenuGlass.SOLID))
         assertThat(newSession().state.value.visuals)
-            .isEqualTo(StreamVisuals(MenuGlass.SOLID, BackgroundMode.OFF))
+            .isEqualTo(StreamVisuals(MenuGlass.BLUR, BackgroundStyle.Starfield))
     }
 }

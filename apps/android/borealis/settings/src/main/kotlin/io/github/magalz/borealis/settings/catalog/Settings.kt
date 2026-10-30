@@ -276,31 +276,12 @@ object Settings {
         )
 
     /**
-     * The background on the screens outside the game, before and after the stream:
-     * [STREAM_BACKGROUND_MOVING], [STREAM_BACKGROUND_STILL] or [STREAM_BACKGROUND_OFF]. It shows
-     * the style of [BACKGROUND]. A stored value that no choice has stands for the default. The
-     * stream reads it once, when it starts (ADR 0061).
-     */
-    val STREAM_BACKGROUND =
-        StringSetting(
-            "borealis_stream_background",
-            default = STREAM_BACKGROUND_MOVING,
-            store = SettingStore.DATASTORE,
-        )
-
-    /** Value of [STREAM_BACKGROUND] for the background as it moves, the default. */
-    const val STREAM_BACKGROUND_MOVING = "moving"
-
-    /** Value of [STREAM_BACKGROUND] for one still frame of the background. */
-    const val STREAM_BACKGROUND_STILL = "still"
-
-    /** Value of [STREAM_BACKGROUND] for the plain page colour. */
-    const val STREAM_BACKGROUND_OFF = "off"
-
-    /**
-     * The glass of the in-game menu in a stream: [STREAM_MENU_GLASS_BLUR] or
+     * The Stream menu style: the glass of the in-game menu in a stream, [STREAM_MENU_GLASS_BLUR] or
      * [STREAM_MENU_GLASS_SOLID]. A stored value that no choice has stands for the default. The
-     * stream reads it once, when it starts (ADR 0061).
+     * stream reads it once, when it starts (ADR 0061). The screens outside the game have no option
+     * of their own: they follow [BACKGROUND] as the Library does. A value that an earlier build
+     * stored under `borealis_stream_background`, the key of the option that Sprint 15 dropped, is
+     * read by nothing; the file keeps it.
      */
     val STREAM_MENU_GLASS =
         StringSetting(
@@ -515,7 +496,6 @@ object Settings {
             ACCENT,
             BACKGROUND,
             BACKGROUND_INTENSITY,
-            STREAM_BACKGROUND,
             STREAM_MENU_GLASS,
             CARD_DENSITY,
             GLASS_TINT,

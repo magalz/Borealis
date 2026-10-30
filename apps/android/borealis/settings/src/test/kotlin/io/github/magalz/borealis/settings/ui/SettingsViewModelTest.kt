@@ -261,29 +261,29 @@ class SettingsViewModelTest {
     private fun rowOf(setting: Setting<*>) = SettingsItem.entries.single { it.setting == setting }
 
     @Test
-    fun `the lists of the stream store the stable id of the chosen entry`() = runTest {
+    fun `the stream menu style stores the stable id of the chosen entry`() = runTest {
         val viewModel = viewModel()
 
         viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "solid")
-        viewModel.onChoiceSelected(rowOf(Settings.STREAM_BACKGROUND), "still")
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "blur")
         advanceUntilIdle()
 
         assertThat(repository.writes)
             .containsExactly(
                 Write(Settings.STREAM_MENU_GLASS, "solid"),
-                Write(Settings.STREAM_BACKGROUND, "still"),
+                Write(Settings.STREAM_MENU_GLASS, "blur"),
             )
             .inOrder()
     }
 
     @Test
-    fun `an entry that the lists of the stream do not offer is not stored`() = runTest {
+    fun `an entry that the stream menu style does not offer is not stored`() = runTest {
         val viewModel = viewModel()
 
         viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "tint")
         viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "Blur")
-        viewModel.onChoiceSelected(rowOf(Settings.STREAM_BACKGROUND), "paused")
-        viewModel.onChoiceSelected(rowOf(Settings.STREAM_BACKGROUND), "aurora_curtains")
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "Blurred")
+        viewModel.onChoiceSelected(rowOf(Settings.STREAM_MENU_GLASS), "still")
         advanceUntilIdle()
 
         assertThat(repository.writes).isEmpty()
@@ -736,7 +736,6 @@ private val UC_009_ROWS =
                 SettingsItem.ACCENT,
                 SettingsItem.BACKGROUND,
                 SettingsItem.BACKGROUND_INTENSITY,
-                SettingsItem.STREAM_BACKGROUND,
                 SettingsItem.STREAM_MENU_GLASS,
                 SettingsItem.CARD_DENSITY,
                 SettingsItem.GLASS_TINT,

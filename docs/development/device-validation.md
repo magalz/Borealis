@@ -2299,20 +2299,21 @@ Steps:
      enters it without asking (the host gives no session id; discussion
      [#221](https://github.com/NortheBridge/luminalshine/discussions/221)). Record it if you see it.
 6. The background and the glass (TV, S22). Source: ADR 0061, issues #103 and #104. Settings, Appearance has
-   "Background" (the style), "Background before and after the stream" (Moving, Still or Off; Moving is the
-   default) and "Menu glass in the stream" (Blur or Solid; Blur is the default). Accessibility has Reduce
-   motion, Transparency, High contrast and Thicker focus outline.
-   - TV, a clip style (Northern lights), Moving. Launch the game. Expected: the Starting screen shows its steps
+   "Background" (the style) and "Stream menu style" (Blurred or Solid; Blurred is the default). It has no row
+   for the background before and after the stream: those screens follow the Background, as the Library does
+   (the owner dropped that row on 2026-10-30). Accessibility has Reduce motion, Transparency, High contrast
+   and Thicker focus outline.
+   - TV, a clip style (Northern lights). Launch the game. Expected: the Starting screen shows its steps
      on a glass panel over the background. The clip plays during the first steps and shows its still from
      "Preparing the display" on, where the stream holds its decoder. The background goes when the stream
      shows, with no frame of it over the first frame. The log has no `W Borealis.APP: Background video failed`, and the start
      reaches its first frame within the spread of the runs with the background Off (10.5 to 18 s in the
-     comparison of 2026-10-28). Record the time from OK to the first frame, three starts with Moving and
-     three with Off. Quit: the Quitting screen shows the still of the clip while the stream stops, and the clip
+     comparison of 2026-10-28). Record the time from OK to the first frame, three starts with the clip style and
+     three with the style Off. Quit: the Quitting screen shows the still of the clip while the stream stops, and the clip
      plays again once the connection has stopped.
-   - TV, Aurora curtains, Moving. Expected: the background keeps moving on the Starting screen and the
-     Quitting screen. Set the option to Still: it shows a still on every screen. Set it to Off: the screens
-     stand on the plain page.
+   - TV, Aurora curtains. Expected: the background keeps moving on the Starting screen and the Quitting
+     screen, as it moves in the Library. Set Reduce motion to On: it stands still on every screen, as it does
+     in the Library. Set Background to Off: the screens stand on the plain page. Put the settings back.
    - Every screen outside the game stands on that background: Starting, the Conflict dialog (step 5), the
      error popup (step 7), Quitting and Disconnecting.
    - S22, an HDR stream (Settings, Video, HDR on and Codec HEVC; 3.12). Open the menu. Expected, as an
@@ -2326,8 +2327,8 @@ Steps:
      known), and the segmented controls (Touch, Pointer speed, Overlay) sit on a solid container with
      readable labels.
    - Set Reduce motion On. Expected: the menu glass is solid (no copy of the stream) and the background is
-     still. Set Transparency Off, then High contrast: the menu and the popups are solid. Set Menu glass in the
-     stream to Solid: the same. Put the settings back.
+     still. Set Transparency Off, then High contrast: the menu and the popups are solid. Set Stream menu style
+     to Solid: the same. Put the settings back.
 7. The failed popup (TV, S22). Source: `Game.connectionTerminated`, `FrozenFrame`, issue #105. This needs a drop of
    the stream that keeps adb up.
    - TV: block the network of the app only. The block takes about 3 s to bite (on 2026-10-29 the video kept
@@ -2363,7 +2364,7 @@ Steps:
      B on a pad) closes the popup and opens the Library, which shows the game still running. Diagnostics
      opens the diagnostics, and Close does what Back does. While the copy is pending, for tens of ms, the popup
      is on black with a solid panel, then on the frame.
-   - The panel follows the menu glass: glass with Blur, solid with Solid, Transparency Off or High contrast.
+   - The panel follows the Stream menu style: glass with Blurred, solid with Solid, Transparency Off or High contrast.
      On a phone in landscape the actions stack, and with a large text size the panel scrolls (S22). A
      rotation after the drop leaves the frozen frame at its old place: known.
    - A drop before the first frame. Start a stream and block the network while the Starting screen shows (the
@@ -2390,8 +2391,7 @@ and take no screenshot of the stream (section 5).
 
 Before you start: the same build is on both devices, both are paired, the host is Online, and no app runs.
 The orchestrator has the drop commands of 3.29, step 7, ready for the TV and the S22. Settings are the
-defaults: "Background before and after the stream" Moving, "Menu glass in the stream" Blur, Reduce motion
-Follow system, Transparency Standard.
+defaults: "Stream menu style" Blurred, Reduce motion Follow system, Transparency Standard.
 
 Steps, with the minutes that the plan gives them:
 
@@ -2405,11 +2405,12 @@ Steps, with the minutes that the plan gives them:
   and wrap? Press Down and Up through every row to Quit. Press Back to leave the menu.
 - **U3. Disconnect (TV, 1 min).** Menu, Disconnect. Is "Disconnecting from `<game>`…" long enough to read?
   Does the Library say that the game is still running?
-- **U4. The look (S22, 5 min).** In Settings, Appearance, look at "Background before and after the stream"
-  and "Menu glass in the stream". Start a stream with each of Moving and Still. Look at the Starting screen,
-  the menu (is the glass blurred, live, with the right colour; is the text readable over a bright window on
-  the PC?), and the Quitting screen. Then set Menu glass in the stream to Solid, and Reduce motion to On,
-  and look again. Put them back.
+- **U4. The look (S22, 5 min).** In Settings, Appearance, look at "Stream menu style" (Blurred or Solid).
+  There is no row for the background before and after the stream: those screens follow the Background of the
+  Library. Start a stream with Reduce motion on Follow system. Look at the Starting screen (does the
+  background move, as it does in the Library?), the menu (is the glass blurred, live, with the right colour;
+  is the text readable over a bright window on the PC?), and the Quitting screen. Then set Stream menu style
+  to Solid, and Reduce motion to On, and look again (does the background stand still?). Put them back.
 - **U5. The dropped stream (S22, 3 min).** Stream a game. The orchestrator drops the connection. Look at the
   popup: is the last frame of the stream behind it, frozen and blurred, with the scrim over it, and does it
   look right? A tap outside does nothing. Press Back: does the Library show the game still running? This is
@@ -2434,7 +2435,7 @@ what you saw in the notes. A `fail` needs a note.
 | U1 Quit and the popup | TV | popup centred and readable; Quitting at once; the Library | | | |
 | U2 The menu without lateral movement | TV | Left and Right do nothing; OK cycles; Quit reached | | | |
 | U3 Disconnect | TV | the screen is readable; "still running" notice | | | |
-| U4 The look | S22 | Moving, Still, Blur, Solid, Reduce motion; readable text | | | |
+| U4 The look | S22 | the background moves and, with Reduce motion, stands still; Blurred, Solid; readable text | | | |
 | U5 The dropped stream | S22 | last frame frozen and blurred behind the popup; Back to the Library | | | |
 | U6 A second device | TV, S22 | a tap on the running game resumes; the shortcut asks | | | |
 | U7 The keyboard and the mouse | S22 | the chord opens the menu; the Back hold opens it; a short press goes back | | | |

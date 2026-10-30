@@ -412,14 +412,6 @@ enum class SettingsItem(
         R.string.settings_background_intensity_title,
         input = ItemInput(fixedChoices = FixedChoices.BACKGROUND_INTENSITY),
     ),
-    STREAM_BACKGROUND(
-        SettingsGroupId.APPEARANCE,
-        SettingsItemKind.CHOICE,
-        Settings.STREAM_BACKGROUND,
-        R.string.settings_stream_background_title,
-        R.string.settings_stream_background_summary,
-        input = ItemInput(fixedChoices = FixedChoices.STREAM_BACKGROUND),
-    ),
     STREAM_MENU_GLASS(
         SettingsGroupId.APPEARANCE,
         SettingsItemKind.CHOICE,

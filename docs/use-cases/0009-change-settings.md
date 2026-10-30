@@ -131,7 +131,8 @@ check.
 4. A stored value that no style has shows Aurora curtains, the default.
 
 The background shows behind every Library and Settings screen. In a stream it shows on
-the screens outside the game and never behind the video (A14,
+the screens outside the game, as the Library shows it, with no option of its own, and
+never behind the video ([UC-002](0002-start-a-stream.md), A6,
 [ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md), which amends
 [ADR 0056](../adr/0056-add-an-animated-background-and-the-appearance-group.md) decision 5).
 
@@ -205,8 +206,8 @@ the screens outside the game and never behind the video (A14,
 ### A13: The user changes the font, the accent, the background intensity or the card density (Sprint 11; branches from step 3)
 
 1. In Appearance, the rows are Font, Accent colour, Background (A7), Background
-   intensity, Background before and after the stream and Menu glass in the stream
-   (A14), Card density, and then Glass tint and Glass blur (A10).
+   intensity, Stream menu style (A14), Card density, and then Glass tint and Glass
+   blur (A10): eight rows.
 2. Font has seven choices: IBM Plex Sans (the default), Atkinson Hyperlegible Next,
    Luciole, Lexend, Andika, B612 and the system font. Each has a purpose line under
    its name, and each name is drawn in its own font. The system stores the id under
@@ -234,24 +235,28 @@ the screens outside the game and never behind the video (A14,
 6. Each choice applies to the Library and Settings at once, with no restart, and the
    stream reads it when it starts, as in A11.
 
-### A14: The user changes what the stream draws (Sprint 15; branches from step 3)
+### A14: The user changes the style of the stream menu (Sprint 15; branches from step 3)
 
-1. In Appearance, after Background intensity, two rows set what the stream draws.
-   Background before and after the stream has Moving (the default), Still and Off.
-   It says how the background of A7 behaves on the screens outside the game
-   (Starting, the question about a running app, an error, Quitting and
-   Disconnecting): Moving, one still frame, or the plain page. Menu glass in the
-   stream has Blur (the default) and Solid. Blur is a live blurred copy of the video
-   behind the in-game menu and its Quit popup, and Solid is a plain panel.
-2. The system stores the stable ids under `borealis_stream_background` (`moving`,
-   `still` or `off`) and `borealis_stream_menu_glass` (`blur` or `solid`). A stored
-   value that no choice has shows the default.
-3. The rows change nothing in the Library or in Settings. The stream reads them
-   once, when it starts, so a change shows in the next stream.
-4. The rows are not disabled by the Accessibility settings. Transparency Off, High
+1. In Appearance, after Background intensity, the row Stream menu style sets the
+   glass of the in-game menu. It has Blurred (the default) and Solid. Blurred is a
+   live blurred copy of the video behind the in-game menu and its Quit popup, and
+   Solid is a plain panel.
+2. The system stores the stable id under `borealis_stream_menu_glass` (`blur` or
+   `solid`). A stored value that no choice has shows the default. The ids and the
+   default are those of the first version of the row, which was named Menu glass in
+   the stream and offered Blur and Solid, so no stored value changes its meaning.
+3. The row changes nothing in the Library or in Settings. The stream reads it once,
+   when it starts, so a change shows in the next stream.
+4. The row is not disabled by the Accessibility settings. Transparency Off, High
    contrast, Reduce motion, the battery saver and an API level below 31 win in the
    stream: [UC-002](0002-start-a-stream.md), A6, and
    [UC-004](0004-use-the-in-game-menu.md), A10, say how.
+5. The screens outside the game have no row of their own. They stand on the
+   background of A7, as the Library shows it (UC-002, A6). The first version of
+   Sprint 15 also had a row, Background before and after the stream (Moving, Still
+   or Off), stored under `borealis_stream_background`. The owner dropped it on
+   2026-10-30. The setting is no longer in the catalog, so a value stored under that
+   key is never read: the DataStore leaves it in the file and nothing uses it.
 
 ## Postconditions
 
@@ -298,7 +303,7 @@ UC-009-T33 to T37 are Sprint 11 rows, and T38 and T39 are Sprint 15 rows.
 | UC-009-T22 | Given the Google TV Streamer, when the user moves between groups, then focus and the pane change together without a wait. | device | planned (Sprint 9 device round, section 3.22); measured with atrace in section 14 |
 | UC-009-T23 | Given a phone, when Settings opens, then every group is a collapsed section; a tap opens a section and the next tap closes it, several can be open, the open ones survive a recreation and a trip to Privacy and diagnostics, About is a section, and Privacy and diagnostics is a link row. | UI | exists (Sprint 10, UI): `SettingsPhoneSectionsTest`, `CollapsibleSectionTest` |
 | UC-009-T24 | Given a TV or a handheld and a group with the focus, when the user presses OK, Enter, the numpad Enter or the gamepad A, then the focus is on the first row of its pane and Left returns to the group; given a tap, then the group is selected and the focus stays. | UI | exists (Sprint 10, UI): `SettingsTwoPaneTest`, `SettingsTvTest` |
-| UC-009-T25 | Given the Appearance group, when it opens, then it has Font, Accent colour, Background, Background intensity, Background before and after the stream, Menu glass in the stream, Card density, Glass tint (30 to 85 %) and Glass blur (8 to 48 dp), in that order, each stored as a stable id, and a stored value that is not offered shows the default. | unit, UI | exists (Sprint 10; the Sprint 11 rows and their order: `SettingsAccessibilityTest`; the two Sprint 15 rows: `StreamAppearanceTest`): `BorealisLooksTest`, `DataStoreBackingTest` |
+| UC-009-T25 | Given the Appearance group, when it opens, then it has eight rows, Font, Accent colour, Background, Background intensity, Stream menu style, Card density, Glass tint (30 to 85 %) and Glass blur (8 to 48 dp), in that order, each stored as a stable id, and a stored value that is not offered shows the default. | unit, UI | exists (Sprint 10; the Sprint 11 rows and their order: `SettingsAccessibilityTest`; the Sprint 15 row: `StreamAppearanceTest`): `BorealisLooksTest`, `DataStoreBackingTest` |
 | UC-009-T26 | Given the Accessibility group, when it opens, then it has its seven rows, in order (Text spacing among them), at their defaults, each stores a stable id, and a stored value that no choice has shows the default. | unit, UI | exists (Sprint 10; seven rows since Sprint 11: `SettingsAccessibilityTest`): `BorealisLooksTest` |
 | UC-009-T27 | Given High contrast is on, then Glass tint, Glass blur, Transparency and Thicker focus outline are disabled with the note, and the other rows can be changed; given Transparency is Reduced or Off, then the two glass rows are disabled with their note. | unit, UI | exists (Sprint 10): `DefaultSettingsOptionsTest`, `SettingsAccessibilityTest` |
 | UC-009-T28 | Given the Library shows Settings, when an Appearance or Accessibility setting changes, then the Library changes at once with no restart. | UI | exists (Sprint 10, UI): `LibraryActivityLookTest`, `LibraryActivityBackgroundTest` |
@@ -311,8 +316,8 @@ UC-009-T33 to T37 are Sprint 11 rows, and T38 and T39 are Sprint 15 rows.
 | UC-009-T35 | Given the Appearance group, when the user chooses a Background intensity (100, 75, 50 or 25 %), then the choice is stored under `borealis_background_intensity` as `100`, `75`, `50` or `25`, the background is veiled by 0, 25, 50 or 75 % of the page colour, the Library changes at once, and under High contrast the stronger of the veil and the dim wins. | UI, unit | exists (Sprint 11, UI and unit): `BackgroundIntensityTest`, `LibraryBackgroundIntensityTest`, `BorealisLooksTest` |
 | UC-009-T36 | Given the Appearance group, when the user chooses a Card density (Comfortable, Compact or Dense), then the choice is stored under `borealis_card_density` as its id, Compact and Dense add one column to the hosts and apps rows (not with Text spacing at Wider, where they keep the columns of Comfortable), Dense cuts the card padding, the gutter, the gaps, the touch targets and the TV focus scale stay the same, a Running badge with no room for its label shows its dot alone, and the screen re-lays out at once and keeps the focus. | UI, unit | exists (Sprint 11, UI and unit): `CardDensityPaddingTest`, `CardDensityLayoutTest`, `CardDensityInvariantsTest`, `LibraryActivityCardDensityTest` |
 | UC-009-T37 | Given a TV, when the user chooses Source code or Privacy policy in About, then a dialog shows the address of the link and a 240 dp QR code that decodes to that address, Close and Back dismiss the dialog and the focus returns to the row, and a phone or a handheld opens the browser instead. | UI | exists (Sprint 11, UI): `AboutLinksTvTest` |
-| UC-009-T38 | Given the Appearance group, when the user chooses Background before and after the stream (Moving, Still or Off) or Menu glass in the stream (Blur or Solid), then the choice is stored under `borealis_stream_background` as `moving`, `still` or `off`, or under `borealis_stream_menu_glass` as `blur` or `solid`, a stored value that no choice has shows Moving and Blur, and nothing in the Library changes. | unit, UI | exists (Sprint 15): `StreamAppearanceTest`, `SettingsViewModelTest`, `DataStoreBackingTest`, `BorealisLooksTest` |
-| UC-009-T39 | Given the two stream options are stored, when a stream starts, then it reads them once, nothing stored gives Blur, Moving and the default style, and a change shows in the next stream. | unit | exists (Sprint 15, unit): `StreamSessionFactoryVisualsTest`, `StreamSessionVisualsTest` |
+| UC-009-T38 | Given the Appearance group, when the user chooses the Stream menu style (Blurred or Solid), then the choice is stored under `borealis_stream_menu_glass` as `blur` or `solid`, a stored value that no choice has shows Blurred, and nothing in the Library changes. Given a value stored under `borealis_stream_background`, the key of the dropped row Background before and after the stream, then it is not read, and no other setting changes. | unit, UI | exists (Sprint 15): `StreamAppearanceTest`, `SettingsViewModelTest`, `DataStoreBackingTest`, `BorealisLooksTest` |
+| UC-009-T39 | Given the Stream menu style and the Background are stored, when a stream starts, then it reads them once, nothing stored gives Blurred and the default style, and a change shows in the next stream. | unit | exists (Sprint 15, unit): `StreamSessionFactoryVisualsTest`, `StreamSessionVisualsTest` |
 
 ## Host dependency
 
@@ -329,7 +334,7 @@ LuminalShine capability.
   [0057](../adr/0057-glass-surfaces-and-the-accessibility-settings.md) (the glass
   and the Accessibility group),
   [0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md) (the
-  two stream rows).
+  stream menu style).
 - Use cases: [UC-010](0010-adjust-accessibility.md) (the Accessibility settings),
   [UC-006](0006-send-diagnostics-from-a-tv-to-a-phone.md) and
   [UC-007](0007-review-and-erase-the-audit-trail.md) (the Privacy and diagnostics

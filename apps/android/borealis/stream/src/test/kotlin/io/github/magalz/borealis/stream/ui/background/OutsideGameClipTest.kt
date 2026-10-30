@@ -8,7 +8,6 @@ import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
-import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
@@ -132,15 +131,6 @@ class OutsideGameClipTest {
         change { session.onConnectionStopped() }
 
         assertClipPlays()
-    }
-
-    @Test
-    fun `a still option never makes a player, and shows the still`() {
-        val session = sessionAt(visuals = clip.copy(background = BackgroundMode.STILL))
-
-        show(session)
-
-        assertStillOnly()
     }
 
     @Test

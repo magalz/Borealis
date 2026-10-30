@@ -68,15 +68,7 @@ object FixedChoices {
     /** Background: the styles of the Appearance setting, with their stable ids. */
     val BACKGROUND = BackgroundChoices.all.choices.map { FixedChoice(it.id, it.value.label) }
 
-    /** Background before and after the stream: Moving, Still or Off. */
-    val STREAM_BACKGROUND =
-        listOf(
-            FixedChoice(Settings.STREAM_BACKGROUND_MOVING, R.string.settings_choice_stream_moving),
-            FixedChoice(Settings.STREAM_BACKGROUND_STILL, R.string.settings_choice_stream_still),
-            FixedChoice(Settings.STREAM_BACKGROUND_OFF, R.string.settings_choice_stream_off),
-        )
-
-    /** Menu glass in the stream. */
+    /** Stream menu style: Blurred or Solid. */
     val STREAM_MENU_GLASS =
         listOf(
             FixedChoice(Settings.STREAM_MENU_GLASS_BLUR, R.string.settings_choice_glass_blur),

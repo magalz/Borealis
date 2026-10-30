@@ -7,6 +7,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.logging.BorealisLog
@@ -26,6 +27,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -54,6 +56,9 @@ class DataStoreBackingTest {
     private lateinit var file: File
     private val scopes = mutableListOf<CoroutineScope>()
 
+    /** The key of the Appearance option that Sprint 15 dropped: no setting has it any more. */
+    private val droppedKey = "borealis_stream_background"
+
     /**
      * Every setting that the DataStore holds: the logging switches, the background and the look.
      */
@@ -73,7 +78,6 @@ class DataStoreBackingTest {
             Settings.FONT,
             Settings.ACCENT,
             Settings.BACKGROUND_INTENSITY,
-            Settings.STREAM_BACKGROUND,
             Settings.STREAM_MENU_GLASS,
             Settings.CARD_DENSITY,
             Settings.TEXT_SPACING,
@@ -161,20 +165,34 @@ class DataStoreBackingTest {
         }
 
     @Test
-    fun `every id of the menu glass and the background of the stream reads back as written`() =
+    fun `every id of the stream menu style reads back as written`() =
         runBlocking<Unit> {
-            val ids =
-                mapOf(
-                    Settings.STREAM_MENU_GLASS to listOf("blur", "solid"),
-                    Settings.STREAM_BACKGROUND to listOf("moving", "still", "off"),
-                )
             val backing = backing()
 
-            for ((setting, values) in ids) {
-                for (id in values) {
-                    backing.write(setting, id)
-                    assertThat(backing.read()[setting]).isEqualTo(id)
-                }
+            for (id in listOf("blur", "solid")) {
+                backing.write(Settings.STREAM_MENU_GLASS, id)
+                assertThat(backing.read()[Settings.STREAM_MENU_GLASS]).isEqualTo(id)
+            }
+        }
+
+    @Test
+    fun `a value stored under the dropped stream background key is not read and changes nothing`() =
+        runBlocking<Unit> {
+            val scope = newScope()
+            val store = DataStoreBacking.create(preferences, scope, file)
+            val backing = DataStoreBacking(store, scope)
+            for (id in listOf("moving", "still", "off")) {
+                store.edit { it[stringPreferencesKey(droppedKey)] = id }
+
+                backing.write(Settings.STREAM_MENU_GLASS, "solid")
+
+                assertThat(backing.read())
+                    .containsExactlyEntriesIn(
+                        datastoreSettings.associateWith<Setting<*>, Any?> { null } +
+                            mapOf(Settings.STREAM_MENU_GLASS to "solid")
+                    )
+                // The file keeps the value, unused: nothing removes a key that no setting has.
+                assertThat(store.data.first().asMap().keys.map { it.name }).contains(droppedKey)
             }
         }
 

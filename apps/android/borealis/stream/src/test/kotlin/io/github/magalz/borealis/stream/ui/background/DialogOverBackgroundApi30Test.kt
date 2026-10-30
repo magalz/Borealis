@@ -17,9 +17,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.stream.BackgroundMode
 import io.github.magalz.borealis.stream.StreamPhase
-import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.aFailure
@@ -61,9 +59,7 @@ class DialogOverBackgroundApi30Test {
         shadowOf(app)
             .grantPermissions("${app.packageName}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")
         composeRule.setChrome(FormFactor.Phone) {
-            OutsideGameBackground(StreamVisuals(background = BackgroundMode.STILL), false) {
-                if (open) dialog()
-            }
+            OnStillBackground { if (open) dialog() }
         }
         composeRule.waitForIdle()
     }

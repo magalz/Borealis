@@ -2201,6 +2201,16 @@ class ControllerHandler(
         vm.vibrate(combo.combine(), vibrationAttributes.build())
     }
 
+    // We cast the unsigned short value to a signed int before multiplying by the preferred
+    // strength. The resulting value is capped at 65534 before we cast it back to a short so it
+    // doesn't go above 100%. A motor that is not zero stays at 1 at least, so a weak rumble is not
+    // scaled to nothing and cancelled; a strength of 0 still turns the vibration off.
+    private fun scaledFallbackMotor(motor: Short, strength: Int): Short {
+        val unsigned = motor.toInt() and UNSIGNED_SHORT_MASK
+        val scaled = min((unsigned * strength) / PERCENT, Short.MAX_VALUE * 2)
+        return if (unsigned != 0 && strength > 0) max(1, scaled).toShort() else scaled.toShort()
+    }
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
     @Suppress("DEPRECATION")
     private fun rumbleSingleVibrator(
@@ -2361,25 +2371,12 @@ class ControllerHandler(
                 // We found a device to vibrate but it didn't have rumble support. The user
                 // has requested us to vibrate the device in this case.
 
-                // We cast the unsigned short value to a signed int before multiplying by
-                // the preferred strength. The resulting value is capped at 65534 before
-                // we cast it back to a short so it doesn't go above 100%.
-                val lowFreqMotorAdjusted =
-                    min(
-                            (((lowFreqMotor.toInt() and 0xffff) *
-                                prefConfig.vibrateFallbackToDeviceStrength) / 100),
-                            Short.MAX_VALUE * 2,
-                        )
-                        .toShort()
-                val highFreqMotorAdjusted =
-                    min(
-                            (((highFreqMotor.toInt() and 0xffff) *
-                                prefConfig.vibrateFallbackToDeviceStrength) / 100),
-                            Short.MAX_VALUE * 2,
-                        )
-                        .toShort()
-
-                rumbleSingleVibrator(deviceVibrator, lowFreqMotorAdjusted, highFreqMotorAdjusted)
+                val strength = prefConfig.vibrateFallbackToDeviceStrength
+                rumbleSingleVibrator(
+                    deviceVibrator,
+                    scaledFallbackMotor(lowFreqMotor, strength),
+                    scaledFallbackMotor(highFreqMotor, strength),
+                )
             }
         }
     }
@@ -3860,6 +3857,7 @@ class ControllerHandler(
         private const val RUMBLE_DURATION_MS = 60000L
         private const val RAD_TO_DEG = 57.2957795f
         private const val PERCENT = 100
+        private const val UNSIGNED_SHORT_MASK = 0xFFFF
         private const val QUAD_VIBRATOR_COUNT = 4
         private const val RED_SHIFT = 16
         private const val RED_MASK = 0xFF0000

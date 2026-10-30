@@ -244,6 +244,21 @@ class NativePointerCaptureCharacterizationTest {
     }
 
     @Test
+    fun `a request that waited is dropped when the cursor is hidden again with the capture off`() {
+        // The capture is off, so the hiding that follows is not the stream's own.
+        rig.connect(MOUSE, Sources.MOUSE)
+        rig.provider.enableCapture()
+        rig.provider.onWindowFocusChanged(true)
+        rig.provider.disableCapture()
+        rig.provider.hideCursor()
+        val asked = rig.view.requests
+
+        rig.advanceBy(500)
+
+        assertThat(rig.view.requests).isEqualTo(asked)
+    }
+
+    @Test
     fun `losing focus asks for nothing`() {
         rig.connect(MOUSE, Sources.MOUSE)
         rig.provider.enableCapture()

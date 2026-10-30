@@ -2261,9 +2261,12 @@ class Game :
                 }
 
                 // Mouse secondary or stylus primary is right click (stylus down is left click)
+                // BOREALIS: the two share one host button, which changes only when the group does
                 if (
-                    (changedButtons and
-                        (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) != 0
+                    groupChanged(
+                        buttonState,
+                        MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY,
+                    )
                 ) {
                     if (
                         (buttonState and
@@ -2278,8 +2281,10 @@ class Game :
 
                 // Mouse tertiary or stylus secondary is middle click
                 if (
-                    (changedButtons and
-                        (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY)) != 0
+                    groupChanged(
+                        buttonState,
+                        MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY,
+                    )
                 ) {
                     if (
                         (buttonState and
@@ -2530,6 +2535,11 @@ class Game :
     private fun touchContextEntry(entry: TouchContext?): TouchContext {
         return entry ?: throw NullPointerException("The touch contexts have not been built")
     }
+
+    // BOREALIS: whether any button of a group that shares a host button is down now and was not
+    // before, or the other way round
+    private fun groupChanged(buttonState: Int, group: Int): Boolean =
+        ((buttonState and group) != 0) != ((lastButtonState and group) != 0)
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
         return handleMotionEvent(null, event) || super.onGenericMotionEvent(event)

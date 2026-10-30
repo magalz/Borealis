@@ -33,8 +33,9 @@ class VirtualController(
         ResizeButtons,
     }
 
-    // The elements of the layout call it from their own listeners (Kotlin, in this package).
-    val handler: Handler = Handler(Looper.getMainLooper())
+    // Runs the delayed retransmits of the controller state, on the main looper whichever thread
+    // built the controller.
+    private val handler: Handler = Handler(Looper.getMainLooper())
 
     private val delayedRetransmitRunnable = Runnable { sendControllerInputContextInternal() }
 

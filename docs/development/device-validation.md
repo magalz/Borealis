@@ -1,10 +1,10 @@
 # Device validation runbook
 
 This runbook checks Borealis Phase 1 and Sprints 2 to 15 on two devices against
-LuminalShine 26.09.1 and 26.10.0-beta.1 running on the owner's Windows PC. It is
+LuminalShine 26.09.1, 26.10.0-beta.1 and 26.10.1 running on the owner's Windows PC. It is
 for the owner and for the orchestrator who runs the checks. Run the steps in
 order and record the results as a new section with a table, like sections 7 to
-10. Sections 6 to 19 hold the results of Phase 1 and Sprints 2 to 14, in that
+10. Sections 6 to 20 hold the results of Phase 1 and Sprints 2 to 15, in that
 order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
@@ -2164,9 +2164,10 @@ Steps:
 1. Quit (TV, S22). Source: `StreamSession.quitApp`, `NvHTTP.quitApp`, `GameStreamActions.quitApp`.
    - Stream the game. Open the in-game menu (Back on the TV; a pull of the handle or Back on the S22),
      choose "Quit `<game>`". Expected: the Quit popup "Quit `<game>`?" is centred in the stream, over the
-     glass, with "Closes `<game>` on the PC." and "Unsaved progress in it is lost."; Cancel has the focus. B
-     or Back closes only the popup, and the focus returns to the Quit row. On the S22 a tap outside the
-     popup is Cancel. With TalkBack on (S22), opening the popup announces its title and its body.
+     glass, with "Closes `<game>` on the PC." and "Unsaved progress in it is lost."; Cancel has the focus. The
+     game shows around it under a light scrim (the page at 35 %), and the panel is firmer than the menu
+     behind it (an `owner check`, since the UAT of 2026-10-30). B or Back closes only the popup, and the focus
+     returns to the Quit row. On the S22 a tap outside the popup is Cancel. With TalkBack on (S22), opening the popup announces its title and its body.
    - Choose Quit. Expected: "Quitting `<game>`…" shows at once, at the confirmation, over the user's
      background, with the Borealis loader. It does not wait for the stream to end. Then the Library shows
      "App quit." and "Nothing running".
@@ -2360,7 +2361,8 @@ Steps:
      Diagnostics and Close (Wake PC where the host is offline, Pair again where the certificate changed). Read
      the text with `adb -s <serial> shell uiautomator dump /sdcard/borealis-ui.xml`, pull it, read it and
      delete it from the device and from your disk. Behind the popup, as an `owner check`: the last frame of the
-     stream, frozen and blurred, with the scrim over it. A tap outside the popup does nothing (S22). Back (or
+     stream, frozen and blurred, under a light scrim (the page at 35 %), and the panel firm (85 % of the
+     surface with Blurred). A tap outside the popup does nothing (S22). Back (or
      B on a pad) closes the popup and opens the Library, which shows the game still running. Diagnostics
      opens the diagnostics, and Close does what Back does. While the copy is pending, for tens of ms, the popup
      is on black with a solid panel, then on the frame.
@@ -2379,7 +2381,7 @@ Steps:
    wanted. Quit the app on the S22, and end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on
    the Streamer.
 
-The results go in a new section of this runbook, after the round.
+The results are in [section 20](#20-results-sprint-15).
 
 ### 3.30 Owner's 20-minute UAT (Sprint 15)
 
@@ -2412,8 +2414,8 @@ Steps, with the minutes that the plan gives them:
   is the text readable over a bright window on the PC?), and the Quitting screen. Then set Stream menu style
   to Solid, and Reduce motion to On, and look again (does the background stand still?). Put them back.
 - **U5. The dropped stream (S22, 3 min).** Stream a game. The orchestrator drops the connection. Look at the
-  popup: is the last frame of the stream behind it, frozen and blurred, with the scrim over it, and does it
-  look right? A tap outside does nothing. Press Back: does the Library show the game still running? This is
+  popup: is the last frame of the stream behind it, frozen and blurred, under a light scrim, with a firm panel
+  that does not look like a hole, and does it look right? A tap outside does nothing. Press Back: does the Library show the game still running? This is
   the check that no capture can make: the judgement is yours.
 - **U6. A second device (TV and S22, 4 min).** Start the game on the S22 and Disconnect. On the TV, tap the
   running game: it resumes with no question. Disconnect on the TV. On the S22, tap the pinned shortcut of the
@@ -5412,3 +5414,192 @@ TV; it was toggled back at once, and `HiddenApps.xml` is empty and unchanged.
   reported). The owner decides whether to uninstall that build.
 - Left on the devices, for the owner: the release build, installed and paired on the TV, and the
   pinned Steam Big Picture shortcut on the S22 launcher.
+
+## 20. Results: Sprint 15
+
+This section holds the results of the Sprint 15 device round and of the owner's acceptance test (UAT). The
+agent part ran on the Google TV Streamer on 2026-10-29, with the owner's OK: the drop check of #105 at about
+19:40, and the TV part of [section 3.29](#329-sprint-15-checks) at about 21:35. A run with two clients for
+LuminalShine #201 followed at about 23:31, on both devices. The owner's UAT
+([section 3.30](#330-owners-20-minute-uat-sprint-15)) ran by hand on the TV and the S22 on 2026-10-30. No step
+failed: every step of the UAT passed except three decisions of the owner, which changed the code afterwards
+(see the UAT below). The code of those three changes, which is the head of the phase, `4429af309`, has had no
+device run yet. The findings went to [Sprint 17](../roadmap.md#sprint-17-general-fixes) and
+[Sprint 18](../roadmap.md#sprint-18-refactor-of-the-converted-code), and the host data to the
+[host-side items](../roadmap.md#host-side-items-luminalshine) of the roadmap.
+
+### Setup
+
+- Builds:
+  - The debug build of `2e76dfcfb` for the drop check of #105 on the TV.
+  - The debug build of `1455bcf0a` for the TV part of 3.29, for the #201 run and for the owner's UAT. It is
+    the phase head after the docs of wave 4. Its Kotlin differs from `2e76dfcfb` only in comments, so it
+    behaves as that build.
+  - The TV got both builds with `install -r`, so its data stayed, and the embedded commit was checked.
+- Devices: the Google TV Streamer over wireless ADB, and the Samsung Galaxy S22 (adb over Wi-Fi in the #201
+  run). They are the two devices of [section 19](#19-results-sprint-14).
+- Host:
+  - LuminalShine 26.10.1 for the drop check, the TV part of 3.29 and the owner's UAT (the host that crashed
+    on 2026-10-30 was 26.10.1).
+  - A diagnostics build of LuminalShine for the #201 run (a nightly, `0.0.5-nightly`, commit `2f3da177`),
+    with the per-client display and the debug log.
+  - The TV clock ran about 2.9 s ahead of the host's, so the spans between host lines are compared, not the
+    wall times.
+- The drop method, as in 3.29, step 7:
+  - TV: the networking of the app alone was blocked with `cmd connectivity set-chain3-enabled true` and
+    `cmd connectivity set-package-networking-enabled false <package>`, so adb stayed up, and it was restored
+    right after the popup showed. The video kept decoding for about 3 s after the block.
+  - S22: a host-side end. In the #201 run, the Quit of the second client stopped the first client's session.
+    On 2026-10-29 a Disconnect of the client from the host's Web UI gave an ENet error -1 and a copy of the
+    frame ([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md), the measurements).
+- No capture of the stream was made. The screen was read with `uiautomator dump`, and the rest from logcat
+  and the host log. The TV was put to sleep with `KEYCODE_SLEEP` at the end.
+- No address, host name, serial, PIN or client name is recorded here.
+
+### Results
+
+The agent part on the TV, one row for each step of [section 3.29](#329-sprint-15-checks) that it ran.
+
+| Step | Device | Result | Evidence and notes |
+| --- | --- | --- | --- |
+| 1 Quit popup | TV | pass | "Quit Desktop?" with the wording for Desktop. Cancel had the focus. Back closed only the popup, and the focus returned to the Quit row. |
+| 1 Quit, Desktop (twice) and Steam Big Picture (once) | TV | pass | "Quitting `<app>`…" at the confirmation, then the Library with "App quit." and "Nothing running". The stage lines came in order. No `E … Connection terminated: -1`, no `Duplicate finish request`, no `Frozen frame` line, and one `activity finished` for each. |
+| 1 Quit from the Apps sheet, no stream | TV | pass | `quit cancel answered ms=599`, `quit check answered ms=72`, no stream lines. On 2026-10-29 at 19:45, in the drop check, `/cancel` answered in 466 ms and the check in 74 ms. |
+| 2 Disconnect | TV | pass | Steam Big Picture. `disconnect accepted` to `activity finished` took 1.03 s (the stop took 281 ms, so the floor of 1 s held). The Library said "Disconnected. Steam Big Picture is still running on the PC.", and the app kept running. The dump takes over a second, so the Disconnecting screen itself was not caught. |
+| 3 The menu with no lateral movement | TV | pass (D-pad); owner check for OK | Right and Left on "Back to stream" and on Gamepad mouse left the focus where it was. Down walked every row in order to Quit. Whether OK cycles an option is not visible in the view tree (no selected state), so it is an owner check. |
+| 7 The failed popup | TV | pass (build `2e76dfcfb`); the frame is an owner check | See the drop check below. The code is unchanged since, apart from comments. |
+| 8 End | TV | done | `KEYCODE_SLEEP`. |
+
+Quit timings on the TV, from the client log, on 26.10.1:
+
+| App | `since_quit_ms` | Stop, ms | `cancel answered ms` | `check answered ms` | Confirmation to the Library |
+| --- | --- | --- | --- | --- | --- |
+| Desktop | 304 | 209 | 5931 | 123 | about 6.1 s |
+| Steam Big Picture | 183 | 231 | 5603 | 188 | about 5.8 s |
+| Desktop | 177 | 337 | 5960 | 82 | about 6.1 s |
+
+On the host, the join of the last session ran the `rtsp_session_end` virtual display cleanup in each Quit,
+and its `Display helper: transactional REVERT` took 5.08 s, 4.83 s and 5.35 s, which is most of the time of
+`/cancel`. `Session ended` followed within about 0.2 s. The Quit of Steam Big Picture then ran its undo command
+(`steam://close/bigpicture`), which returned at once. There was no `Successfully requested the app to exit` line
+(Desktop has no process, and Big Picture is closed by its undo command) and no second cleanup
+(`app_termination` or `cancel`). The host did not crash in these four session ends. This is the data for
+[luminalshine#217](https://github.com/NortheBridge/luminalshine/issues/217): on 26.10.1 each Quit took 5.6 to
+6.0 s in `/cancel`, and about 5 s of it was the revert of the display helper in the join of the last session.
+It is under the 10 s limit of 3.29, step 1.
+
+#### The drop check of #105 on the TV (2026-10-29, build `2e76dfcfb`)
+
+Desktop over HEVC, decoder `c2.mtk.hevc.decoder.lowlatency`. The popup stood over the stream after the
+networking of the app was blocked.
+
+- The block was made at 19:42:41, and the video kept decoding until 19:42:44.278.
+- `Frozen frame requested width=480 height=270` was logged 16 ms before `Connection terminated: -1`. The stop
+  of input, audio, video and control took 231 ms (`connection stop done ms=231`). `Frozen frame copied ms=314`
+  came after the stop of the decoder, and the copy still worked.
+- The popup read "Desktop stopped", with "The stream ended. The PC may have quit the app, or the connection
+  dropped.", "Error -1", Try again (focused), Diagnostics and Close. Back closed it, and the Library showed
+  Desktop running. Quit Desktop from the actions sheet followed (the row above).
+- The frame behind the popup was not captured, so what it looked like was left to the owner.
+
+#### The run with two clients for luminalshine#201 (2026-10-29)
+
+The agent ran it on a diagnostics build of the host to look at
+[#201](https://github.com/NortheBridge/luminalshine/issues/201), with the build of `1455bcf0a` on both devices:
+client A on the S22 and client B on the TV, both on Desktop. It was not a step of 3.29, and it is a host
+observation, not a check of Borealis. The issue was open on 2026-10-29, and this run does not decide whether
+the case it describes is fixed.
+
+| Step | Result |
+| --- | --- |
+| A starts Desktop | A streams. |
+| B joins from the Library tile (the user's resume choice) and chooses Disconnect, three times, each stream 10 to 60 s | A did not drop on any of the three. The host stopped only B's session each time (`enet_disconnect`, active sessions 1), and A's decoder kept running. |
+| B joins again and chooses Quit (`/cancel`) | The host stopped both sessions with `reason=explicit_cancel`, and `/cancel` answered in 5706 ms. A dropped with `Connection terminated: -1` at the moment the cancel stopped its session, and showed the error popup over the frozen frame ("Desktop stopped", Error -1) until the agent pressed Back. |
+
+For #105 on the S22, in that drop: `Frozen frame requested` came 8 ms before `Connection terminated: -1`, and
+`Frozen frame copied ms=76`.
+
+### Owner's UAT (3.30), 2026-10-30
+
+The owner ran the 20-minute UAT of [section 3.30](#330-owners-20-minute-uat-sprint-15) by hand on the TV and the
+S22, on the build of `1455bcf0a`. Every step passed. The owner made three decisions, which are in the code now
+([ADR 0061](../adr/0061-glass-and-the-animated-background-in-the-stream.md), decision 11), and the owner's review
+of the 53 screenshot references of the phase (gate G1) made no other mark.
+
+| Step | Device | Result | Notes |
+| --- | --- | --- | --- |
+| U1 Quit and the popup | TV | pass, with decision 1 | The look of the popup: see decision 1 below. |
+| U2 The menu without lateral movement | TV | pass | No note. |
+| U3 Disconnect | TV | pass | No note. |
+| U4 The look | S22 | pass, with decisions 2 and 3 | The row for the background before and after the stream is dropped, and the other row is renamed: see decisions 2 and 3 below. |
+| U5 The dropped stream | S22 | pass, with decision 1 | The popup and Back were right, in the owner's words. The look of the popup: decision 1. |
+| U6 A second device | TV, S22 | pass | The tap on the running app entered directly. That is a resume choice and the design ([3.29](#329-sprint-15-checks), step 5, first bullet). The agent's later retest of the question for another app is void (see The host below). The pinned-shortcut part of the step has no result recorded. |
+| U7 The keyboard and the mouse | S22 | pass | No note. The owner's mouse is finding (b) below. |
+
+The three decisions:
+
+1. **The popups over the game.** The Quit popup and the error popup over the frozen frame looked like a hole: a
+   panel of 40 % glass under a scrim of 72 %. Now the scrim of a popup over the game is the page at 35 %
+   (`STREAM_SCRIM_ALPHA`, the scrim of the side panel), and the panel is 85 % of the surface (`POPUP_TINT_PERCENT`),
+   solid where the rules say. Over the background outside the game, ADR 0057 decision 8 is unchanged. On the
+   85 % panel over white, the text keeps 4.5:1 without any halo (ink 9.50:1, ink-2 6.74:1, accent-soft 6.20:1,
+   danger-ink 5.01:1). The halo stays, and the owner may drop it later.
+2. **The option "Background before and after the stream" is dropped.** The screens outside the game follow the
+   Background of the Library: its style, Off, Reduce motion and the battery saver. A clip still shows its still
+   while the stream holds the decoder, and every style is held still under the conflict dialog and the error
+   popup, where the host blurs. A value stored under the old key is ignored and stays in the DataStore file.
+3. **"Menu glass in the stream" is "Stream menu style", Blurred or Solid.** The stored ids and the default are
+   the same.
+
+The code of these three changes is the merges `4dabac9db` (decision 1) and `1d73bc0b7` (decisions 2 and 3), and
+the phase head `4429af309`. No device has run them, so the next device round looks at the new scrim, the new
+panel and the screens that now follow the Library.
+
+### The host
+
+LuminalShine 26.10.1 crashed again on 2026-10-30 at 00:21:40, right after the line "Virtual display cleanup:
+finished": the signature of [luminalshine#212](https://github.com/NortheBridge/luminalshine/issues/212). The
+owner has the fix pull requests #213 and #215. The agent's retest of "another app" in 3.29, step 5, was void
+because of the crash, so that step has no valid device result in this round.
+
+### Findings for the backlog
+
+The owner found these on 2026-10-30. None is a Sprint 15 regression. Each one says where it went in the
+[roadmap](../roadmap.md).
+
+- **(a) A line at the bottom edge of the video on the TV.** A purple and cyan line with white blocks showed at
+  the bottom edge of the video, once, with Steam Big Picture, and went away by itself. The owner has a photo. In
+  the TV logs of the agent part, the decoder's output format and crop change at the start of every stream, so
+  that change alone does not set the stream with the line apart. The cause is not known.
+  [Sprint 17](../roadmap.md#sprint-17-general-fixes), Video and the stream screens.
+- **(b) The side Back button of the owner's mouse arrives as a right click.** The inherited path turns a Back
+  key from a mouse source into a right click while "Mouse back and forward buttons" is off. With it on, only a
+  real `BUTTON_BACK` opens the menu after 1 s. A raw capture of the events of that mouse is needed. Roadmap,
+  [Sprint 17](../roadmap.md#sprint-17-general-fixes), Input.
+- **(c) Two flaky tests, seen once each under load.** `StreamChromeHostFrozenFrameTest` (a Robolectric
+  `NullPointerException` before the body of the test) and `StreamBackTest` "back opens the menu…" (the timing of
+  `menuHintShown`). Roadmap, [Sprint 18](../roadmap.md#sprint-18-refactor-of-the-converted-code), test and
+  tooling items.
+- **(d) Duplicated pixel helpers in the tests.** `ui/glass/PixelSupport.kt` and the private copies in
+  `DialogOverBackgroundTest` and `DialogOverBackgroundApi30Test`, and the copies of `assertNear`. Roadmap,
+  Sprint 18, test and tooling items.
+- **(e) The orphan DataStore key of the dropped option.** `borealis_stream_background` stays in the file where an
+  earlier build stored it, and nothing reads it. Roadmap, [Sprint 17](../roadmap.md#sprint-17-general-fixes),
+  Library and Settings.
+- **(f) The known limits of the code of Sprint 15.** The focus casing cut by the scroll clip, the faint tail
+  of the halo, the frozen frame after a rotation, the pending copy with no time cap, a phone in landscape, the
+  checks that Robolectric cannot make, `handleBack` for the Failed phase and the two untested branches, and the
+  test fixtures. Each has a place now: roadmap, [Sprint 15](../roadmap.md#sprint-15-the-stream-screens-and-glass),
+  "Known limits of the code".
+
+### Not run and owner items
+
+- No result is recorded here for these steps of 3.29, which the TV part of the agent did not run and the UAT
+  does not repeat: the S22 Quit with TalkBack and its tap outside, the S22 Quit timings, the hint with the
+  keyboard and the mouse, the second device in both orders and the Try again flows, Transparency Off, High
+  contrast and an HDR stream by eye, the drop before the first frame, and a drop on the S22 by
+  `cmd connectivity`. The owner decides whether the next device round runs them.
+- The question for another app (step 5, third bullet), because of the host crash.
+- The pinned-shortcut part of U6.
+- The new look of decision 11, and the screens that follow the Library (see the UAT above).
+- Left on the devices: the build of `1455bcf0a`.

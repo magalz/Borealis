@@ -94,7 +94,8 @@ class AndroidNativePointerCaptureProvider(activity: Activity, private val target
         @Suppress("DEPRECATION") val h = Handler()
         h.postDelayed(
             {
-                if (hasCaptureCompatibleInputDevice()) {
+                // The capture can end, or the cursor be shown, while the request waits.
+                if (isCapturing && !isCursorVisible && hasCaptureCompatibleInputDevice()) {
                     targetView.requestPointerCapture()
                 }
             },

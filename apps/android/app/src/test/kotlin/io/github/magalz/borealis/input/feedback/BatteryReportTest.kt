@@ -185,6 +185,27 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     @Test
+    fun `the touchpad of a pad does not overwrite the battery of its joystick`() {
+        val rig = rig()
+        val joystick =
+            rig.connectPad(
+                vendorId = FeedbackRig.SONY_VENDOR,
+                features = DeviceFeatures(batteryState = battery()),
+            )
+        val touchpad = rig.connectTouchpad(joystick)
+
+        // The touchpad sends input first, and takes the controller number of its joystick
+        rig.wake(touchpad)
+        rig.awaitBackground()
+        poll(rig)
+
+        // Both devices report an arrival for controller 0, and only the joystick has a battery
+        assertThat(rig.connection.arrivals.map { it.controller }).containsExactly(0, 0)
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
+    }
+
+    @Test
     fun `a battery that shows up later is reported as the battery it is`() {
         val rig = rig()
         val battery = battery(present = false)

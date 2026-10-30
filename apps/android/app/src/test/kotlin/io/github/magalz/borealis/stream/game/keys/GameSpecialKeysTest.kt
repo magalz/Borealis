@@ -375,6 +375,26 @@ internal class GameSpecialKeysTest : GameTestBase() {
     }
 
     @Test
+    fun `the repeat of a key that was down before the chord is not eaten for it, so its key up goes through`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_B)
+        rig.down(KeyEvent.KEYCODE_Z)
+        forgetCalls()
+
+        // The host saw the first key down of the B; a repeat is not one.
+        val repeated =
+            rig.game.dispatchKeyEvent(
+                keyboardKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_B, repeat = 1)
+            )
+        assertThat(repeated).isTrue()
+        assertThat(sentKeys()).isEmpty()
+        rig.up(KeyEvent.KEYCODE_B)
+
+        assertThat(sentKeys()).containsExactly(sent(0x8042, up, ctrl or alt or shift))
+    }
+
+    @Test
     fun `a key that goes down again forgets that its earlier key up was lost, so it reaches the host whole`() {
         streamingAndCapturing()
         rig.holdCtrlAltShift()

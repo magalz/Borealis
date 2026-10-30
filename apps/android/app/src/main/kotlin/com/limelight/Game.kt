@@ -1325,6 +1325,8 @@ class Game :
         modifierFlags = 0
         specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
         waitingForAllModifiersUp = false
+        // The key up of a key that the chord ate comes to the chrome, so it never clears the entry
+        keysEatenByChord.clear()
         setInputGrabState(false)
     }
 
@@ -1413,8 +1415,16 @@ class Game :
         // up is eaten too
         val eatenKeyUp = !down && keysEatenByChord.remove(androidKeyCode)
 
+        // A key that goes down again while no chord waits came up without this code seeing it (the
+        // chrome or another window had the keys): its earlier key up is lost, and this key down is
+        // the host's, so its key up is too
+        val chordWaits = waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN
+        if (down && !repeat && !chordWaits) {
+            keysEatenByChord.remove(androidKeyCode)
+        }
+
         // Handle the special combos on the key up
-        if (waitingForAllModifiersUp || specialKeyCode != KeyEvent.KEYCODE_UNKNOWN) {
+        if (chordWaits) {
             if (specialKeyCode == androidKeyCode) {
                 // If this is a key up for the special key itself, eat that because the host never
                 // saw the original key down

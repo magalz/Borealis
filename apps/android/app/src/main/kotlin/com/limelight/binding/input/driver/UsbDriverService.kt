@@ -298,11 +298,13 @@ class UsbDriverService : Service(), UsbDriverListener {
     }
 
     override fun onCreate() {
+        super.onCreate()
         this.usbManager = getSystemService(Context.USB_SERVICE) as UsbManager?
         this.prefConfig = PreferenceConfiguration.readPreferences(this)
     }
 
     override fun onDestroy() {
+        super.onDestroy()
         stop()
 
         // Remove listeners

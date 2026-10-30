@@ -99,7 +99,6 @@ object VirtualControllerConfigurationLoader {
     private fun createDigitalButton(
         elementId: Int,
         keyShort: Int,
-        keyLong: Int,
         layer: Int,
         text: String,
         controller: VirtualController,
@@ -116,16 +115,8 @@ object VirtualControllerConfigurationLoader {
                     controller.sendControllerInputContext()
                 }
 
-                override fun onLongClick() {
-                    controller.controllerInputContext.setFlag(keyLong, true)
-
-                    controller.sendControllerInputContext()
-                }
-
                 override fun onRelease() {
-                    val inputContext = controller.controllerInputContext
-                    inputContext.setFlag(keyShort, false)
-                    inputContext.setFlag(keyLong, false)
+                    controller.controllerInputContext.setFlag(keyShort, false)
 
                     controller.sendControllerInputContext()
                 }
@@ -194,7 +185,6 @@ object VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_A,
                     if (!config.flipFaceButtons) ControllerPacket.A_FLAG
                     else ControllerPacket.B_FLAG,
-                    0,
                     1,
                     if (!config.flipFaceButtons) "A" else "B",
                     controller,
@@ -211,7 +201,6 @@ object VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_B,
                     if (config.flipFaceButtons) ControllerPacket.A_FLAG
                     else ControllerPacket.B_FLAG,
-                    0,
                     1,
                     if (config.flipFaceButtons) "A" else "B",
                     controller,
@@ -228,7 +217,6 @@ object VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_X,
                     if (!config.flipFaceButtons) ControllerPacket.X_FLAG
                     else ControllerPacket.Y_FLAG,
-                    0,
                     1,
                     if (!config.flipFaceButtons) "X" else "Y",
                     controller,
@@ -245,7 +233,6 @@ object VirtualControllerConfigurationLoader {
                     VirtualControllerElement.EID_Y,
                     if (config.flipFaceButtons) ControllerPacket.X_FLAG
                     else ControllerPacket.Y_FLAG,
-                    0,
                     1,
                     if (config.flipFaceButtons) "X" else "Y",
                     controller,
@@ -277,7 +264,6 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_LB,
                     ControllerPacket.LB_FLAG,
-                    0,
                     1,
                     "LB",
                     controller,
@@ -293,7 +279,6 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_RB,
                     ControllerPacket.RB_FLAG,
-                    0,
                     1,
                     "RB",
                     controller,
@@ -325,7 +310,6 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_BACK,
                     ControllerPacket.BACK_FLAG,
-                    0,
                     2,
                     "BACK",
                     controller,
@@ -341,7 +325,6 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_START,
                     ControllerPacket.PLAY_FLAG,
-                    0,
                     START_LAYER,
                     "START",
                     controller,
@@ -357,7 +340,6 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_LSB,
                     ControllerPacket.LS_CLK_FLAG,
-                    0,
                     1,
                     "L3",
                     controller,
@@ -373,7 +355,6 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_RSB,
                     ControllerPacket.RS_CLK_FLAG,
-                    0,
                     1,
                     "R3",
                     controller,
@@ -391,7 +372,6 @@ object VirtualControllerConfigurationLoader {
                 createDigitalButton(
                     VirtualControllerElement.EID_GDB,
                     ControllerPacket.SPECIAL_BUTTON_FLAG,
-                    0,
                     1,
                     "GUIDE",
                     controller,

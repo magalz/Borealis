@@ -306,7 +306,7 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
-    fun `a trigger held for three seconds changes nothing, where a button would long click`() {
+    fun `a trigger held for ten seconds changes nothing after the retransmits of its press`() {
         kit.rig.press(leftTrigger)
         val sent = kit.rig.packets.size
 
@@ -318,7 +318,7 @@ class StickControlsCharacterizationTest {
     }
 
     @Test
-    fun `a right trigger held for three seconds changes nothing either`() {
+    fun `a right trigger held for ten seconds changes nothing either`() {
         kit.rig.press(rightTrigger)
         val sent = kit.rig.packets.size
 

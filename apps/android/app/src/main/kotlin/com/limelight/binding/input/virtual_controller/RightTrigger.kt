@@ -19,8 +19,6 @@ class RightTrigger(controller: VirtualController, layer: Int, context: Context) 
                     controller.sendControllerInputContext()
                 }
 
-                override fun onLongClick() = Unit
-
                 override fun onRelease() {
                     val inputContext = controller.controllerInputContext
                     inputContext.rightTrigger = TRIGGER_RELEASED

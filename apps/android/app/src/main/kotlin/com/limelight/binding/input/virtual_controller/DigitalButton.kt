@@ -28,16 +28,12 @@ open class DigitalButton(
         /** onClick event will be fired on button click. */
         fun onClick()
 
-        /** onLongClick event will be fired on button long click. */
-        fun onLongClick()
-
         /** onRelease event will be fired on button unpress. */
         fun onRelease()
     }
 
     private val listeners = ArrayList<DigitalButtonListener>()
     private var text = ""
-    private val longClickRunnable = Runnable { onLongClickCallback() }
 
     private val paint = Paint()
     private val rect = RectF()
@@ -142,16 +138,6 @@ open class DigitalButton(
         for (listener in listeners) {
             listener.onClick()
         }
-
-        virtualController.handler.removeCallbacks(longClickRunnable)
-        virtualController.handler.postDelayed(longClickRunnable, LONG_CLICK_TIMEOUT_MS)
-    }
-
-    private fun onLongClickCallback() {
-        // notify listeners
-        for (listener in listeners) {
-            listener.onLongClick()
-        }
     }
 
     private fun onReleaseCallback() {
@@ -159,9 +145,6 @@ open class DigitalButton(
         for (listener in listeners) {
             listener.onRelease()
         }
-
-        // We may be called for a release without a prior click
-        virtualController.handler.removeCallbacks(longClickRunnable)
     }
 
     override fun onElementTouchEvent(event: MotionEvent): Boolean {
@@ -194,9 +177,6 @@ open class DigitalButton(
     }
 
     private companion object {
-        /** The time a button is held until it is long clicked, in milliseconds. */
-        private const val LONG_CLICK_TIMEOUT_MS = 3000L
-
         // The text is sized and placed in percent of the width and of the height of the button
         private const val TEXT_SIZE_PERCENT = 25f
         private const val TEXT_X_PERCENT = 50f

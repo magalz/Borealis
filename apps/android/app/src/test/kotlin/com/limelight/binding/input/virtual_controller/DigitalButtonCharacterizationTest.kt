@@ -12,7 +12,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Notes what a button tells its listeners, in order: `click`, `long` and `release`. */
+/** Notes what a button tells its listeners, in order: `click` and `release`. */
 class ButtonLog(private val name: String = "", private val shared: MutableList<String>? = null) :
     DigitalButton.DigitalButtonListener {
     val events = mutableListOf<String>()
@@ -24,14 +24,12 @@ class ButtonLog(private val name: String = "", private val shared: MutableList<S
 
     override fun onClick() = note("click")
 
-    override fun onLongClick() = note("long")
-
     override fun onRelease() = note("release")
 }
 
 /**
- * What a button does with a finger: it presses on the touch, calls its long click after three
- * seconds, releases on the lift, and passes a finger that slides on to the buttons of its layer.
+ * What a button does with a finger: it presses on the touch, releases on the lift, and passes a
+ * finger that slides on to the buttons of its layer.
  *
  * The buttons of these tests are 200 by 100 pixels, in a row: `a` at x = 100, `b` at x = 400, both
  * of layer 1, and `c` at x = 700 of layer 2. All of them are at y = 100.
@@ -134,100 +132,15 @@ class DigitalButtonCharacterizationTest {
         assertThat(shadowOf(a).wasInvalidated()).isTrue()
     }
 
-    // The long click
-
     @Test
-    fun `a button held for three seconds long clicks, once`() {
+    fun `a button held for a long time clicks once, and releases on the lift`() {
         press(a)
 
-        kit.rig.advanceBy(2_999)
+        kit.rig.advanceBy(10_000)
         assertThat(aLog.events).containsExactly("click")
 
-        kit.rig.advanceBy(1)
-        assertThat(aLog.events).containsExactly("click", "long").inOrder()
-
-        kit.rig.advanceBy(10_000)
-        assertThat(aLog.events).containsExactly("click", "long").inOrder()
-    }
-
-    @Test
-    fun `a button released before three seconds does not long click`() {
-        press(a)
-        kit.rig.advanceBy(2_999)
-
         lift(a)
-        kit.rig.advanceBy(10_000)
-
         assertThat(aLog.events).containsExactly("click", "release").inOrder()
-    }
-
-    @Test
-    fun `a button cancelled before three seconds does not long click`() {
-        press(a)
-        kit.rig.advanceBy(1_000)
-
-        a.touch(MotionEvent.ACTION_CANCEL, 10f, 10f)
-        kit.rig.advanceBy(10_000)
-
-        assertThat(aLog.events).containsExactly("click", "release").inOrder()
-    }
-
-    @Test
-    fun `a new press restarts the three seconds, and the long click that was waiting does not come`() {
-        press(a)
-        kit.rig.advanceBy(2_000)
-
-        press(a) // a second press with no lift between: one long click waits for the new press only
-        kit.rig.advanceBy(1_000) // three seconds after the first press
-        assertThat(aLog.events).containsExactly("click", "click")
-
-        kit.rig.advanceBy(1_999)
-        assertThat(aLog.events).containsExactly("click", "click")
-
-        kit.rig.advanceBy(1)
-        assertThat(aLog.events).containsExactly("click", "click", "long").inOrder()
-
-        kit.rig.advanceBy(10_000)
-        assertThat(aLog.events).hasSize(3)
-    }
-
-    @Test
-    fun `the long click of a button is not the long click of the one beside it`() {
-        press(a)
-        kit.rig.advanceBy(1_000)
-        press(b)
-
-        kit.rig.advanceBy(2_000) // 3000 for a, 2000 for b
-
-        assertThat(aLog.events).containsExactly("click", "long").inOrder()
-        assertThat(bLog.events).containsExactly("click")
-
-        kit.rig.advanceBy(1_000)
-        assertThat(bLog.events).containsExactly("click", "long").inOrder()
-    }
-
-    @Test
-    fun `releasing one button leaves the long click of another coming`() {
-        press(a)
-        press(b)
-
-        lift(a)
-        kit.rig.advanceBy(3_000)
-
-        assertThat(aLog.events).containsExactly("click", "release").inOrder()
-        assertThat(bLog.events).containsExactly("click", "long").inOrder()
-    }
-
-    @Test
-    fun `a button that was pressed by sliding long clicks three seconds after the slide`() {
-        press(a)
-        slide(a, 500f, 150f)
-        kit.rig.advanceBy(2_999)
-        assertThat(bLog.events).containsExactly("click")
-
-        kit.rig.advanceBy(1)
-
-        assertThat(bLog.events).containsExactly("click", "long").inOrder()
     }
 
     @Test
@@ -237,15 +150,12 @@ class DigitalButtonCharacterizationTest {
         a.addDigitalButtonListener(ButtonLog("second", order))
 
         press(a)
-        kit.rig.advanceBy(3_000)
         lift(a)
 
         assertThat(order)
             .containsExactly(
                 "first:click",
                 "second:click",
-                "first:long",
-                "second:long",
                 "first:release",
                 "second:release",
             )

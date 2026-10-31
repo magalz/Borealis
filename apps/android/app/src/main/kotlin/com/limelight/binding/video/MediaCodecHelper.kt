@@ -297,7 +297,7 @@ object MediaCodecHelper {
             context.packageManager.hasSystemFeature("amazon.hardware.fire_tv") ||
                 Build.MANUFACTURER.equals("Amazon", ignoreCase = true)
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val configInfo = activityManager.deviceConfigurationInfo
+        val glEsVersion = activityManager.deviceConfigurationInfo.reqGlEsVersion
 
         // Older Sony ATVs (SVP-DTV15) have broken MediaTek codecs (decoder hangs after rendering
         // the first frame). I know the Fire TV 2 and 3 works, so I'll whitelist Amazon devices
@@ -332,14 +332,14 @@ object MediaCodecHelper {
             refFrameInvalidationHevcPrefixes.add("c2.amlogic")
         }
 
-        if (configInfo.reqGlEsVersion != ConfigurationInfo.GL_ES_VERSION_UNDEFINED) {
-            LimeLog.info("OpenGL ES version: " + configInfo.reqGlEsVersion)
+        if (glEsVersion != ConfigurationInfo.GL_ES_VERSION_UNDEFINED) {
+            LimeLog.info("OpenGL ES version: " + glEsVersion)
 
             isLowEndSnapdragon = isLowEndSnapdragonRenderer(glRenderer)
             isAdreno620 = getAdrenoRendererModelNumber(glRenderer) == ADRENO_620_MODEL
 
             // Tegra K1 and later can do reference frame invalidation properly
-            if (configInfo.reqGlEsVersion >= GL_ES_VERSION_3_0) {
+            if (glEsVersion >= GL_ES_VERSION_3_0) {
                 LimeLog.info(
                     "Added omx.nvidia/c2.nvidia to reference frame invalidation support list"
                 )

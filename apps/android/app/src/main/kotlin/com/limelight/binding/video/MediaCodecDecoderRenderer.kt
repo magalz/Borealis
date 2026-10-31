@@ -1408,6 +1408,13 @@ class MediaCodecDecoderRenderer(
             return
         }
 
+        // Setup makes its codec with the metadata in its format, so there is nothing to restart
+        // before it; and a restart marked while stopping would never be done, and the threads
+        // that meet it would wait for it
+        if (videoDecoder == null || stopping) {
+            return
+        }
+
         // If we reach this point, we need to restart the MediaCodec instance to
         // pick up the HDR metadata change. This will happen on the next input
         // or output buffer.

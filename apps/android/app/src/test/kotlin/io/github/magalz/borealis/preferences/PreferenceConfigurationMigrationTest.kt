@@ -166,7 +166,7 @@ class PreferenceConfigurationMigrationTest {
             .inOrder()
         assertThat(preferences.getString("list_resolution", null)).isEqualTo("1920x1080")
         assertThat(preferences.getString("list_fps", null)).isEqualTo("30")
-        // The automatic bitrate uses what the migration has just written.
+        // The automatic bitrate is that of the migrated resolution and frame rate.
         assertThat(config.bitrate).isEqualTo(10_000)
     }
 
@@ -190,20 +190,28 @@ class PreferenceConfigurationMigrationTest {
     }
 
     @Test
-    fun `an unknown resolution name without an x becomes 720p`() {
+    fun `an unknown resolution name without an x reads as 720p and is not written back`() {
         for (legacy in listOf("", "Native", "native", "8K", "720")) {
-            preferences.edit().clear().putString("list_resolution", legacy).commit()
+            preferences
+                .edit()
+                .clear()
+                .putString("list_resolution", legacy)
+                .putString("list_fps", "144")
+                .commit()
             log.clear()
 
             val config = read()
 
             assertWithMessage("fields for '$legacy'")
-                .that(config.width to config.height)
-                .isEqualTo(1280 to 720)
-            assertWithMessage("writes for '$legacy'")
-                .that(log)
-                .containsExactly("edit", "putString(list_resolution=1280x720)", "apply()")
+                .that(listOf(config.width, config.height, config.fps))
+                .containsExactly(1280, 720, 144)
                 .inOrder()
+            // The automatic bitrate is that of the resolution the stream uses.
+            assertWithMessage("bitrate for '$legacy'").that(config.bitrate).isEqualTo(15_000)
+            assertWithMessage("writes for '$legacy'").that(log).isEmpty()
+            assertWithMessage("stored '$legacy'")
+                .that(preferences.getString("list_resolution", null))
+                .isEqualTo(legacy)
         }
     }
 

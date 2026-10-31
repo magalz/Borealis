@@ -516,6 +516,21 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     }
 
     @Test
+    fun `closing the agent shuts the executor down even when stopping the discovery throws`() {
+        // The platform dropped the callback, and its failure has not reached the agent yet, so
+        // unregistering it throws. The agent must still release its executor.
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        nsdManager.unregisterServiceInfoCallback(callbacks(found).single())
+
+        runCatching { agent.close() }
+
+        assertThat((platform.serviceInfoExecutors.first() as ThreadPoolExecutor).isShutdown)
+            .isTrue()
+    }
+
+    @Test
     fun `closing the agent stops the discovery, unregisters the callbacks and shuts the executor down`() {
         val discovery = startAndConfirm()
         val denPc = service("Den PC")

@@ -915,9 +915,10 @@ object MediaCodecHelper {
         }
     }
 
-    // The Java gave up the whole search when the feature check of a decoder threw, like it did for
-    // its capabilities. A decoder whose feature check throws counts as one without the feature:
-    // round 1 skips it, and round 2, which does not ask for the feature, may still take it.
+    // The Java's decoderSupportsAndroidRLowLatency swallowed a feature check that threw and
+    // answered false. Reading the capabilities once left the feature check unguarded here, and this
+    // guard restores that: a decoder whose feature check throws counts as one without the feature,
+    // so round 1 skips it and round 2, which does not ask for the feature, may still take it.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun supportsLowLatencyFeature(
         codecInfo: MediaCodecInfo,

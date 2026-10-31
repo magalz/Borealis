@@ -50,6 +50,7 @@ import java.security.NoSuchAlgorithmException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.BooleanSupplier
 import java.util.function.Supplier
 import javax.crypto.KeyGenerator
@@ -108,6 +109,10 @@ open class NvConnection(
     // lock (stream.keyframe)
     @Volatile private var connected = false
 
+    // BOREALIS: true while this connection holds the place of connectionAllowed: from the acquire of
+    // its start until stop(), or a start that ends without a stream, gives it back (host.launch)
+    private val holdsPlace = AtomicBoolean(false)
+
     init {
         context.serverAddress = host
         context.httpsPort = httpsPort
@@ -141,11 +146,19 @@ open class NvConnection(
         }
 
         // Now a pending connection can be processed
-        connectionAllowed.release()
+        releasePlace()
     }
 
-    // BOREALIS: ends the retry wait of start() without stop(): the semaphore is only released by
-    // stop() (host.launch)
+    // BOREALIS: gives the place back once, and only when this connection holds it: stop() of a
+    // connection that never took one, or a second stop(), must not add a place (host.launch)
+    private fun releasePlace() {
+        if (holdsPlace.compareAndSet(true, false)) {
+            connectionAllowed.release()
+        }
+    }
+
+    // BOREALIS: ends the retry wait of start() without stop(): a stream's place is only given back
+    // by stop() (host.launch)
     fun cancelLaunch() {
         launchCancelled = true
     }
@@ -714,7 +727,7 @@ open class NvConnection(
             return
         }
 
-        // BOREALIS: before the semaphore, which only stop() releases
+        // BOREALIS: before the semaphore, whose place a stream gives back only by stop()
         if (launchCancelled) {
             return
         }
@@ -733,9 +746,12 @@ open class NvConnection(
             context.listener.stageFailed(startStep, 0, 0)
             return
         }
+        // BOREALIS: before the cancel check, so that a stop() from here on gives the place back
+        // too (host.launch)
+        holdsPlace.set(true)
         // BOREALIS: left while waiting for the semaphore
         if (launchCancelled) {
-            connectionAllowed.release()
+            releasePlace()
             return
         }
 
@@ -776,7 +792,7 @@ open class NvConnection(
                 // LiStartConnection() failed, so the caller is not expected
                 // to stop the connection themselves. We need to release their
                 // semaphore count for them.
-                connectionAllowed.release()
+                releasePlace()
                 // BOREALIS: restart the whole start once
                 if (collisions.restartAfterFailure()) {
                     start(audioRenderer, videoDecoderRenderer, connectionListener)

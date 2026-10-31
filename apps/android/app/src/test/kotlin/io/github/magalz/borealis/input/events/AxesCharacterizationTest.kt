@@ -229,9 +229,18 @@ class AxesCharacterizationTest {
     // ----- Triggers -----
 
     @Test
-    fun `a trigger is its value times 255 in a byte, so it turns negative above one half`() {
+    fun `a trigger is its value times 255 in a byte, held at 255 past 1`() {
+        // The packet carries the byte unsigned; the test reads it signed, so 0xFF is -1.
         val expected =
-            listOf(0.25f to 63, 0.5f to 127, 0.502f to -128, 0.75f to -65, 1f to -1, 1.2f to 50)
+            listOf(
+                0.25f to 63,
+                0.5f to 127,
+                0.502f to -128,
+                0.75f to -65,
+                1f to -1,
+                1.2f to -1,
+                7f to -1,
+            )
 
         for ((value, byte) in expected) {
             assertWithMessage("left $value")

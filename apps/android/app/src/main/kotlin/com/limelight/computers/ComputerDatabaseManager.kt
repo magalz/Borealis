@@ -66,15 +66,17 @@ class ComputerDatabaseManager(c: Context) {
     }
 
     fun deleteComputer(details: ComputerDetails) {
-        computerDb.delete(
-            COMPUTER_TABLE_NAME,
-            "$COMPUTER_UUID_COLUMN_NAME=?",
-            arrayOf(details.uuid),
-        )
+        val uuid = details.uuid
+        if (uuid == null) {
+            // The rows that an earlier build saved without an id: "uuid = NULL" matches no row.
+            computerDb.delete(COMPUTER_TABLE_NAME, "$COMPUTER_UUID_COLUMN_NAME IS NULL", null)
+        } else {
+            computerDb.delete(COMPUTER_TABLE_NAME, "$COMPUTER_UUID_COLUMN_NAME=?", arrayOf(uuid))
+        }
     }
 
-    // A host without a name is refused, with a log: the name column is NOT NULL, and the insert
-    // would throw.
+    // A host without a name or without an id is refused, with a log: the name column is NOT NULL,
+    // so the insert would throw, and a row without an id could not be deleted by its id.
     //
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The JSON failure is still rethrown as a RuntimeException, and the stack trace of a
@@ -82,14 +84,20 @@ class ComputerDatabaseManager(c: Context) {
     // instead is a behaviour change.
     @Suppress("TooGenericExceptionThrown", "PrintStackTrace")
     fun updateComputer(details: ComputerDetails): Boolean {
-        if (details.name == null) {
+        val uuid = details.uuid
+        val name = details.name
+        if (name == null) {
             LimeLog.warning("Not saving a host that has no name")
+            return false
+        }
+        if (uuid == null) {
+            LimeLog.warning("Not saving a host that has no id")
             return false
         }
 
         val values = ContentValues()
-        values.put(COMPUTER_UUID_COLUMN_NAME, details.uuid)
-        values.put(COMPUTER_NAME_COLUMN_NAME, details.name)
+        values.put(COMPUTER_UUID_COLUMN_NAME, uuid)
+        values.put(COMPUTER_NAME_COLUMN_NAME, name)
 
         try {
             val addresses = JSONObject()

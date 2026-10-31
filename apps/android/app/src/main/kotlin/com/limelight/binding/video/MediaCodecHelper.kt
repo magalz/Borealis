@@ -430,18 +430,26 @@ object MediaCodecHelper {
     ): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
-                if (
-                    decoderInfo
-                        .getCapabilitiesForType(mimeType)
-                        .isFeatureSupported(CodecCapabilities.FEATURE_LowLatency)
-                ) {
-                    LimeLog.info("Low latency decoding mode supported (FEATURE_LowLatency)")
+                val caps = decoderInfo.getCapabilitiesForType(mimeType)
+                if (capabilitiesSupportAndroidRLowLatency(caps)) {
                     return true
                 }
             } catch (e: Exception) {
                 // Tolerate buggy codecs
                 e.printStackTrace()
             }
+        }
+
+        return false
+    }
+
+    private fun capabilitiesSupportAndroidRLowLatency(caps: CodecCapabilities): Boolean {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                caps.isFeatureSupported(CodecCapabilities.FEATURE_LowLatency)
+        ) {
+            LimeLog.info("Low latency decoding mode supported (FEATURE_LowLatency)")
+            return true
         }
 
         return false
@@ -944,7 +952,7 @@ object MediaCodecHelper {
 
                         val caps = codecInfo.getCapabilitiesForType(mime)
 
-                        if (i == 0 && !decoderSupportsAndroidRLowLatency(codecInfo, mime)) {
+                        if (i == 0 && !capabilitiesSupportAndroidRLowLatency(caps)) {
                             LimeLog.info(
                                 "Skipping decoder that lacks FEATURE_LowLatency for round 1"
                             )

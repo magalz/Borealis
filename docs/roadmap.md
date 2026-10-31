@@ -2262,9 +2262,13 @@ of item (b) are fixed after Sprint 14. On 2026-10-28 the owner scheduled item (a
 [Sprint 18](#sprint-18-refactor-of-the-converted-code), item (b) for
 [Sprint 16](#sprint-16-fixes-of-the-converted-code), item (c) for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (d) for Sprints 17
-and 19, as item (d) says. None of the defects is fixed yet: the conversion keeps behaviour (ADR
-0059, rule 10), and each one is kept as it was and pinned by a test that passes on the Java and on
-the Kotlin, so a fix changes that test on purpose. Paths are under
+and 19, as item (d) says. None of the defects was fixed by the conversion: it keeps behaviour (ADR
+0059, rule 10), and each one was kept as it was and pinned by a test that passes on the Java and on
+the Kotlin, so a fix changes that test on purpose. [Sprint 16](#sprint-16-fixes-of-the-converted-code)
+took item (b): 37 are fixed, G-M5 and R2 are closed, and A8 and B3 are moved. Each entry now ends
+with its triage id and what Sprint 16 did. The batches are #110 (the stream activity, the audio
+renderer and `MoonBridge`, with G-S2 and B1 in wave 2), #113 (video and the JNI callbacks) and #109
+(G-M7). Paths are under
 `apps/android/app/src/main/kotlin/com/limelight/`, unless an item says otherwise. A pinning test is
 named by its class and its test. The tests are under `apps/android/app/src/test/kotlin/`: in
 `io/github/magalz/borealis/stream/game/` for `Game` (the folders `keys/`, `motion/` and `session/`,
@@ -2328,43 +2332,57 @@ test is named, none pins the item.
       `waitingForAllModifiersUp`. After a focus change the next key can quit, toggle the grab or
       toggle the cursor. A real defect, low. Fix: reset both. Pinned by `GameSpecialKeysTest`, "a
       chord that waits is done by the next key when the focus change forgot the modifiers".
+      **G-K1, Sprint 16:** fixed (#110). A focus change drops the chord that waits.
     - A code point above U+FFFF from a hardware keyboard is narrowed to 16 bits (U+1F600 arrives
       as U+F600). Latent, very low. Pinned by `GameKeySendTest`, "a character is sent as UTF-8
-      text, and one outside the basic plane loses its high bits".
+      text, and one outside the basic plane loses its high bits". **G-K2, Sprint 16:** fixed
+      (#110). The character is sent whole.
     - The key ups of a chord that waits for the modifiers go through to the host, which sees the
       key up of a key whose key down it never saw. Pinned by `GameSpecialKeysTest`, "while the
-      chord waits for the modifiers, the keys down are eaten and the keys up go through".
+      chord waits for the modifiers, the keys down are eaten and the keys up go through". **G-K3,
+      Sprint 16:** fixed (#110). The ups of the keys that the chord ate are eaten too, and the
+      chord forgets them when the stream menu takes the input. The key that arms the chord is
+      still open (see [Sprint 17](#sprint-17-general-fixes), Input).
   - **Motion** (`Game.kt`):
     - `ACTION_CANCEL` from a mouse or a stylus sends a pen `CANCEL_ALL` and returns before the
       buttons and `lastButtonState`. Pinned by `PenEventsTest`, "a cancel of a mouse is a pen
-      cancel too, whatever the tool".
+      cancel too, whatever the tool". **G-M1, Sprint 16:** fixed (#110). The cancel releases the
+      mouse buttons.
     - Grouped buttons press the shared host button again at every change: releasing one while
       the other is down sends a press. Pinned by `MouseButtonsTest`, "two buttons of a group
-      share the host button, which is pressed again at every change".
+      share the host button, which is pressed again at every change". **G-M2, Sprint 16:** fixed
+      (#110). The host button changes only when the group does.
     - On Samsung DeX, `ACTION_DOWN` adds the primary button, so a right click is left plus
       right. Pinned by `MouseButtonsTest`, "the DeX touchpad right click comes with the left
-      button that it did not send".
+      button that it did not send". **G-M3, Sprint 16:** fixed (#110). The right click no longer
+      adds a left click.
     - A mouse event that reaches the activity itself (`onGenericMotionEvent`) has no view, so
       the position is not sent, and the buttons still are. Pinned by `MouseMovementTest`, "the
       activity itself has no view and does not place the pointer" (the position) and "the
-      activity itself still sends the buttons".
+      activity itself still sends the buttons". **G-M4, Sprint 16:** fixed (#110). The pointer is
+      placed for such an event too.
     - `controllerHandler.handleMotionEvent` always answers true, so the `return false` after it
       in `handleMotionEvent` is dead. Pinned for a known pad by `MotionGateTest`, "a joystick
-      source goes to the controller handler, which sends the stick to the host".
+      source goes to the controller handler, which sends the stick to the host". **G-M5,
+      Sprint 16:** closed. The `return false` is reachable for other sources.
     - `getStreamViewRelativeNormalizedXY` divides by the width and the height of the stream view
-      without a guard. No test pins it.
+      without a guard. No test pins it. **G-M6, Sprint 16:** fixed (#110). No pen or touch event
+      is sent while the stream view has no size.
     - On the trackpad, a tap of two fingers presses the right button only when the second finger
       lifts first, and it does so at that lift. When the first finger lifts first, nothing is
       sent. Pinned by `FingerTouchTest`, "when the second of two fingers lifts, the first goes on
       moving the pointer from where it was" and "when the first of two fingers lifts, the second
-      takes its place as the finger that moves".
+      takes its place as the finger that moves". **G-M7, Sprint 16:** fixed (#109), an owner
+      choice: a two-finger tap is one right click whichever finger lifts first. The triage found
+      that the tap lives in `RelativeTouchContext`, not in `Game`. Its gaps are in
+      [Sprint 17](#sprint-17-general-fixes), Input.
   - **Session** (`Game.kt`):
     - `onUsbPermissionPromptCompleted` can arrive without a matching starting call:
       `UsbDriverService.kt` calls its listener with `?.`, so `Game` can get a completed call for
       a prompt whose starting call reached no listener. `suppressPipRefCount` then goes to -1,
       and the auto-enter of picture-in-picture stays off until a dialog opens. Fix: clamp it at
       0. Pinned by `GameUsbServiceTest`, "a dialog that closes without having opened leaves the
-      count below zero".
+      count below zero". **G-S1, Sprint 16:** fixed (#110). The count stays at 0.
     - Leaving before the connection starts skips the end of the audit session and `conn.stop`,
       and delays the stop of the controller handler, because `stopConnection` acts only when
       `connected` (the `connecting` flag was removed as never true). `onDestroy` still stops the
@@ -2372,97 +2390,148 @@ test is named, none pins the item.
       checked.
       Pinned by `GameStopTest`, "onStop leaves the controller handler of a stream that never
       connected to onDestroy" and "onStop leaves the native library alone when no connection
-      started".
+      started". **G-S2, Sprint 16:** fixed in wave 2 (#110). Leaving before the connection starts
+      stops the connection and the controller handler. The audit session is not ended on that path:
+      it is process-wide, and no session of the activity can be open there. With it,
+      `NvConnection.stop()` makes the native calls only for a bridge that its own connection set
+      up, a GFE host gets no first `/launch` once the start is cancelled, a start callback that
+      arrives after the stop opens no audit session, and a stage that fails because of the stop is
+      not reported.
   - **Renderer** (`binding/video/`):
     - `stop()` and `cleanup()` throw a `NullPointerException` before `start()` and `setup`
       (`stop()` first tells the decoder to stop). Pinned by `RendererLifecycleTest`, "stop before
       start fails with a null pointer after it has told the decoder to stop" and "cleanup before
-      setup fails with a null pointer".
+      setup fails with a null pointer". **R1, Sprint 16:** fixed (#113). Both do nothing before
+      `start()` and `setup`.
     - `getPreferredColorSpace` is a constant (Rec. 709). Pinned by `RendererCapabilitiesTest`,
-      "the preferred colour space is Rec 709".
+      "the preferred colour space is Rec 709". **R2, Sprint 16:** closed. The Rec. 601 branch
+      needs an SDK below O, under the `minSdk` of 28.
     - The wait of the codec recovery has no check for `stopping`. The comment in the code says
       why: a thread that gives up in a half-quiesced state leaves the others asleep. The wait
       ends when the recovery is done, when `prepareForStop` cancels it or when the thread is
       interrupted, so the risk is a recovery whose other threads never come, with no stop
       (a deadlock). The closest pin is `RendererThreadsTest`, "a thread that is interrupted while
       it waits for the others gives up the recovery", which covers the interrupt path only.
+      **R3, Sprint 16:** fixed (#113). The triage found the trigger of the hang: a recovery step
+      that throws skipped the wake-up, so the other threads waited until a stop. Now the crash is
+      reported before the throw, the waiting threads wake, and the renderer stops (`stopping`
+      stays true, so a woken thread does not touch the released decoder).
     - `VideoStats.add` takes a minimum host latency of 0 when the newer window has none. Pinned
       by `RendererStatsTest`, "the lowest host latency reads zero when the newer window has none".
+      **R4, Sprint 16:** fixed (#113). A window without host latency does not lower the lowest.
     - `replaySps` always writes profile 100 (High), and `needsBaselineSpsHack` is cleared before
       the replay. Pinned by `RendererSubmitH264Test`, "the replay after the baseline hack says
-      High profile whatever the stream said" and "the baseline hack is used once".
+      High profile whatever the stream said" and "the baseline hack is used once". **R5,
+      Sprint 16:** fixed (#113). The replay says the profile of the stream, and a failed replay is
+      tried again at the next IDR frame.
     - `replaySps` calls `fetchNextInputBuffer()` and ignores its result. The call finds the
       buffer that the queue call before it already fetched, so it does nothing. The owner
-      removed its failure check on 2026-10-27 and kept the call. No test pins it.
+      removed its failure check on 2026-10-27 and kept the call. No test pins it. **R6,
+      Sprint 16:** fixed (#113). The triage found that the call is not a no-op: the removed check
+      is the check of the fetch result that 12.2 had. It is restored, so a failed fetch makes the
+      replay answer false. The failing fetch is not reachable through the public API, as the entry
+      said, so the new test calls `replaySps` by reflection.
     - `numFramesIn` counts a frame before the check for an oversize decode unit, so the crash
       text counts the frame that crashed. Pinned by `RendererCrashTest`, "the text lists the
-      decoders, the formats, the device and the counters" (`Frames in-out: 1, 0`).
+      decoders, the formats, the device and the counters" (`Frames in-out: 1, 0`). **R7,
+      Sprint 16:** fixed (#113). A frame is counted after it was found to fit.
     - `setHdrMode` before `setup` also marks a codec restart, before any codec exists. Only the
       format is pinned: `RendererHdrTest`, "HDR metadata set before setup goes into the format as
-      a static info of 25 bytes".
+      a static info of 25 bytes". **R8, Sprint 16:** fixed (#113). A restart is marked only when a
+      codec exists and the renderer is not stopping, and the HDR metadata and the decoder are
+      `@Volatile`.
     - A frame number of 0 never flips the stats window, because the window start is set again
-      while `lastFrameNumber` is 0. No test pins it (the tests start at 1).
+      while `lastFrameNumber` is 0. No test pins it (the tests start at 1). **R9, Sprint 16:**
+      fixed (#113).
     - `RendererException.getMessage` can be null. Pinned by `RendererCrashTest`, "the exception
-      has no message of its own, only its text".
+      has no message of its own, only its text". **R10, Sprint 16:** fixed (#113). The message is
+      its text.
     - A redundant `else if (!e.isRecoverable)` in `handleDecoderException` follows
-      `if (e.isRecoverable)`. It changes no behaviour, so no test pins it.
+      `if (e.isRecoverable)`. It changes no behaviour, so no test pins it. **R11, Sprint 16:** it is
+      a plain `else` now (#113).
   - **MediaCodecHelper** (`binding/video/`):
     - `initialize` sets `initialized` only at its end, so a retry after an exception adds the
-      Amazon entries again. No test pins it.
+      Amazon entries again. No test pins it. **H1, Sprint 16:** fixed (#113). A retry adds the
+      lists once.
     - The Adreno pattern takes the last three digits of the renderer text, so "6400" gives 400
       (no test pins this), and an "Adreno" with no three-digit model counts as another GPU
       (pinned by `MediaCodecHelperInitializeTest`, "the Adreno model decides the Qualcomm HEVC
-      decoders").
+      decoders"). **H2, Sprint 16:** fixed (#113). The model is the whole number after "Adreno".
     - `findKnownSafeDecoder` asks for `getCapabilitiesForType` twice for a decoder in the first
-      round (its own call, and `decoderSupportsAndroidRLowLatency`). No test pins it.
+      round (its own call, and `decoderSupportsAndroidRLowLatency`). No test pins it. **H3,
+      Sprint 16:** fixed (#113). The capabilities are read once per round.
     - Two checks return before the check for `initialized`, so they answer before `initialize`
       where the others throw. Pinned by `MediaCodecHelperUninitializedTest`, "a decoder that
       answers without a list also answers before initialize" and "the decisions on a decoder
-      throw before initialize unless they answer first".
+      throw before initialize unless they answer first". **H4, Sprint 16:** fixed (#113). Every
+      public decision throws before `initialize`.
     - The "sw" checks are case sensitive. Pinned by `MediaCodecHelperCapabilityDecisionsTest`, "a
       decoder with sw in its name is never whitelisted for HEVC" (its row "the match is case
-      sensitive").
+      sensitive"). **H5, Sprint 16:** fixed (#113). The check ignores the case.
     - The search for the required profile is skipped when `findKnownSafeDecoder` throws for a
       decoder: the search goes to the first decoder. Pinned by `MediaCodecHelperSelectionTest`,
-      "a decoder that throws for its capabilities sends the search to the first decoder".
+      "a decoder that throws for its capabilities sends the search to the first decoder". **H6,
+      Sprint 16:** fixed (#113). The decoder that throws is skipped, and the search goes on with
+      the profile. A device whose only HEVC or AV1 decoder throws now gets none for that codec
+      (see [Sprint 17](#sprint-17-general-fixes), Video and the stream screens).
   - **Audio** (`binding/audio/AndroidAudioRenderer.kt`):
     - A `release()` that throws keeps the track, and setup answers 0 with a track that never
       played. Pinned by `AudioRendererSetupCharacterizationTest`, "a track that cannot be
-      released stays, and setup answers 0 without a track that played".
+      released stays, and setup answers 0 without a track that played". **A1, Sprint 16:** fixed
+      (#110). The failed track is dropped even when its release fails, and setup answers the
+      failure.
     - A second setup leaks the first track. Pinned by `AudioRendererSetupCharacterizationTest`,
-      "a second setup creates another track and leaves the first one alone".
+      "a second setup creates another track and leaves the first one alone". **A2, Sprint 16:**
+      fixed (#110). A second setup releases the first track.
     - `getMinBufferSize` is asked even when both low latency attempts are skipped. Pinned by
       `AudioRendererSetupCharacterizationTest`, "a hardware rate that is not the rate of the
-      stream skips both low latency attempts".
+      stream skips both low latency attempts". **A3, Sprint 16:** fixed (#110). A skipped attempt
+      does not ask.
     - A packet of no samples (`samplesPerFrame` 0) throws `ArithmeticException` in the second
       attempt. Pinned by `AudioRendererSetupCharacterizationTest`, "a packet of no samples makes
-      the second attempt divide by zero".
+      the second attempt divide by zero". **A4, Sprint 16:** fixed (#110). Setup refuses it with an
+      explicit error.
     - `cleanup` does not set the track to null, so a second cleanup is refused by the platform.
       Pinned by `AudioRendererPlaybackCharacterizationTest`, "cleanup keeps the released track,
-      so a second cleanup is refused by the platform".
+      so a second cleanup is refused by the platform". **A5, Sprint 16:** fixed (#110), an owner
+      choice. A second cleanup does nothing, and the release runs in a `finally`.
     - The pending duration is read twice when it is too long: once for the check and once for
       the log. Pinned by `AudioRendererPlaybackCharacterizationTest`, "40 milliseconds of pending
-      audio drops the samples and logs the duration read again".
+      audio drops the samples and logs the duration read again". **A6, Sprint 16:** fixed (#110).
+      It is read once per packet.
     - `track` is not `@Volatile`, though the native threads of the audio stream use it. A
-      memory-model matter, so no test pins it.
+      memory-model matter, so no test pins it. **A7, Sprint 16:** fixed (#110), with the TDD
+      exemption for memory visibility.
     - A comment on the 7.1 mask `0x18FC` still says that the constant is hardcoded for Lollipop.
       Only the value is pinned: `AudioRendererSetupCharacterizationTest`, "8 channels ask for the
-      7 point 1 surround mask".
+      7 point 1 surround mask". **A8, Sprint 16:** moved to
+      [Sprint 18](#sprint-18-refactor-of-the-converted-code).
   - **MoonBridge** (`nvstream/jni/MoonBridge.kt` and `app/src/main/jni/moonlight-core/`):
     - `VIDEO_FORMAT_MASK_10BIT` is `0x2200` in Kotlin and `0xAA00` in `Limelight.h`, which also
       counts the 4:4:4 formats. It has no effect today, because the client never asks for them.
       Pinned by `MoonBridgeJniContractTest`, "the constants that Limelight h defines have the same
       value in MoonBridge" (this is its only difference) and "the 10-bit video mask of MoonBridge
-      keeps the two 10-bit formats the client asks for".
+      keeps the two 10-bit formats the client asks for". **B1, Sprint 16:** fixed in wave 2
+      (#110), an owner choice. The mask is `0xAA00`, as in `Limelight.h`, and so is `MASK_10BIT`
+      of `SessionAudit` (`borealis/host`). Nothing changes while the client never asks for 4:4:4.
     - `AudioConfiguration.equals` compares `toInt()`, so `AudioConfiguration(0x100, 0)` equals
       `AudioConfiguration(0, 1)`. Pinned by `AudioConfigurationTest`, "equality is decided by the
-      packed int, not by the two fields".
+      packed int, not by the two fields". **B2, Sprint 16:** fixed (#110). Two configurations are
+      equal when their channel count and mask are. `hashCode` still uses the packed int, which
+      keeps the contract.
     - `simplejni.c` keeps unreachable code after the early returns of `findExternalAddressIP4` and
       `testClientConnectivity` (ADR 0050). It is C that the unit tests do not run, so no test
-      pins it.
+      pins it. **B3, Sprint 16:** moved to [Sprint 19](#sprint-19-secops). The triage found that it
+      is a Borealis change of ADR 0050, not a defect of the conversion.
     - Ten bridges of `callbacks.c` do not check for a Java exception after the call: the start,
       stop and cleanup of the video and the audio renderer, the three stage ones and
-      `BridgeClConnectionStarted`. This is upstream code, and no test runs it.
+      `BridgeClConnectionStarted`. This is upstream code, and no test runs it. **B4, Sprint 16:**
+      fixed (#113), with the TDD exemption: no unit test runs that C, and the NDK build and the
+      device round check it. The ten bridges check, log and clear a Java exception after the call,
+      and so do `BridgeDrSetup`, `BridgeArInit` and the cleanup call inside `BridgeArInit`. The
+      video and audio start cannot return a failure, because their typedefs in the vendored
+      `Limelight.h` return `void`: the owner decided on 2026-10-31 that they log and clear, and
+      [Sprint 19](#sprint-19-secops) looks at it again with the JNI audit.
 - **(c) Test and tooling items.**
   - `GameWiringTest` (`io/github/magalz/borealis/stream/`) keeps 6 tests that read text: 3 read
     `NvConnection.kt` and 3 read `src/main/res`. Replace them with behaviour tests.

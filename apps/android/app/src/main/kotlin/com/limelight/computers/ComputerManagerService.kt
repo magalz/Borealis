@@ -546,13 +546,19 @@ class ComputerManagerService : Service() {
         releaseLocalDatabaseReference()
     }
 
+    // The count is checked and raised in one step: a release that closes the database cannot come
+    // in between, so a reference is never handed out on a closed database.
     private fun getLocalDatabaseReference(): Boolean {
-        if (dbRefCount.get() == 0) {
-            return false
-        }
+        while (true) {
+            val count = dbRefCount.get()
+            if (count == 0) {
+                return false
+            }
 
-        dbRefCount.incrementAndGet()
-        return true
+            if (dbRefCount.compareAndSet(count, count + 1)) {
+                return true
+            }
+        }
     }
 
     private fun releaseLocalDatabaseReference() {

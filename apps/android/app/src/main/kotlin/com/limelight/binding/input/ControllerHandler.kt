@@ -3938,9 +3938,12 @@ class ControllerHandler(
             this.refusedControllerNumber = oldContext.refusedControllerNumber
             this.controllerNumber = oldContext.controllerNumber
 
-            // The buttons the pad holds stay held, with the flags of the ones it emulates, so the
-            // PC does not see them come up; the click the gamepad mouse has down too
+            // The buttons and triggers the pad holds stay held, with the flags of the buttons it
+            // emulates, so the PC does not see them come up; the click the gamepad mouse has down
+            // too
             this.inputMap = oldContext.inputMap
+            this.leftTrigger = oldContext.leftTrigger
+            this.rightTrigger = oldContext.rightTrigger
             this.emulatingButtonFlags = oldContext.emulatingButtonFlags
             this.mouseEmulationLastInputMap = oldContext.mouseEmulationLastInputMap
 

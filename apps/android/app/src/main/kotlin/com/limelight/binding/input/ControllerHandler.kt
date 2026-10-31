@@ -2564,8 +2564,9 @@ class ControllerHandler(
             return
         }
 
-        // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission
-        val rateHz = min(MAX_SENSOR_RATE_HZ, reportRateHz.toInt()).toShort()
+        // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission,
+        // and a negative one is off, not a negative period
+        val rateHz = reportRateHz.toInt().coerceIn(0, MAX_SENSOR_RATE_HZ).toShort()
 
         var i = 0
         while (i < inputDeviceContexts.size) {

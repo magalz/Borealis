@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.database.sqlite.SQLiteException
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -29,6 +30,9 @@ import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.LinkedList
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -50,6 +54,13 @@ class ComputerManagerService : Service() {
     private val activePolls = AtomicInteger(0)
     private var pollingActive = false
     private val defaultNetworkLock: Lock = ReentrantLock()
+
+    // The adds of the hosts that mDNS finds run one at a time on this executor, in the order they
+    // came, and never on the thread of the discovery agent. Tests read it, to wait for the adds
+    // that they started.
+    internal val discoveryAdds: ExecutorService = Executors.newSingleThreadExecutor { task ->
+        Thread(task, DISCOVERY_ADD_THREAD)
+    }
 
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
@@ -74,15 +85,49 @@ class ComputerManagerService : Service() {
             }
         }
 
-    // Returns true if the details object was modified
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount", "CyclomaticComplexMethod", "NestedBlockDepth")
+    // How a poll ended, for the thread that counts the polls that failed in a row.
+    private enum class PollResult {
+        // The host answered, and the listener was told.
+        ONLINE,
+
+        // Enough polls failed in a row: the host is offline. The listener was told if that is a
+        // change, so a host that stays down is announced once.
+        OFFLINE,
+
+        // No verdict: too few polls failed yet, the host is not saved any more, or the database is
+        // closed. The listener was not told.
+        UNDECIDED,
+    }
+
+    // Polls the host once and tells the listener what it learned: an online host after every poll,
+    // so a change of its game, pair state, name or app list arrives; an offline host when its
+    // state changes.
     @Throws(InterruptedException::class)
-    private fun runPoll(details: ComputerDetails, newPc: Boolean, offlineCount: Int): Boolean {
+    private fun runPoll(details: ComputerDetails, newPc: Boolean, offlineCount: Int): PollResult {
         if (!getLocalDatabaseReference()) {
-            return false
+            return PollResult.UNDECIDED
         }
 
+        // The reference goes back on every way out, a throw of the database or of the listener
+        // included.
+        try {
+            return pollAndReport(details, newPc, offlineCount)
+        } finally {
+            releaseLocalDatabaseReference()
+        }
+    }
+
+    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Two things differ from the Java: runPoll gives the reference back (the Java kept it when the
+    // database or the listener threw), and a host that is offline already is not told again (the
+    // Java told it every fourth failed poll).
+    @Suppress("ReturnCount", "CyclomaticComplexMethod", "NestedBlockDepth")
+    @Throws(InterruptedException::class)
+    private fun pollAndReport(
+        details: ComputerDetails,
+        newPc: Boolean,
+        offlineCount: Int,
+    ): PollResult {
         val pollTriesBeforeOffline =
             if (details.state == ComputerDetails.State.UNKNOWN) {
                 INITIAL_POLL_TRIES
@@ -93,19 +138,17 @@ class ComputerManagerService : Service() {
         activePolls.incrementAndGet()
 
         // Poll the machine
+        var wasOffline = false
         try {
             if (!pollComputer(details)) {
                 if (!newPc && offlineCount < pollTriesBeforeOffline) {
                     // Return without calling the listener
-                    releaseLocalDatabaseReference()
-                    return false
+                    return PollResult.UNDECIDED
                 }
 
+                wasOffline = details.state == ComputerDetails.State.OFFLINE
                 details.state = ComputerDetails.State.OFFLINE
             }
-        } catch (e: InterruptedException) {
-            releaseLocalDatabaseReference()
-            throw e
         } finally {
             activePolls.decrementAndGet()
         }
@@ -118,8 +161,7 @@ class ComputerManagerService : Service() {
             // removed after this was issued
             if (!newPc && existingComputer == null) {
                 // It's gone
-                releaseLocalDatabaseReference()
-                return false
+                return PollResult.UNDECIDED
             }
 
             // If we already have an entry for this computer in the DB, we must
@@ -149,13 +191,14 @@ class ComputerManagerService : Service() {
             }
         }
 
-        // Don't call the listener if this is a failed lookup of a new PC
-        if (!newPc || details.state == ComputerDetails.State.ONLINE) {
+        // Don't call the listener if this is a failed lookup of a new PC, or if the host was
+        // offline already: it was told, and its state did not change.
+        val online = details.state == ComputerDetails.State.ONLINE
+        if (online || (!newPc && !wasOffline)) {
             listener?.notifyComputerUpdated(details)
         }
 
-        releaseLocalDatabaseReference()
-        return true
+        return if (online) PollResult.ONLINE else PollResult.OFFLINE
     }
 
     private fun createPollingThread(tuple: PollingTuple): Thread {
@@ -167,15 +210,20 @@ class ComputerManagerService : Service() {
                         try {
                             // Only allow one request to the machine at a time
                             synchronized(tuple.networkLock) {
-                                // Check if this poll has modified the details
-                                if (!runPoll(tuple.computer, false, offlineCount)) {
-                                    LimeLog.warning(
-                                        "${tuple.computer.name} is offline (try $offlineCount)"
-                                    )
-                                    offlineCount++
-                                } else {
-                                    tuple.lastSuccessfulPollMs = SystemClock.elapsedRealtime()
-                                    offlineCount = 0
+                                when (runPoll(tuple.computer, false, offlineCount)) {
+                                    PollResult.ONLINE -> {
+                                        // Only an answer keeps the polled state of the host from
+                                        // timing out: an offline poll does not.
+                                        tuple.lastSuccessfulPollMs = SystemClock.elapsedRealtime()
+                                        offlineCount = 0
+                                    }
+                                    PollResult.OFFLINE -> offlineCount = 0
+                                    PollResult.UNDECIDED -> {
+                                        LimeLog.warning(
+                                            "${tuple.computer.name} is offline (try $offlineCount)"
+                                        )
+                                        offlineCount++
+                                    }
                                 }
                             }
 
@@ -193,6 +241,10 @@ class ComputerManagerService : Service() {
 
     inner class ComputerManagerBinder : Binder() {
         fun startPolling(listener: ComputerManagerListener) {
+            // Without the discovery service this fails before it changes anything. (The Java set
+            // the two fields below first, so a failed start left the service polling.)
+            val discovery = checkNotNull(discoveryBinder) { "The discovery service is not bound" }
+
             // Polling is active
             pollingActive = true
 
@@ -200,7 +252,7 @@ class ComputerManagerService : Service() {
             this@ComputerManagerService.listener = listener
 
             // Start mDNS autodiscovery too
-            checkNotNull(discoveryBinder).startDiscovery(MDNS_QUERY_PERIOD_MS)
+            discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
 
             synchronized(pollingTuples) {
                 for (tuple in pollingTuples) {
@@ -247,21 +299,12 @@ class ComputerManagerService : Service() {
             }
         }
 
-        // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
-        // instead is a behaviour change (Sprint 12 backlog).
-        @Suppress("PrintStackTrace")
+        // An interrupt ends the wait: the Java swallowed it and went on waiting, so a thread that
+        // was interrupted spun until the polls ended.
+        @Throws(InterruptedException::class)
         fun waitForPollingStopped() {
             while (activePolls.get() != 0) {
-                try {
-                    Thread.sleep(POLLING_STOPPED_WAIT_MS)
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
-
-                    // InterruptedException clears the thread's interrupt status. Since we can't
-                    // handle that here, we will re-interrupt the thread to set the interrupt
-                    // status back to true.
-                    Thread.currentThread().interrupt()
-                }
+                Thread.sleep(POLLING_STOPPED_WAIT_MS)
             }
         }
 
@@ -333,12 +376,12 @@ class ComputerManagerService : Service() {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The Java called getAllNetworks, which is deprecated since Android 12 and is still the call
-    // that finds the network under a VPN.
+    // that finds the network under a VPN. It unlocked the network state without a finally, so a
+    // call that threw kept the lock for good, and the process bound to its network.
     @Suppress("DEPRECATION", "NestedBlockDepth")
     private fun populateExternalAddress(details: ComputerDetails) {
-        var boundToNetwork = false
         val activeNetworkIsVpn = NetHelper.isActiveNetworkVpn(this)
         val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -347,60 +390,67 @@ class ComputerManagerService : Service() {
         if (activeNetworkIsVpn) {
             // Acquire the default network lock since we could be changing global process state
             defaultNetworkLock.lock()
-
-            // On Lollipop or later, we can bind our process to the underlying interface
-            // to ensure our STUN request goes out on that interface or not at all (which is
-            // preferable to getting a VPN endpoint address back).
-            val networks = connMgr.allNetworks
-            for (net in networks) {
-                val netCaps = connMgr.getNetworkCapabilities(net)
-                if (netCaps != null) {
-                    if (
-                        !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
-                            !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-                    ) {
-                        // This network looks like an underlying multicast-capable transport,
-                        // so let's guess that it's probably where our mDNS response came from.
-                        if (connMgr.bindProcessToNetwork(net)) {
-                            boundToNetwork = true
-                            break
+            try {
+                var boundToNetwork = false
+                try {
+                    // On Lollipop or later, we can bind our process to the underlying interface
+                    // to ensure our STUN request goes out on that interface or not at all (which
+                    // is preferable to getting a VPN endpoint address back).
+                    val networks = connMgr.allNetworks
+                    for (net in networks) {
+                        val netCaps = connMgr.getNetworkCapabilities(net)
+                        if (netCaps != null) {
+                            if (
+                                !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
+                                    !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+                            ) {
+                                // This network looks like an underlying multicast-capable
+                                // transport, so let's guess that it's probably where our mDNS
+                                // response came from.
+                                if (connMgr.bindProcessToNetwork(net)) {
+                                    boundToNetwork = true
+                                    break
+                                }
+                            }
                         }
                     }
+
+                    // Perform the STUN request if we bound to a network
+                    if (boundToNetwork) {
+                        val stunResolvedAddress =
+                            NvConnection.findExternalAddressForMdns(STUN_SERVER, STUN_PORT)
+                        if (stunResolvedAddress != null) {
+                            // We don't know for sure what the external port is, so we will have to
+                            // guess. When we contact the PC (if we haven't already), it will update
+                            // the port.
+                            details.remoteAddress =
+                                ComputerDetails.AddressTuple(
+                                    stunResolvedAddress,
+                                    details.guessExternalPort(),
+                                )
+                        }
+                    }
+                } finally {
+                    // Unbind from the network
+                    if (boundToNetwork) {
+                        connMgr.bindProcessToNetwork(null)
+                    }
                 }
-            }
-
-            // Perform the STUN request if we're not on a VPN or if we bound to a network
-            if (!activeNetworkIsVpn || boundToNetwork) {
-                val stunResolvedAddress =
-                    NvConnection.findExternalAddressForMdns(STUN_SERVER, STUN_PORT)
-                if (stunResolvedAddress != null) {
-                    // We don't know for sure what the external port is, so we will have to guess.
-                    // When we contact the PC (if we haven't already), it will update the port.
-                    details.remoteAddress =
-                        ComputerDetails.AddressTuple(
-                            stunResolvedAddress,
-                            details.guessExternalPort(),
-                        )
-                }
-            }
-
-            // Unbind from the network
-            if (boundToNetwork) {
-                connMgr.bindProcessToNetwork(null)
-            }
-
-            // Unlock the network state
-            if (activeNetworkIsVpn) {
+            } finally {
+                // Unlock the network state
                 defaultNetworkLock.unlock()
             }
         }
     }
 
-    // The stack traces go to the standard error stream, as in the inherited Java. Logging them
-    // instead is a behaviour change (Sprint 12 backlog).
+    // The stack trace of a failed discovery goes to the standard error stream, as in the inherited
+    // Java. Logging it instead is a behaviour change (Sprint 12 backlog).
     @Suppress("PrintStackTrace")
     private fun createDiscoveryListener(): MdnsDiscoveryListener =
         object : MdnsDiscoveryListener {
+            // The discovery agent holds its list of hosts while it calls this (on API 34 and later
+            // it is the one thread that answers every resolve), so nothing here may wait for the
+            // network: the Java polled the host on this thread, and every other host waited.
             override fun notifyComputerAdded(computer: MdnsComputer) {
                 val details = ComputerDetails()
 
@@ -409,13 +459,6 @@ class ComputerManagerService : Service() {
                 if (localAddress != null) {
                     details.localAddress =
                         ComputerDetails.AddressTuple(localAddress.hostAddress, computer.port)
-
-                    // Since we're on the same network, we can use STUN to find
-                    // our WAN address, which is also very likely the WAN address
-                    // of the PC. We can use this later to connect remotely.
-                    if (localAddress is Inet4Address) {
-                        populateExternalAddress(details)
-                    }
                 }
                 val ipv6Address = computer.ipv6Address
                 if (ipv6Address != null) {
@@ -423,18 +466,17 @@ class ComputerManagerService : Service() {
                         ComputerDetails.AddressTuple(ipv6Address.hostAddress, computer.port)
                 }
 
-                try {
-                    // Kick off a blocking serverinfo poll on this machine
-                    if (!addComputerBlocking(details)) {
-                        LimeLog.warning("Auto-discovered PC failed to respond: $details")
-                    }
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
+                // Since we're on the same network, we can use STUN to find
+                // our WAN address, which is also very likely the WAN address
+                // of the PC. We can use this later to connect remotely.
+                val findExternalAddress = localAddress is Inet4Address
 
-                    // InterruptedException clears the thread's interrupt status. Since we can't
-                    // handle that here, we will re-interrupt the thread to set the interrupt
-                    // status back to true.
-                    Thread.currentThread().interrupt()
+                // The service adds one host at a time. After the service is destroyed the host is
+                // dropped: the agent gets no exception.
+                try {
+                    discoveryAdds.execute { addDiscoveredComputer(details, findExternalAddress) }
+                } catch (ignored: RejectedExecutionException) {
+                    LimeLog.info("Dropping an auto-discovered PC: the service is destroyed")
                 }
             }
 
@@ -444,12 +486,41 @@ class ComputerManagerService : Service() {
             }
         }
 
+    // Runs on the executor of the adds. Destroying the service interrupts it: the add ends without
+    // a trace, and the interrupt stays for the executor. Any other exception ends the add alone,
+    // so that the thread is there for the next host; only its class is logged, because its message
+    // can carry what a saved row holds.
+    @Suppress("TooGenericExceptionCaught")
+    private fun addDiscoveredComputer(details: ComputerDetails, findExternalAddress: Boolean) {
+        try {
+            if (findExternalAddress) {
+                populateExternalAddress(details)
+            }
+
+            // Kick off a blocking serverinfo poll on this machine
+            if (!addComputerBlocking(details)) {
+                LimeLog.warning("Auto-discovered PC failed to respond: $details")
+            }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        } catch (e: RuntimeException) {
+            LimeLog.severe("Could not add an auto-discovered PC: ${e.javaClass.simpleName}")
+        }
+    }
+
+    // A host without an id is left out of the list, so that no host in it is without one. (The Java
+    // listed it, and a later add threw a NullPointerException on its missing id.)
     private fun addTuple(details: ComputerDetails) {
+        val uuid = details.uuid
+        if (uuid == null) {
+            LimeLog.warning("Leaving a host out of the list: it has no id")
+            return
+        }
+
         synchronized(pollingTuples) {
             for (tuple in pollingTuples) {
-                // Check if this is the same computer. The Java called equals on the saved id, so
-                // a saved computer without one threw a NullPointerException.
-                if (checkNotNull(tuple.computer.uuid) == details.uuid) {
+                // Check if this is the same computer
+                if (tuple.computer.uuid == uuid) {
                     // Update the saved computer with potentially new details
                     tuple.computer.update(details)
 
@@ -481,11 +552,13 @@ class ComputerManagerService : Service() {
 
         // We cannot use runPoll() here because it will attempt to persist the state of the machine
         // in the database, which would be bad because we don't have our pinned cert loaded yet.
-        if (pollComputer(fakeDetails)) {
-            // See if we have record of this PC to pull its pinned cert
+        val answered = pollComputer(fakeDetails)
+        if (answered) {
+            // See if we have record of this PC to pull its pinned cert. The poll set the id of
+            // fakeDetails, so a saved computer without one is not this PC.
             synchronized(pollingTuples) {
                 for (tuple in pollingTuples) {
-                    if (checkNotNull(tuple.computer.uuid) == fakeDetails.uuid) {
+                    if (tuple.computer.uuid == fakeDetails.uuid) {
                         fakeDetails.serverCert = tuple.computer.serverCert
                         break
                     }
@@ -497,8 +570,10 @@ class ComputerManagerService : Service() {
             runPoll(fakeDetails, true, 0)
         }
 
-        // If the machine is reachable, it was successful
-        if (fakeDetails.state == ComputerDetails.State.ONLINE) {
+        // If a poll got an answer and the poll that saves the host did not find it offline, it was
+        // successful. The state that the caller handed over says nothing: the Java read it, and
+        // listed a host that never answered if it was handed over as online.
+        if (answered && fakeDetails.state == ComputerDetails.State.ONLINE) {
             LimeLog.info("New PC (${fakeDetails.name}) is UUID ${fakeDetails.uuid}")
 
             // Start a polling thread for this machine
@@ -514,35 +589,44 @@ class ComputerManagerService : Service() {
             return
         }
 
-        // Remove it from the database
-        dbManager.deleteComputer(computer)
+        // The reference goes back on every way out, a throw of the database included.
+        try {
+            // Remove it from the database
+            dbManager.deleteComputer(computer)
 
-        synchronized(pollingTuples) {
-            // Remove the computer from the computer list
-            for (tuple in pollingTuples) {
-                if (checkNotNull(tuple.computer.uuid) == computer.uuid) {
-                    val polling = tuple.thread
-                    if (polling != null) {
-                        // Interrupt the thread on this entry
-                        polling.interrupt()
-                        tuple.thread = null
+            synchronized(pollingTuples) {
+                // Remove the computer from the computer list
+                for (tuple in pollingTuples) {
+                    if (tuple.computer.uuid == computer.uuid) {
+                        val polling = tuple.thread
+                        if (polling != null) {
+                            // Interrupt the thread on this entry
+                            polling.interrupt()
+                            tuple.thread = null
+                        }
+                        pollingTuples.remove(tuple)
+                        break
                     }
-                    pollingTuples.remove(tuple)
-                    break
                 }
             }
+        } finally {
+            releaseLocalDatabaseReference()
         }
-
-        releaseLocalDatabaseReference()
     }
 
+    // The count is checked and raised in one step: a release that closes the database cannot come
+    // in between, so a reference is never handed out on a closed database.
     private fun getLocalDatabaseReference(): Boolean {
-        if (dbRefCount.get() == 0) {
-            return false
-        }
+        while (true) {
+            val count = dbRefCount.get()
+            if (count == 0) {
+                return false
+            }
 
-        dbRefCount.incrementAndGet()
-        return true
+            if (dbRefCount.compareAndSet(count, count + 1)) {
+                return true
+            }
+        }
     }
 
     private fun releaseLocalDatabaseReference() {
@@ -769,7 +853,16 @@ class ComputerManagerService : Service() {
             return
         }
 
-        for (computer in dbManager.getAllComputers()) {
+        // A database that cannot be read must not stop the service: it starts with no hosts.
+        val savedComputers =
+            try {
+                dbManager.getAllComputers()
+            } catch (e: SQLiteException) {
+                LimeLog.severe("Could not read the saved hosts: ${e.message}")
+                emptyList()
+            }
+
+        for (computer in savedComputers) {
             // Add tuples for each computer
             addTuple(computer)
         }
@@ -805,6 +898,8 @@ class ComputerManagerService : Service() {
     }
 
     override fun onDestroy() {
+        discoveryAdds.shutdownNow()
+
         val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         connMgr.unregisterNetworkCallback(networkCallback)
 
@@ -864,7 +959,7 @@ class ComputerManagerService : Service() {
             return null
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+        // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
         // The stack traces go to the standard error stream, as in the inherited Java. Logging them
         // instead is a behaviour change.
         @Suppress(
@@ -875,6 +970,12 @@ class ComputerManagerService : Service() {
             "LoopWithTooManyJumpStatements",
         )
         fun start() {
+            // A poller that runs is not started again: the Java started a second thread, and stop
+            // ended only the last one, so the first polled for good.
+            if (thread != null) {
+                return
+            }
+
             val polling =
                 object : Thread() {
                     override fun run() {
@@ -1006,6 +1107,8 @@ class ComputerManagerService : Service() {
         private const val DISCOVERY_WAIT_MS = 1000L
         private const val POLLING_STOPPED_WAIT_MS = 250L
 
+        private const val DISCOVERY_ADD_THREAD = "mDNS add thread"
+
         private const val STUN_SERVER = "stun.moonlight-stream.org"
         private const val STUN_PORT = 3478
     }
@@ -1016,10 +1119,6 @@ internal class PollingTuple(
     @JvmField var thread: Thread?,
 ) {
     @JvmField val networkLock = Any()
-    @JvmField var lastSuccessfulPollMs: Long = 0
+    // The polling thread writes it under networkLock and startPolling reads it under pollingTuples.
+    @Volatile @JvmField var lastSuccessfulPollMs: Long = 0
 }
-
-internal class ReachabilityTuple(
-    @JvmField val computer: ComputerDetails,
-    @JvmField val reachableAddress: String,
-)

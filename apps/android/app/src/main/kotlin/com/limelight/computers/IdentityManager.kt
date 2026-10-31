@@ -22,9 +22,11 @@ class IdentityManager(c: Context) {
         private const val UNIQUE_ID_FILE_NAME = "uniqueid"
         private const val UID_SIZE_IN_BYTES = 8
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12
-        // backlog). The stack trace goes to the standard error stream, as in the inherited Java.
-        // Logging it instead is a behaviour change.
+        // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog). The
+        // stack trace goes to the standard error stream, as in the inherited Java. Logging it
+        // instead is a behaviour change. The saved id is kept when it is not hex (Sprint 16):
+        // generating a new one would unpair the client from every host. The warning must not
+        // hold the id, which is the identity of the client toward every host.
         @Suppress("ReturnCount", "PrintStackTrace")
         fun loadUniqueId(c: Context): String? {
             // 2 Hex digits per byte
@@ -35,6 +37,9 @@ class IdentityManager(c: Context) {
                     if (reader.read(uid) != UID_SIZE_IN_BYTES * 2) {
                         LimeLog.severe("UID file data is truncated")
                         return null
+                    }
+                    if (!uid.all { isHexDigit(it) }) {
+                        LimeLog.warning("UID file data is not hex digits, the saved id is kept")
                     }
                     return String(uid)
                 }
@@ -48,6 +53,8 @@ class IdentityManager(c: Context) {
             }
         }
 
+        private fun isHexDigit(ch: Char) = ch in '0'..'9' || ch in 'a'..'f' || ch in 'A'..'F'
+
         // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
         // instead is a behaviour change (Sprint 12 backlog).
         @Suppress("PrintStackTrace")
@@ -59,8 +66,9 @@ class IdentityManager(c: Context) {
             try {
                 OutputStreamWriter(c.openFileOutput(UNIQUE_ID_FILE_NAME, 0)).use { writer ->
                     writer.write(uidStr)
-                    LimeLog.info("UID written to disk")
                 }
+                // Only the close flushes the buffered text, so the log comes after it.
+                LimeLog.info("UID written to disk")
             } catch (e: IOException) {
                 LimeLog.severe("Error while writing UID file")
                 e.printStackTrace()

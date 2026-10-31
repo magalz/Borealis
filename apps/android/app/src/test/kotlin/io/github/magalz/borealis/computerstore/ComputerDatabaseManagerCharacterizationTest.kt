@@ -3,7 +3,6 @@ package io.github.magalz.borealis.computerstore
 import android.content.Context
 import android.content.ContextWrapper
 import android.database.Cursor
-import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import androidx.test.core.app.ApplicationProvider
@@ -12,10 +11,12 @@ import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.NvHTTP
+import io.github.magalz.borealis.testing.LimeLogCapture
 import org.json.JSONException
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertThrows
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -25,10 +26,16 @@ import org.robolectric.RobolectricTestRunner
  * file that the Java build wrote (`computerstore/computers4.db`, see [FIXTURE_HOSTS]), what it
  * writes, and what it does with a row or a file that is not what it expects.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests passed on the Java class and on its Kotlin conversion. Sprint 16
+ * changed three things, and the tests about them pin the fixed behaviour: a host without a name or
+ * without a uuid is refused with a log, where the Java class threw or saved it (P11, P13); deleting
+ * a host without a uuid removes the rows that have none (P13); and the list leaves out a row that
+ * it cannot read instead of throwing, while the lookups of that row still throw (P12).
  */
 @RunWith(RobolectricTestRunner::class)
 class ComputerDatabaseManagerCharacterizationTest {
+    @get:Rule val log = LimeLogCapture()
+
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val managers = mutableListOf<ComputerDatabaseManager>()
 
@@ -390,26 +397,28 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `a host without a name makes the update throw, and leaves the list as it was`() {
+    fun `a host without a name is refused with a log, and the list stays as it was`() {
         val manager = open()
         manager.updateComputer(details(uuid = "u-1", name = "Kept"))
 
-        assertThrows(SQLiteConstraintException::class.java) {
-            manager.updateComputer(details(uuid = "u-1", name = null))
-        }
+        val refused = runCatching { manager.updateComputer(details(uuid = "u-1", name = null)) }
 
+        assertThat(refused.exceptionOrNull()).isNull()
+        assertThat(refused.getOrNull()).isFalse()
+        assertThat(log.warnings()).containsExactly("Not saving a host that has no name")
         assertThat(manager.getAllComputers().map { it.name }).containsExactly("Kept")
     }
 
     @Test
-    fun `a host without a uuid is stored with a null uuid, as SQLite allows it`() {
+    fun `a host without a uuid is refused with a log, and nothing is stored`() {
         val manager = open()
 
-        assertThat(manager.updateComputer(details(uuid = null, name = "No id"))).isTrue()
+        val refused = runCatching { manager.updateComputer(details(uuid = null, name = "No id")) }
 
-        val stored = manager.getAllComputers().single()
-        assertThat(stored.uuid).isNull()
-        assertThat(stored.name).isEqualTo("No id")
+        assertThat(refused.exceptionOrNull()).isNull()
+        assertThat(refused.getOrNull()).isFalse()
+        assertThat(log.warnings()).containsExactly("Not saving a host that has no id")
+        assertThat(manager.getAllComputers()).isEmpty()
     }
 
     @Test
@@ -491,16 +500,25 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `deleting a host without a uuid deletes nothing, not even a row with a null uuid`() {
+    fun `deleting a host without a uuid deletes the rows that have a null uuid and no other`() {
         val manager = open()
-        manager.updateComputer(details(uuid = null, name = "No id"))
+        insertRaw(uuid = null, name = "No id", addresses = "{}")
         manager.updateComputer(details(uuid = "u-1", name = "Kept"))
 
         manager.deleteComputer(details(uuid = null))
 
-        assertThat(manager.getAllComputers().map { it.name })
-            .containsExactly("No id", "Kept")
-            .inOrder()
+        assertThat(manager.getAllComputers().map { it.name }).containsExactly("Kept")
+    }
+
+    @Test
+    fun `deleting a host with a uuid leaves a row with a null uuid alone`() {
+        val manager = open()
+        insertRaw(uuid = null, name = "No id", addresses = "{}")
+        manager.updateComputer(details(uuid = "u-1", name = "Gone"))
+
+        manager.deleteComputer(details(uuid = "u-1"))
+
+        assertThat(manager.getAllComputers().map { it.name }).containsExactly("No id")
     }
 
     @Test
@@ -528,39 +546,49 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `addresses that are not JSON make reading throw a runtime exception caused by the JSON one`() {
+    fun `addresses that are not JSON make a lookup throw a runtime exception caused by the JSON one`() {
         val manager = open()
         insertRaw("u-1", "Bad JSON", "not json")
 
-        val all = assertThrows(RuntimeException::class.java) { manager.getAllComputers() }
-        val one = assertThrows(RuntimeException::class.java) { manager.getComputerByUUID("u-1") }
+        val byUuid = assertThrows(RuntimeException::class.java) { manager.getComputerByUUID("u-1") }
+        val byName =
+            assertThrows(RuntimeException::class.java) { manager.getComputerByName("Bad JSON") }
 
-        assertThat(all).hasCauseThat().isInstanceOf(JSONException::class.java)
-        assertThat(one).hasCauseThat().isInstanceOf(JSONException::class.java)
+        assertThat(byUuid).hasCauseThat().isInstanceOf(JSONException::class.java)
+        assertThat(byName).hasCauseThat().isInstanceOf(JSONException::class.java)
     }
 
     @Test
-    fun `one bad row makes the whole list throw`() {
+    fun `addresses that are not JSON are left out of the list, with a log that names no host`() {
+        val manager = open()
+        insertRaw("u-1", "Bad JSON", "not json")
+
+        val read = runCatching { manager.getAllComputers() }
+
+        assertThat(read.exceptionOrNull()).isNull()
+        assertThat(read.getOrNull()).isEmpty()
+        assertThat(log.warnings()).containsExactly(UNREADABLE_ROW_LOG)
+    }
+
+    @Test
+    fun `one bad row is left out of the list and the other hosts are listed in saving order`() {
         val manager = open()
         insertRaw("u-1", "Good", "{}")
         insertRaw("u-2", "Bad JSON", "{")
         insertRaw("u-3", "Good too", "{}")
 
-        assertThrows(RuntimeException::class.java) { manager.getAllComputers() }
+        val read = runCatching { manager.getAllComputers() }
+
+        assertThat(read.exceptionOrNull()).isNull()
+        assertThat(read.getOrNull()?.map { it.uuid }).containsExactly("u-1", "u-3").inOrder()
+        assertThat(log.warnings()).containsExactly(UNREADABLE_ROW_LOG)
         assertThat(manager.getComputerByUUID("u-1")!!.name).isEqualTo("Good")
     }
 
     @Test
-    fun `an address that is malformed makes reading throw a runtime exception caused by the JSON one`() {
+    fun `an address that is malformed makes a lookup throw a runtime exception caused by the JSON one`() {
         val manager = open()
-        for ((uuid, addresses) in
-            listOf(
-                "no-address" to """{"local":{"port":47989}}""",
-                "no-port" to """{"local":{"address":"192.0.2.1"}}""",
-                "not-an-object" to """{"remote":5}""",
-                "json-null" to """{"manual":null}""",
-                "port-as-text" to """{"local":{"address":"192.0.2.1","port":"x"}}""",
-            )) {
+        for ((uuid, addresses) in MALFORMED_ADDRESSES) {
             insertRaw(uuid, uuid, addresses)
 
             val failure =
@@ -571,11 +599,37 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `a port that is not positive makes reading throw the address exception`() {
+    fun `a row with a malformed address is left out of the list, whatever is wrong with it`() {
+        val manager = open()
+        for ((uuid, addresses) in MALFORMED_ADDRESSES) insertRaw(uuid, uuid, addresses)
+        insertRaw("u-good", "Good", "{}")
+
+        val read = runCatching { manager.getAllComputers() }
+
+        assertThat(read.exceptionOrNull()).isNull()
+        assertThat(read.getOrNull()?.map { it.uuid }).containsExactly("u-good")
+        assertThat(log.warnings()).hasSize(MALFORMED_ADDRESSES.size)
+    }
+
+    @Test
+    fun `a port that is not positive makes a lookup throw the address exception`() {
         val manager = open()
         insertRaw("u-1", "Port zero", """{"local":{"address":"192.0.2.1","port":0}}""")
 
-        assertThrows(IllegalArgumentException::class.java) { manager.getAllComputers() }
+        assertThrows(IllegalArgumentException::class.java) { manager.getComputerByUUID("u-1") }
+    }
+
+    @Test
+    fun `a row with a port that is not positive is left out of the list`() {
+        val manager = open()
+        insertRaw("u-1", "Port zero", """{"local":{"address":"192.0.2.1","port":0}}""")
+        insertRaw("u-2", "Good", "{}")
+
+        val read = runCatching { manager.getAllComputers() }
+
+        assertThat(read.exceptionOrNull()).isNull()
+        assertThat(read.getOrNull()?.map { it.uuid }).containsExactly("u-2")
+        assertThat(log.warnings()).containsExactly(UNREADABLE_ROW_LOG)
     }
 
     @Test
@@ -751,6 +805,19 @@ class ComputerDatabaseManagerCharacterizationTest {
 
     private companion object {
         const val GARBAGE_BYTES = 4096
+
+        const val UNREADABLE_ROW_LOG =
+            "Leaving a saved host out of the list: its addresses cannot be read"
+
+        /** Addresses that are JSON and are not what the list wrote, by the id of the host. */
+        val MALFORMED_ADDRESSES =
+            listOf(
+                "no-address" to """{"local":{"port":47989}}""",
+                "no-port" to """{"local":{"address":"192.0.2.1"}}""",
+                "not-an-object" to """{"remote":5}""",
+                "json-null" to """{"manual":null}""",
+                "port-as-text" to """{"local":{"address":"192.0.2.1","port":"x"}}""",
+            )
     }
 }
 

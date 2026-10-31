@@ -2,11 +2,15 @@ package io.github.magalz.borealis.hostmodel
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import java.lang.reflect.Modifier
 import java.util.Objects
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
-/** Characterizes the address tuple of the host model as it was before the Kotlin conversion. */
+/**
+ * Characterizes the address tuple of the host model as it was before the Kotlin conversion, except
+ * its port, which is final since S12-02.
+ */
 class AddressTupleTest {
     @Test
     fun `the constructor keeps the address and the port`() {
@@ -92,14 +96,20 @@ class AddressTupleTest {
     }
 
     @Test
-    fun `a tuple follows the fields that the service mutates`() {
+    fun `the port of a tuple cannot be reassigned`() {
+        val port = AddressTuple::class.java.getField("port")
+
+        assertThat(Modifier.isFinal(port.modifiers)).isTrue()
+    }
+
+    @Test
+    fun `a tuple follows its address, the one field that can still be changed`() {
         val tuple = AddressTuple("pc.local", 47989)
-        tuple.port = 50000
         tuple.address = "other.local"
 
-        assertThat(tuple).isEqualTo(AddressTuple("other.local", 50000))
+        assertThat(tuple).isEqualTo(AddressTuple("other.local", 47989))
         assertThat(tuple).isNotEqualTo(AddressTuple("pc.local", 47989))
-        assertThat(tuple.toString()).isEqualTo("other.local:50000")
+        assertThat(tuple.toString()).isEqualTo("other.local:47989")
     }
 
     @Test

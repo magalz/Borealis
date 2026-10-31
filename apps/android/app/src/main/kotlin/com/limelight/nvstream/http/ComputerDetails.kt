@@ -13,7 +13,7 @@ class ComputerDetails {
 
     class AddressTuple(address: String?, port: Int) {
         @JvmField var address: String
-        @JvmField var port: Int
+        @JvmField val port: Int
 
         init {
             requireNotNull(address) { "Address cannot be null" }
@@ -94,7 +94,7 @@ class ComputerDetails {
 
     fun update(details: ComputerDetails) {
         this.state = details.state
-        this.name = details.name
+        details.name?.let { this.name = it }
         this.uuid = details.uuid
         details.activeAddress?.let { this.activeAddress = it }
         // We can get IPv4 loopback addresses with GS IPv6 Forwarder
@@ -103,11 +103,12 @@ class ComputerDetails {
         val knownRemote = this.remoteAddress
         if (remote != null) {
             this.remoteAddress = remote
-        } else if (knownRemote != null && details.externalPort != 0) {
+        } else if (knownRemote != null && details.externalPort > 0) {
             // If we have a remote address already (perhaps via STUN) but our updated details
             // don't have a new one (because GFE doesn't send one), propagate the external
             // port to the current remote address. We may have tried to guess it previously.
-            knownRemote.port = details.externalPort
+            // The tuple is replaced: its hash code uses the port, and callers may hold it.
+            this.remoteAddress = AddressTuple(knownRemote.address, details.externalPort)
         }
         details.manualAddress?.let { this.manualAddress = it }
         details.ipv6Address?.let { this.ipv6Address = it }
@@ -119,7 +120,8 @@ class ComputerDetails {
         this.runningGameId = details.runningGameId
         this.nvidiaServer = details.nvidiaServer
         this.borealis = details.borealis // BOREALIS: host capabilities (host.caps)
-        this.rawAppList = details.rawAppList
+        // A poll result has no app list: keep the one that the app list poller stored.
+        details.rawAppList?.let { this.rawAppList = it }
     }
 
     override fun toString(): String =

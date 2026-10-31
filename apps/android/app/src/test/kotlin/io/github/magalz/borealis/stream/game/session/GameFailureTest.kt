@@ -18,6 +18,7 @@ import io.github.magalz.borealis.stream.game.GameTestBase
 import io.github.magalz.borealis.stream.game.RecordingSurface
 import io.github.magalz.borealis.stream.game.assertToasts
 import io.github.magalz.borealis.stream.game.phase
+import io.github.magalz.borealis.testing.LimeLogCapture
 import org.junit.Test
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowLooper
@@ -285,6 +286,53 @@ internal class GameFailureTest : GameTestBase() {
         rig.game.stageFailed("Control connection", 0, -5)
 
         assertThat(rig.phase).isInstanceOf(StreamPhase.Starting::class.java)
+    }
+
+    // A stage that fails because the stop interrupted the start
+
+    /**
+     * The native start that a stop interrupts reports the stage it was in as failed, from its own
+     * thread, after the stop ran: the report is the stop's own doing, so nothing of it is acted on.
+     */
+    private fun interruptedStartReports() {
+        // onStop sets the flag itself, a Disconnect does not: the report leaves it as the stop did.
+        val dialogFlagAfterTheStop = rig.field<Boolean>("displayedFailureDialog")
+        LimeLogCapture().start().use { limeLog ->
+            onConnectionThread { rig.game.stageFailed("RTSP handshake", 0x4, -1) }
+            // The port test would run on the thread of the start, which holds the native library.
+            assertThat(ShadowRecordingBridge.named("testClientConnectivity")).isEmpty()
+
+            ShadowLooper.idleMainLooper()
+            assertThat(limeLog.severes()).isEmpty()
+        }
+        assertThat(rig.phase).isNotInstanceOf(StreamPhase.Failed::class.java)
+        assertThat(rig.field<Boolean>("displayedFailureDialog")).isEqualTo(dialogFlagAfterTheStop)
+    }
+
+    @Test
+    fun `a stage that fails because a Disconnect interrupted the start is no failure`() {
+        rig.create()
+        rig.game.stopConnectionThen {}
+        rig.awaitStop()
+
+        interruptedStartReports()
+    }
+
+    @Test
+    fun `a stage that fails because the activity stopped before the start is no failure`() {
+        rig.create()
+        rig.stop()
+
+        interruptedStartReports()
+    }
+
+    @Test
+    fun `a stage that fails after the stop of a stream that ran is no failure either`() {
+        rig.streaming()
+        rig.game.stopConnectionThen {}
+        rig.awaitStop()
+
+        interruptedStartReports()
     }
 
     // A video stage that fails

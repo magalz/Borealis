@@ -1829,8 +1829,6 @@ class MediaCodecDecoderRenderer(
         }
         lastTimestampUs = timestampUs
 
-        numFramesIn++
-
         if (decodeUnitLength > requireInputBuffer().limit() - requireInputBuffer().position()) {
             val exception =
                 IllegalArgumentException(
@@ -1843,6 +1841,9 @@ class MediaCodecDecoderRenderer(
             }
             throw RendererException(this, exception)
         }
+
+        // Only a frame that fits is counted: the crash text must not count the one that crashed
+        numFramesIn++
 
         // Copy data from our buffer list into the input buffer
         requireInputBuffer().put(decodeUnitData.orNpe("The decode unit data"), 0, decodeUnitLength)

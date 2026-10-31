@@ -1196,21 +1196,89 @@ owner decides which to run.
 
 ### Sprint 16: fixes of the converted code
 
-Planned, not started. Owner decision of 2026-10-28; see the
+Owner decision of 2026-10-28; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
+Built in the phase branch `phase/s16-converted-fixes`, from `1220cc365`, in six batches and a wave 2.
+The six batches are merged, and the phase gate passed at `5c364487c`. Wave 2 is not merged yet, and
+the phase pull request is still to come. The device round has not run; its checks are
+[device-validation section 3.31](development/device-validation.md#331-sprint-16-checks).
 
 - **Scope:** item (b) of the blocks "From the Sprint 12 conversion", "From the Sprint 13
   conversion" and "From the Sprint 14 conversion" of the [backlog](#backlog-not-scheduled): the
-  defects that the conversions found and kept. 34 are open from Sprint 12 (the first, #69, is
-  fixed), 53 from Sprint 13 and 41 from Sprint 14.
-- **Triage first:** the sprint starts with a triage that the owner approves. Each defect is a
-  real defect (fixed), latent, or upstream behaviour (kept, with the reason).
-- **Method:** a fix follows the [TDD rule](development/tdd.md). The test that pins the defect is
-  changed to the fixed behaviour in its own failing commit, then the fix.
+  defects that the conversions found and kept. 34 were open from Sprint 12 (the first, #69, was
+  fixed), 53 from Sprint 13 and 41 from Sprint 14, 128 in all.
+- **Triage first:** six inventories at `b2f311be7` sorted the 128 entries, and the owner approved
+  the triage in two rounds on 2026-10-30. Each entry was a real defect, a latent one, a dead path,
+  upstream behaviour, intended, or gone. The owner asked to fix every latent and every upstream
+  entry too.
+- **Outcome:** 113 entries are fixed, 5 are recorded with no change (C1, C9, C17, O7 and U8), 4 are
+  closed (P4, U10, G-M5 and R2), and 6 are moved: P9 and B3 to [Sprint 19](#sprint-19-secops), C18
+  to the open owner decision of [Sprint 17](#sprint-17-general-fixes), and K6, C4 and A8 to
+  [Sprint 18](#sprint-18-refactor-of-the-converted-code). Of the 113, U2 is fixed by the same change as
+  U1. The plan had U2 as intended and U8 as a fix: the owner moved U2 to the fixes on 2026-10-30,
+  and batch D found that U8 is not a defect. Each entry of item (b) of the three blocks now ends
+  with its triage id and what Sprint 16 did, and the triage corrected a few of the descriptions there
+  (S12-09, S12-14, P4, U3, U7a, C3, C17, C19c, C20c, G-M7, R3, R6 and B3).
+- **Batches.** Each batch was an issue and a branch, merged into the phase with a merge commit:
+
+  | Batch | Issue | Entries | Merge |
+  | --- | --- | --- | --- |
+  | E: the stream activity, the audio renderer and `MoonBridge` | #110 | G-K1 to G-K3, G-M1 to G-M4, G-M6, G-S1, A1 to A7, B2 | `87558ae3a` |
+  | C: the keyboard, pointer capture, touch and the on-screen controller | #109 | K1 to K5, T1 to T5, G-M7, O1 to O6, O8 to O11 | `6b341d9f3` |
+  | A: network, discovery, preferences and support | #111 | S12-03 to S12-11, P1 to P3, P5 to P8, P10 | `ca1fec363` |
+  | D: the USB pad drivers and `ControllerHandler` | #108 | U1 to U7, U9, C2, C3, C6 to C8, C10 to C16, C19 to C21 | `0fd6b0dfa` |
+  | F: the video renderer, `MediaCodecHelper` and the JNI callbacks | #113 | R1, R3 to R11, H1 to H6, B4 | `342fde0cb` |
+  | B: the host store | #112 | S12-01, S12-02, S12-12 to S12-20, P11 to P14 | `694102f09` |
+  | Wave 2 | #108, #110 | C5, G-S2, B1 | not merged yet |
+
+  Wave 2 waited for the batches it couples. G-S2 makes `Game` stop a connection that never
+  connected, which is safe only after the S12-09 fix of batch A. B1 changes a constant that batch A's
+  `NvConnection` and batch F's renderer read, and C5 changes a constructor that batch E's `Game`
+  calls. The phase also has three test commits that fit one batch's change to another batch's tests
+  (`40caf3011`, `28f474259` and `025391275`) and one comment fix (`5c364487c`).
+- **Owner choices.** How each of these entries is fixed is a product choice, approved with the
+  triage on 2026-10-30, unless a date says otherwise:
+  - G-M7: a two-finger trackpad tap is a right click whichever finger lifts first.
+  - O10: the inert long-click path of the on-screen buttons is removed, not wired to a key code.
+  - S12-15: an OFFLINE poll no longer refreshes the TTL, so a host that stayed offline shows UNKNOWN
+    after a re-open, and the Library hears OFFLINE once. ONLINE is still told at every poll, by
+    design.
+  - B1: `VIDEO_FORMAT_MASK_10BIT` is `0xAA00`, as in `Limelight.h`.
+  - P14 (b): a client id file that is not hex is kept, with a warning log. A new id would unpair the
+    client from every host.
+  - U3: the trigger motors are zeroed at stream end too, not only when the USB service stops.
+  - A5: a second `cleanup` of the audio renderer does nothing.
+  - U2: fixed with U1 (2026-10-30).
+  - B4: the video and audio start log and clear a Java exception, and return no failure, because the
+    vendored typedefs return `void` (2026-10-31). Sprint 19 looks at it again.
+
+  Choices of the batches and their reviews, accepted at the merge: C2, one motion source for each
+  type and controller number; C19 (b), the report rate read as an unsigned 16-bit value and capped
+  at 200; S12-01, `withListFrom` stays; S12-08 (a) and (b), an app id above `Int.MAX_VALUE` and the
+  32-bit `status_code` stay, as intended.
+- **Method.** The fixes followed the [TDD rule](development/tdd.md): the test that pinned the defect
+  was changed in a `test:` commit that failed on its assertions, then the `fix:` commit. The merge
+  review of batch F noted two exceptions in follow-ups of its reviews: a test that came after its
+  change (`b87367818`, R5) and a `refactor:` commit that moves a read (`d18cf7545`). A deletion
+  needed no failing test, but its commit has the compiler proof and the check for callable
+  references, Compose, JNI, the manifest, reflection and Hilt. A race or memory-visibility fix got a
+  deterministic test where one could be built (a latch, a fake executor or a throwing fake);
+  otherwise the commit names the exemption (S12-13, S12-19, U4, A7, B4 and the order check of the
+  G-S2 bridge flag). The batches ran as separate sessions, three at a time, each with its own
+  implementer and reviewer, and up to two fix rounds a task. Before each merge, a fresh reviewer
+  checked the batch entry by entry against its brief.
+- **Phase gate.** At `5c364487c`, with the six batches merged: `spotlessCheck detekt lint
+  testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis` passed in
+  11 min 29 s, with 4,431 `:app` tests and no failure.
+- **What it found for later.** New items are in [Sprint 17](#sprint-17-general-fixes) (Input, Pads,
+  and Video and the stream screens), [Sprint 18](#sprint-18-refactor-of-the-converted-code) (a flaky
+  test), [Sprint 19](#sprint-19-secops) and [Sprint 20](#sprint-20-release-preparation) (the host
+  version line).
 - **Order:** the fixes come before the refactor of Sprint 18. The triage removes dead and
   unreachable paths, which shrinks the refactor, and the refactor then does not have to keep known
   defects on purpose.
-- **Ends with a device round.**
+- **Ends with a device round.** Not run yet: see
+  [device-validation section 3.31](development/device-validation.md#331-sprint-16-checks).
 
 ### Sprint 17: general fixes
 
@@ -1555,7 +1623,12 @@ Planned, not started. Owner decision of 2026-10-28.
 
 - **Scope:** item (a) of the same three blocks of the [backlog](#backlog-not-scheduled): the 166
   places marked `(Sprint 12 backlog)` (49), `(Sprint 13 backlog)` (65) and `(Sprint 14 backlog)`
-  (52), with the other notes of item (a) of the Sprint 14 block.
+  (52), with the other notes of item (a) of the Sprint 14 block. The fixes of Sprint 16 left 163
+  at `5c364487c` (49, 63 and 51), and 162 once wave 2 removes one more with C5. Each block has the
+  recount by file.
+- **Moved here by Sprint 16:** K6, the Windows `VK_*` codes duplicated in `KeyboardLayout.kt`; C4,
+  the controller-input fusing block of `ControllerHandler` written out three times; and A8, the stale
+  Lollipop comment on the 7.1 mask of `AndroidAudioRenderer`. Each is in item (b) of its block.
 - **Test and tooling items.** Moved here from the [backlog](#backlog-not-scheduled) (owner,
   2026-10-28):
   - item (c) of the block "From the Sprint 14 conversion": the tests that read text, the test code that
@@ -1849,7 +1922,10 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
   - `utils/ShortcutHelper.kt`: 1
   - `utils/TvChannelHelper.kt`: 6
 
-  That is 49 suppressions in 18 files.
+  That is 49 suppressions in 18 files. Sprint 16 recount, at `5c364487c`: still 49 in 18 files.
+  `computers/ComputerDatabaseManager.kt` has 3 (P12 added one), `computers/ComputerManagerService.kt`
+  has 8 (S12-12 removed one), and the marker of `computers/IdentityManager.kt` no longer wraps
+  (P14).
 - **(b) Bugs found during the Sprint 12 conversion.** Only the first was fixed before Sprint 16. The
   conversion keeps behaviour (ADR 0059, rule 10). [Sprint 16](#sprint-16-fixes-of-the-converted-code)
   took the other 34. Each entry now ends with its triage id (S12-01 to S12-20, P1 to P14) and what
@@ -2043,7 +2119,10 @@ took item (b), and each of its entries now ends with its triage id and what Spri
   - `virtual_controller/VirtualControllerConfigurationLoader.kt`: 4
   - `virtual_controller/VirtualControllerElement.kt`: 1
 
-  That is 65 places in 22 files.
+  That is 65 places in 22 files. Sprint 16 recount, at `5c364487c`: 63 places in 21 files. The
+  marker of `driver/AbstractController.kt` went with the U1 fix, and `virtual_controller/DigitalButton.kt`
+  has 1 after the O8 deletion. Wave 2 removes the `UnusedPrivateProperty` place of
+  `ControllerHandler.kt` with C5, which leaves 62 places (27 in `ControllerHandler.kt`).
 - **(b) Bugs and oddities found during the conversion, by area.** Each one was kept as it was. In
   Sprint 16, 44 are fixed, 5 are recorded with no change, U10 is closed, and K6, C4 and C18 are
   moved. The batches are #109 (keyboard, capture, touch and the on-screen controller) and #108
@@ -2296,7 +2375,8 @@ test is named, none pins the item.
   - `binding/audio/AndroidAudioRenderer.kt`: 1
   - `nvstream/av/video/VideoDecoderRenderer.kt`: 1
 
-  That is 52 places in 6 files. Also:
+  That is 52 places in 6 files. Sprint 16 recount, at `5c364487c`: 51 places in 6 files, with 11 in
+  `binding/video/MediaCodecHelper.kt` after the H6 fix. Also:
   - `Game.setMetaKeyCaptureState` has no caller outside `Game` (the tests reach it through the
     grab), so it could be private.
   - The `@SuppressLint("InlinedApi")` on `hideSystemUi` is probably not needed, because `minSdk`

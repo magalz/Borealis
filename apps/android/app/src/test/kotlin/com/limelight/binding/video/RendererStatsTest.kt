@@ -164,6 +164,19 @@ class RendererStatsTest : RendererTestBase() {
     }
 
     @Test
+    fun `a stream that starts at frame number zero closes its window after a second`() {
+        val renderer = counting()
+        renderer.feed(pFrame(0))
+        advanceClock(1_000)
+
+        renderer.feed(pFrame(1))
+
+        assertThat(snapshots).hasSize(1)
+        assertThat(snapshots.single().lossPercent).isEqualTo(0f)
+        assertThat(snapshots.single().receivedFps).isWithin(EPSILON).of(1f)
+    }
+
+    @Test
     fun `a frame number repeated or a step of one is not a loss`() {
         val renderer = counting()
         for (number in listOf(1, 1, 2, 2, 2, 3)) renderer.feed(pFrame(number))

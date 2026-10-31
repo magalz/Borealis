@@ -446,6 +446,100 @@ class StopAndCancelTest {
         assertThat(listener.events).containsExactly("stageStarting $DESKTOP_NAME")
     }
 
+    /**
+     * Waits for the start thread to end, once it reached its first launch request, which a cancel
+     * keeps from being sent.
+     */
+    private fun awaitStartEnded() {
+        listener.await("launchStarting")
+        listener.awaitEnded()
+    }
+
+    /**
+     * A GFE host is never asked again, so its first `/launch` is the only request and nothing
+     * retries it: a cancel that came before it must keep it from being sent, or the host launches
+     * an app that nothing streams. (The runner of the retries checks the cancel for the other
+     * hosts.)
+     */
+    @Test
+    fun `a start that was cancelled before it began sends no launch to a GFE host`() {
+        rig.script.state = HostScript.GFE_FREE
+        val connection = rig.connection()
+        connection.cancelLaunch()
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=false")
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a start that was stopped before it began sends no launch to a GFE host`() {
+        rig.script.state = HostScript.GFE_FREE
+        val connection = rig.connection()
+        connection.stop()
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a start that is cancelled while a GFE host answers serverinfo sends no launch`() {
+        rig.script.state = HostScript.GFE_FREE
+        val connection = rig.connection()
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=false")
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    @Test
+    fun `a start that is cancelled while a GFE host answers serverinfo sends no resume`() {
+        rig.script.running(DESKTOP_ID, HostScript.GFE_BUSY)
+        val connection = rig.resumingConnection()
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=true")
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    /** The runner of the retries checks the cancel before the first request of this host. */
+    @Test
+    fun `a start that is cancelled while a LuminalShine host answers serverinfo sends no launch`() {
+        val connection = rig.connection()
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=false")
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
     @Test
     fun `a start that is cancelled when it is complete ends at once, without waiting for the stream that runs`() {
         val first = rig.connection()

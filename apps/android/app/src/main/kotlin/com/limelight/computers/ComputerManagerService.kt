@@ -368,10 +368,10 @@ class ComputerManagerService : Service() {
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The Java called getAllNetworks, which is deprecated since Android 12 and is still the call
-    // that finds the network under a VPN.
+    // that finds the network under a VPN. It unlocked the network state without a finally, so a
+    // call that threw kept the lock for good, and the process bound to its network.
     @Suppress("DEPRECATION", "NestedBlockDepth")
     private fun populateExternalAddress(details: ComputerDetails) {
-        var boundToNetwork = false
         val activeNetworkIsVpn = NetHelper.isActiveNetworkVpn(this)
         val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -380,50 +380,54 @@ class ComputerManagerService : Service() {
         if (activeNetworkIsVpn) {
             // Acquire the default network lock since we could be changing global process state
             defaultNetworkLock.lock()
-
-            // On Lollipop or later, we can bind our process to the underlying interface
-            // to ensure our STUN request goes out on that interface or not at all (which is
-            // preferable to getting a VPN endpoint address back).
-            val networks = connMgr.allNetworks
-            for (net in networks) {
-                val netCaps = connMgr.getNetworkCapabilities(net)
-                if (netCaps != null) {
-                    if (
-                        !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
-                            !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-                    ) {
-                        // This network looks like an underlying multicast-capable transport,
-                        // so let's guess that it's probably where our mDNS response came from.
-                        if (connMgr.bindProcessToNetwork(net)) {
-                            boundToNetwork = true
-                            break
+            try {
+                var boundToNetwork = false
+                try {
+                    // On Lollipop or later, we can bind our process to the underlying interface
+                    // to ensure our STUN request goes out on that interface or not at all (which
+                    // is preferable to getting a VPN endpoint address back).
+                    val networks = connMgr.allNetworks
+                    for (net in networks) {
+                        val netCaps = connMgr.getNetworkCapabilities(net)
+                        if (netCaps != null) {
+                            if (
+                                !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
+                                    !netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+                            ) {
+                                // This network looks like an underlying multicast-capable
+                                // transport, so let's guess that it's probably where our mDNS
+                                // response came from.
+                                if (connMgr.bindProcessToNetwork(net)) {
+                                    boundToNetwork = true
+                                    break
+                                }
+                            }
                         }
                     }
+
+                    // Perform the STUN request if we bound to a network
+                    if (boundToNetwork) {
+                        val stunResolvedAddress =
+                            NvConnection.findExternalAddressForMdns(STUN_SERVER, STUN_PORT)
+                        if (stunResolvedAddress != null) {
+                            // We don't know for sure what the external port is, so we will have to
+                            // guess. When we contact the PC (if we haven't already), it will update
+                            // the port.
+                            details.remoteAddress =
+                                ComputerDetails.AddressTuple(
+                                    stunResolvedAddress,
+                                    details.guessExternalPort(),
+                                )
+                        }
+                    }
+                } finally {
+                    // Unbind from the network
+                    if (boundToNetwork) {
+                        connMgr.bindProcessToNetwork(null)
+                    }
                 }
-            }
-
-            // Perform the STUN request if we're not on a VPN or if we bound to a network
-            if (!activeNetworkIsVpn || boundToNetwork) {
-                val stunResolvedAddress =
-                    NvConnection.findExternalAddressForMdns(STUN_SERVER, STUN_PORT)
-                if (stunResolvedAddress != null) {
-                    // We don't know for sure what the external port is, so we will have to guess.
-                    // When we contact the PC (if we haven't already), it will update the port.
-                    details.remoteAddress =
-                        ComputerDetails.AddressTuple(
-                            stunResolvedAddress,
-                            details.guessExternalPort(),
-                        )
-                }
-            }
-
-            // Unbind from the network
-            if (boundToNetwork) {
-                connMgr.bindProcessToNetwork(null)
-            }
-
-            // Unlock the network state
-            if (activeNetworkIsVpn) {
+            } finally {
+                // Unlock the network state
                 defaultNetworkLock.unlock()
             }
         }

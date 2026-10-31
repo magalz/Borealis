@@ -254,13 +254,13 @@ class ButtonFlagsCharacterizationTest {
     }
 
     @Test
-    fun `an unknown scan code on a pad with paddles leaves the whole event to the system, down and up`() {
+    fun `an unknown scan code on a pad with paddles is no paddle, and the event goes on, down and up`() {
         pad.set("hasPaddles", true)
 
         for (scanCode in listOf(0x2c8, 0x2c9, 0)) {
             assertWithMessage("down $scanCode")
                 .that(pad.press(KEYCODE_UNKNOWN, KeyDetail(scanCode = scanCode)))
-                .isFalse()
+                .isTrue()
             assertWithMessage("up $scanCode")
                 .that(
                     pad.release(
@@ -269,11 +269,21 @@ class ButtonFlagsCharacterizationTest {
                         downTime = rig.now - 100,
                     )
                 )
-                .isFalse()
+                .isTrue()
         }
+    }
 
-        // Nothing after the switch ran for them: no packet, and no quit combo or emulation check.
-        assertThat(rig.packets).isEmpty()
+    @Test
+    fun `an unknown scan code that comes up while Select is emulated ends that Select like any key up`() {
+        pad.set("hasPaddles", true)
+        pad.press(KEYCODE_BUTTON_L1)
+        pad.press(KEYCODE_BUTTON_START)
+        assertThat(rig.buttons().last()).isEqualTo(BACK_FLAG)
+
+        pad.release(KEYCODE_UNKNOWN, KeyDetail(scanCode = 0x2c8), downTime = rig.now - 100)
+
+        // The emulation check after the switch ran for the key, and the packet went out.
+        assertThat(rig.buttons().last()).isEqualTo(0)
     }
 
     @Test

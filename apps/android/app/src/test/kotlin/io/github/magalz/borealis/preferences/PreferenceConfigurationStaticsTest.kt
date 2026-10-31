@@ -223,6 +223,16 @@ class PreferenceConfigurationStaticsTest {
         assertThat(PreferenceConfiguration.isSquarishScreen(0, 1080)).isFalse()
     }
 
+    @Test
+    fun `a screen with a negative side is not squarish`() {
+        // The ratio of a negative side to a positive one is negative, and of two negative sides
+        // is one: both are below the cutoff, but neither is a screen shape.
+        assertThat(PreferenceConfiguration.isSquarishScreen(-5, 10)).isFalse()
+        assertThat(PreferenceConfiguration.isSquarishScreen(10, -5)).isFalse()
+        assertThat(PreferenceConfiguration.isSquarishScreen(1080, -1)).isFalse()
+        assertThat(PreferenceConfiguration.isSquarishScreen(-1000, -1000)).isFalse()
+    }
+
     private fun booleanFields(config: PreferenceConfiguration): Map<String, Boolean> =
         PreferenceConfiguration::class
             .java

@@ -2557,7 +2557,6 @@ class ControllerHandler(
     @Suppress(
         "CyclomaticComplexMethod",
         "LongMethod",
-        "LoopWithTooManyJumpStatements",
     )
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
         if (stopped) {
@@ -2639,7 +2638,6 @@ class ControllerHandler(
                         }
                     }
                 }
-                break
             }
             i++
         }

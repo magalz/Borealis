@@ -1199,8 +1199,9 @@ owner decides which to run.
 Owner decision of 2026-10-28; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
 Built in the phase branch `phase/s16-converted-fixes`, from `1220cc365`, in six batches and a wave 2.
-The six batches are merged, and the phase gate passed at `5c364487c`. Wave 2 is not merged yet, and
-the phase pull request is still to come. The device round has not run; its checks are
+The six batches and wave 2 are merged: the phase gate passed at `5c364487c`, with the six batches,
+and wave 2 was merged on top of it as `4e1985c6f`. The phase pull request is still to come. The
+device round has not run; its checks are
 [device-validation section 3.31](development/device-validation.md#331-sprint-16-checks).
 
 - **Scope:** item (b) of the blocks "From the Sprint 12 conversion", "From the Sprint 13
@@ -1229,12 +1230,15 @@ the phase pull request is still to come. The device round has not run; its check
   | D: the USB pad drivers and `ControllerHandler` | #108 | U1 to U7, U9, C2, C3, C6 to C8, C10 to C16, C19 to C21 | `0fd6b0dfa` |
   | F: the video renderer, `MediaCodecHelper` and the JNI callbacks | #113 | R1, R3 to R11, H1 to H6, B4 | `342fde0cb` |
   | B: the host store | #112 | S12-01, S12-02, S12-12 to S12-20, P11 to P14 | `694102f09` |
-  | Wave 2 | #108, #110 | C5, G-S2, B1 | not merged yet |
+  | Wave 2 | #108, #110 | C5, G-S2, B1 | `4e1985c6f` |
 
   Wave 2 waited for the batches it couples. G-S2 makes `Game` stop a connection that never
   connected, which is safe only after the S12-09 fix of batch A. B1 changes a constant that batch A's
   `NvConnection` and batch F's renderer read, and C5 changes a constructor that batch E's `Game`
-  calls. The phase also has two test commits that fit one batch's change to another batch's tests
+  calls. Before G-S2, wave 2 made two changes to `NvConnection` that the merge review of batch A
+  asked for: the native calls of a stop run only for a bridge that its own connection set up (a
+  failed native start cleans its bridge up itself), and a GFE start cancelled before its first
+  `/launch` sends none. Its gate passed at `84bb6430d`, the head of the wave. The phase also has two test commits that fit one batch's change to another batch's tests
   (`40caf3011` and `28f474259`), a style commit (`025391275`) and one comment fix (`5c364487c`).
 - **Owner choices.** How each of these entries is fixed is a product choice, approved with the
   triage on 2026-10-30, unless a date says otherwise:
@@ -1256,7 +1260,11 @@ the phase pull request is still to come. The device round has not run; its check
   Choices of the batches and their reviews, accepted at the merge: C2, one motion source for each
   type and controller number; C19 (b), the report rate read as an unsigned 16-bit value and capped
   at 200; S12-01, `withListFrom` stays; S12-08 (a) and (b), an app id above `Int.MAX_VALUE` and the
-  32-bit `status_code` stay, as intended.
+  32-bit `status_code` stay, as intended; G-S2, the audit session is not ended when the user leaves
+  before the connection starts, which the plan had asked for (2026-10-31). No session of the
+  activity can be open there, because `connected` and the start of the audit session happen
+  together, and the audit session is process-wide, so ending it there could only end another
+  activity's session.
 - **Method.** The fixes followed the [TDD rule](development/tdd.md): the test that pinned the defect
   was changed in a `test:` commit that failed on its assertions, then the `fix:` commit. The merge
   review of batch F noted two exceptions in follow-ups of its reviews: a test that came after its
@@ -1270,13 +1278,14 @@ the phase pull request is still to come. The device round has not run; its check
   U9 (empty framework bodies), P5 (no change of behaviour) and C16 (a comment). The batches ran as
   separate sessions, three at a time, each with its own implementer and reviewer, and up to two fix
   rounds a task. Each batch also got a fresh review, entry by entry against its brief: before the
-  merge for A, D, F and B, and after it for E and C, which were merged before the owner asked for
-  that review on 2026-10-31.
+  merge for A, D, F, B and wave 2 (on a tree merged with the phase), and after it for E and C,
+  which were merged before the owner asked for that review on 2026-10-31.
 - **Phase gate.** At `5c364487c`, with the six batches merged: `spotlessCheck detekt lint
   testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis` passed in
-  11 min 29 s, with 4,431 `:app` tests and no failure.
+  11 min 29 s, with 4,431 `:app` tests and no failure. The gate of wave 2 passed at `84bb6430d`; a
+  phase gate on `4e1985c6f` is not recorded here.
 - **What it found for later.** New items are in [Sprint 17](#sprint-17-general-fixes) (Input, Pads,
-  and Video and the stream screens), [Sprint 18](#sprint-18-refactor-of-the-converted-code) (a flaky
+  Video and the stream screens, and the stream session), [Sprint 18](#sprint-18-refactor-of-the-converted-code) (a flaky
   test), [Sprint 19](#sprint-19-secops) and [Sprint 20](#sprint-20-release-preparation) (the host
   version line).
 - **Order:** the fixes come before the refactor of Sprint 18. The triage removes dead and
@@ -1295,8 +1304,9 @@ sprints squarely (owner: "everything that is not conversion and does not fit per
 sprints already planned"). It comes after the fixes of the converted code, so that every fix comes
 before the refactor. Each item keeps its text, its source and its owner date, and says where it came
 from: Sprint 15, the [backlog](#backlog-not-scheduled), or the backlog by way of Sprint 15 on the
-same day. The items marked "From Sprint 16" came from the reviews of the fixes of the converted
-code (2026-10-30 and 2026-10-31); none of them is a Sprint 16 regression, unless the item says so.
+same day. The items marked "From Sprint 16", and the section on the stream session, came from the
+reviews of the fixes of the converted code (2026-10-30 and 2026-10-31). The items marked "From
+Sprint 16" are not Sprint 16 regressions, unless the item says so.
 
 The deferred RTSP parser rework is not here: it stays in the backlog, deferred by the owner. What
 the plan already holds for [SecOps](#sprint-19-secops) and
@@ -1644,6 +1654,26 @@ the round are in [device-validation section 20](development/device-validation.md
   search fell back to the first decoder; AVC still falls back. The device round compares the start
   logs of both devices (3.31).
 
+#### The stream session
+
+From Sprint 16, wave 2 (C5, G-S2 and B1, the reviews of #108 and #110, 2026-10-31): the gaps that
+its reviews found and left for this sprint.
+
+- **A late stop and the next start.** `NvConnection.stop()` reads its bridge flag and calls
+  `interruptConnection` outside the `MoonBridge` monitor. In a narrow window, a late stop of an old
+  connection can interrupt the start of the next one. A small lock around the read of the flag and
+  the `interruptConnection` call, in Kotlin, would close it; no native change is needed.
+- **A late GFE quit and relaunch.** On a GFE host, a late quit-and-relaunch still sends `/quit`.
+- **A termination just before a Disconnect.** A termination that was dispatched just before a
+  Disconnect can still reach `onFailed`: `connectionTerminated` has no guard for the stop.
+- **`GameGestures` has no consumer left.** C5 removed the `gestures` property of `ControllerHandler`,
+  its only consumer; `Game` still implements the interface (`ui/GameGestures.kt`).
+- **The 10-bit masks of `SessionAudit` and `MoonBridge`.** `SessionAudit` (`borealis/host`) keeps its
+  own private copy of the 10-bit mask, now `0xAA00` too, and no test ties its masks to `MoonBridge`.
+- **`HDR_CODEC_MODES` and the 4:4:4 modes.** `NvConnection`'s `HDR_CODEC_MODES` (`0x20200`) does not
+  count the 4:4:4 10-bit modes of the server's codec support.
+- **A second "connection stop done".** A second stop logs `connection stop done` again.
+
 #### Accessibility and layout
 
 Moved here from Sprint 15 or from the backlog (owner, 2026-10-28), as each item says.
@@ -1685,8 +1715,8 @@ Planned, not started. Owner decision of 2026-10-28.
 - **Scope:** item (a) of the same three blocks of the [backlog](#backlog-not-scheduled): the 166
   places marked `(Sprint 12 backlog)` (49), `(Sprint 13 backlog)` (65) and `(Sprint 14 backlog)`
   (52), with the other notes of item (a) of the Sprint 14 block. The fixes of Sprint 16 left 163
-  at `5c364487c` (49, 63 and 51), and 162 once wave 2 removes one more with C5. Each block has the
-  recount by file.
+  at `5c364487c` (49, 63 and 51), and 162 after the merge of wave 2 (`4e1985c6f`), whose C5 removed
+  one more. Each block has the recount by file.
 - **Moved here by Sprint 16:** K6, the Windows `VK_*` codes duplicated in `KeyboardLayout.kt`; C4,
   the controller-input fusing block of `ControllerHandler` written out three times; and A8, the stale
   Lollipop comment on the 7.1 mask of `AndroidAudioRenderer`. Each is in item (b) of its block.
@@ -2214,8 +2244,9 @@ took item (b), and each of its entries now ends with its triage id and what Spri
 
   That is 65 places in 22 files. Sprint 16 recount, at `5c364487c`: 63 places in 21 files. The
   marker of `driver/AbstractController.kt` went with the U1 fix, and `virtual_controller/DigitalButton.kt`
-  has 1 after the O8 deletion. Wave 2 removes the `UnusedPrivateProperty` place of
-  `ControllerHandler.kt` with C5, which leaves 62 places (27 in `ControllerHandler.kt`).
+  has 1 after the O8 deletion. Wave 2 removed the `UnusedPrivateProperty` place of
+  `ControllerHandler.kt` with C5, which leaves 62 places (27 in `ControllerHandler.kt`) at
+  `4e1985c6f`.
 - **(b) Bugs and oddities found during the conversion, by area.** Each one was kept as it was. In
   Sprint 16, 44 are fixed, 5 are recorded with no change, U10 is closed, and K6, C4 and C18 are
   moved. The batches are #109 (keyboard, capture, touch and the on-screen controller) and #108
@@ -2565,12 +2596,18 @@ test is named, none pins the item.
       Pinned by `GameStopTest`, "onStop leaves the controller handler of a stream that never
       connected to onDestroy" and "onStop leaves the native library alone when no connection
       started". **G-S2, Sprint 16:** fixed in wave 2 (#110). Leaving before the connection starts
-      stops the connection and the controller handler. The audit session is not ended on that path:
-      it is process-wide, and no session of the activity can be open there. With it,
-      `NvConnection.stop()` makes the native calls only for a bridge that its own connection set
-      up, a GFE host gets no first `/launch` once the start is cancelled, a start callback that
-      arrives after the stop opens no audit session, and a stage that fails because of the stop is
-      not reported.
+      stops the controller handler and the connection. A `connectionStarted` that arrives after the
+      stop does nothing, so it opens no audit session. A stage that fails after the stop is not
+      reported: `Game.stageFailed` returns at once, so a Disconnect from the Starting screen no
+      longer waits for the connectivity test. The audit session is not ended on that path, a
+      decision accepted at the merge (2026-10-31): no session of the activity can be open there,
+      because `connected` and the start of the audit session happen together, and the audit session
+      is process-wide. With
+      it, `NvConnection.stop()` makes the native calls (`interruptConnection`, `stopConnection` and
+      `cleanupBridge`) only for a bridge that its own connection set up, and a failed native start
+      runs `cleanupBridge` itself. A GFE start cancelled before its first `/launch` sends none; a
+      LuminalShine host was already covered by the retry runner, which keeps its
+      `launch_attempt` audit line with the result `cancelled`.
   - **Renderer** (`binding/video/`):
     - `stop()` and `cleanup()` throw a `NullPointerException` before `start()` and `setup`
       (`stop()` first tells the decoder to stop). Pinned by `RendererLifecycleTest`, "stop before

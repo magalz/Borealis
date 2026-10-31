@@ -1950,6 +1950,10 @@ class MediaCodecDecoderRenderer(
         RuntimeException() {
         private val text: String = generateText(renderer, e)
 
+        // The message is the text, so whatever reads a message of this exception gets it
+        override val message: String
+            get() = text
+
         override fun toString(): String {
             return text
         }

@@ -522,7 +522,7 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     }
 
     @Test
-    fun `a callback that the platform dropped before its failure arrived lets the service found again register a new one`() {
+    fun `a callback that the platform already dropped lets the service found again register a new one`() {
         // The platform forgets the callback on its handler thread and only then posts the failure
         // to the executor of the agent, so the agent still holds the dead callback when the
         // service is found again.
@@ -542,7 +542,7 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     }
 
     @Test
-    fun `a callback that the platform dropped before its failure arrived does not make the service lost throw`() {
+    fun `a callback that the platform already dropped does not make the service lost throw`() {
         val discovery = startAndConfirm()
         val found = service("Den PC")
         discovery.onServiceFound(found)
@@ -558,7 +558,7 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     }
 
     @Test
-    fun `a callback that the platform dropped before its failure arrived does not stop the stop from unregistering the others`() {
+    fun `a callback that the platform already dropped does not stop the stop from unregistering the others`() {
         val discovery = startAndConfirm()
         val denPc = service("Den PC")
         val laptop = service("Laptop")
@@ -574,7 +574,7 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     }
 
     @Test
-    fun `a callback that the platform dropped before its failure arrived does not make the close throw`() {
+    fun `a callback that the platform already dropped does not make the close throw`() {
         val discovery = startAndConfirm()
         val denPc = service("Den PC")
         val laptop = service("Laptop")

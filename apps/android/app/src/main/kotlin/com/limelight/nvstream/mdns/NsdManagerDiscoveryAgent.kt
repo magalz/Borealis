@@ -241,7 +241,9 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
         try {
             nsdManager.unregisterServiceInfoCallback(callback)
         } catch (e: IllegalArgumentException) {
-            LimeLog.warning("NSD: Service info callback of $serviceName is gone already: ${e.message}")
+            LimeLog.warning(
+                "NSD: Service info callback of $serviceName is gone already: ${e.message}"
+            )
         }
     }
 

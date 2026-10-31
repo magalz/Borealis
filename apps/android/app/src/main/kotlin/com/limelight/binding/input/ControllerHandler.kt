@@ -316,18 +316,20 @@ class ControllerHandler(
         }
     }
 
-    // Another pad on the controller number of the context, or null. The default context is not
-    // one: it is the on-screen controller, which is always on number 0.
+    // Another pad on the controller number of the context, or null; one that is not in mouse mode
+    // goes first, since the packet it sends fuses only the pads in its own mode and one in mouse
+    // mode would hide what the others hold. The default context is not a sharer: it is the
+    // on-screen controller, which is always on number 0.
     private fun numberSharer(context: GenericControllerContext): GenericControllerContext? {
         fun isOnItsNumber(other: GenericControllerContext) =
             other !== context &&
                 other.assignedControllerNumber &&
                 other.controllerNumber == context.controllerNumber
 
-        var sharer: GenericControllerContext? = null
-        inputDeviceContexts.forEachValue { sharer = sharer ?: it.takeIf { c -> isOnItsNumber(c) } }
-        usbDeviceContexts.forEachValue { sharer = sharer ?: it.takeIf { c -> isOnItsNumber(c) } }
-        return sharer
+        val sharers = mutableListOf<GenericControllerContext>()
+        inputDeviceContexts.forEachValue { if (isOnItsNumber(it)) sharers += it }
+        usbDeviceContexts.forEachValue { if (isOnItsNumber(it)) sharers += it }
+        return sharers.firstOrNull { !it.mouseEmulationActive } ?: sharers.firstOrNull()
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).

@@ -279,6 +279,20 @@ class TvChannelCharacterizationTest {
     }
 
     @Test
+    fun `the request to show the channel looks the channel up once and passes that id`() {
+        val channel = tv.seedChannel("uuid-1")
+        val activity = Robolectric.buildActivity(Activity::class.java).create().get()
+
+        ShortcutHelper(activity).createHostShortcut(computer, false, true)
+
+        // One lookup of the channel to update it, one for the request.
+        assertThat(tv.queries)
+            .containsExactly(TvContract.Channels.CONTENT_URI, TvContract.Channels.CONTENT_URI)
+        val request = shadowOf(activity).nextStartedActivityForResult
+        assertThat(request.intent.getLongExtra(TvContract.EXTRA_CHANNEL_ID, -1L)).isEqualTo(channel)
+    }
+
+    @Test
     fun `an application context cannot ask for the channel to be shown`() {
         helper.createHostShortcut(computer, false, true)
 

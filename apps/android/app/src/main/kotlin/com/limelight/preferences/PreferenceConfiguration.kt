@@ -114,7 +114,9 @@ class PreferenceConfiguration {
         private const val GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors"
         private const val GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback"
 
-        private const val DEFAULT_RESOLUTION = "1280x720"
+        private const val DEFAULT_WIDTH = 1280
+        private const val DEFAULT_HEIGHT = 720
+        private const val DEFAULT_RESOLUTION = "${DEFAULT_WIDTH}x$DEFAULT_HEIGHT"
         private const val DEFAULT_FPS = "60"
         private const val DEFAULT_STRETCH = false
         private const val DEFAULT_SOPS = true
@@ -265,6 +267,15 @@ class PreferenceConfiguration {
 
         private fun getHeightFromResolutionString(resString: String): Int =
             X_SEPARATOR.split(resString)[1].toInt()
+
+        // The width and height of a stored resolution, or null when it is not a size. The parts
+        // are those of Java's split, which drops the trailing empty strings: "1920x" has one.
+        private fun sizeOrNull(resString: String): Pair<Int, Int>? {
+            val parts = X_SEPARATOR.split(resString)
+            val width = parts.getOrNull(0)?.toIntOrNull() ?: return null
+            val height = parts.getOrNull(1)?.toIntOrNull() ?: return null
+            return width to height
+        }
 
         private fun getResolutionString(height: Int): String =
             // An unknown height gives 720p, like the 720p case.
@@ -446,9 +457,14 @@ class PreferenceConfiguration {
                     prefs.edit { putString(RESOLUTION_PREF_STRING, resStr) }
                 }
 
-                config.width = getWidthFromResolutionString(resStr)
-                config.height = getHeightFromResolutionString(resStr)
-                config.fps = prefs.getRequiredString(FPS_PREF_STRING, DEFAULT_FPS).toInt()
+                // A stored value that is not a size or a number counts as the default one, as the
+                // settings screen reads it. It stays in the file; the stream does not crash on it.
+                val (width, height) = sizeOrNull(resStr) ?: (DEFAULT_WIDTH to DEFAULT_HEIGHT)
+                config.width = width
+                config.height = height
+                config.fps =
+                    prefs.getRequiredString(FPS_PREF_STRING, DEFAULT_FPS).toIntOrNull()
+                        ?: DEFAULT_FPS.toInt()
             }
 
             if (
@@ -472,7 +488,10 @@ class PreferenceConfiguration {
                     prefs.getInt(BITRATE_PREF_OLD_STRING, 0) * KBPS_PER_MBPS,
                 )
             if (config.bitrate == 0) {
-                config.bitrate = getDefaultBitrate(context)
+                // From the resolved size and frame rate: the stored strings are not parsed again,
+                // so one that fell back to the default does not fail here.
+                config.bitrate =
+                    getDefaultBitrate("${config.width}x${config.height}", config.fps.toString())
             }
 
             val audioConfig: String =

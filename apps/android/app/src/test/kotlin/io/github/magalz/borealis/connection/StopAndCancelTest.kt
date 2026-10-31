@@ -438,6 +438,29 @@ class StopAndCancelTest {
     }
 
     /**
+     * The same order as above, and then a second stop. The start set the flag that says it set the
+     * bridge up before it saw the cancel, and it must clear it when it returns: nothing was set up,
+     * so a later stop, which may come after another connection took the bridge, must make no native
+     * call.
+     */
+    @Test
+    fun `a stop after a start that saw the cancel under the monitor makes no native call`() {
+        val connection = rig.connection()
+
+        synchronized(MoonBridge::class.java) {
+            rig.start(connection)
+            listener.await("stageComplete")
+            awaitBlockedOnBridge(listener.threads.single())
+            connection.stop()
+        }
+        listener.awaitEnded()
+
+        connection.stop()
+
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    /**
      * The user left while the host answered `/serverinfo` with an error: nobody is left to tell.
      */
     @Test

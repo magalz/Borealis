@@ -1736,6 +1736,10 @@ class ControllerHandler(
     private fun stickShort(value: Float): Short =
         (value.coerceIn(-1f, 1f) * STICK_MAX).toInt().toShort()
 
+    // The same for a trigger, whose byte would wrap to a small value
+    private fun triggerByte(value: Float): Byte =
+        (value.coerceIn(0f, 1f) * TRIGGER_MAX).toInt().toByte()
+
     private fun handleDeadZone(stickVector: Vector2d, deadzoneRadius: Float) {
         if (stickVector.magnitude <= deadzoneRadius) {
             // Deadzone
@@ -1812,8 +1816,8 @@ class ControllerHandler(
                 rightTriggerValue = 0f
             }
 
-            context.leftTrigger = (leftTriggerValue * TRIGGER_MAX).toInt().toByte()
-            context.rightTrigger = (rightTriggerValue * TRIGGER_MAX).toInt().toByte()
+            context.leftTrigger = triggerByte(leftTriggerValue)
+            context.rightTrigger = triggerByte(rightTriggerValue)
         }
 
         if (context.hatXAxis != -1 && context.hatYAxis != -1) {
@@ -3215,8 +3219,8 @@ class ControllerHandler(
         val leftTriggerValue = if (leftTrigger <= context.triggerDeadzone) 0f else leftTrigger
         val rightTriggerValue = if (rightTrigger <= context.triggerDeadzone) 0f else rightTrigger
 
-        context.leftTrigger = (leftTriggerValue * TRIGGER_MAX).toInt().toByte()
-        context.rightTrigger = (rightTriggerValue * TRIGGER_MAX).toInt().toByte()
+        context.leftTrigger = triggerByte(leftTriggerValue)
+        context.rightTrigger = triggerByte(rightTriggerValue)
 
         context.inputMap = filteredButtonFlags
 

@@ -1,5 +1,6 @@
 package com.limelight.binding.video
 
+import android.media.MediaCodec
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.os.Build
 import com.google.common.truth.Truth.assertThat
@@ -148,7 +149,17 @@ class RendererCrashTest : RendererTestBase() {
         val renderer = small(MoonBridge.VIDEO_FORMAT_H265)
         renderer.submit(parameterSet(MoonBridge.BUFFER_TYPE_VPS, "00000001 4001"))
 
-        assertThat(crash(renderer).lines().first()).isEqualTo("PreOutputConfigErrorFormat: 100")
+        // The frame that crashes is not counted, so none was sent: the early output error is the
+        // last of the checks that holds.
+        assertThat(crash(renderer).lines().first()).isEqualTo("EarlyOutputErrorFormat: 100")
+    }
+
+    @Test
+    fun `after a PPS but before any frame it is a pre IFrame error`() {
+        val renderer = small()
+        renderer.gotPps()
+
+        assertThat(crash(renderer).lines().first()).isEqualTo("PreIFrameErrorFormat: 1")
     }
 
     @Test
@@ -165,10 +176,14 @@ class RendererCrashTest : RendererTestBase() {
     fun `after the output format is known but before any output it is a pre output error`() {
         val renderer = small()
         renderer.gotPps()
+        // The codec tells the format and then gives no frame out.
+        ShadowRecordingVideoCodec.starveOutput = true
+        ShadowRecordingVideoCodec.answerNextOutputDequeue(MediaCodec.INFO_OUTPUT_FORMAT_CHANGED)
         renderer.begin()
         await("the output format") { log.lines().any { it == "INFO: Output format changed" } }
+        renderer.submit(pFrame(1))
 
-        assertThat(crash(renderer, tooBig.again(1)).lines().first())
+        assertThat(crash(renderer, tooBig.again(2)).lines().first())
             .isEqualTo("PreOutputErrorFormat: 1")
     }
 
@@ -250,7 +265,7 @@ class RendererCrashTest : RendererTestBase() {
                 "FPS target: 60",
                 "Bitrate: 20000 Kbps",
                 "CSD stats: 0, 0, 0",
-                "Frames in-out: 1, 0",
+                "Frames in-out: 0, 0",
                 "Total frames received: 0",
                 "Total frames rendered: 0",
                 "Frame losses: 0 in 0 loss events",

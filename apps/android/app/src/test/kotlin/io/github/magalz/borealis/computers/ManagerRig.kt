@@ -23,6 +23,7 @@ import java.net.InetAddress
 import java.security.cert.X509Certificate
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.locks.ReentrantLock
 import org.junit.rules.ExternalResource
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
@@ -276,6 +277,16 @@ class ManagerRule : ExternalResource() {
     fun destroy() {
         destroyed = true
         checkNotNull(controller).destroy()
+    }
+
+    /**
+     * Whether any thread holds the lock that lets one thread at a time bind the process to a
+     * network. The service keeps it private: this reads the field.
+     */
+    fun defaultNetworkLockIsHeld(): Boolean {
+        val field = ComputerManagerService::class.java.getDeclaredField("defaultNetworkLock")
+        field.isAccessible = true
+        return (field.get(service) as ReentrantLock).isLocked
     }
 
     /** The discovery listeners that the platform holds for the service type. */

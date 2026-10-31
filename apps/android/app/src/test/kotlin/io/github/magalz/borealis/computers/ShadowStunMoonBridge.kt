@@ -28,9 +28,13 @@ object ShadowStunMoonBridge {
     /** What the STUN server tells the device: the address that it came from, or null. */
     @Volatile var answer: String? = null
 
+    /** What the request throws, after it is recorded, or null when it answers. */
+    @Volatile var failure: RuntimeException? = null
+
     fun reset() {
         requests.clear()
         answer = null
+        failure = null
     }
 
     /**
@@ -54,6 +58,7 @@ object ShadowStunMoonBridge {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val bound = context.getSystemService(ConnectivityManager::class.java).boundNetworkForProcess
         requests += Request(stunHostName, stunPort, bound)
+        failure?.let { throw it }
         return answer
     }
 

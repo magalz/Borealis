@@ -7,7 +7,9 @@ import android.net.NetworkInfo
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import io.github.magalz.borealis.computers.ShadowFailingConnectivityManager.Call
 import io.github.magalz.borealis.nvhttp.HostReply
+import io.github.magalz.borealis.nvhttp.NvFakeHost
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -18,6 +20,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowNetwork
 import org.robolectric.shadows.ShadowNetworkCapabilities
 import org.robolectric.shadows.ShadowNetworkInfo
@@ -31,13 +34,15 @@ import org.robolectric.shadows.ShadowNetworkInfo
  * Characterization: these tests pass on the Java class and on its Kotlin conversion.
  */
 @Suppress("DEPRECATION")
-@Config(shadows = [ShadowStunMoonBridge::class])
+@Config(shadows = [ShadowStunMoonBridge::class, ShadowFailingConnectivityManager::class])
 @RunWith(RobolectricTestRunner::class)
 class ManagerDiscoveryCharacterizationTest {
     @get:Rule(order = 0) val log = LimeLogCapture()
     @get:Rule(order = 1) val rig = ManagerRule()
 
     private val connectivity = shadowOf(rig.app.getSystemService(ConnectivityManager::class.java))
+    private val platform: ShadowFailingConnectivityManager =
+        Shadow.extract(rig.app.getSystemService(ConnectivityManager::class.java))
 
     @Before
     fun resetStunAndNetworks() {
@@ -245,6 +250,60 @@ class ManagerDiscoveryCharacterizationTest {
         assertThat(rig.app.getSystemService(ConnectivityManager::class.java).boundNetworkForProcess)
             .isNull()
     }
+
+    /**
+     * A host that mDNS finds on a device under a VPN, while [call] of the platform throws (none
+     * does when it is null). The error ends the add: how it ends does not matter here, only what
+     * the add leaves behind.
+     */
+    private fun resolveWhileFailing(call: Call?, host: NvFakeHost) {
+        vpn(WIFI_ID to NetworkCapabilities.TRANSPORT_WIFI)
+        ShadowStunMoonBridge.answer = STUN_ANSWER
+        platform.failing = call
+        rig.start()
+        rig.binder.startPolling(Updates())
+
+        runCatching { rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort) }
+    }
+
+    @Test
+    fun `the network lock is released when the list of networks cannot be read`() {
+        resolveWhileFailing(Call.ALL_NETWORKS, rig.reachable(UUID_1))
+
+        assertThat(platform.thrown).isEqualTo(1)
+        assertThat(rig.defaultNetworkLockIsHeld()).isFalse()
+    }
+
+    @Test
+    fun `the network lock is released when the process cannot be bound to a network`() {
+        resolveWhileFailing(Call.BIND_TO_NETWORK, rig.reachable(UUID_1))
+
+        assertThat(platform.thrown).isEqualTo(1)
+        assertThat(rig.defaultNetworkLockIsHeld()).isFalse()
+        assertThat(boundNetwork()).isNull()
+    }
+
+    @Test
+    fun `the network lock is released when the process cannot be freed from its network`() {
+        resolveWhileFailing(Call.UNBIND, rig.reachable(UUID_1))
+
+        assertThat(ShadowStunMoonBridge.requests).hasSize(1)
+        assertThat(platform.thrown).isEqualTo(1)
+        assertThat(rig.defaultNetworkLockIsHeld()).isFalse()
+    }
+
+    @Test
+    fun `the process is freed from its network and the lock is released when the STUN request throws`() {
+        ShadowStunMoonBridge.failure = IllegalStateException("The STUN request failed")
+        resolveWhileFailing(null, rig.reachable(UUID_1))
+
+        assertThat(ShadowStunMoonBridge.requests).hasSize(1)
+        assertThat(boundNetwork()).isNull()
+        assertThat(rig.defaultNetworkLockIsHeld()).isFalse()
+    }
+
+    private fun boundNetwork(): Network? =
+        rig.app.getSystemService(ConnectivityManager::class.java).boundNetworkForProcess
 
     private companion object {
         const val UUID_1 = "00000000-0000-0000-0000-0000000000c1"

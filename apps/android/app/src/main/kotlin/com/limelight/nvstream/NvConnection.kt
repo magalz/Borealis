@@ -113,6 +113,11 @@ open class NvConnection(
     // its start until stop(), or a start that ends without a stream, gives it back (host.launch)
     private val holdsPlace = AtomicBoolean(false)
 
+    // BOREALIS: the app that this start asks for: the configured one, or the one that the lookup by
+    // name found when the configuration came without an id; set by startApp, on the start thread
+    // (host.launch)
+    private lateinit var appToStart: NvApp
+
     init {
         context.serverAddress = host
         context.httpsPort = httpsPort
@@ -228,7 +233,7 @@ open class NvConnection(
     // (host.launch)
     @Throws(IOException::class, XmlPullParserException::class)
     private fun joinRunning(h: NvHTTP, context: ConnectionContext, appId: Int): LaunchOutcome {
-        val askedFor = appId == checkNotNull(checkNotNull(context.streamConfig).app).appId
+        val askedFor = appId == appToStart.appId
         if (askedFor && !collisions.settleBeforeResume()) {
             return LaunchOutcome.CANCELLED
         }
@@ -258,8 +263,7 @@ open class NvConnection(
 
     private fun requestedApp(context: ConnectionContext): RequestedApp {
         val streamConfig = checkNotNull(context.streamConfig)
-        val app = checkNotNull(streamConfig.app)
-        return RequestedApp(app.appId, app.appName, streamConfig.resumeChosen)
+        return RequestedApp(appToStart.appId, appToStart.appName, streamConfig.resumeChosen)
     }
 
     // BOREALIS: another app is running although /serverinfo said none, or a launch was refused
@@ -540,6 +544,7 @@ open class NvConnection(
             }
             app = found
         }
+        appToStart = app // BOREALIS: launch and ask with the id that was found
 
         // If there's a game running, resume it
         if (h.getCurrentGame(serverInfo) != 0) {
@@ -652,8 +657,7 @@ open class NvConnection(
     private fun launchNotRunningApp(h: NvHTTP, context: ConnectionContext): Boolean {
         // Launch the app since it's not running
         // BOREALIS: retries and cancellation
-        val launched =
-            launchWithRetry(h, "launch", checkNotNull(checkNotNull(context.streamConfig).app).appId)
+        val launched = launchWithRetry(h, "launch", appToStart.appId)
         if (launched == LaunchOutcome.CANCELLED) { // BOREALIS
             return false
         }

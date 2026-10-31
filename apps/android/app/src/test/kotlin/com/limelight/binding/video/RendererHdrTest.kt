@@ -53,6 +53,19 @@ class RendererHdrTest : RendererTestBase() {
     }
 
     @Test
+    fun `HDR metadata set before setup restarts nothing`() {
+        install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        renderer.setHdrMode(true, metadata())
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        renderer.begin()
+
+        // The codec was made with the static info, so the first frame meets no restart.
+        assertThat(renderer.submit(pFrame(1))).isEqualTo(MoonBridge.DR_OK)
+        assertThat(events<CodecEvent.Stopped>()).isEmpty()
+    }
+
+    @Test
     fun `without HDR metadata the format has no static info`() {
         val renderer = ready()
 

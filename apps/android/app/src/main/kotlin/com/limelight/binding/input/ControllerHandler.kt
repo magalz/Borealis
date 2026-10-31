@@ -2600,6 +2600,17 @@ class ControllerHandler(
         // and a negative one is off, not a negative period
         val rateHz = reportRateHz.toInt().coerceIn(0, MAX_SENSOR_RATE_HZ).toShort()
 
+        // One context of the controller number reports a motion type: the readings of several pads
+        // would interleave on the one virtual pad of the host
+        val source =
+            when (motionType) {
+                MoonBridge.LI_MOTION_TYPE_ACCEL ->
+                    motionSource(controllerNumber, Sensor.TYPE_ACCELEROMETER)
+                MoonBridge.LI_MOTION_TYPE_GYRO ->
+                    motionSource(controllerNumber, Sensor.TYPE_GYROSCOPE)
+                else -> null
+            }
+
         var i = 0
         while (i < inputDeviceContexts.size) {
             val deviceContext = inputDeviceContexts.valueAt(i)
@@ -2635,7 +2646,9 @@ class ControllerHandler(
 
                         // Enable the accelerometer if requested
                         val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                        if (rateHz.toInt() != 0 && accelSensor != null) {
+                        if (
+                            rateHz.toInt() != 0 && accelSensor != null && deviceContext === source
+                        ) {
                             val accelListener =
                                 createSensorListener(
                                     controllerNumber,
@@ -2659,7 +2672,7 @@ class ControllerHandler(
 
                         // Enable the gyroscope if requested
                         val gyroSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-                        if (rateHz.toInt() != 0 && gyroSensor != null) {
+                        if (rateHz.toInt() != 0 && gyroSensor != null && deviceContext === source) {
                             val gyroListener =
                                 createSensorListener(
                                     controllerNumber,
@@ -2678,6 +2691,28 @@ class ControllerHandler(
             }
             i++
         }
+    }
+
+    // The context that reports a sensor type of a controller number to the host, or null. A pad
+    // with sensors of its own goes before one that borrows the phone's; pads that have different
+    // sensors (the accelerometer on one device, the gyroscope on another) each report the type
+    // they have.
+    private fun motionSource(controllerNumber: Short, sensorType: Int): InputDeviceContext? {
+        var borrowing: InputDeviceContext? = null
+        inputDeviceContexts.forEachValue { context ->
+            val sm = context.sensorManager
+            if (
+                context.assignedControllerNumber &&
+                    context.controllerNumber == controllerNumber &&
+                    sm?.getDefaultSensor(sensorType) != null
+            ) {
+                if (sm !== deviceSensorManager) {
+                    return context
+                }
+                borrowing = borrowing ?: context
+            }
+        }
+        return borrowing
     }
 
     fun handleSetControllerLED(controllerNumber: Short, r: Byte, g: Byte, b: Byte) {

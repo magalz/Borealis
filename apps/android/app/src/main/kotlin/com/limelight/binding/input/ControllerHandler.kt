@@ -2596,9 +2596,12 @@ class ControllerHandler(
             return
         }
 
-        // Report rate is restricted to <= 200 Hz without the HIGH_SAMPLING_RATE_SENSORS permission,
-        // and a negative one is off, not a negative period
-        val rateHz = reportRateHz.toInt().coerceIn(0, MAX_SENSOR_RATE_HZ).toShort()
+        // The host sends the rate as an unsigned short. It is restricted to <= 200 Hz without the
+        // HIGH_SAMPLING_RATE_SENSORS permission
+        val rateHz =
+            (reportRateHz.toInt() and UNSIGNED_SHORT_MASK)
+                .coerceAtMost(MAX_SENSOR_RATE_HZ)
+                .toShort()
 
         // One context of the controller number reports a motion type: the readings of several pads
         // would interleave on the one virtual pad of the host

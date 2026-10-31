@@ -19,7 +19,8 @@ import org.robolectric.RobolectricTestRunner
  * [destroyAndProbe]). Each test ends a poll on one of the ways out of `runPoll` and
  * `removeComputer`.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the two
+ * that throw out of a poll (S12-13), which pin the fixed behaviour.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerDatabaseReferenceCharacterizationTest {
@@ -38,6 +39,22 @@ class ManagerDatabaseReferenceCharacterizationTest {
     private fun stopPollingAndWait() {
         rig.binder.stopPolling()
         awaitUntil("the polling thread to end") { liveThreads(POLLING_THREAD).isEmpty() }
+    }
+
+    /**
+     * Adds a host that answers and checks that it is saved. A poll that gave its reference back
+     * twice would leave the service without the database, and the host would not be saved.
+     */
+    private fun saveAnotherHost() {
+        val other = rig.reachable(UUID_2, "TWO-PC")
+
+        val added =
+            rig.binder.addComputerBlocking(
+                ComputerDetails().also { it.manualAddress = other.address }
+            )
+
+        assertThat(added).isTrue()
+        assertThat(rig.savedRows().map { it.uuid }).contains(UUID_2)
     }
 
     /**
@@ -127,6 +144,47 @@ class ManagerDatabaseReferenceCharacterizationTest {
     }
 
     @Test
+    fun `a poll whose lookup of the saved host throws gives its reference back`() {
+        rig.seedRow(BAD_UUID, "BAD-PC", "not json")
+        rig.start()
+        val bad = rig.reachable(BAD_UUID, "BAD-PC")
+
+        val failure =
+            runCatching {
+                    rig.binder.addComputerBlocking(
+                        ComputerDetails().also { it.manualAddress = bad.address }
+                    )
+                }
+                .exceptionOrNull()
+
+        // The host answers and the lookup of its saved row, which cannot be read, throws.
+        assertThat(failure).isInstanceOf(RuntimeException::class.java)
+        saveAnotherHost()
+        destroyAndProbe()
+    }
+
+    @Test
+    fun `a poll whose listener throws gives its reference back`() {
+        rig.start()
+        val boom = IllegalStateException("the listener failed")
+        rig.binder.startPolling { throw boom }
+        val host = rig.reachable(UUID_1, "ONE-PC")
+
+        val failure =
+            runCatching {
+                    rig.binder.addComputerBlocking(
+                        ComputerDetails().also { it.manualAddress = host.address }
+                    )
+                }
+                .exceptionOrNull()
+        rig.binder.stopPolling()
+
+        assertThat(failure).isSameInstanceAs(boom)
+        saveAnotherHost()
+        destroyAndProbe()
+    }
+
+    @Test
     fun `removing a host gives its reference back`() {
         rig.seed(saved(UUID_1, "ONE-PC"))
         rig.start()
@@ -146,6 +204,8 @@ class ManagerDatabaseReferenceCharacterizationTest {
 
     private companion object {
         const val UUID_1 = "00000000-0000-0000-0000-0000000000e1"
+        const val UUID_2 = "00000000-0000-0000-0000-0000000000e2"
+        const val BAD_UUID = "00000000-0000-0000-0000-0000000000e3"
         const val PROBE_UUID = "00000000-0000-0000-0000-0000000000e9"
     }
 }

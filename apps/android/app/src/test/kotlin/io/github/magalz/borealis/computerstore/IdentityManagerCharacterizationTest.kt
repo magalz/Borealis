@@ -20,7 +20,9 @@ import org.robolectric.RobolectricTestRunner
  * (`computerstore/uniqueid`), the id it generates when there is none, and what it logs and does
  * when the file is short, long, odd or cannot be read or written.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests passed on the Java class and on its Kotlin conversion. Sprint 16
+ * changed what the log says about the write: "UID written to disk" comes only after the file was
+ * flushed and closed.
  */
 @RunWith(RobolectricTestRunner::class)
 class IdentityManagerCharacterizationTest {
@@ -197,8 +199,11 @@ class IdentityManagerCharacterizationTest {
         }
     }
 
-    private class TrackedOutput(file: File, private val fault: IOException?) :
-        FileOutputStream(file) {
+    private class TrackedOutput(
+        file: File,
+        private val fault: IOException?,
+        private val closeFault: IOException?,
+    ) : FileOutputStream(file) {
         var closed = false
 
         override fun write(b: ByteArray, off: Int, len: Int) {
@@ -206,9 +211,11 @@ class IdentityManagerCharacterizationTest {
             super.write(b, off, len)
         }
 
+        /** The file is closed before [closeFault] is thrown, so a fault leaks no descriptor. */
         override fun close() {
             closed = true
             super.close()
+            if (closeFault != null) throw closeFault
         }
     }
 
@@ -217,6 +224,7 @@ class IdentityManagerCharacterizationTest {
         base: Context,
         private val readFault: IOException? = null,
         private val writeFault: IOException? = null,
+        private val closeFault: IOException? = null,
     ) : ContextWrapper(base) {
         val calls = mutableListOf<String>()
         val inputs = mutableListOf<TrackedInput>()
@@ -229,7 +237,9 @@ class IdentityManagerCharacterizationTest {
 
         override fun openFileOutput(name: String, mode: Int): FileOutputStream {
             calls += "out $name $mode"
-            return TrackedOutput(File(filesDir, name), writeFault).also { outputs += it }
+            return TrackedOutput(File(filesDir, name), writeFault, closeFault).also {
+                outputs += it
+            }
         }
     }
 
@@ -298,21 +308,39 @@ class IdentityManagerCharacterizationTest {
     }
 
     @Test
-    fun `a file that cannot be written still gives a generated id, and the log tells it`() {
+    fun `a file that cannot be written gives a generated id, and no log that it was written`() {
         val files = IdFileContext(context, writeFault = IOException("disk full"))
 
         val identity = IdentityManager(files)
 
         assertThat(identity.uniqueId).matches(generated.pattern)
         assertThat(files.outputs.single().closed).isTrue()
-        // The text is only buffered when the log says "written": the failure comes when it is
-        // flushed.
+        // The text is only buffered until the writer is closed: the failure comes when it is
+        // flushed, so the log must not say "written" before that.
         assertThat(lines())
             .containsExactly(
                 "INFO: Reading UID from disk",
                 "INFO: No UID file found",
                 "INFO: Generating new UID",
-                "INFO: UID written to disk",
+                "SEVERE: Error while writing UID file",
+                "INFO: UID is now: ${identity.uniqueId}",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a file whose close fails after the text was flushed does not log that it was written`() {
+        val files = IdFileContext(context, closeFault = IOException("close failed"))
+
+        val identity = IdentityManager(files)
+
+        assertThat(identity.uniqueId).matches(generated.pattern)
+        assertThat(files.outputs.single().closed).isTrue()
+        assertThat(lines())
+            .containsExactly(
+                "INFO: Reading UID from disk",
+                "INFO: No UID file found",
+                "INFO: Generating new UID",
                 "SEVERE: Error while writing UID file",
                 "INFO: UID is now: ${identity.uniqueId}",
             )

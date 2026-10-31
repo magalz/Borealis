@@ -278,7 +278,7 @@ class ManagerPollingCharacterizationTest {
     }
 
     @Test
-    fun `a host that was online is told offline once after four polls in a row that failed, and online when it answers`() {
+    fun `a host that was online is told offline once after four failed polls, and online when it answers`() {
         val host = rig.host()
         val flaky = Flaky(host, hostInfo(UUID_1))
         rig.start()

@@ -149,13 +149,12 @@ class ManagerDatabaseReferenceCharacterizationTest {
         rig.start()
         val bad = rig.reachable(BAD_UUID, "BAD-PC")
 
-        val failure =
-            runCatching {
-                    rig.binder.addComputerBlocking(
-                        ComputerDetails().also { it.manualAddress = bad.address }
-                    )
-                }
-                .exceptionOrNull()
+        val failure = runCatching {
+            rig.binder.addComputerBlocking(
+                ComputerDetails().also { it.manualAddress = bad.address }
+            )
+        }
+            .exceptionOrNull()
 
         // The host answers and the lookup of its saved row, which cannot be read, throws.
         assertThat(failure).isInstanceOf(RuntimeException::class.java)
@@ -170,13 +169,12 @@ class ManagerDatabaseReferenceCharacterizationTest {
         rig.binder.startPolling { throw boom }
         val host = rig.reachable(UUID_1, "ONE-PC")
 
-        val failure =
-            runCatching {
-                    rig.binder.addComputerBlocking(
-                        ComputerDetails().also { it.manualAddress = host.address }
-                    )
-                }
-                .exceptionOrNull()
+        val failure = runCatching {
+            rig.binder.addComputerBlocking(
+                ComputerDetails().also { it.manualAddress = host.address }
+            )
+        }
+            .exceptionOrNull()
         rig.binder.stopPolling()
 
         assertThat(failure).isSameInstanceAs(boom)

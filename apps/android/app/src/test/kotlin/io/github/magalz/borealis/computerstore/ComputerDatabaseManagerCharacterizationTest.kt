@@ -406,14 +406,15 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `a host without a uuid is stored with a null uuid, as SQLite allows it`() {
+    fun `a host without a uuid is refused with a log, and nothing is stored`() {
         val manager = open()
 
-        assertThat(manager.updateComputer(details(uuid = null, name = "No id"))).isTrue()
+        val refused = runCatching { manager.updateComputer(details(uuid = null, name = "No id")) }
 
-        val stored = manager.getAllComputers().single()
-        assertThat(stored.uuid).isNull()
-        assertThat(stored.name).isEqualTo("No id")
+        assertThat(refused.exceptionOrNull()).isNull()
+        assertThat(refused.getOrNull()).isFalse()
+        assertThat(log.warnings()).containsExactly("Not saving a host that has no id")
+        assertThat(manager.getAllComputers()).isEmpty()
     }
 
     @Test
@@ -495,16 +496,25 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `deleting a host without a uuid deletes nothing, not even a row with a null uuid`() {
+    fun `deleting a host without a uuid deletes the rows that have a null uuid and no other`() {
         val manager = open()
-        manager.updateComputer(details(uuid = null, name = "No id"))
+        insertRaw(uuid = null, name = "No id", addresses = "{}")
         manager.updateComputer(details(uuid = "u-1", name = "Kept"))
 
         manager.deleteComputer(details(uuid = null))
 
-        assertThat(manager.getAllComputers().map { it.name })
-            .containsExactly("No id", "Kept")
-            .inOrder()
+        assertThat(manager.getAllComputers().map { it.name }).containsExactly("Kept")
+    }
+
+    @Test
+    fun `deleting a host with a uuid leaves a row with a null uuid alone`() {
+        val manager = open()
+        insertRaw(uuid = null, name = "No id", addresses = "{}")
+        manager.updateComputer(details(uuid = "u-1", name = "Gone"))
+
+        manager.deleteComputer(details(uuid = "u-1"))
+
+        assertThat(manager.getAllComputers().map { it.name }).containsExactly("No id")
     }
 
     @Test

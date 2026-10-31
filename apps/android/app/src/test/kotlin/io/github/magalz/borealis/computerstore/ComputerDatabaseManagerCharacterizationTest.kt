@@ -532,39 +532,49 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `addresses that are not JSON make reading throw a runtime exception caused by the JSON one`() {
+    fun `addresses that are not JSON make a lookup throw a runtime exception caused by the JSON one`() {
         val manager = open()
         insertRaw("u-1", "Bad JSON", "not json")
 
-        val all = assertThrows(RuntimeException::class.java) { manager.getAllComputers() }
-        val one = assertThrows(RuntimeException::class.java) { manager.getComputerByUUID("u-1") }
+        val byUuid = assertThrows(RuntimeException::class.java) { manager.getComputerByUUID("u-1") }
+        val byName =
+            assertThrows(RuntimeException::class.java) { manager.getComputerByName("Bad JSON") }
 
-        assertThat(all).hasCauseThat().isInstanceOf(JSONException::class.java)
-        assertThat(one).hasCauseThat().isInstanceOf(JSONException::class.java)
+        assertThat(byUuid).hasCauseThat().isInstanceOf(JSONException::class.java)
+        assertThat(byName).hasCauseThat().isInstanceOf(JSONException::class.java)
     }
 
     @Test
-    fun `one bad row makes the whole list throw`() {
+    fun `addresses that are not JSON are left out of the list, with a log that names no host`() {
+        val manager = open()
+        insertRaw("u-1", "Bad JSON", "not json")
+
+        val read = runCatching { manager.getAllComputers() }
+
+        assertThat(read.exceptionOrNull()).isNull()
+        assertThat(read.getOrNull()).isEmpty()
+        assertThat(log.warnings()).containsExactly(UNREADABLE_ROW_LOG)
+    }
+
+    @Test
+    fun `one bad row is left out of the list and the other hosts are listed in saving order`() {
         val manager = open()
         insertRaw("u-1", "Good", "{}")
         insertRaw("u-2", "Bad JSON", "{")
         insertRaw("u-3", "Good too", "{}")
 
-        assertThrows(RuntimeException::class.java) { manager.getAllComputers() }
+        val read = runCatching { manager.getAllComputers() }
+
+        assertThat(read.exceptionOrNull()).isNull()
+        assertThat(read.getOrNull()?.map { it.uuid }).containsExactly("u-1", "u-3").inOrder()
+        assertThat(log.warnings()).containsExactly(UNREADABLE_ROW_LOG)
         assertThat(manager.getComputerByUUID("u-1")!!.name).isEqualTo("Good")
     }
 
     @Test
-    fun `an address that is malformed makes reading throw a runtime exception caused by the JSON one`() {
+    fun `an address that is malformed makes a lookup throw a runtime exception caused by the JSON one`() {
         val manager = open()
-        for ((uuid, addresses) in
-            listOf(
-                "no-address" to """{"local":{"port":47989}}""",
-                "no-port" to """{"local":{"address":"192.0.2.1"}}""",
-                "not-an-object" to """{"remote":5}""",
-                "json-null" to """{"manual":null}""",
-                "port-as-text" to """{"local":{"address":"192.0.2.1","port":"x"}}""",
-            )) {
+        for ((uuid, addresses) in MALFORMED_ADDRESSES) {
             insertRaw(uuid, uuid, addresses)
 
             val failure =
@@ -575,11 +585,37 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `a port that is not positive makes reading throw the address exception`() {
+    fun `a row with a malformed address is left out of the list, whatever is wrong with it`() {
+        val manager = open()
+        for ((uuid, addresses) in MALFORMED_ADDRESSES) insertRaw(uuid, uuid, addresses)
+        insertRaw("u-good", "Good", "{}")
+
+        val read = runCatching { manager.getAllComputers() }
+
+        assertThat(read.exceptionOrNull()).isNull()
+        assertThat(read.getOrNull()?.map { it.uuid }).containsExactly("u-good")
+        assertThat(log.warnings()).hasSize(MALFORMED_ADDRESSES.size)
+    }
+
+    @Test
+    fun `a port that is not positive makes a lookup throw the address exception`() {
         val manager = open()
         insertRaw("u-1", "Port zero", """{"local":{"address":"192.0.2.1","port":0}}""")
 
-        assertThrows(IllegalArgumentException::class.java) { manager.getAllComputers() }
+        assertThrows(IllegalArgumentException::class.java) { manager.getComputerByUUID("u-1") }
+    }
+
+    @Test
+    fun `a row with a port that is not positive is left out of the list`() {
+        val manager = open()
+        insertRaw("u-1", "Port zero", """{"local":{"address":"192.0.2.1","port":0}}""")
+        insertRaw("u-2", "Good", "{}")
+
+        val read = runCatching { manager.getAllComputers() }
+
+        assertThat(read.exceptionOrNull()).isNull()
+        assertThat(read.getOrNull()?.map { it.uuid }).containsExactly("u-2")
+        assertThat(log.warnings()).containsExactly(UNREADABLE_ROW_LOG)
     }
 
     @Test
@@ -755,6 +791,19 @@ class ComputerDatabaseManagerCharacterizationTest {
 
     private companion object {
         const val GARBAGE_BYTES = 4096
+
+        const val UNREADABLE_ROW_LOG =
+            "Leaving a saved host out of the list: its addresses cannot be read"
+
+        /** Addresses that are JSON and are not what the list wrote, by the id of the host. */
+        val MALFORMED_ADDRESSES =
+            listOf(
+                "no-address" to """{"local":{"port":47989}}""",
+                "no-port" to """{"local":{"address":"192.0.2.1"}}""",
+                "not-an-object" to """{"remote":5}""",
+                "json-null" to """{"manual":null}""",
+                "port-as-text" to """{"local":{"address":"192.0.2.1","port":"x"}}""",
+            )
     }
 }
 

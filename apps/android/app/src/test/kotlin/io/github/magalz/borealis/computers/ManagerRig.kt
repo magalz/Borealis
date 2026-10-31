@@ -3,6 +3,7 @@ package io.github.magalz.borealis.computers
 import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
+import android.database.sqlite.SQLiteDatabase
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.IBinder
@@ -15,6 +16,7 @@ import com.limelight.computers.ComputerManagerService.ComputerManagerBinder
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import io.github.magalz.borealis.computerstore.computerDatabase
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.nvhttp.NvFakeHost
 import java.net.InetAddress
@@ -181,6 +183,41 @@ class ManagerRule : ExternalResource() {
         } finally {
             db.close()
         }
+    }
+
+    /**
+     * Writes a row into the saved list as the file holds it, whatever the row says: the list itself
+     * refuses a host that has no id, and it does not check the addresses that it reads back.
+     */
+    fun seedRow(uuid: String?, name: String, addresses: String) {
+        openFile { database ->
+            database.execSQL(
+                "INSERT INTO Computers(UUID, ComputerName, Addresses) VALUES (?, ?, ?)",
+                arrayOf(uuid, name, addresses),
+            )
+        }
+    }
+
+    /**
+     * Replaces the table of the saved list with a view of a table that is not there, so that the
+     * database opens and the saved hosts cannot be read.
+     */
+    fun breakSavedList() {
+        openFile { database ->
+            database.execSQL("DROP TABLE Computers")
+            database.execSQL("CREATE VIEW Computers AS SELECT * FROM NoSuchTable")
+        }
+    }
+
+    /** Runs [block] on the database file, which the list creates first when it is not there. */
+    private fun openFile(block: (SQLiteDatabase) -> Unit) {
+        ComputerDatabaseManager(app).close()
+        SQLiteDatabase.openDatabase(
+                app.computerDatabase().path,
+                null,
+                SQLiteDatabase.OPEN_READWRITE,
+            )
+            .use(block)
     }
 
     /** The hosts that a second connection reads from the database file. */

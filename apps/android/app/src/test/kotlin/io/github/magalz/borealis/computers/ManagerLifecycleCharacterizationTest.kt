@@ -86,6 +86,32 @@ class ManagerLifecycleCharacterizationTest {
     }
 
     @Test
+    fun `creating the service lists the saved hosts that it can read and skips a row that it cannot`() {
+        rig.seedRow(BAD_UUID, "BAD-PC", "not json")
+        rig.seed(saved(GOOD_UUID, "GOOD-PC"))
+
+        val started = runCatching { rig.start() }
+
+        assertThat(started.exceptionOrNull()).isNull()
+        assertThat(rig.binder.getComputer(GOOD_UUID)?.name).isEqualTo("GOOD-PC")
+        assertThat(rig.binder.getComputer(BAD_UUID)).isNull()
+        assertThat(connectivity.networkCallbacks).hasSize(1)
+        assertThat(log.warnings())
+            .containsExactly("Leaving a saved host out of the list: its addresses cannot be read")
+    }
+
+    @Test
+    fun `creating the service when the saved list cannot be read starts with no hosts`() {
+        rig.breakSavedList()
+
+        val started = runCatching { rig.start() }
+
+        assertThat(started.exceptionOrNull()).isNull()
+        assertThat(connectivity.networkCallbacks).hasSize(1)
+        assertThat(log.severes().single()).startsWith("Could not read the saved hosts")
+    }
+
+    @Test
     fun `creating the service registers one network callback and destroying it removes it`() {
         rig.start()
 
@@ -240,5 +266,7 @@ class ManagerLifecycleCharacterizationTest {
         val OFFLINE = ComputerDetails.State.OFFLINE
         const val SETTLE_MS = 100L
         const val PROMPT_MS = 300L
+        const val GOOD_UUID = "00000000-0000-0000-0000-0000000000f1"
+        const val BAD_UUID = "00000000-0000-0000-0000-0000000000f2"
     }
 }

@@ -80,7 +80,9 @@ open class NvConnection(
     private val context = ConnectionContext()
     private val isMonkey: Boolean
 
-    // BOREALIS: set by cancelLaunch() when the user leaves before the stream started (host.launch)
+    // BOREALIS: set by cancelLaunch() when the user leaves before the stream started, and by stop()
+    // too. Nothing resets it: a stopped NvConnection is never started again, one serves one stream
+    // (host.launch)
     @Volatile private var launchCancelled = false
 
     // BOREALIS: one resolution of "an app is already running" per launch (host.launch)

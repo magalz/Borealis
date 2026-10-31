@@ -59,8 +59,9 @@ class IdentityManager(c: Context) {
             try {
                 OutputStreamWriter(c.openFileOutput(UNIQUE_ID_FILE_NAME, 0)).use { writer ->
                     writer.write(uidStr)
-                    LimeLog.info("UID written to disk")
                 }
+                // Only the close flushes the buffered text, so the log comes after it.
+                LimeLog.info("UID written to disk")
             } catch (e: IOException) {
                 LimeLog.severe("Error while writing UID file")
                 e.printStackTrace()

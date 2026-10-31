@@ -300,7 +300,7 @@ class PreferenceConfigurationReadTest {
     }
 
     @Test
-    fun `the legacy bitrate is read but not migrated`() {
+    fun `the legacy bitrate is read and the read itself writes nothing`() {
         preferences.edit().putInt("seekbar_bitrate", 20).commit()
         val recording = RecordingContext(context)
 

@@ -40,7 +40,9 @@ object MoonBridge {
     const val VIDEO_FORMAT_MASK_H264 = 0x000F
     const val VIDEO_FORMAT_MASK_H265 = 0x0F00
     const val VIDEO_FORMAT_MASK_AV1 = 0xF000
-    const val VIDEO_FORMAT_MASK_10BIT = 0x2200
+    // BOREALIS: the value of Limelight.h, which also counts the two 4:4:4 10-bit formats (0x0800,
+    // 0x8000)
+    const val VIDEO_FORMAT_MASK_10BIT = 0xAA00
 
     const val BUFFER_TYPE_SPS = 1
     const val BUFFER_TYPE_PPS = 2

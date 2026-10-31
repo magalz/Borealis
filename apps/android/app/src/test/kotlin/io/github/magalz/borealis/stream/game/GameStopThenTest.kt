@@ -79,6 +79,7 @@ internal class GameStopThenTest : GameTestBase() {
         assertThat(rig.session.state.value.decoderHeld).isTrue()
 
         rig.game.stopConnectionThen {}
+        rig.awaitStop()
         ShadowLooper.idleMainLooper()
 
         assertThat(rig.session.state.value.decoderHeld).isFalse()
@@ -96,14 +97,38 @@ internal class GameStopThenTest : GameTestBase() {
     }
 
     @Test
-    fun `the callback runs at once when no connection runs`() {
+    fun `the callback runs after the stop of a connection that never connected, on its thread`() {
         rig.create()
-        var ran = false
+        val seen = CopyOnWriteArrayList<List<String>>()
+        val cancelled = CopyOnWriteArrayList<Boolean>()
+        val threads = CopyOnWriteArrayList<Thread>()
 
-        rig.game.stopConnectionThen { ran = true }
+        rig.game.stopConnectionThen {
+            threads += Thread.currentThread()
+            seen += ShadowRecordingBridge.names
+            // The stop of the connection cancels its start, which nothing else did on this path.
+            cancelled += ReflectionHelpers.getField<Boolean>(rig.connection, "launchCancelled")
+        }
+        rig.awaitStop()
 
-        assertThat(ran).isTrue()
-        assertThat(ShadowRecordingBridge.named("stopConnection")).isEmpty()
+        assertThat(threads.single()).isNotSameInstanceAs(Thread.currentThread())
+        assertThat(cancelled.single()).isTrue()
+        // The connection never set its bridge up, so the stop makes no native call.
+        assertThat(seen.single()).isEmpty()
+    }
+
+    @Test
+    fun `the callback of a connection with its bridge set up waits for the stop`() {
+        rig.create()
+        ReflectionHelpers.setField(rig.connection, "bridgeSetUp", true)
+        val seen = CopyOnWriteArrayList<List<String>>()
+
+        rig.game.stopConnectionThen { seen += ShadowRecordingBridge.names }
+        rig.awaitStop()
+
+        assertThat(seen.single())
+            .containsAtLeast("interruptConnection", "stopConnection", "cleanupBridge")
+            .inOrder()
     }
 
     private companion object {

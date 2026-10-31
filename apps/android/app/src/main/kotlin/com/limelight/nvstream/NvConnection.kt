@@ -136,6 +136,10 @@ open class NvConnection(
         get() = checkNotNull(connListener)
 
     fun stop() {
+        // BOREALIS: first, so that a start still on its way ends without a stream that nobody
+        // would stop: the start thread checks it after it got the place and again under the bridge
+        // monitor, which the stop below takes after this (host.launch)
+        cancelLaunch()
         connected = false // BOREALIS: no new keyframe request from here on (stream.keyframe)
         // Interrupt any pending connection. This is thread-safe.
         MoonBridge.interruptConnection()
@@ -766,6 +770,13 @@ open class NvConnection(
         // Moonlight-core is not thread-safe with respect to connection start and stop, so
         // we must not invoke that functionality in parallel.
         synchronized(MoonBridge::class.java) {
+            // BOREALIS: a whole stop() may have come since the check above, and the native start
+            // would reset its interrupt: the start is either complete before the stop takes the
+            // monitor, and the stop then stops it, or it never begins (host.launch)
+            if (launchCancelled) {
+                releasePlace()
+                return
+            }
             // BOREALIS: hold an RTSP failure that collides with another device
             MoonBridge.setupBridge(
                 videoDecoderRenderer,

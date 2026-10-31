@@ -3,7 +3,6 @@ package io.github.magalz.borealis.computerstore
 import android.content.Context
 import android.content.ContextWrapper
 import android.database.Cursor
-import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import androidx.test.core.app.ApplicationProvider
@@ -12,10 +11,12 @@ import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.NvHTTP
+import io.github.magalz.borealis.testing.LimeLogCapture
 import org.json.JSONException
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertThrows
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -29,6 +30,8 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class ComputerDatabaseManagerCharacterizationTest {
+    @get:Rule val log = LimeLogCapture()
+
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val managers = mutableListOf<ComputerDatabaseManager>()
 
@@ -390,14 +393,15 @@ class ComputerDatabaseManagerCharacterizationTest {
     }
 
     @Test
-    fun `a host without a name makes the update throw, and leaves the list as it was`() {
+    fun `a host without a name is refused with a log, and the list stays as it was`() {
         val manager = open()
         manager.updateComputer(details(uuid = "u-1", name = "Kept"))
 
-        assertThrows(SQLiteConstraintException::class.java) {
-            manager.updateComputer(details(uuid = "u-1", name = null))
-        }
+        val refused = runCatching { manager.updateComputer(details(uuid = "u-1", name = null)) }
 
+        assertThat(refused.exceptionOrNull()).isNull()
+        assertThat(refused.getOrNull()).isFalse()
+        assertThat(log.warnings()).containsExactly("Not saving a host that has no name")
         assertThat(manager.getAllComputers().map { it.name }).containsExactly("Kept")
     }
 

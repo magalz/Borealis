@@ -2800,8 +2800,9 @@ class Game :
 
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
         // BOREALIS: the stop interrupts a start in flight, and the interrupted start reports its
-        // stage as failed; that failure is the stop's own, so no port test (the stop waits for the
-        // native library that this thread holds) and no failure on the chrome (leave)
+        // stage as failed; that failure is the stop's own, so no port test (during a native stage
+        // this thread holds the bridge monitor, which the stop waits for) and no failure on the
+        // chrome (leave)
         if (stopRan) return
 
         // BOREALIS: the last frame, copied before the connectivity test; a stage fails after the

@@ -232,6 +232,13 @@ open class NvConnection(
     private fun launchWithRetry(h: NvHTTP, verb: String, appId: Int): LaunchOutcome {
         startStep = verb // BOREALIS: host.failure
         context.listener.launchStarting("resume" == verb) // BOREALIS: host.failure
+        // BOREALIS: a stop or a cancel during /serverinfo, /applist or the connection-type
+        // detection must keep the first request from being sent: a GFE host is never asked again,
+        // and the runner below checks the cancel only for the other hosts. The callers take
+        // CANCELLED as "the user left, nothing to report" (host.launch)
+        if (launchCancelled) {
+            return LaunchOutcome.CANCELLED
+        }
         return LaunchRetries.run(
             LaunchRequest(
                 context.isNvidiaServerSoftware,

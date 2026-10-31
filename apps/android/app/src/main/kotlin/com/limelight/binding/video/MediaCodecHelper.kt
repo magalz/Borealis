@@ -220,6 +220,12 @@ object MediaCodecHelper {
         amlogicDecoderPrefixes.add("c2.amlogic") // Unconfirmed
     }
 
+    // Every public decision starts with this, directly or through isDecoderInList, so a decision
+    // made before initialize throws whatever it would have answered.
+    private fun requireInitialized() {
+        check(initialized) { NOT_INITIALIZED }
+    }
+
     private fun isPowerVR(glRenderer: String): Boolean {
         return glRenderer.lowercase(Locale.getDefault()).contains("powervr")
     }
@@ -394,7 +400,7 @@ object MediaCodecHelper {
     }
 
     private fun isDecoderInList(decoderList: List<String>, decoderName: String): Boolean {
-        check(initialized) { NOT_INITIALIZED }
+        requireInitialized()
 
         for (badPrefix in decoderList) {
             if (decoderName.length >= badPrefix.length) {
@@ -488,6 +494,8 @@ object MediaCodecHelper {
         decoderInfo: MediaCodecInfo,
         tryNumber: Int,
     ): Boolean {
+        requireInitialized()
+
         // Options here should be tried in the order of most to least risky. The decoder will use
         // the first MediaFormat that doesn't fail in configure().
 
@@ -602,6 +610,8 @@ object MediaCodecHelper {
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     @JvmStatic
     fun decoderSupportsFusedIdrFrame(decoderInfo: MediaCodecInfo, mimeType: String): Boolean {
+        requireInitialized()
+
         // If adaptive playback is supported, we can submit new CSD together with a keyframe
         try {
             if (
@@ -675,6 +685,8 @@ object MediaCodecHelper {
 
     @JvmStatic
     fun decoderSupportsRefFrameInvalidationAvc(decoderName: String, videoHeight: Int): Boolean {
+        requireInitialized()
+
         // Reference frame invalidation is broken on low-end Snapdragon SoCs at 1080p.
         if (videoHeight > LOW_END_SNAPDRAGON_MAX_RFI_HEIGHT && isLowEndSnapdragon) {
             return false
@@ -691,6 +703,8 @@ object MediaCodecHelper {
 
     @JvmStatic
     fun decoderSupportsRefFrameInvalidationHevc(decoderInfo: MediaCodecInfo): Boolean {
+        requireInitialized()
+
         // HEVC decoders seem to universally support RFI, but it can have huge latency penalties
         // for some decoders due to the number of references frames being > 1. Old Amlogic
         // decoders are known to have this problem.
@@ -711,6 +725,8 @@ object MediaCodecHelper {
 
     @JvmStatic
     fun decoderSupportsRefFrameInvalidationAv1(decoderInfo: MediaCodecInfo): Boolean {
+        requireInitialized()
+
         // We'll use the same heuristics as HEVC for now
         if (
             decoderSupportsAndroidRLowLatency(decoderInfo, "video/av01") ||
@@ -727,6 +743,8 @@ object MediaCodecHelper {
     @Suppress("ReturnCount")
     @JvmStatic
     fun decoderIsWhitelistedForHevc(decoderInfo: MediaCodecInfo): Boolean {
+        requireInitialized()
+
         //
         // Software decoders are terrible and we never want to use them.
         // We want to catch decoders like:
@@ -772,6 +790,8 @@ object MediaCodecHelper {
     @Suppress("ReturnCount")
     @JvmStatic
     fun isDecoderWhitelistedForAv1(decoderInfo: MediaCodecInfo): Boolean {
+        requireInitialized()
+
         // Google didn't have official support for AV1 (or more importantly, a CTS test) until
         // Android 10, so don't use any decoder before then.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -827,6 +847,8 @@ object MediaCodecHelper {
     @Suppress("LoopWithTooManyJumpStatements")
     @JvmStatic
     fun findFirstDecoder(mimeType: String): MediaCodecInfo? {
+        requireInitialized()
+
         for (codecInfo in getMediaCodecList()) {
             // Skip encoders
             if (codecInfo.isEncoder) {
@@ -861,7 +883,7 @@ object MediaCodecHelper {
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     @JvmStatic
     fun findProbableSafeDecoder(mimeType: String, requiredProfile: Int): MediaCodecInfo? {
-        check(initialized) { NOT_INITIALIZED }
+        requireInitialized()
 
         // Now look for decoders we know are safe
         return try {

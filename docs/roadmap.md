@@ -1221,7 +1221,7 @@ the phase pull request is still to come. The device round has not run; its check
   (S12-09, S12-14, P4, U3, U7a, C3, C17, C19c, C20c, G-M7, R3, R6 and B3).
 - **Batches.** Each batch was an issue and a branch, merged into the phase with a merge commit:
 
-  | Batch | Issue | Entries | Merge |
+  | Batch | Issue | Entries fixed | Merge |
   | --- | --- | --- | --- |
   | E: the stream activity, the audio renderer and `MoonBridge` | #110 | G-K1 to G-K3, G-M1 to G-M4, G-M6, G-S1, A1 to A7, B2 | `87558ae3a` |
   | C: the keyboard, pointer capture, touch and the on-screen controller | #109 | K1 to K5, T1 to T5, G-M7, O1 to O6, O8 to O11 | `6b341d9f3` |
@@ -1234,8 +1234,8 @@ the phase pull request is still to come. The device round has not run; its check
   Wave 2 waited for the batches it couples. G-S2 makes `Game` stop a connection that never
   connected, which is safe only after the S12-09 fix of batch A. B1 changes a constant that batch A's
   `NvConnection` and batch F's renderer read, and C5 changes a constructor that batch E's `Game`
-  calls. The phase also has three test commits that fit one batch's change to another batch's tests
-  (`40caf3011`, `28f474259` and `025391275`) and one comment fix (`5c364487c`).
+  calls. The phase also has two test commits that fit one batch's change to another batch's tests
+  (`40caf3011` and `28f474259`), a style commit (`025391275`) and one comment fix (`5c364487c`).
 - **Owner choices.** How each of these entries is fixed is a product choice, approved with the
   triage on 2026-10-30, unless a date says otherwise:
   - G-M7: a two-finger trackpad tap is a right click whichever finger lifts first.
@@ -1248,6 +1248,7 @@ the phase pull request is still to come. The device round has not run; its check
     client from every host.
   - U3: the trigger motors are zeroed at stream end too, not only when the USB service stops.
   - A5: a second `cleanup` of the audio renderer does nothing.
+  - C9: recorded only, beside the intended entries: the defect it describes does not exist.
   - U2: fixed with U1 (2026-10-30).
   - B4: the video and audio start log and clear a Java exception, and return no failure, because the
     vendored typedefs return `void` (2026-10-31). Sprint 19 looks at it again.
@@ -1260,13 +1261,17 @@ the phase pull request is still to come. The device round has not run; its check
   was changed in a `test:` commit that failed on its assertions, then the `fix:` commit. The merge
   review of batch F noted two exceptions in follow-ups of its reviews: a test that came after its
   change (`b87367818`, R5) and a `refactor:` commit that moves a read (`d18cf7545`). A deletion
-  needed no failing test, but its commit has the compiler proof and the check for callable
+  needed no failing test; most deletion commits have the compiler proof and the check for callable
   references, Compose, JNI, the manifest, reflection and Hilt. A race or memory-visibility fix got a
   deterministic test where one could be built (a latch, a fake executor or a throwing fake);
-  otherwise the commit names the exemption (S12-13, S12-19, U4, A7, B4 and the order check of the
-  G-S2 bridge flag). The batches ran as separate sessions, three at a time, each with its own
-  implementer and reviewer, and up to two fix rounds a task. Before each merge, a fresh reviewer
-  checked the batch entry by entry against its brief.
+  otherwise the commit names the exemption, for example S12-13, S12-19, U4, A7, R8, the gap
+  between the acquire and the held place of S12-09, and the order check of the G-S2 bridge flag.
+  Other commits name an exemption for a change with nothing to test: B4 (C that no unit test runs),
+  U9 (empty framework bodies), P5 (no change of behaviour) and C16 (a comment). The batches ran as
+  separate sessions, three at a time, each with its own implementer and reviewer, and up to two fix
+  rounds a task. Each batch also got a fresh review, entry by entry against its brief: before the
+  merge for A, D, F and B, and after it for E and C, which were merged before the owner asked for
+  that review on 2026-10-31.
 - **Phase gate.** At `5c364487c`, with the six batches merged: `spotlessCheck detekt lint
   testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis` passed in
   11 min 29 s, with 4,431 `:app` tests and no failure.
@@ -1575,8 +1580,8 @@ facts of both items and added the third item and the open decision. See the
   trigger sent is the bitwise OR of their values, not the larger one.
 - **Weak rumble on the USB drivers.** From Sprint 16 (C21, the merge review of #108). Sprint 16 keeps
   a weak motor above zero in `ControllerHandler`, but the USB drivers still shift the motor values
-  down by 8 bits (`driver/XboxOneController.kt` and `driver/Xbox360Controller.kt`), so a motor below
-  256 still sends 0 to a USB pad.
+  down, by 8 bits in `driver/Xbox360Controller.kt` and by 9 bits in `driver/XboxOneController.kt`,
+  so a motor below 256 (Xbox 360) or 512 (Xbox One) still sends 0 to a USB pad.
 - **The cost of the stop on stuck USB pads.** From Sprint 16 (U3, the merge review of #108). To zero
   the motors at stream end, `ControllerHandler.stop()` makes up to two bulk writes of 100 ms each for
   every USB pad that does not answer. This is new with the U3 fix.
@@ -2032,7 +2037,8 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
     for a known host.
   - `nvstream/http/ComputerDetails.kt`: `AddressTuple` is mutable, and its `hashCode`
     depends on the mutable fields. A latent hazard, not a live bug. **S12-02, Sprint 16:** fixed
-    (#112). The port is final, and an update replaces the remote tuple.
+    (#112). The port is final, and an update with an external port above 0 replaces the remote
+    tuple instead of changing it in place.
   - `HeldStageFailures.kt` (`io/github/magalz/borealis/`): does not forward
     `launchRetrying`, `launchStarting` or `launchConflict`. Unreachable today. **S12-03,
     Sprint 16:** fixed (#111). It forwards the three.
@@ -2147,8 +2153,8 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
     the first thread. `lastSuccessfulPollMs` is read under a different lock than the one it is
     written under. **S12-19, Sprint 16:** fixed (#112). A second `start` does nothing, and the
     field is `@Volatile`.
-  - `computers/ComputerManagerService.kt`: `ReachabilityTuple` is dead code. It is kept.
-    **S12-20, Sprint 16:** deleted (#112).
+  - `computers/ComputerManagerService.kt`: `ReachabilityTuple` is dead code. The conversion kept
+    it. **S12-20, Sprint 16:** deleted (#112).
 - **(c) For SecOps (Sprint 19).** The security observations of the conversion are listed
   under [Sprint 19](#sprint-19-secops), one line each, with their files.
 - **(d) From the Sprint 12 device round (2026-10-23).**
@@ -2279,7 +2285,7 @@ took item (b), and each of its entries now ends with its triage id and what Spri
       found that it gives no packet out of range.
     - A blocked `bulkTransfer` ignores `interrupt()`, so after `stop()` the input thread lingers
       up to the 3 s timeout. **U8, Sprint 16:** recorded, no change (#108). Not a defect: `stop()`
-      never waits for the thread, which ends when the connection is closed or at the timeout.
+      never waits for the thread, and a read is bounded by the 3 s timeout.
     - `onCreate`, `onDestroy` and `onReceive` of the service do not call `super`. **U9,
       Sprint 16:** fixed (#108). `onCreate` and `onDestroy` call `super`; `onReceive` has none to
       call.
@@ -2493,7 +2499,7 @@ test is named, none pins the item.
       `SupportJavaVisibleApiTest`. A commit that drops an annotation changes or removes the
       matching test in the same commit.
     - Other tests use reflection too (`ControllerHandlerRig` and `OscRig`).
-- **(b) Bugs and oddities found during the conversion, by area.** Each one is kept as it was.
+- **(b) Bugs and oddities found during the conversion, by area.** Each one was kept as it was.
   - **Keys** (`Game.kt`):
     - `onWindowFocusChanged` clears `modifierFlags` but not `specialKeyCode` and
       `waitingForAllModifiersUp`. After a focus change the next key can quit, toggle the grab or
@@ -2534,7 +2540,8 @@ test is named, none pins the item.
       Sprint 16:** closed. The `return false` is reachable for other sources.
     - `getStreamViewRelativeNormalizedXY` divides by the width and the height of the stream view
       without a guard. No test pins it. **G-M6, Sprint 16:** fixed (#110). No pen or touch event
-      is sent while the stream view has no size.
+      is sent while the stream view has no size (the touch path is parked, so only the pen half
+      acts today).
     - On the trackpad, a tap of two fingers presses the right button only when the second finger
       lifts first, and it does so at that lift. When the first finger lifts first, nothing is
       sent. Pinned by `FingerTouchTest`, "when the second of two fingers lifts, the first goes on
@@ -2580,9 +2587,11 @@ test is named, none pins the item.
       (a deadlock). The closest pin is `RendererThreadsTest`, "a thread that is interrupted while
       it waits for the others gives up the recovery", which covers the interrupt path only.
       **R3, Sprint 16:** fixed (#113). The triage found the trigger of the hang: a recovery step
-      that throws skipped the wake-up, so the other threads waited until a stop. Now the crash is
-      reported before the throw, the waiting threads wake, and the renderer stops (`stopping`
-      stays true, so a woken thread does not touch the released decoder).
+      that throws skipped the wake-up, so the other threads waited until a stop. Now the waiting
+      threads wake and the renderer stops (`stopping` stays true, so a woken thread does not touch
+      the released decoder). The crash of an `IllegalStateException` is reported before the throw,
+      as before; another exception that escapes (a null pointer, a `CryptoException` or a wrapped
+      `IOException`) is not reported that way, and stays a loud uncaught failure.
     - `VideoStats.add` takes a minimum host latency of 0 when the newer window has none. Pinned
       by `RendererStatsTest`, "the lowest host latency reads zero when the newer window has none".
       **R4, Sprint 16:** fixed (#113). A window without host latency does not lower the lowest.

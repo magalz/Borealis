@@ -2546,7 +2546,8 @@ Steps:
     - Look at the D-pad. Expected: its four lines start at the same distance from the centre (an
       `owner check`).
     - Touch a stick once, right after the stream starts. Expected: it is not taken for a double
-      click. Hold a button for more than 3 s. Expected: nothing happens at 3 s, and the release
+      click. This is a smoke check only: the window that O3 fixed is at an uptime of 0, which a
+      device does not reach. Hold a button for more than 3 s. Expected: nothing happens at 3 s, and the release
       reaches the host.
     - Press Y while a pad is on the same controller number. Expected: Y works, and the pad's paddles
       and touchpad are not changed.
@@ -2566,8 +2567,8 @@ Steps:
     - Weak rumble: in a game with light rumble, or the host's controller test, on a pad that rumbles
       through the phone's fallback or through Android. Expected: a weak rumble is felt, not dropped.
     - Battery: on a pad for which Android reports a battery (`dumpsys input`), with the host making a
-      DualShock 4, a DualSense or a Switch Pro Controller. Expected: the battery level reaches the PC
-      (Steam or the Windows settings), rounded, from 0 to 100.
+      DualShock 4, a DualSense or a Switch Pro Controller. Expected: the battery level reaches the PC,
+      rounded, from 0 to 100 (the owner picks where to read it on the PC).
     - A device change: hold a button and a trigger while Android reports a change of the pad (a
       change of the same device, not a removal and a new pad; how to cause one on these pads is
       open, so note what was tried). Expected: the host does not see the held button released by the

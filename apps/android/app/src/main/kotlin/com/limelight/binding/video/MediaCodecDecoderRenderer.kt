@@ -167,6 +167,7 @@ class MediaCodecDecoderRenderer(
     private val globalVideoStats = VideoStats()
 
     private var lastTimestampUs = 0L
+    private var gotFrameNumber = false
     private var lastFrameNumber = 0
     private var baseTimestampUs = 0L
     private var refreshRate = 0
@@ -1535,8 +1536,10 @@ class MediaCodecDecoderRenderer(
             return MoonBridge.DR_OK
         }
 
-        if (lastFrameNumber == 0) {
+        if (!gotFrameNumber) {
+            // The first frame, whatever its number (it may be 0), starts the first window
             activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
+            gotFrameNumber = true
         } else if (frameNumber != lastFrameNumber && frameNumber != lastFrameNumber + 1) {
             // We can receive the same "frame" multiple times if it's an IDR frame.
             // In that case, each frame start NALU is submitted independently.

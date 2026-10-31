@@ -288,37 +288,46 @@ class ControllerHandler(
         // If this device sent data as a gamepad, zero the values before removing.
         // We must do this after clearing the currentControllers entry so this
         // causes the device to be removed on the server PC. A pad that only shares its number
-        // leaves the number to the others: the zero packet would drop what they hold.
-        if (
-            context.assignedControllerNumber &&
-                (context.reservedControllerNumber || !sharesControllerNumber(context))
-        ) {
-            conn.sendControllerInput(
-                context.controllerNumber,
-                getActiveControllerMask(),
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            )
+        // leaves the number to the others: the zero packet would drop what they hold, so they
+        // send their state without what this pad held.
+        if (context.assignedControllerNumber) {
+            val sharer = if (context.reservedControllerNumber) null else numberSharer(context)
+            if (sharer == null) {
+                conn.sendControllerInput(
+                    context.controllerNumber,
+                    getActiveControllerMask(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                )
+            } else {
+                // The context leaves the lists after this call, so the fusion still reads it
+                synchronized(inputLock) {
+                    context.clearPacketState()
+                    if (!captured) {
+                        transmitControllerInputLocked(sharer)
+                    }
+                }
+            }
         }
     }
 
-    // Whether another pad is on the controller number of the context. The default context is not
+    // Another pad on the controller number of the context, or null. The default context is not
     // one: it is the on-screen controller, which is always on number 0.
-    private fun sharesControllerNumber(context: GenericControllerContext): Boolean {
+    private fun numberSharer(context: GenericControllerContext): GenericControllerContext? {
         fun isOnItsNumber(other: GenericControllerContext) =
             other !== context &&
                 other.assignedControllerNumber &&
                 other.controllerNumber == context.controllerNumber
 
-        var shares = false
-        inputDeviceContexts.forEachValue { shares = shares || isOnItsNumber(it) }
-        usbDeviceContexts.forEachValue { shares = shares || isOnItsNumber(it) }
-        return shares
+        var sharer: GenericControllerContext? = null
+        inputDeviceContexts.forEachValue { sharer = sharer ?: it.takeIf { c -> isOnItsNumber(c) } }
+        usbDeviceContexts.forEachValue { sharer = sharer ?: it.takeIf { c -> isOnItsNumber(c) } }
+        return sharer
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
@@ -1240,17 +1249,10 @@ class ControllerHandler(
             }
         }
 
-        context.inputMap = 0
-        context.leftTrigger = 0
-        context.rightTrigger = 0
-        context.leftStickX = 0
-        context.leftStickY = 0
-        context.rightStickX = 0
-        context.rightStickY = 0
+        context.clearPacketState()
         context.mouseEmulationLastInputMap = 0
         context.leftStickMotion.reset()
         context.rightStickMotion.reset()
-        context.tapButtons = 0
         context.menuChord.reset()
         context.quitCombo.reset()
         mainThreadHandler.removeCallbacks(context.menuChordCheck)
@@ -3453,6 +3455,18 @@ class ControllerHandler(
         // separate key events and have a Select button. A USB pad reports both in one report.
         open fun holdsLonePress(): Boolean {
             return false
+        }
+
+        // No button held, no trigger or stick moved, no short press of a chord pending
+        fun clearPacketState() {
+            inputMap = 0
+            leftTrigger = 0
+            rightTrigger = 0
+            leftStickX = 0
+            leftStickY = 0
+            rightStickX = 0
+            rightStickY = 0
+            tapButtons = 0
         }
 
         // The buttons the PC gets: not the ones the chord holds back, and the short press of an

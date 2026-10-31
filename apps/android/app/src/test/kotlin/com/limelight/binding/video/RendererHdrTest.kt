@@ -4,7 +4,9 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes `setHdrMode`: the HDR static info that goes into the format of the codec, the
@@ -63,6 +65,18 @@ class RendererHdrTest : RendererTestBase() {
         // The codec was made with the static info, so the first frame meets no restart.
         assertThat(renderer.submit(pFrame(1))).isEqualTo(MoonBridge.DR_OK)
         assertThat(events<CodecEvent.Stopped>()).isEmpty()
+    }
+
+    @Test
+    fun `new metadata after the renderer was told to stop restarts nothing`() {
+        val renderer = ready()
+        renderer.prepareForStop()
+
+        renderer.setHdrMode(true, metadata())
+
+        // A restart marked now would never be done: the threads that meet it would wait for it.
+        val recovery = ReflectionHelpers.getField<AtomicInteger>(renderer, "codecRecoveryType")
+        assertThat(recovery.get()).isEqualTo(0)
     }
 
     @Test

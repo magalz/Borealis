@@ -2358,7 +2358,11 @@ class ControllerHandler(
         }
 
         inputDeviceContexts.forEachValue { deviceContext ->
-            if (deviceContext.controllerNumber == controllerNumber) {
+            // A pad that has sent no input has no controller number yet, and answers to none
+            if (
+                deviceContext.assignedControllerNumber &&
+                    deviceContext.controllerNumber == controllerNumber
+            ) {
                 foundMatchingDevice = true
 
                 deviceContext.lowFreqMotor = lowFreqMotor
@@ -2454,7 +2458,10 @@ class ControllerHandler(
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             inputDeviceContexts.forEachValue { deviceContext ->
-                if (deviceContext.controllerNumber == controllerNumber) {
+                if (
+                    deviceContext.assignedControllerNumber &&
+                        deviceContext.controllerNumber == controllerNumber
+                ) {
                     deviceContext.leftTriggerMotor = leftTrigger
                     deviceContext.rightTriggerMotor = rightTrigger
 
@@ -2597,7 +2604,10 @@ class ControllerHandler(
         while (i < inputDeviceContexts.size) {
             val deviceContext = inputDeviceContexts.valueAt(i)
 
-            if (deviceContext.controllerNumber == controllerNumber) {
+            if (
+                deviceContext.assignedControllerNumber &&
+                    deviceContext.controllerNumber == controllerNumber
+            ) {
                 // Store the desired report rate even if we don't have sensors. In some cases,
                 // input devices can be reconfigured at runtime which results in a change where
                 // sensors disappear and reappear. By storing the desired report rate, we can
@@ -2678,7 +2688,11 @@ class ControllerHandler(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             inputDeviceContexts.forEachValue { deviceContext ->
                 // Ignore input devices without an RGB LED
-                if (deviceContext.controllerNumber == controllerNumber && deviceContext.hasRgbLed) {
+                if (
+                    deviceContext.assignedControllerNumber &&
+                        deviceContext.controllerNumber == controllerNumber &&
+                        deviceContext.hasRgbLed
+                ) {
                     // Convert the RGB components into the integer value that LightState uses
                     deviceContext.ledArgbValue =
                         OPAQUE_ALPHA or

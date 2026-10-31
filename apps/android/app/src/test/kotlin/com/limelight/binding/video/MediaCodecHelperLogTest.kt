@@ -423,10 +423,12 @@ class MediaCodecHelperLogTest : MediaCodecHelperTestBase() {
             logged { helper.findProbableSafeDecoder("video/avc", high) }
         }
         rows.check(
-            "a decoder that throws falls back to the first decoder",
+            "a decoder that throws is skipped in both rounds",
             infos(
                 "Examining decoder capabilities of c2.vendor.buggy (round 1)",
-                "First decoder choice is c2.vendor.buggy",
+                "Skipping decoder that throws for its capabilities: c2.vendor.buggy",
+                "Examining decoder capabilities of c2.vendor.buggy (round 2)",
+                "Skipping decoder that throws for its capabilities: c2.vendor.buggy",
             ),
         ) {
             val helper = helper()

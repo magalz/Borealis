@@ -492,10 +492,12 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
     }
 
     @Test
-    fun `a decoder that throws for its capabilities sends the search to the first decoder`() {
+    fun `a decoder that throws for its capabilities is skipped and the search goes on`() {
+        val high = CodecProfileLevel.AVCProfileHigh
+        val baseline = CodecProfileLevel.AVCProfileBaseline
         val rows = Rows()
 
-        rows.check("the first decoder is the one that throws", "c2.vendor.buggy") {
+        rows.check("the first decoder is the one that throws", "c2.vendor.low") {
             val helper = helper()
             installCodecs(
                 codec("c2.vendor.buggy") { brokenCapabilities = true },
@@ -503,7 +505,7 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
             )
             probable(helper)
         }
-        rows.check("a later decoder throws and the first one is taken", "c2.vendor.plain") {
+        rows.check("a later decoder throws and the one after it has the feature", "c2.vendor.low") {
             val helper = helper()
             installCodecs(
                 codec("c2.vendor.plain"),
@@ -532,7 +534,7 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
             )
             probable(helper)
         }
-        rows.check("the fallback skips blacklisted decoders", "c2.vendor.avc") {
+        rows.check("a decoder that throws is no fallback when the others are blacklisted", null) {
             val helper = helper()
             installCodecs(
                 codec("OMX.google.h264.decoder"),
@@ -540,10 +542,42 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
             )
             probable(helper)
         }
-        rows.check("the fallback does not look at the profile", "c2.vendor.buggy") {
+        rows.check("the only decoder throws", null) {
             val helper = helper()
             installCodecs(codec("c2.vendor.buggy") { brokenCapabilities = true })
-            probable(helper, profile = CodecProfileLevel.AVCProfileHigh)
+            probable(helper, profile = high)
+        }
+        rows.check("a decoder that throws is asked again in the second round", "c2.vendor.plain") {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+                codec("c2.vendor.plain"),
+            )
+            probable(helper)
+        }
+        rows.check(
+            "the search keeps the required profile after a decoder that throws",
+            "c2.vendor.high",
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+                codec("c2.vendor.baseline") { profiles = listOf(baseline) },
+                codec("c2.vendor.high") { profiles = listOf(high) },
+            )
+            probable(helper, profile = high)
+        }
+        rows.check(
+            "a decoder that throws between two without the profile still ends on the third",
+            "c2.vendor.high",
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.baseline") { profiles = listOf(baseline) },
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+                codec("c2.vendor.high") { profiles = listOf(high) },
+            )
+            probable(helper, profile = high)
         }
 
         rows.verify()

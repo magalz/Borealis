@@ -24,8 +24,8 @@ import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes what `PreferenceConfiguration` writes while it reads, and the migrations and
- * overrides behind those writes: the legacy resolution, frame rate, audio and frame pacing keys,
- * the Android 12 motion sensor override, the Shield firmware check and the streaming reset. A
+ * overrides behind those writes: the legacy resolution, frame rate and frame pacing keys, the
+ * Android 12 motion sensor override, the Shield firmware check and the streaming reset. A
  * recording context logs each edit with its keys, values and order, and whether it was applied or
  * committed, so a conversion that changes any of those fails here.
  */
@@ -56,28 +56,23 @@ class PreferenceConfigurationMigrationTest {
     private val log: MutableList<String>
         get() = recording.log
 
+    // The legacy 5,1 surround switch is migrated at the start of the app, by `LegacyMigrations`
+    // (see `LegacyMigrationsTest`). The stream start only reads the audio configuration.
     @Test
-    fun `a legacy 5,1 surround switch that is on becomes the audio configuration 51 and is removed`() {
+    fun `a legacy 5,1 surround switch that is on is neither read nor rewritten at the stream start`() {
         preferences.edit().putBoolean("checkbox_51_surround", true).commit()
 
         val config = read()
 
-        assertThat(log)
-            .containsExactly(
-                "edit",
-                "remove(checkbox_51_surround)",
-                "putString(list_audio_config=51)",
-                "apply()",
-            )
-            .inOrder()
-        assertThat(preferences.contains("checkbox_51_surround")).isFalse()
-        assertThat(preferences.getString("list_audio_config", null)).isEqualTo("51")
+        assertThat(log).isEmpty()
+        assertThat(preferences.getBoolean("checkbox_51_surround", false)).isTrue()
+        assertThat(preferences.contains("list_audio_config")).isFalse()
         assertThat(config.audioConfiguration)
-            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_STEREO)
     }
 
     @Test
-    fun `a legacy 5,1 surround switch that is on replaces a stored audio configuration`() {
+    fun `a legacy 5,1 surround switch that is on does not replace a stored audio configuration`() {
         preferences
             .edit()
             .putBoolean("checkbox_51_surround", true)
@@ -87,12 +82,13 @@ class PreferenceConfigurationMigrationTest {
         val config = read()
 
         assertThat(config.audioConfiguration)
-            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
-        assertThat(preferences.getString("list_audio_config", null)).isEqualTo("51")
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_71_SURROUND)
+        assertThat(preferences.getString("list_audio_config", null)).isEqualTo("71")
+        assertThat(log).isEmpty()
     }
 
     @Test
-    fun `a legacy 5,1 surround switch that is off writes nothing and stays in the file`() {
+    fun `a legacy 5,1 surround switch that is off is left alone at the stream start`() {
         preferences.edit().putBoolean("checkbox_51_surround", false).commit()
 
         val config = read()
@@ -313,7 +309,7 @@ class PreferenceConfigurationMigrationTest {
 
     @Test
     @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
-    fun `the edits of one read come in the order audio, resolution and frame rate, motion, frame pacing`() {
+    fun `the edits of one read come in the order resolution and frame rate, motion, frame pacing`() {
         preferences
             .edit()
             .putBoolean("checkbox_51_surround", true)
@@ -325,10 +321,6 @@ class PreferenceConfigurationMigrationTest {
 
         assertThat(log)
             .containsExactly(
-                "edit",
-                "remove(checkbox_51_surround)",
-                "putString(list_audio_config=51)",
-                "apply()",
                 "edit",
                 "remove(list_resolution_fps)",
                 "putString(list_resolution=1280x720)",
@@ -360,10 +352,6 @@ class PreferenceConfigurationMigrationTest {
         assertThat(log)
             .containsExactly(
                 "edit",
-                "remove(checkbox_51_surround)",
-                "putString(list_audio_config=51)",
-                "apply()",
-                "edit",
                 "putString(list_resolution=1920x1080)",
                 "apply()",
                 "edit",
@@ -381,7 +369,6 @@ class PreferenceConfigurationMigrationTest {
     fun `a second read finds the migration done and writes nothing`() {
         preferences
             .edit()
-            .putBoolean("checkbox_51_surround", true)
             .putString("list_resolution_fps", "4K30")
             .putBoolean("checkbox_disable_frame_drop", true)
             .commit()
@@ -395,8 +382,6 @@ class PreferenceConfigurationMigrationTest {
             .containsExactly(3840, 2160, 30)
             .inOrder()
         assertThat(config.framePacing).isEqualTo(PreferenceConfiguration.FRAME_PACING_BALANCED)
-        assertThat(config.audioConfiguration)
-            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
     }
 
     @Test

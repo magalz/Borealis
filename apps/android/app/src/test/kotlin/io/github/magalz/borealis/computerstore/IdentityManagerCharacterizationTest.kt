@@ -189,15 +189,18 @@ class IdentityManagerCharacterizationTest {
 
     @Test
     fun `the warning about an id that is not hex holds no part of the id`() {
-        val id = "Zq#Zq#Zq#Zq#Zq#Z"
+        // Sixteen different characters, none of them in the text of the warning, so that a piece of
+        // the id of any length, one character included, shows in the warning.
+        val id = "Zq#Wj@Yc%Xb!Rm*G"
         writeIdFile(id)
 
-        IdentityManager(context)
+        val identity = IdentityManager(context)
 
+        assertThat(identity.uniqueId).isEqualTo(id)
         assertThat(log.warnings()).hasSize(1)
         // The id is the identity of the client toward every host: not even a piece of it.
         val warning = log.warnings().single()
-        assertThat(id.windowed(4).filter { it in warning }).isEmpty()
+        assertThat(id.filter { it in warning }).isEmpty()
     }
 
     @Test
@@ -371,6 +374,9 @@ class IdentityManagerCharacterizationTest {
 
         assertThat(identity.uniqueId).matches(generated.pattern)
         assertThat(files.outputs.single().closed).isTrue()
+        // The text was flushed before the close failed: the file holds the id, and the log still
+        // does not say so.
+        assertThat(idFile.readText()).isEqualTo(identity.uniqueId)
         assertThat(lines())
             .containsExactly(
                 "INFO: Reading UID from disk",

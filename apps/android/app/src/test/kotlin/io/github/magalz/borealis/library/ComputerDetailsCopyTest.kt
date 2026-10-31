@@ -51,21 +51,21 @@ class ComputerDetailsCopyTest {
     }
 
     @Test
-    fun `the address tuples of a snapshot are not the ones that the service mutates`() {
+    fun `the address tuples of a snapshot are not the ones that can still be changed`() {
         val source = full()
 
         val copy = source.snapshot()
-        source.activeAddress!!.port = 1
-        source.localAddress!!.port = 2
-        source.remoteAddress!!.port = 3
-        source.manualAddress!!.port = 4
-        source.ipv6Address!!.port = 5
+        source.activeAddress!!.address = "changed-1.local"
+        source.localAddress!!.address = "changed-2.local"
+        source.remoteAddress!!.address = "changed-3.local"
+        source.manualAddress!!.address = "changed-4.local"
+        source.ipv6Address!!.address = "changed-5.local"
 
-        assertThat(copy.activeAddress!!.port).isEqualTo(47989)
-        assertThat(copy.localAddress!!.port).isEqualTo(47989)
-        assertThat(copy.remoteAddress!!.port).isEqualTo(47989)
-        assertThat(copy.manualAddress!!.port).isEqualTo(47989)
-        assertThat(copy.ipv6Address!!.port).isEqualTo(47989)
+        assertThat(copy.activeAddress).isEqualTo(AddressTuple("192.168.1.5", 47989))
+        assertThat(copy.localAddress).isEqualTo(AddressTuple("127.0.0.1", 47989))
+        assertThat(copy.remoteAddress).isEqualTo(AddressTuple("203.0.113.9", 47989))
+        assertThat(copy.manualAddress).isEqualTo(AddressTuple("pc.local", 47989))
+        assertThat(copy.ipv6Address).isEqualTo(AddressTuple("fe80::1", 47989))
     }
 
     @Test

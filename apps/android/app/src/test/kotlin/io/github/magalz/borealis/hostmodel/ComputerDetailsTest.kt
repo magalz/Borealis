@@ -345,15 +345,44 @@ class ComputerDetailsTest {
     }
 
     @Test
-    fun `an update without a remote address moves the known remote port to the external port`() {
+    fun `an update without a remote address replaces the known one with the external port`() {
         val details = full()
         val known = details.remoteAddress
 
         details.update(ComputerDetails().also { it.externalPort = 50000 })
 
-        assertThat(details.remoteAddress).isSameInstanceAs(known)
-        assertThat(known!!.port).isEqualTo(50000)
-        assertThat(known.address).isEqualTo("203.0.113.9")
+        assertThat(details.remoteAddress).isNotSameInstanceAs(known)
+        assertThat(details.remoteAddress).isEqualTo(tuple("203.0.113.9", 50000))
+        assertThat(known).isEqualTo(tuple("203.0.113.9", 47990))
+    }
+
+    @Test
+    fun `an update leaves a remote address that a caller holds, in a set or as a key, as it was`() {
+        val details = full()
+        val known = details.remoteAddress!!
+        val inSet = hashSetOf(known)
+        val asKey = hashMapOf(known to "poll")
+
+        details.update(ComputerDetails().also { it.externalPort = 50000 })
+
+        assertThat(known.port).isEqualTo(47990)
+        assertThat(inSet).contains(known)
+        assertThat(asKey).containsKey(known)
+        assertThat(inSet).doesNotContain(details.remoteAddress)
+    }
+
+    @Test
+    fun `an update with an external port that is not positive leaves the known remote address`() {
+        for (port in listOf(-1, Int.MIN_VALUE)) {
+            val details = full()
+            val known = details.remoteAddress
+
+            details.update(ComputerDetails().also { it.externalPort = port })
+
+            assertThat(details.remoteAddress).isSameInstanceAs(known)
+            assertThat(known!!.port).isEqualTo(47990)
+            assertThat(details.externalPort).isEqualTo(port)
+        }
     }
 
     @Test

@@ -227,13 +227,17 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
     }
 
     // The end of the agent: it stops discovery, unregisters its callbacks and frees its executor,
-    // and does not discover again. Calling it again does nothing.
+    // and does not discover again. Calling it again does nothing. The executor is shut down even
+    // when the stop throws, or its thread would outlive the agent.
     override fun close() {
-        synchronized(listenerLock) {
-            closed = true
-            stopDiscovery()
+        try {
+            synchronized(listenerLock) {
+                closed = true
+                stopDiscovery()
+            }
+        } finally {
+            executor.shutdown()
         }
-        executor.shutdown()
     }
 
     private companion object {

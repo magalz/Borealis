@@ -287,14 +287,19 @@ object MediaCodecHelper {
             return
         }
 
+        // What the context says is read before the first list changes: the reads can throw, and a
+        // retry after an exception must not find the entries of the failed run in the lists.
+        val isAmazonDevice =
+            context.packageManager.hasSystemFeature("amazon.hardware.fire_tv") ||
+                Build.MANUFACTURER.equals("Amazon", ignoreCase = true)
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val configInfo = activityManager.deviceConfigurationInfo
+
         // Older Sony ATVs (SVP-DTV15) have broken MediaTek codecs (decoder hangs after rendering
         // the first frame). I know the Fire TV 2 and 3 works, so I'll whitelist Amazon devices
         // which seem to actually be tested. We still have to check Build.MANUFACTURER to catch
         // Amazon Fire tablets.
-        if (
-            context.packageManager.hasSystemFeature("amazon.hardware.fire_tv") ||
-                Build.MANUFACTURER.equals("Amazon", ignoreCase = true)
-        ) {
+        if (isAmazonDevice) {
             // HEVC and RFI have been confirmed working on Fire TV 2, Fire TV Stick 2, Fire TV 4K
             // Max, Fire HD 8 2020, and Fire HD 8 2022 models.
             //
@@ -323,8 +328,6 @@ object MediaCodecHelper {
             refFrameInvalidationHevcPrefixes.add("c2.amlogic")
         }
 
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val configInfo = activityManager.deviceConfigurationInfo
         if (configInfo.reqGlEsVersion != ConfigurationInfo.GL_ES_VERSION_UNDEFINED) {
             LimeLog.info("OpenGL ES version: " + configInfo.reqGlEsVersion)
 

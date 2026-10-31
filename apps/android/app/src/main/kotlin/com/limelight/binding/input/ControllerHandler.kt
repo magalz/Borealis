@@ -193,9 +193,28 @@ class ControllerHandler(
         val context = inputDeviceContexts.get(deviceId)
         if (context != null) {
             LimeLog.info("Removed controller: ${context.name} ($deviceId)")
+
+            // destroy() takes the listeners away
+            val reportedMotion = context.gyroListener != null || context.accelListener != null
             releaseControllerNumber(context)
             context.destroy()
             inputDeviceContexts.remove(deviceId)
+
+            if (reportedMotion) {
+                passMotionToSharers(context)
+            }
+        }
+    }
+
+    // The pads that share the number of a pad that reported its motion hold the rates the host
+    // asked for and no listener, and the host does not ask again: their enable runnable picks the
+    // next source. It runs at once: the second that enableSensors() waits is for a device that
+    // changed, and these did not.
+    private fun passMotionToSharers(removed: InputDeviceContext) {
+        inputDeviceContexts.forEachValue {
+            if (it.assignedControllerNumber && it.controllerNumber == removed.controllerNumber) {
+                backgroundThreadHandler.post(it.enableSensorRunnable)
+            }
         }
     }
 

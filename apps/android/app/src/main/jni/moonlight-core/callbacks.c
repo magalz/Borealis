@@ -115,6 +115,10 @@ int BridgeDrSetup(int videoFormat, int width, int height, int redrawRate, void* 
     err = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeDrSetupMethod, videoFormat, width, height, redrawRate);
     if ((*env)->ExceptionCheck(env)) {
         // This is called on a Java thread, so it's safe to return
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeDrSetup: the Java call threw an exception\n");
         return -1;
     }
     else if (err != 0) {
@@ -229,6 +233,10 @@ int BridgeArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusCon
     err = (*env)->CallStaticIntMethod(env, GlobalBridgeClass, BridgeArInitMethod, audioConfiguration, opusConfig->sampleRate, opusConfig->samplesPerFrame);
     if ((*env)->ExceptionCheck(env)) {
         // This is called on a Java thread, so it's safe to return
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeArInit: the Java call threw an exception\n");
         err = -1;
     }
     if (err == 0) {
@@ -241,6 +249,12 @@ int BridgeArInit(int audioConfiguration, POPUS_MULTISTREAM_CONFIGURATION opusCon
                                                   &err);
         if (Decoder == NULL) {
             (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeArCleanupMethod);
+            if ((*env)->ExceptionCheck(env)) {
+                // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+                (*env)->ExceptionDescribe(env);
+                (*env)->ExceptionClear(env);
+                BridgeClLogMessage("BridgeArInit: the Java call threw an exception\n");
+            }
             return -1;
         }
 

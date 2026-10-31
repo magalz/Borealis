@@ -971,6 +971,12 @@ class ComputerManagerService : Service() {
             "LoopWithTooManyJumpStatements",
         )
         fun start() {
+            // A poller that runs is not started again: the Java started a second thread, and stop
+            // ended only the last one, so the first polled for good.
+            if (thread != null) {
+                return
+            }
+
             val polling =
                 object : Thread() {
                     override fun run() {

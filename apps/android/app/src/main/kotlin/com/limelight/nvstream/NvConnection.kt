@@ -713,6 +713,10 @@ open class NvConnection(
             }
             context.listener.stageComplete(appName)
         } catch (e: HostHttpResponseException) {
+            // BOREALIS: the user left during the request, nothing to report
+            if (launchCancelled) {
+                return
+            }
             // BOREALIS: the log masks addresses; the screen never shows the exception text
             StartFailureLog.failed(startStep, e)
             recordStartFailure(e) // BOREALIS: host.failure

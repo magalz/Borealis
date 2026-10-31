@@ -2743,7 +2743,7 @@ class Game :
     }
 
     // BOREALIS: stops the connection and runs [done] once it has stopped, from the thread that
-    // stopped it; at once when no connection runs (leave)
+    // stopped it; a connection that never connected is stopped too (leave)
     internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
 
     private fun stopConnection(done: Runnable? = null) {
@@ -2757,32 +2757,33 @@ class Game :
 
             // Update GameManager state to indicate we're no longer in game
             UiHelper.notifyStreamEnded(this)
-
-            // Stop may take a few hundred ms to do some network I/O to tell
-            // the server we're going away and clean up. Let it run in a separate
-            // thread to keep things smooth for the UI. Inside moonlight-common,
-            // we prevent another thread from starting a connection before and
-            // during the process of stopping this one.
-            object : Thread() {
-                    override fun run() {
-                        val stopStarted = System.nanoTime() // BOREALIS: leave log
-                        conn.stop()
-                        BorealisLog.i(
-                            LogTag.APP,
-                            "connection stop done",
-                            "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
-                        )
-                        tellConnectionStopped()
-                        done?.run()
-                    }
-                }
-                .start()
-        } else {
-            // BOREALIS: a start that failed after the decoder stage holds a decoder and no
-            // connection (stream)
-            tellConnectionStopped()
-            done?.run() // BOREALIS: nothing runs, so nothing to wait for (leave)
+        } else if (::controllerHandler.isInitialized) {
+            // BOREALIS: a stop before the connection started (the Connecting screen, a launch
+            // retry) stops the handler now, not in onDestroy, and the connection below (leave)
+            controllerHandler.stop()
         }
+
+        // Stop may take a few hundred ms to do some network I/O to tell
+        // the server we're going away and clean up. Let it run in a separate
+        // thread to keep things smooth for the UI. Inside moonlight-common,
+        // we prevent another thread from starting a connection before and
+        // during the process of stopping this one.
+        object : Thread() {
+                override fun run() {
+                    val stopStarted = System.nanoTime() // BOREALIS: leave log
+                    conn.stop()
+                    BorealisLog.i(
+                        LogTag.APP,
+                        "connection stop done",
+                        "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
+                    )
+                    // BOREALIS: a start that failed after the decoder stage holds a decoder and no
+                    // connection (stream)
+                    tellConnectionStopped()
+                    done?.run()
+                }
+            }
+            .start()
     }
 
     // BOREALIS: the stream's decoder is released with the connection, so a clip of the background

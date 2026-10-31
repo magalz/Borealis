@@ -1238,7 +1238,8 @@ device round has not run; its checks are
   calls. Before G-S2, wave 2 made two changes to `NvConnection` that the merge review of batch A
   asked for: the native calls of a stop run only for a bridge that its own connection set up (a
   failed native start cleans its bridge up itself), and a GFE start cancelled before its first
-  `/launch` sends none. Its gate passed at `84bb6430d`, the head of the wave. The phase also has two test commits that fit one batch's change to another batch's tests
+  `/launch` sends none. Its gate passed at `84bb6430d`, the head of the wave. The phase also has
+  two test commits that fit one batch's change to another batch's tests
   (`40caf3011` and `28f474259`), a style commit (`025391275`) and one comment fix (`5c364487c`).
 - **Owner choices.** How each of these entries is fixed is a product choice, approved with the
   triage on 2026-10-30, unless a date says otherwise:
@@ -1285,7 +1286,8 @@ device round has not run; its checks are
   11 min 29 s, with 4,431 `:app` tests and no failure. The gate of wave 2 passed at `84bb6430d`; a
   phase gate on `4e1985c6f` is not recorded here.
 - **What it found for later.** New items are in [Sprint 17](#sprint-17-general-fixes) (Input, Pads,
-  Video and the stream screens, and the stream session), [Sprint 18](#sprint-18-refactor-of-the-converted-code) (a flaky
+  Video and the stream screens, and the stream session),
+  [Sprint 18](#sprint-18-refactor-of-the-converted-code) (a flaky
   test), [Sprint 19](#sprint-19-secops) and [Sprint 20](#sprint-20-release-preparation) (the host
   version line).
 - **Order:** the fixes come before the refactor of Sprint 18. The triage removes dead and

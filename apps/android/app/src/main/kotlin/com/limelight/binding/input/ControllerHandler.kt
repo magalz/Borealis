@@ -2466,7 +2466,8 @@ class ControllerHandler(
         needsDeviceOrientationCorrection: Boolean,
     ): SensorEventListener {
         return object : SensorEventListener {
-            private val lastValues = FloatArray(3)
+            // Nothing is equal to NaN, so the first reading is never taken for a repeat
+            private val lastValues = FloatArray(3) { Float.NaN }
 
             // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13
             // backlog).

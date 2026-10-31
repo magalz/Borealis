@@ -13,7 +13,7 @@ class ComputerDetails {
 
     class AddressTuple(address: String?, port: Int) {
         @JvmField var address: String
-        @JvmField var port: Int
+        @JvmField val port: Int
 
         init {
             requireNotNull(address) { "Address cannot be null" }
@@ -103,11 +103,12 @@ class ComputerDetails {
         val knownRemote = this.remoteAddress
         if (remote != null) {
             this.remoteAddress = remote
-        } else if (knownRemote != null && details.externalPort != 0) {
+        } else if (knownRemote != null && details.externalPort > 0) {
             // If we have a remote address already (perhaps via STUN) but our updated details
             // don't have a new one (because GFE doesn't send one), propagate the external
             // port to the current remote address. We may have tried to guess it previously.
-            knownRemote.port = details.externalPort
+            // The tuple is replaced: its hash code uses the port, and callers may hold it.
+            this.remoteAddress = AddressTuple(knownRemote.address, details.externalPort)
         }
         details.manualAddress?.let { this.manualAddress = it }
         details.ipv6Address?.let { this.ipv6Address = it }

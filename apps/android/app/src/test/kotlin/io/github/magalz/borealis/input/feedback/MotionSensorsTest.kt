@@ -387,16 +387,17 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a first reading of all zeros is taken for a repeat and dropped`() {
+    fun `a first reading of all zeros is sent, and the zeros that follow are repeats`() {
         val rig = sensorRig()
         wake(rig)
         rig.motionState(ACCEL, 100)
 
         sensors.deliver(Sensor.TYPE_ACCELEROMETER, 0f, 0f, 0f)
+        sensors.deliver(Sensor.TYPE_ACCELEROMETER, 0f, 0f, 0f)
         sensors.deliver(Sensor.TYPE_ACCELEROMETER, 0f, 0f, 1f)
         sensors.deliver(Sensor.TYPE_ACCELEROMETER, 0f, 0f, 0f)
 
-        assertThat(rig.connection.motions.map { it.z }).containsExactly(1f, 0f).inOrder()
+        assertThat(rig.connection.motions.map { it.z }).containsExactly(0f, 1f, 0f).inOrder()
     }
 
     @Test

@@ -461,6 +461,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
 
         discovery.onServiceFound(found)
 
+        // The failed callback was forgotten, so nothing tried to unregister it: no warning.
+        assertThat(log.messages(Level.WARNING)).isEmpty()
         assertThat(callbacks(found)).hasSize(1)
         assertThat(callbacks(found)).doesNotContain(failed)
         // The new callback is stored, so the stop unregisters it.
@@ -478,6 +480,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
         discovery.onServiceLost(found)
 
         assertThat(log.messages(Level.INFO)).contains("NSD: Machine lost: Den PC")
+        // The failed callback was forgotten, so nothing tried to unregister it: no warning.
+        assertThat(log.messages(Level.WARNING)).isEmpty()
     }
 
     @Test
@@ -490,6 +494,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
         agent.stopDiscovery()
 
         assertThat(discoveries()).isEmpty()
+        // The failed callback was forgotten, so nothing tried to unregister it: no warning.
+        assertThat(log.messages(Level.WARNING)).isEmpty()
     }
 
     @Test
@@ -504,6 +510,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
         assertThat(discoveries()).isEmpty()
         assertThat((platform.serviceInfoExecutors.first() as ThreadPoolExecutor).isShutdown)
             .isTrue()
+        // The failed callback was forgotten, so nothing tried to unregister it: no warning.
+        assertThat(log.messages(Level.WARNING)).isEmpty()
     }
 
     @Test

@@ -23,7 +23,8 @@ import org.robolectric.shadows.ShadowToast
 
 /**
  * A context that counts how often the default preferences are read whole: every full read of the
- * stream settings starts by asking for the legacy 5.1 setting, and nothing else does.
+ * stream settings starts by asking for the legacy resolution and frame rate setting, and nothing
+ * else does.
  */
 private class FullReadCountingContext(base: Context) : ContextWrapper(base) {
     var fullReads = 0
@@ -34,15 +35,15 @@ private class FullReadCountingContext(base: Context) : ContextWrapper(base) {
         if (name != "${packageName}_preferences") return real
 
         return object : SharedPreferences by real {
-            override fun contains(key: String?): Boolean {
+            override fun getString(key: String?, defValue: String?): String? {
                 if (key == FIRST_KEY_OF_A_FULL_READ) fullReads++
-                return real.contains(key)
+                return real.getString(key, defValue)
             }
         }
     }
 
     private companion object {
-        const val FIRST_KEY_OF_A_FULL_READ = "checkbox_51_surround"
+        const val FIRST_KEY_OF_A_FULL_READ = "list_resolution_fps"
     }
 }
 

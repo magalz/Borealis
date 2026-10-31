@@ -231,6 +231,10 @@ class ComputerManagerService : Service() {
 
     inner class ComputerManagerBinder : Binder() {
         fun startPolling(listener: ComputerManagerListener) {
+            // Without the discovery service this fails before it changes anything. (The Java set
+            // the two fields below first, so a failed start left the service polling.)
+            val discovery = checkNotNull(discoveryBinder) { "The discovery service is not bound" }
+
             // Polling is active
             pollingActive = true
 
@@ -238,7 +242,7 @@ class ComputerManagerService : Service() {
             this@ComputerManagerService.listener = listener
 
             // Start mDNS autodiscovery too
-            checkNotNull(discoveryBinder).startDiscovery(MDNS_QUERY_PERIOD_MS)
+            discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
 
             synchronized(pollingTuples) {
                 for (tuple in pollingTuples) {

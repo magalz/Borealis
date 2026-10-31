@@ -1846,14 +1846,15 @@ class ControllerHandler(
         sendControllerInputPacket(context)
     }
 
-    // Normalize the given raw float value into a 0.0-1.0f range
+    // Normalize the given raw float value into a 0.0-1.0f range; a range with no width puts every
+    // value at 0, where the division would make it not a number
     private fun normalizeRawValueWithRange(value: Float, range: InputDevice.MotionRange): Float {
         var normalized = max(value, range.min)
         normalized = min(normalized, range.max)
 
         normalized -= range.min
 
-        return normalized / range.range
+        return if (range.range == 0f) 0f else normalized / range.range
     }
 
     private fun sendTouchpadEventForPointer(

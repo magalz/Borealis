@@ -1732,6 +1732,10 @@ class ControllerHandler(
         return inputVector
     }
 
+    // A value past 1 would wrap in the short and flip the stick to the other side
+    private fun stickShort(value: Float): Short =
+        (value.coerceIn(-1f, 1f) * STICK_MAX).toInt().toShort()
+
     private fun handleDeadZone(stickVector: Vector2d, deadzoneRadius: Float) {
         if (stickVector.magnitude <= deadzoneRadius) {
             // Deadzone
@@ -1768,8 +1772,8 @@ class ControllerHandler(
 
             handleDeadZone(leftStickVector, context.leftStickDeadzoneRadius)
 
-            context.leftStickX = (leftStickVector.x * STICK_MAX).toInt().toShort()
-            context.leftStickY = (-leftStickVector.y * STICK_MAX).toInt().toShort()
+            context.leftStickX = stickShort(leftStickVector.x)
+            context.leftStickY = stickShort(-leftStickVector.y)
         }
 
         if (context.rightStickXAxis != -1 && context.rightStickYAxis != -1) {
@@ -1777,8 +1781,8 @@ class ControllerHandler(
 
             handleDeadZone(rightStickVector, context.rightStickDeadzoneRadius)
 
-            context.rightStickX = (rightStickVector.x * STICK_MAX).toInt().toShort()
-            context.rightStickY = (-rightStickVector.y * STICK_MAX).toInt().toShort()
+            context.rightStickX = stickShort(rightStickVector.x)
+            context.rightStickY = stickShort(-rightStickVector.y)
         }
 
         if (context.leftTriggerAxis != -1 && context.rightTriggerAxis != -1) {
@@ -3198,15 +3202,15 @@ class ControllerHandler(
 
         handleDeadZone(leftStickVector, context.leftStickDeadzoneRadius)
 
-        context.leftStickX = (leftStickVector.x * STICK_MAX).toInt().toShort()
-        context.leftStickY = (-leftStickVector.y * STICK_MAX).toInt().toShort()
+        context.leftStickX = stickShort(leftStickVector.x)
+        context.leftStickY = stickShort(-leftStickVector.y)
 
         val rightStickVector = populateCachedVector(rightStickX, rightStickY)
 
         handleDeadZone(rightStickVector, context.rightStickDeadzoneRadius)
 
-        context.rightStickX = (rightStickVector.x * STICK_MAX).toInt().toShort()
-        context.rightStickY = (-rightStickVector.y * STICK_MAX).toInt().toShort()
+        context.rightStickX = stickShort(rightStickVector.x)
+        context.rightStickY = stickShort(-rightStickVector.y)
 
         val leftTriggerValue = if (leftTrigger <= context.triggerDeadzone) 0f else leftTrigger
         val rightTriggerValue = if (rightTrigger <= context.triggerDeadzone) 0f else rightTrigger

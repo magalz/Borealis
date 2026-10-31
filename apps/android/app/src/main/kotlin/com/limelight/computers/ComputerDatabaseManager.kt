@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
+import com.limelight.LimeLog
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvHTTP
 import java.io.ByteArrayInputStream
@@ -72,12 +73,20 @@ class ComputerDatabaseManager(c: Context) {
         )
     }
 
+    // A host without a name is refused, with a log: the name column is NOT NULL, and the insert
+    // would throw.
+    //
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The JSON failure is still rethrown as a RuntimeException, and the stack trace of a
     // certificate that cannot be encoded still goes to the standard error stream. Logging it
     // instead is a behaviour change.
     @Suppress("TooGenericExceptionThrown", "PrintStackTrace")
     fun updateComputer(details: ComputerDetails): Boolean {
+        if (details.name == null) {
+            LimeLog.warning("Not saving a host that has no name")
+            return false
+        }
+
         val values = ContentValues()
         values.put(COMPUTER_UUID_COLUMN_NAME, details.uuid)
         values.put(COMPUTER_NAME_COLUMN_NAME, details.name)

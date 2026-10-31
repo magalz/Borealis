@@ -294,13 +294,14 @@ class RendererSubmitH264Test : RendererTestBase() {
     }
 
     @Test
-    fun `the replay after the baseline hack says High profile whatever the stream said`() {
+    fun `the replay after the baseline hack says the profile the stream said`() {
         val renderer = h264("omx.intel.avc.decoder")
         val main = original.copy(profile = 77)
 
         renderer.sendIdr(main.nal())
 
-        val replayed = patched.copy(profile = 100, constraintSets = setOf(4, 5))
+        // Not High, so no constraint flags either.
+        val replayed = patched.copy(profile = 77)
         assertThat(queued()[1].hex).isEqualTo(hex(bytes("00000001 67") + replayed.nal().drop(5)))
     }
 

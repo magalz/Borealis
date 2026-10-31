@@ -116,12 +116,15 @@ class MediaCodecDecoderRenderer(
     private val spsBuffers = ArrayList<ByteArray>()
     private val ppsBuffers = ArrayList<ByteArray>()
     private var submittedCsd = false
-    private var currentHdrMetadata: ByteArray? = null
+    // BOREALIS: setHdrMode (control stream thread) and setup each write one of currentHdrMetadata
+    // and videoDecoder and read the other, so both are volatile: a stale read on both sides would
+    // lose the HDR restart
+    @Volatile private var currentHdrMetadata: ByteArray? = null
 
     private var nextInputBufferIndex = -1
     private var nextInputBuffer: ByteBuffer? = null
 
-    private var videoDecoder: MediaCodec? = null
+    @Volatile private var videoDecoder: MediaCodec? = null
     private var rendererThread: Thread? = null
     private var adaptivePlayback = false
     private var directSubmit = false
@@ -156,6 +159,8 @@ class MediaCodecDecoderRenderer(
 
     private var needsBaselineSpsHack = false
     private var savedSps: SeqParameterSet? = null
+    // The profile the stream said, before the hack made savedSps say baseline
+    private var savedSpsProfileIdc = 0
 
     private var initialException: RendererException? = null
     private var initialExceptionTimestamp = 0L
@@ -165,6 +170,7 @@ class MediaCodecDecoderRenderer(
     private val globalVideoStats = VideoStats()
 
     private var lastTimestampUs = 0L
+    private var gotFrameNumber = false
     private var lastFrameNumber = 0
     private var baseTimestampUs = 0L
     private var refreshRate = 0
@@ -796,91 +802,110 @@ class MediaCodecDecoderRenderer(
 
             // This is the final thread to quiesce, so let's perform the codec recovery now.
             if (codecRecoveryThreadQuiescedFlags == CR_FLAG_ALL) {
-                // Input and output buffers are invalidated by stop() and reset().
-                nextInputBuffer = null
-                nextInputBufferIndex = -1
-                outputBufferQueue.clear()
-                // BOREALIS: stream.perf
-                synchronized(decodeTimeTracker) { decodeTimeTracker.clear() }
+                // The recovery either settles the recovery type or throws, and a thread that
+                // throws must not leave the quiesced threads waiting for it for ever.
+                var settled = false
+                try {
+                    // Input and output buffers are invalidated by stop() and reset().
+                    nextInputBuffer = null
+                    nextInputBufferIndex = -1
+                    outputBufferQueue.clear()
+                    // BOREALIS: stream.perf
+                    synchronized(decodeTimeTracker) { decodeTimeTracker.clear() }
 
-                // Count the attempt, unless prepareForStop() cancelled the recovery meanwhile
-                if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
-                    codecRecoveryAttempts++
-                    LimeLog.info("Codec recovery attempt: $codecRecoveryAttempts")
-                }
-
-                // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
-                    LimeLog.warning("Trying to restart decoder after CodecException")
-                    try {
-                        requireDecoder().stop()
-                        configureAndStartDecoder(configuredFormat.orNpe("The configured format"))
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
-
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        e.printStackTrace()
-
-                        // Something went wrong during the restart, let's use a bigger hammer
-                        // and try a reset instead.
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_RESET)
+                    // Count the attempt, unless prepareForStop() cancelled the recovery meanwhile
+                    if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
+                        codecRecoveryAttempts++
+                        LimeLog.info("Codec recovery attempt: $codecRecoveryAttempts")
                     }
-                }
 
-                // For "non-recoverable" exceptions on L+, we can call reset() to recover
-                // without having to recreate the entire decoder again.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                    LimeLog.warning("Trying to reset decoder after CodecException")
-                    try {
-                        requireDecoder().reset()
-                        configureAndStartDecoder(configuredFormat.orNpe("The configured format"))
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
+                    // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
+                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
+                        LimeLog.warning("Trying to restart decoder after CodecException")
+                        try {
+                            requireDecoder().stop()
+                            configureAndStartDecoder(
+                                configuredFormat.orNpe("The configured format")
+                            )
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
 
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        e.printStackTrace()
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            e.printStackTrace()
 
-                        // Something went wrong during the reset, we'll have to resort to
-                        // releasing and recreating the decoder now.
-                    }
-                }
-
-                // If we _still_ haven't managed to recover, go for the nuclear option and just
-                // throw away the old decoder and reinitialize a new one from scratch.
-                if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                    LimeLog.warning("Trying to recreate decoder after CodecException")
-                    requireDecoder().release()
-
-                    try {
-                        initializeDecoder(true)
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalArgumentException) {
-                        e.printStackTrace()
-
-                        // Our Surface is probably invalid, so just stop
-                        stopping = true
-                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                    } catch (e: IllegalStateException) {
-                        // If we failed to recover after all of these attempts, just crash
-                        if (!reportedCrash) {
-                            reportedCrash = true
-                            crashListener.notifyCrash(e)
+                            // Something went wrong during the restart, let's use a bigger hammer
+                            // and try a reset instead.
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_RESET)
                         }
-                        throw RendererException(this, e)
                     }
-                }
 
-                // Wake all quiesced threads and allow them to begin work again
-                codecRecoveryThreadQuiescedFlags = 0
-                (codecRecoveryMonitor as Object).notifyAll()
+                    // For "non-recoverable" exceptions on L+, we can call reset() to recover
+                    // without having to recreate the entire decoder again.
+                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+                        LimeLog.warning("Trying to reset decoder after CodecException")
+                        try {
+                            requireDecoder().reset()
+                            configureAndStartDecoder(
+                                configuredFormat.orNpe("The configured format")
+                            )
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
+
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            e.printStackTrace()
+
+                            // Something went wrong during the reset, we'll have to resort to
+                            // releasing and recreating the decoder now.
+                        }
+                    }
+
+                    // If we _still_ haven't managed to recover, go for the nuclear option and just
+                    // throw away the old decoder and reinitialize a new one from scratch.
+                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+                        LimeLog.warning("Trying to recreate decoder after CodecException")
+                        requireDecoder().release()
+
+                        try {
+                            initializeDecoder(true)
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalArgumentException) {
+                            e.printStackTrace()
+
+                            // Our Surface is probably invalid, so just stop
+                            stopping = true
+                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                        } catch (e: IllegalStateException) {
+                            // If we failed to recover after all of these attempts, just crash
+                            if (!reportedCrash) {
+                                reportedCrash = true
+                                crashListener.notifyCrash(e)
+                            }
+                            throw RendererException(this, e)
+                        }
+                    }
+
+                    settled = true
+                } finally {
+                    if (!settled) {
+                        // The recovery failed for good and the codec cannot be used, so the
+                        // waiting threads must not meet it again: just stop, as when our Surface
+                        // is invalid.
+                        stopping = true
+                        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                    }
+
+                    // Wake all quiesced threads and allow them to begin work again
+                    codecRecoveryThreadQuiescedFlags = 0
+                    (codecRecoveryMonitor as Object).notifyAll()
+                }
             } else {
                 // If we haven't quiesced all threads yet, wait to be signalled after recovery.
                 // The final thread to be quiesced will handle the codec recovery.
@@ -944,7 +969,7 @@ class MediaCodecDecoderRenderer(
                     ) {
                         error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
                     }
-                } else if (!e.isRecoverable) {
+                } else {
                     if (
                         codecRecoveryType.compareAndSet(
                             CR_RECOVERY_TYPE_NONE,
@@ -1357,9 +1382,9 @@ class MediaCodecDecoderRenderer(
             }
         }
 
-        // Wait for the renderer thread to shut down
+        // Wait for the renderer thread to shut down (if start() ever ran)
         try {
-            rendererThread.orNpe("The renderer thread").join()
+            rendererThread?.join()
         } catch (e: InterruptedException) {
             e.printStackTrace()
 
@@ -1371,7 +1396,8 @@ class MediaCodecDecoderRenderer(
     }
 
     override fun cleanup() {
-        requireDecoder().release()
+        // Nothing to release if setup() never made a decoder
+        videoDecoder?.release()
     }
 
     override fun setHdrMode(enabled: Boolean, hdrMetadata: ByteArray?) {
@@ -1383,6 +1409,13 @@ class MediaCodecDecoderRenderer(
             currentHdrMetadata = hdrMetadata
         } else {
             // Nothing to do
+            return
+        }
+
+        // Setup makes its codec with the metadata in its format, so there is nothing to restart
+        // before it; and a restart marked while stopping would never be done, and the threads
+        // that meet it would wait for it
+        if (videoDecoder == null || stopping) {
             return
         }
 
@@ -1506,8 +1539,10 @@ class MediaCodecDecoderRenderer(
             return MoonBridge.DR_OK
         }
 
-        if (lastFrameNumber == 0) {
+        if (!gotFrameNumber) {
+            // The first frame, whatever its number (it may be 0), starts the first window
             activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
+            gotFrameNumber = true
         } else if (frameNumber != lastFrameNumber && frameNumber != lastFrameNumber + 1) {
             // We can receive the same "frame" multiple times if it's an IDR frame.
             // In that case, each frame start NALU is submitted independently.
@@ -1620,6 +1655,7 @@ class MediaCodecDecoderRenderer(
                 // If we need to hack this SPS to say we're baseline, do so now
                 if (needsBaselineSpsHack) {
                     LimeLog.info("Hacking SPS to baseline")
+                    savedSpsProfileIdc = sps.profileIdc
                     sps.profileIdc = PROFILE_BASELINE
                     savedSps = sps
                 }
@@ -1728,12 +1764,15 @@ class MediaCodecDecoderRenderer(
                     submittedCsd = true
 
                     if (needsBaselineSpsHack) {
-                        needsBaselineSpsHack = false
-
                         if (!replaySps()) {
+                            // The decoder still has the baseline SPS. Forget the CSD that went, so
+                            // the next IDR frame gets here again, fused decoders too: it says
+                            // baseline again and replays
+                            submittedCsd = false
                             return MoonBridge.DR_NEED_IDR
                         }
 
+                        needsBaselineSpsHack = false
                         LimeLog.info("SPS replay complete")
                     }
                 }
@@ -1805,8 +1844,6 @@ class MediaCodecDecoderRenderer(
         }
         lastTimestampUs = timestampUs
 
-        numFramesIn++
-
         if (decodeUnitLength > requireInputBuffer().limit() - requireInputBuffer().position()) {
             val exception =
                 IllegalArgumentException(
@@ -1820,6 +1857,9 @@ class MediaCodecDecoderRenderer(
             throw RendererException(this, exception)
         }
 
+        // Only a frame that fits is counted: the crash text must not count the one that crashed
+        numFramesIn++
+
         // Copy data from our buffer list into the input buffer
         requireInputBuffer().put(decodeUnitData.orNpe("The decode unit data"), 0, decodeUnitLength)
 
@@ -1831,14 +1871,16 @@ class MediaCodecDecoderRenderer(
     }
 
     private fun replaySps(): Boolean {
-        fetchNextInputBuffer()
+        if (!fetchNextInputBuffer()) {
+            return false
+        }
 
         // Write the Annex B header
         requireInputBuffer().put(byteArrayOf(0x00, 0x00, 0x00, 0x01, SPS_NAL_HEADER))
 
-        // Switch the H264 profile back to high
+        // Switch the H264 profile back to the one the stream said
         val sps = savedSps.orNpe("The saved SPS")
-        sps.profileIdc = PROFILE_HIGH
+        sps.profileIdc = savedSpsProfileIdc
 
         // Patch the SPS constraint flags
         doProfileSpecificSpsPatching(sps)
@@ -1848,11 +1890,15 @@ class MediaCodecDecoderRenderer(
         val escapedNalu = H264Utils.writeSPS(sps, REPLAYED_SPS_SIZE)
         requireInputBuffer().put(escapedNalu)
 
+        // Queue the new SPS
+        if (!queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)) {
+            // Keep the SPS: the retry may come with no new one
+            return false
+        }
+
         // No need for the SPS anymore
         savedSps = null
-
-        // Queue the new SPS
-        return queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
+        return true
     }
 
     override fun getCapabilities(): Int {
@@ -1908,6 +1954,10 @@ class MediaCodecDecoderRenderer(
     private class RendererException(renderer: MediaCodecDecoderRenderer, e: Exception) :
         RuntimeException() {
         private val text: String = generateText(renderer, e)
+
+        // The message is the text, so whatever reads a message of this exception gets it
+        override val message: String
+            get() = text
 
         override fun toString(): String {
             return text

@@ -199,6 +199,10 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
         outputAnswers.poll()?.let {
             return it
         }
+        if (starveOutput) {
+            Thread.sleep(STARVE_SLEEP_MS)
+            return MediaCodec.INFO_TRY_AGAIN_LATER
+        }
         return super.native_dequeueOutputBuffer(info, timeoutUs)
     }
 
@@ -268,6 +272,12 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
         @Volatile @JvmStatic var starveInput = false
 
         /**
+         * While true, no output is ever ready: `dequeueOutputBuffer` times out, after the answers
+         * of [answerNextOutputDequeue].
+         */
+        @Volatile @JvmStatic var starveOutput = false
+
+        /**
          * The timestamp that an output frame carries for an input queued with the one given; null
          * keeps it. Some decoders return another timestamp than the one they were given.
          */
@@ -335,6 +345,7 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
             failures.clear()
             outputAnswers.clear()
             starveInput = false
+            starveOutput = false
             nullInputBuffers.set(0)
             outputDelayNanos = 0
             outputTimestamp = null

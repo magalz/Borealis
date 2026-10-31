@@ -40,7 +40,7 @@ class MediaCodecHelperCapabilityDecisionsTest : MediaCodecHelperTestBase() {
                 hevcDecoder("c2.vendor.hevc.sw.decoder") { lowLatency = true }
             )
         }
-        rows.check("the match is case sensitive", true) {
+        rows.check("the match ignores the case", false) {
             helper.whitelistedForHevc(hevcDecoder("OMX.Exynos.HEVC.SW.Decoder"))
         }
 

@@ -11,9 +11,14 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertWithMessage
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Rule
 import org.junit.rules.ExternalResource
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
+import org.robolectric.annotation.RealObject
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.MediaCodecInfoBuilder
 import org.robolectric.shadows.ShadowMediaCodecList
 import org.robolectric.util.ReflectionHelpers
@@ -286,6 +291,16 @@ class CodecBuilder(private val name: String) {
     var brokenCapabilities = false
 
     /**
+     * Lists the capabilities but throws when asked for a feature of them, as a buggy decoder does.
+     * Needs `@Config(shadows = [ShadowBrokenFeatureCheckCapabilities::class])`; the rig fails at
+     * once when the test lacks it.
+     */
+    var brokenFeatureCheck = false
+
+    /** Counts every read of the capabilities of the decoder, which is what the framework asks. */
+    var capabilityReads: AtomicInteger? = null
+
+    /**
      * Sets more keys of the capabilities format, or replaces the ones set here (the size, block and
      * rate ranges, the performance points), after all of them were set.
      */
@@ -321,6 +336,7 @@ class CodecBuilder(private val name: String) {
                 setString("size-range", "64x64-4096x2304")
                 setString("block-count-range", "1-100000")
                 setString("blocks-per-second-range", "1-10000000")
+                if (brokenFeatureCheck) setString(BROKEN_FEATURE_CHECK_KEY, "throws")
                 if (lowLatency) {
                     setFeatureEnabled(MediaCodecInfo.CodecCapabilities.FEATURE_LowLatency, true)
                 }
@@ -332,12 +348,22 @@ class CodecBuilder(private val name: String) {
                 }
                 formatHook()
             }
-        return MediaCodecInfoBuilder.CodecCapabilitiesBuilder.newBuilder()
-            .setMediaFormat(format)
-            .setIsEncoder(encoder)
-            .setProfileLevels(levels.toTypedArray())
-            .setColorFormats(intArrayOf())
-            .build()
+        val capabilities =
+            MediaCodecInfoBuilder.CodecCapabilitiesBuilder.newBuilder()
+                .setMediaFormat(format)
+                .setIsEncoder(encoder)
+                .setProfileLevels(levels.toTypedArray())
+                .setColorFormats(intArrayOf())
+                .build()
+        if (brokenFeatureCheck) {
+            // Without the shadow the decoder would only lack the feature, and a test that wants the
+            // throw would pass without exercising the guard.
+            check(Shadow.extract<Any>(capabilities) is ShadowBrokenFeatureCheckCapabilities) {
+                "$name sets brokenFeatureCheck, which needs " +
+                    "@Config(shadows = [ShadowBrokenFeatureCheckCapabilities::class]) on the test"
+            }
+        }
+        return capabilities
     }
 
     fun build(): MediaCodecInfo {
@@ -350,8 +376,10 @@ class CodecBuilder(private val name: String) {
                 .setCapabilities(*mimes.map { capabilities(it) }.toTypedArray())
                 .build()
         canonicalName?.let { ReflectionHelpers.setField(info, "mCanonicalName", it) }
-        if (brokenCapabilities) {
-            // A decoder that lists its types but throws when asked for their capabilities.
+        val reads = capabilityReads
+        if (brokenCapabilities || reads != null) {
+            // A decoder that counts the reads of its capabilities, or lists its types but throws
+            // when asked for their capabilities.
             val real =
                 ReflectionHelpers.getField<Map<String, MediaCodecInfo.CodecCapabilities>>(
                     info,
@@ -361,12 +389,45 @@ class CodecBuilder(private val name: String) {
                 info,
                 "mCaps",
                 object : HashMap<String, MediaCodecInfo.CodecCapabilities>(real) {
-                    override fun get(key: String): MediaCodecInfo.CodecCapabilities? =
-                        throw IllegalArgumentException("buggy decoder")
+                    override fun get(key: String): MediaCodecInfo.CodecCapabilities? {
+                        reads?.incrementAndGet()
+                        require(!brokenCapabilities) { "buggy decoder" }
+                        return super.get(key)
+                    }
                 },
             )
         }
         return info
+    }
+}
+
+/** The key of the capabilities format that tells the shadow to throw; `dup()` keeps the format. */
+private const val BROKEN_FEATURE_CHECK_KEY = "borealis-test-broken-feature-check"
+
+/**
+ * Capabilities that throw from `isFeatureSupported` when [CodecBuilder.brokenFeatureCheck] marked
+ * them, and answer as the framework does otherwise. The framework class is final, so a shadow is
+ * the way to make one decoder throw. Use it with `@Config(shadows =
+ * [ShadowBrokenFeatureCheckCapabilities::class])` on the tests that need it.
+ */
+@Implements(MediaCodecInfo.CodecCapabilities::class)
+class ShadowBrokenFeatureCheckCapabilities {
+    // Robolectric sets the field when it makes the shadow, so it cannot be a val.
+    @Suppress("VarCouldBeVal")
+    @RealObject
+    private lateinit var capabilities: MediaCodecInfo.CodecCapabilities
+
+    @Suppress("unused")
+    @Implementation
+    fun isFeatureSupported(name: String): Boolean {
+        val format = ReflectionHelpers.getField<MediaFormat?>(capabilities, "mDefaultFormat")
+        check(format?.containsKey(BROKEN_FEATURE_CHECK_KEY) != true) { "buggy feature check" }
+        return Shadow.directlyOn<Boolean, MediaCodecInfo.CodecCapabilities>(
+            capabilities,
+            MediaCodecInfo.CodecCapabilities::class.java,
+            "isFeatureSupported",
+            ReflectionHelpers.ClassParameter.from(String::class.java, name),
+        )
     }
 }
 

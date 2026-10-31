@@ -6,6 +6,8 @@ import android.view.KeyEvent.KEYCODE_A
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_B
 import android.view.KeyEvent.KEYCODE_BUTTON_L1
+import android.view.KeyEvent.KEYCODE_BUTTON_L2
+import android.view.KeyEvent.KEYCODE_BUTTON_R2
 import android.view.KeyEvent.KEYCODE_BUTTON_START
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
@@ -367,6 +369,32 @@ class DeviceLifecycleTest : DevicesTestBase() {
 
         // The A button is still held, and the host was not told it came up
         assertThat(rig.connection.packets.last().buttons).isEqualTo(a or b)
+    }
+
+    @Test
+    fun `a change keeps the triggers that were held as keys`() {
+        val before = pad(1)
+        val rig = rig(devices = listOf(before))
+        rig.press(before, KEYCODE_BUTTON_L2)
+        rig.press(before, KEYCODE_BUTTON_R2)
+
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
+        disconnectPad(before)
+        connectPad(after)
+        rig.change(after)
+        rig.press(after, KEYCODE_BUTTON_B)
+
+        // Both triggers are still down (255 is -1 as a byte): the host was not told they came up
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(
+                Sent(
+                    controller = 0,
+                    activeMask = 1,
+                    buttons = b,
+                    leftTrigger = -1,
+                    rightTrigger = -1,
+                )
+            )
     }
 
     @Test

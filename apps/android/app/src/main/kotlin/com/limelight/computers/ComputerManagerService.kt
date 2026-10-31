@@ -448,9 +448,9 @@ class ComputerManagerService : Service() {
     @Suppress("PrintStackTrace")
     private fun createDiscoveryListener(): MdnsDiscoveryListener =
         object : MdnsDiscoveryListener {
-            // The discovery agent holds its list of hosts while it calls this (on API 34 and later
-            // it is the one thread that answers every resolve), so nothing here may wait for the
-            // network: the Java polled the host on this thread, and every other host waited.
+            // The discovery agent calls this on its own thread (on API 34 and later the one thread
+            // that answers every resolve), so nothing here may wait for the network: the Java
+            // polled the host on this thread, and every other host waited.
             override fun notifyComputerAdded(computer: MdnsComputer) {
                 val details = ComputerDetails()
 

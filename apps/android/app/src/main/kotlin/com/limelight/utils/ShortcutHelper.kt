@@ -138,12 +138,18 @@ class ShortcutHelper(private val context: Context) {
         val shortcuts = getAllShortcuts()
         val appShortcutIds = mutableListOf<String>()
         for (info in shortcuts) {
-            if (info.id.startsWith(checkNotNull(computer.uuid))) {
+            if (isShortcutOfHost(info.id, checkNotNull(computer.uuid))) {
                 appShortcutIds.add(info.id)
             }
         }
         sm.disableShortcuts(appShortcutIds, reason)
     }
+
+    // The id of an app shortcut is the host id and the app id with no separator between them (see
+    // getShortcutIdForGame), so a host id that another one starts with must not match by prefix.
+    // An id that is the host id followed by digits only is read as one of its apps.
+    private fun isShortcutOfHost(shortcutId: String, hostId: String): Boolean =
+        shortcutId.startsWith(hostId) && shortcutId.drop(hostId.length).all { it in '0'..'9' }
 
     fun disableAppShortcut(computer: ComputerDetails, app: NvApp, reason: CharSequence?) {
         tvChannelHelper.deleteProgram(computer, app)

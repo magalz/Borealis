@@ -1579,8 +1579,8 @@ facts of both items and added the third item and the open decision. See the
   Controller needs the client to report the Nintendo type, or the host's `gamepad` setting (global
   or per client) set to `switch_pro`.
 
-- **DualSense adaptive triggers.** From Sprint 16 (the owner-approved triage, 2026-10-30). A host of 26.10 sends
-  adaptive triggers (control message `0x5503`) for a DualSense, and Borealis drops them: it has no
+- **DualSense adaptive triggers.** From Sprint 16 (the owner-approved triage, 2026-10-30). A host
+  of 26.10 sends adaptive triggers (control message `0x5503`) for a DualSense, and Borealis drops them: it has no
   handler, so moonlight-common-c puts in one that does nothing
   ([contract, sections 12 and 13](host-contract/luminalshine.md#13-input)). It matters only when the
   host makes a DualSense, which it does through its `gamepad` setting `dualsense` (see "Pad battery"

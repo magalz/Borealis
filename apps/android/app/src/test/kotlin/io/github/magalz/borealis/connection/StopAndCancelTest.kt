@@ -2,8 +2,10 @@ package io.github.magalz.borealis.connection
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.library.RecordingLog
 import io.github.magalz.borealis.nvhttp.HostReply
+import java.lang.management.ManagementFactory
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Rule
@@ -45,6 +47,20 @@ class StopAndCancelTest {
         while (thread.state != Thread.State.WAITING) {
             check(System.currentTimeMillis() < limit) {
                 "The thread did not wait; it is ${thread.state}; calls: ${ShadowRecordingBridge.names}"
+            }
+            Thread.sleep(POLL_MS)
+        }
+    }
+
+    /** Waits until [thread] waits to enter the monitor of the bridge, which the test holds. */
+    private fun awaitBlockedOnBridge(thread: Thread) {
+        val bridge = System.identityHashCode(MoonBridge::class.java)
+        val threads = ManagementFactory.getThreadMXBean()
+        val limit = System.currentTimeMillis() + WAIT_MS
+        while (threads.getThreadInfo(thread.id)?.lockInfo?.identityHashCode != bridge) {
+            check(System.currentTimeMillis() < limit) {
+                "The thread did not wait for the bridge; it is ${thread.state}; " +
+                    "calls: ${ShadowRecordingBridge.names}"
             }
             Thread.sleep(POLL_MS)
         }
@@ -267,10 +283,13 @@ class StopAndCancelTest {
     }
 
     /**
-     * The place that lets it through is the one of the stream that runs, not one that a stop adds.
+     * The place that lets it through is the one of the stream that runs, not one that a stop adds:
+     * the stop does not free the waiting thread, and the start that gets the place later ends
+     * without a stream and without a failure, with no `cancelLaunch` to tell it. The stop comes
+     * before the thread has the place, as a stop between its `acquire` and its cancel check does.
      */
     @Test
-    fun `the stop of a start that waits for the place does not let it through`() {
+    fun `the stop of a start that waits for the place ends it when it gets the place, without a stream`() {
         val first = rig.connection()
         startAndConnect(first)
         listener.awaitEnded()
@@ -278,16 +297,39 @@ class StopAndCancelTest {
         val second = rig.connection()
         rig.start(second, listener = secondListener)
         secondListener.await("stageComplete")
-        val thread = secondListener.threads.single()
-        awaitParked(thread)
+        awaitParked(secondListener.threads.single())
 
         second.stop()
-        assertThat(thread.state).isEqualTo(Thread.State.WAITING)
-        second.cancelLaunch()
         first.stop()
         secondListener.awaitEnded()
 
         assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
+        assertThat(secondListener.events("stageFailed")).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The test holds the monitor of the bridge, so the start thread passes its last cancel check
+     * and waits to enter it, and a whole stop, which runs under the same monitor by the same
+     * thread, comes first. The stop alone, with no `cancelLaunch`, must keep that start from
+     * beginning a stream whose place the stop already gave back.
+     */
+    @Test
+    fun `a stop that completes before the start enters the native connection leaves no stream`() {
+        val connection = rig.connection()
+
+        synchronized(MoonBridge::class.java) {
+            rig.start(connection)
+            listener.await("stageComplete")
+            awaitBlockedOnBridge(listener.threads.single())
+            connection.stop()
+        }
+        listener.awaitEnded()
+
+        assertThat(ShadowRecordingBridge.names)
+            .containsExactly("interruptConnection", "stopConnection", "cleanupBridge")
+            .inOrder()
+        assertThat(listener.events("stageFailed")).isEmpty()
         assertThat(rig.permits()).isEqualTo(1)
     }
 

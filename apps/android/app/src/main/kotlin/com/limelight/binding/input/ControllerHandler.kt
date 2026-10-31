@@ -952,10 +952,9 @@ class ControllerHandler(
         return context
     }
 
+    // A trigger is an unsigned byte: as a signed one, 0.6 of the travel would lose to 0.45
     private fun maxByMagnitude(a: Byte, b: Byte): Byte {
-        val absA = abs(a.toInt())
-        val absB = abs(b.toInt())
-        return if (absA > absB) {
+        return if (a.toUByte() > b.toUByte()) {
             a
         } else {
             b

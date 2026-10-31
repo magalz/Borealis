@@ -438,7 +438,7 @@ class ComputerManagerConnectionTest {
             launch(UnconfinedTestDispatcher(testScheduler)) {
                 connection.hostUpdates().collect {}
             }
-        // The service's details lost the list to a host poll, but it was received before.
+        // The details that arrive have no list, but one was received before.
         live.rawAppList = null
         binder.emit(live)
 

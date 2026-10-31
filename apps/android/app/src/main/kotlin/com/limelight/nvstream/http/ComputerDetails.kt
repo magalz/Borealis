@@ -94,7 +94,7 @@ class ComputerDetails {
 
     fun update(details: ComputerDetails) {
         this.state = details.state
-        this.name = details.name
+        details.name?.let { this.name = it }
         this.uuid = details.uuid
         details.activeAddress?.let { this.activeAddress = it }
         // We can get IPv4 loopback addresses with GS IPv6 Forwarder
@@ -120,7 +120,8 @@ class ComputerDetails {
         this.runningGameId = details.runningGameId
         this.nvidiaServer = details.nvidiaServer
         this.borealis = details.borealis // BOREALIS: host capabilities (host.caps)
-        this.rawAppList = details.rawAppList
+        // A poll result has no app list: keep the one that the app list poller stored.
+        details.rawAppList?.let { this.rawAppList = it }
     }
 
     override fun toString(): String =

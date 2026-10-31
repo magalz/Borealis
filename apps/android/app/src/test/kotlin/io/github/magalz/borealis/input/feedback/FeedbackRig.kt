@@ -189,7 +189,7 @@ class FeedbackRig(
 
     val connection = FeedbackConnection(activity)
     val prefs = PreferenceConfiguration().apply(configure)
-    val handler = ControllerHandler(activity, connection, {}, prefs)
+    val handler = ControllerHandler(activity, connection, prefs)
 
     private var destroyed = false
 

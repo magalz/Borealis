@@ -44,7 +44,6 @@ import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
-import com.limelight.ui.GameGestures
 import com.limelight.utils.Vector2d
 import io.github.magalz.borealis.designsystem.adaptive.hasControllerJoystickAxes
 import io.github.magalz.borealis.designsystem.adaptive.isStreamControllerDevice
@@ -77,9 +76,6 @@ import org.cgutman.shieldcontrollerextensions.SceManager
 class ControllerHandler(
     private val activityContext: Activity,
     private val conn: NvConnection,
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    // The Java stored the gestures and never read them.
-    @Suppress("UnusedPrivateProperty") private val gestures: GameGestures,
     private val prefConfig: PreferenceConfiguration,
 ) : InputManager.InputDeviceListener, UsbDriverListener, GamepadChrome {
 

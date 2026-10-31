@@ -24,11 +24,13 @@ internal class GameStopLogTest : GameTestBase() {
     }
 
     @Test
-    fun `a connection that is not running has no stop to log`() {
+    fun `the stop of a connection that never connected is logged too`() {
         rig.create()
 
         rig.stop()
 
-        assertThat(log.records.map { it.message }).doesNotContain("connection stop done")
+        assertThat(log.records.map { it.message }).contains("connection stop done")
+        val done = log.records.single { it.message == "connection stop done" }
+        assertThat(done.fields.map { it.first }).containsExactly("ms")
     }
 }

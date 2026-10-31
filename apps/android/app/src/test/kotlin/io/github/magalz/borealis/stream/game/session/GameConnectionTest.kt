@@ -204,6 +204,37 @@ internal class GameConnectionTest : GameTestBase() {
         assertThat(rig.phase).isEqualTo(StreamPhase.Starting(StartStage.FIRST_FRAME))
     }
 
+    // The connection stops before the callback that it posted runs
+
+    @Test
+    fun `a start callback posted before a stop opens no session after it`() {
+        rig.create()
+        onConnectionThread { rig.game.connectionStarted() }
+        // The main thread has not run the part of the callback that it owns.
+        assertThat(rig.field<Boolean>("connected")).isFalse()
+
+        rig.game.stopConnectionThen {}
+        rig.awaitStop()
+        ShadowLooper.idleMainLooper()
+
+        assertThat(rig.audit).isEmpty()
+        assertThat(rig.field<Boolean>("connected")).isFalse()
+        assertThat(rig.phase).isNotEqualTo(StreamPhase.Starting(StartStage.FIRST_FRAME))
+    }
+
+    @Test
+    fun `a start callback posted before onStop opens no session after it`() {
+        rig.create()
+        onConnectionThread { rig.game.connectionStarted() }
+        assertThat(rig.field<Boolean>("connected")).isFalse()
+
+        rig.stop()
+        ShadowLooper.idleMainLooper()
+
+        assertThat(rig.audit).isEmpty()
+        assertThat(rig.field<Boolean>("connected")).isFalse()
+    }
+
     // The shortcut of the computer
 
     private val shortcuts: ShortcutManager

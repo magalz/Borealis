@@ -156,6 +156,11 @@ class Game :
     private val imeKeys = ImeKeyGate { ImeKeyGate.isImeVisible(window.decorView) }
     private var displayedFailureDialog = false
     private var connected = false
+    // BOREALIS: the stop ran: a start callback that the connection thread posted before it must not
+    // open a stream that nobody ends, and a stage that fails after it is the failure that the stop
+    // caused. Written on the main thread only; volatile because stageFailed reads it on the native
+    // start thread (leave)
+    @Volatile private var stopRan = false
     // BOREALIS: the first frame was on screen, so an ending stream "stopped" and did not fail to
     // start (stream)
     @Volatile private var firstFrameShown = false
@@ -608,7 +613,7 @@ class Game :
                 PlatformBinding.getCryptoProvider(this),
                 serverCert,
             )
-        controllerHandler = ControllerHandler(this, conn, this, prefConfig)
+        controllerHandler = ControllerHandler(this, conn, prefConfig)
         keyboardTranslator = KeyboardTranslator()
 
         val inputManager = getSystemService(Context.INPUT_SERVICE) as InputManager
@@ -2743,10 +2748,11 @@ class Game :
     }
 
     // BOREALIS: stops the connection and runs [done] once it has stopped, from the thread that
-    // stopped it; at once when no connection runs (leave)
+    // stopped it; a connection that never connected is stopped too (leave)
     internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
 
     private fun stopConnection(done: Runnable? = null) {
+        stopRan = true // BOREALIS: no stream starts after this (leave)
         startupGuard.cancel() // BOREALIS: first-frame watchdog
         if (connected) {
             connected = false
@@ -2757,32 +2763,33 @@ class Game :
 
             // Update GameManager state to indicate we're no longer in game
             UiHelper.notifyStreamEnded(this)
-
-            // Stop may take a few hundred ms to do some network I/O to tell
-            // the server we're going away and clean up. Let it run in a separate
-            // thread to keep things smooth for the UI. Inside moonlight-common,
-            // we prevent another thread from starting a connection before and
-            // during the process of stopping this one.
-            object : Thread() {
-                    override fun run() {
-                        val stopStarted = System.nanoTime() // BOREALIS: leave log
-                        conn.stop()
-                        BorealisLog.i(
-                            LogTag.APP,
-                            "connection stop done",
-                            "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
-                        )
-                        tellConnectionStopped()
-                        done?.run()
-                    }
-                }
-                .start()
-        } else {
-            // BOREALIS: a start that failed after the decoder stage holds a decoder and no
-            // connection (stream)
-            tellConnectionStopped()
-            done?.run() // BOREALIS: nothing runs, so nothing to wait for (leave)
+        } else if (::controllerHandler.isInitialized) {
+            // BOREALIS: a stop before the connection started (the Connecting screen, a launch
+            // retry) stops the handler now, not in onDestroy, and the connection below (leave)
+            controllerHandler.stop()
         }
+
+        // Stop may take a few hundred ms to do some network I/O to tell
+        // the server we're going away and clean up. Let it run in a separate
+        // thread to keep things smooth for the UI. Inside moonlight-common,
+        // we prevent another thread from starting a connection before and
+        // during the process of stopping this one.
+        object : Thread() {
+                override fun run() {
+                    val stopStarted = System.nanoTime() // BOREALIS: leave log
+                    conn.stop()
+                    BorealisLog.i(
+                        LogTag.APP,
+                        "connection stop done",
+                        "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
+                    )
+                    // BOREALIS: a start that failed after the decoder stage holds a decoder and no
+                    // connection (stream)
+                    tellConnectionStopped()
+                    done?.run()
+                }
+            }
+            .start()
     }
 
     // BOREALIS: the stream's decoder is released with the connection, so a clip of the background
@@ -2792,6 +2799,12 @@ class Game :
     }
 
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
+        // BOREALIS: the stop interrupts a start in flight, and the interrupted start reports its
+        // stage as failed; that failure is the stop's own, so no port test (during a native stage
+        // this thread holds the bridge monitor, which the stop waits for) and no failure on the
+        // chrome (leave)
+        if (stopRan) return
+
         // BOREALIS: the last frame, copied before the connectivity test; a stage fails after the
         // first frame only rarely. The first frame was shown, so the chrome host exists (stream)
         if (firstFrameShown) chromeHost.freezeFrame()
@@ -2941,6 +2954,9 @@ class Game :
 
     override fun connectionStarted() {
         runOnUiThread {
+            // BOREALIS: posted before the stop and run after it: nothing would end this stream, and
+            // the audit trail would keep a session that the stop never saw (leave)
+            if (stopRan) return@runOnUiThread
             connected = true
             updatePipAutoEnter()
             // BOREALIS: the chrome waits for the first frame

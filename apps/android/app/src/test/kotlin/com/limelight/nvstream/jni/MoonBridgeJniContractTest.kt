@@ -141,10 +141,7 @@ class MoonBridgeJniContractTest {
                 }
                 .map { it.name }
 
-        // The only difference: Limelight.h counts the 4:4:4 formats as 10-bit ones, MoonBridge
-        // never
-        // asks for them (see the test after the next one).
-        assertThat(differing).containsExactly("VIDEO_FORMAT_MASK_10BIT")
+        assertThat(differing).isEmpty()
     }
 
     @Test
@@ -158,13 +155,19 @@ class MoonBridgeJniContractTest {
     }
 
     @Test
-    fun `the 10-bit video mask of MoonBridge keeps the two 10-bit formats the client asks for`() {
+    fun `the 10-bit video mask of MoonBridge is the one of Limelight h and keeps both Main10 formats`() {
         val java = MoonBridgeClassFile.constants.getValue("VIDEO_FORMAT_MASK_10BIT").value
         val header = NativeSources.numericDefines.getValue("VIDEO_FORMAT_MASK_10BIT")
+        val main10 =
+            listOf("VIDEO_FORMAT_H265_MAIN10", "VIDEO_FORMAT_AV1_MAIN10").map {
+                MoonBridgeClassFile.constants.getValue(it).value
+            }
 
-        // H.265 Main10 (0x0200) and AV1 Main10 (0x2000); the header adds the 4:4:4 formats (0x8800)
-        assertThat(java).isEqualTo(0x2200)
+        // The two Main10 formats the client asks for (0x0200, 0x2000) and the two 4:4:4 10-bit
+        // ones it never asks for (0x0800, 0x8000)
+        assertThat(java).isEqualTo(0xAA00)
         assertThat(header).isEqualTo(0xAA00L)
+        assertThat(main10.map { it and java }).isEqualTo(main10)
     }
 
     @Test

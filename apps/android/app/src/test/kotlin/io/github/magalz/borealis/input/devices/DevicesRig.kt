@@ -329,7 +329,7 @@ class DevicesRig(
             this.multiController = multiController
             configure()
         }
-    val handler = ControllerHandler(activity, connection, {}, prefs)
+    val handler = ControllerHandler(activity, connection, prefs)
 
     init {
         // Robolectric starts the clock at zero, where a lone Start looks like a Start+RB combo.

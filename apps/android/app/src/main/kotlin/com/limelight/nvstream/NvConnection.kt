@@ -111,6 +111,12 @@ open class NvConnection(
     // lock (stream.keyframe)
     @Volatile private var connected = false
 
+    // BOREALIS: true from the moment this connection takes the bridge until it gave it back: the
+    // native calls are process-global, so stop() makes them only while this holds, and never for a
+    // connection that did not set the bridge up (or whose bridge another connection may own by
+    // now). Written under the MoonBridge monitor only (host.launch)
+    @Volatile private var bridgeSetUp = false
+
     // BOREALIS: true while this connection holds the place of connectionAllowed, from the acquire
     // of its start until stop(), or a start that ends without a stream, gives it back (host.launch)
     private val holdsPlace = AtomicBoolean(false)
@@ -144,16 +150,31 @@ open class NvConnection(
         cancelLaunch()
         connected = false // BOREALIS: no new keyframe request from here on (stream.keyframe)
         // Interrupt any pending connection. This is thread-safe.
-        MoonBridge.interruptConnection()
+        // BOREALIS: only a connection that set the bridge up. The cancel above is written before
+        // this read, and the start thread writes the flag before it reads the cancel: either it
+        // sees the cancel and never begins, or this sees the flag and interrupts. The opposite
+        // order on the start side would let a start begin after a stop that skipped the interrupt
+        // (host.launch)
+        if (bridgeSetUp) {
+            MoonBridge.interruptConnection()
+        }
 
         // Moonlight-core is not thread-safe with respect to connection start and stop, so
         // we must not invoke that functionality in parallel.
         synchronized(MoonBridge::class.java) {
-            MoonBridge.stopConnection()
+            // BOREALIS: the flag is consumed, so that a second stop makes no native call either:
+            // by then another connection may own the bridge (host.launch)
+            val setUp = bridgeSetUp
+            bridgeSetUp = false
+            if (setUp) {
+                MoonBridge.stopConnection()
+            }
             // BOREALIS: the start thread may have set it again before it saw the interrupt
             // (stream.keyframe)
             connected = false
-            MoonBridge.cleanupBridge()
+            if (setUp) {
+                MoonBridge.cleanupBridge()
+            }
         }
 
         // Now a pending connection can be processed
@@ -211,6 +232,14 @@ open class NvConnection(
     private fun launchWithRetry(h: NvHTTP, verb: String, appId: Int): LaunchOutcome {
         startStep = verb // BOREALIS: host.failure
         context.listener.launchStarting("resume" == verb) // BOREALIS: host.failure
+        // BOREALIS: a stop or a cancel during /serverinfo, /applist or the connection-type
+        // detection must keep the first request from being sent. Only a GFE host needs it here: its
+        // request is made at once, while the runner below checks the cancel before the first
+        // request to any other host, and records it in the audit trail, which this return would
+        // skip. The callers take CANCELLED as "the user left, nothing to report" (host.launch)
+        if (context.isNvidiaServerSoftware && launchCancelled) {
+            return LaunchOutcome.CANCELLED
+        }
         return LaunchRetries.run(
             LaunchRequest(
                 context.isNvidiaServerSoftware,
@@ -774,8 +803,14 @@ open class NvConnection(
         synchronized(MoonBridge::class.java) {
             // BOREALIS: a whole stop() may have come since the check above, and the native start
             // would reset its interrupt: the start is either complete before the stop takes the
-            // monitor, and the stop then stops it, or it never begins (host.launch)
+            // monitor, and the stop then stops it, or it never begins. The flag is written before
+            // the cancel is read: stop() writes the cancel and then reads the flag outside the
+            // monitor to decide on the interrupt, so either this sees the cancel and never begins,
+            // or the stop sees the flag and interrupts. The opposite order would let the start
+            // begin after a stop that skipped the interrupt (host.launch)
+            bridgeSetUp = true
             if (launchCancelled) {
+                bridgeSetUp = false
                 releasePlace()
                 return
             }
@@ -813,6 +848,13 @@ open class NvConnection(
                 // LiStartConnection() failed, so the caller is not expected
                 // to stop the connection themselves. We need to release their
                 // semaphore count for them.
+                // BOREALIS: and the bridge: LiStartConnection undid its own work, so what is left
+                // is the renderers and the listener of this start, which must not outlive it. The
+                // flag goes before the place, because another connection may start right after
+                // this one gave it back, and a late stop() of this one must then make no native
+                // call; a restart sets it again (host.launch)
+                MoonBridge.cleanupBridge()
+                bridgeSetUp = false
                 releasePlace()
                 // BOREALIS: restart the whole start once
                 if (collisions.restartAfterFailure()) {

@@ -1216,10 +1216,10 @@ device round has not run; its checks are
   closed (P4, U10, G-M5 and R2), and 6 are moved: P9 and B3 to [Sprint 19](#sprint-19-secops), C18
   to the open owner decision of [Sprint 17](#sprint-17-general-fixes), and K6, C4 and A8 to
   [Sprint 18](#sprint-18-refactor-of-the-converted-code). Of the 113, U2 is fixed by the same change as
-  U1. The plan had U2 as intended and U8 as a fix: the owner moved U2 to the fixes on 2026-10-30,
-  and batch D found that U8 is not a defect. Each entry of item (b) of the three blocks now ends
-  with its triage id and what Sprint 16 did, and the triage corrected a few of the descriptions there
-  (S12-09, S12-14, P4, U3, U7a, C3, C17, C19c, C20c, G-M7, R3, R6 and B3).
+  U1. The owner-approved triage had U2 as intended and U8 as a fix: the owner moved U2 to the fixes
+  on 2026-10-30, and batch D found that U8 is not a defect. Each entry of item (b) of the three
+  blocks now ends with its triage id and what Sprint 16 did, and the triage corrected a few of the
+  descriptions there (S12-09, S12-14, P4, U3, U7a, C3, C17, C19c, C20c, G-M7, R3, R6 and B3).
 - **Batches.** Each batch was an issue and a branch, merged into the phase with a merge commit:
 
   | Batch | Issue | Entries fixed | Merge |
@@ -1580,8 +1580,8 @@ facts of both items and added the third item and the open decision. See the
   or per client) set to `switch_pro`.
 
 - **DualSense adaptive triggers.** From Sprint 16 (the owner-approved triage, 2026-10-30). A host
-  of 26.10 sends adaptive triggers (control message `0x5503`) for a DualSense, and Borealis drops them: it has no
-  handler, so moonlight-common-c puts in one that does nothing
+  of 26.10 sends adaptive triggers (control message `0x5503`) for a DualSense, and Borealis drops
+  them: it has no handler, so moonlight-common-c puts in one that does nothing
   ([contract, sections 12 and 13](host-contract/luminalshine.md#13-input)). It matters only when the
   host makes a DualSense, which it does through its `gamepad` setting `dualsense` (see "Pad battery"
   above).

@@ -721,7 +721,7 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `disabling after a stop still sends the stop of the gyroscope`() {
+    fun `disabling after a stop sends nothing and unregisters nothing again`() {
         val rig = sensorRig()
         wake(rig)
         rig.motionState(GYRO, 100)
@@ -729,7 +729,20 @@ class MotionSensorsTest : FeedbackTestBase() {
 
         rig.handler.disableSensors()
 
-        assertThat(rig.connection.motions).containsExactly(Motion(0, GYRO, 0f, 0f, 0f))
+        assertThat(rig.connection.motions).isEmpty()
+        assertThat(sensors.log).containsExactly("register 4 10000", "unregister 4").inOrder()
+    }
+
+    @Test
+    fun `a capture after a stop sends no stop of the gyroscope, since the sensors are gone`() {
+        val rig = sensorRig()
+        wake(rig)
+        rig.motionState(GYRO, 100)
+        rig.handler.stop()
+
+        rig.handler.setCaptured(true)
+
+        assertThat(rig.connection.motions).isEmpty()
     }
 
     // ---- what the pad reports on arrival

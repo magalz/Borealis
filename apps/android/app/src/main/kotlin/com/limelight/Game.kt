@@ -156,9 +156,11 @@ class Game :
     private val imeKeys = ImeKeyGate { ImeKeyGate.isImeVisible(window.decorView) }
     private var displayedFailureDialog = false
     private var connected = false
-    // BOREALIS: the stop ran (main thread only): a start callback that the connection thread posted
-    // before it must not open a stream that nobody ends (leave)
-    private var stopRan = false
+    // BOREALIS: the stop ran: a start callback that the connection thread posted before it must not
+    // open a stream that nobody ends, and a stage that fails after it is the failure that the stop
+    // caused. Written on the main thread only; volatile because stageFailed reads it on the native
+    // start thread (leave)
+    @Volatile private var stopRan = false
     // BOREALIS: the first frame was on screen, so an ending stream "stopped" and did not fail to
     // start (stream)
     @Volatile private var firstFrameShown = false
@@ -2797,6 +2799,11 @@ class Game :
     }
 
     override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
+        // BOREALIS: the stop interrupts a start in flight, and the interrupted start reports its
+        // stage as failed; that failure is the stop's own, so no port test (the stop waits for the
+        // native library that this thread holds) and no failure on the chrome (leave)
+        if (stopRan) return
+
         // BOREALIS: the last frame, copied before the connectivity test; a stage fails after the
         // first frame only rarely. The first frame was shown, so the chrome host exists (stream)
         if (firstFrameShown) chromeHost.freezeFrame()

@@ -3,6 +3,7 @@ package io.github.magalz.borealis.input.devices
 import android.view.InputDevice
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_B
+import android.view.KeyEvent.KEYCODE_BUTTON_L2
 import android.view.KeyEvent.KEYCODE_BUTTON_X
 import android.view.KeyEvent.KEYCODE_BUTTON_Y
 import com.google.common.truth.Truth.assertThat
@@ -280,37 +281,58 @@ class ControllerNumberTest : DevicesTestBase() {
     }
 
     @Test
-    fun `removing a pad that shares controller 0 sends nothing for the pad that is left`() {
+    fun `removing a pad that shares controller 0 sends what the pad that is left holds`() {
         val rig = rig(multiController = false)
         val first = pad(1)
         val second = pad(2)
         listOf(first, second).forEach(rig::connect)
         rig.press(first, KEYCODE_BUTTON_A)
         rig.press(second, KEYCODE_BUTTON_B)
+        rig.press(second, KEYCODE_BUTTON_L2)
         val sent = rig.connection.packets.size
 
         rig.disconnect(second)
 
         // A zero packet is for controller 0 as a whole: it would drop the A the first pad holds.
-        // The B of the pad that went stays down on the PC until the next event of the pad left
-        assertThat(rig.connection.packets).hasSize(sent)
-        assertThat(rig.connection.packets.last().buttons).isEqualTo(a or b)
+        // The B and the trigger of the pad that went come up with the state of the pad left
+        assertThat(rig.connection.packets).hasSize(sent + 1)
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = a))
         rig.press(first, KEYCODE_BUTTON_X)
         assertThat(rig.connection.packets.last().buttons).isEqualTo(a or ControllerPacket.X_FLAG)
     }
 
     @Test
-    fun `removing a USB pad that shares controller 0 sends nothing for the pad that is left`() {
+    fun `removing a USB pad that shares controller 0 sends what the pad that is left holds`() {
         val rig = rig(multiController = false)
         val first = FakeUsbController(8, rig.handler).also { rig.handler.deviceAdded(it) }
         val second = FakeUsbController(9, rig.handler).also { rig.handler.deviceAdded(it) }
         first.report(a)
-        second.report(a)
+        second.report(b, leftStickX = 1f)
         val sent = rig.connection.packets.size
 
         rig.handler.deviceRemoved(second)
 
-        assertThat(rig.connection.packets).hasSize(sent)
+        // The B and the stick of the pad that went come up too
+        assertThat(rig.connection.packets).hasSize(sent + 1)
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = a))
+    }
+
+    @Test
+    fun `removing a pad that shares controller 0 while the input is captured sends nothing`() {
+        val rig = rig(multiController = false)
+        val first = pad(1)
+        val second = pad(2)
+        listOf(first, second).forEach(rig::connect)
+        rig.press(first, KEYCODE_BUTTON_A)
+        rig.press(second, KEYCODE_BUTTON_B)
+        rig.handler.setCaptured(true)
+        rig.connection.packets.clear()
+
+        rig.disconnect(second)
+
+        assertThat(rig.connection.packets).isEmpty()
     }
 
     @Test
@@ -330,7 +352,7 @@ class ControllerNumberTest : DevicesTestBase() {
     }
 
     @Test
-    fun `removing the touchpad of a pad sends nothing for its joystick`() {
+    fun `removing the touchpad of a pad sends what its joystick holds`() {
         val rig = rig(multiController = true)
         val other = pad(1)
         val joystick = pad(5) { descriptor = "same" }
@@ -349,7 +371,10 @@ class ControllerNumberTest : DevicesTestBase() {
 
         rig.disconnect(touchpad)
 
-        assertThat(rig.connection.packets).hasSize(sent)
+        // The A of the touchpad comes up; the B of the joystick stays down
+        assertThat(rig.connection.packets).hasSize(sent + 1)
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 1, activeMask = 0b11, buttons = b))
     }
 
     @Test

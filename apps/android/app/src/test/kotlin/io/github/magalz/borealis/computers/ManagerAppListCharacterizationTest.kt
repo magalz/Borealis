@@ -144,6 +144,38 @@ class ManagerAppListCharacterizationTest {
     }
 
     @Test
+    fun `a second start of a poller that runs starts no second thread, so one stop ends it all`() {
+        val host = host(apps("Desktop"))
+        val computer = paired(host).also { it.state = ComputerDetails.State.OFFLINE }
+        rig.start()
+        rig.binder.startPolling(Updates())
+        val poller = rig.appListPoller(computer)
+
+        poller.start()
+        poller.start()
+
+        assertThat(liveThreads(APP_LIST_THREAD)).hasSize(1)
+        poller.stop()
+        awaitUntil("the app list thread to end") { liveThreads(APP_LIST_THREAD).isEmpty() }
+    }
+
+    @Test
+    fun `a poller that was stopped starts a thread again when it is started`() {
+        val host = host(apps("Desktop"))
+        val computer = paired(host).also { it.state = ComputerDetails.State.OFFLINE }
+        rig.start()
+        rig.binder.startPolling(Updates())
+        val poller = rig.appListPoller(computer)
+        poller.start()
+        poller.stop()
+        awaitUntil("the app list thread to end") { liveThreads(APP_LIST_THREAD).isEmpty() }
+
+        poller.start()
+
+        assertThat(liveThreads(APP_LIST_THREAD)).hasSize(1)
+    }
+
+    @Test
     fun `a host without an id or without an address is skipped and polled once it has them`() {
         val list = apps("Desktop")
         val host = host(list)

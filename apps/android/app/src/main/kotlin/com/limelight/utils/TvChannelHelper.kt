@@ -141,8 +141,7 @@ class TvChannelHelper(private val context: Context) {
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
         val width = context.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_width)
-        // The height reads the width dimension too, as the Java did (reported in Sprint 12).
-        val height = context.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_width)
+        val height = context.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_height)
 
         val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)

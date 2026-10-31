@@ -9,6 +9,7 @@ import android.view.KeyEvent.KEYCODE_BUTTON_START
 import android.view.KeyEvent.KEYCODE_MENU
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.input.ControllerPacket.A_FLAG
 import com.limelight.nvstream.input.ControllerPacket.BACK_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LB_FLAG
@@ -18,7 +19,6 @@ import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
 import io.github.magalz.borealis.testing.OwnedResources
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
-import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -129,20 +129,46 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
-    fun `the held time is cut to an int, so 2 to the 32 plus 10 ms looks like 10 ms`() {
-        assertThat(waited((1L shl 32) + 10)).isTrue()
+    fun `the held time is not cut to an int, so 2 to the 32 plus 10 ms is a long hold`() {
+        assertThat(waited((1L shl 32) + 10)).isFalse()
         assertThat(waited((1L shl 32) + 30)).isFalse()
         assertThat(waited((1L shl 31) - 1)).isFalse()
     }
 
     @Test
-    fun `a held time past what an int holds wraps, and the wait then overflows to a negative sleep`() {
+    fun `a held time past what an int holds is a long hold, not a negative sleep`() {
         for (heldMs in listOf(1L shl 31, (1L shl 31) + 5)) {
-            val error =
-                assertThrows(IllegalArgumentException::class.java) {
-                    pad.release(KEYCODE_BUTTON_A, at = rig.now, downTime = rig.now - heldMs)
-                }
-            assertWithMessage("held $heldMs").that(error).hasMessageThat().contains("negative")
+            assertWithMessage("held $heldMs")
+                .that(runCatching { waited(heldMs) }.getOrNull())
+                .isFalse()
+        }
+    }
+
+    @Test
+    fun `the wait is what is missing of 25 ms, never less than 0 or more than 25`() {
+        val expected =
+            mapOf(
+                0L to 25L,
+                1L to 24L,
+                24L to 1L,
+                25L to 0L,
+                26L to 0L,
+                10_000L to 0L,
+                (1L shl 31) to 0L,
+                (1L shl 31) + 5 to 0L,
+                (1L shl 32) + 10 to 0L,
+                Long.MAX_VALUE to 0L,
+                // A key that comes up before it went down waits as long as one let go at once.
+                -5L to 25L,
+                -1_000L to 25L,
+                -(1L shl 31) to 25L,
+                Long.MIN_VALUE to 25L,
+            )
+
+        for ((heldMs, wait) in expected) {
+            assertWithMessage("held $heldMs")
+                .that(ControllerHandler.waitBeforeReleaseMs(heldMs))
+                .isEqualTo(wait)
         }
     }
 

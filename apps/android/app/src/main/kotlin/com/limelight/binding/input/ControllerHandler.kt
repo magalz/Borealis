@@ -4040,6 +4040,10 @@ class ControllerHandler(
             }
         }
 
+        // Not wired yet: handleButtonUp still works the wait out itself, with the same int cast
+        internal fun waitBeforeReleaseMs(heldMs: Long): Long =
+            (MINIMUM_BUTTON_DOWN_TIME_MS - heldMs.toInt()).toLong()
+
         private fun getMotionRangeForJoystickAxis(
             dev: InputDevice,
             axis: Int,

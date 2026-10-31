@@ -78,8 +78,8 @@ class WakeOnLanSenderCharacterizationTest {
 
     /**
      * An HTTP port whose first four dynamic ports (nine, ten, eleven and thirteen above it) are in
-     * range and whose fifth (twenty-one above it) is not, with a socket on each of the four. The
-     * null when none of the candidate ports is free to listen on.
+     * range and whose fifth (twenty-one above it) is not, with a socket on each of the four. Null
+     * when none of the candidate ports is free to listen on.
      */
     private fun bindPartlyOutOfRangePorts(): DynamicPorts? {
         for (httpPort in PARTLY_OUT_OF_RANGE_HTTP_PORTS) {

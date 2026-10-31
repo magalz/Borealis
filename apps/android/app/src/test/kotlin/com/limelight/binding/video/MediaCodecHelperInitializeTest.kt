@@ -105,6 +105,16 @@ class MediaCodecHelperInitializeTest : MediaCodecHelperTestBase() {
                 GlFacts(GlFacts.GL_3_2, "Mali-G78 MP14"),
                 Outcome(OLD),
             ),
+            scenario(
+                "a four-digit model is read whole, not by its last three digits",
+                GlFacts(GlFacts.GL_3_2, "Adreno (TM) 1305"),
+                Outcome(MODERN),
+            ),
+            scenario(
+                "a model number of ten digits does not fit a number and counts as another GPU",
+                GlFacts(GlFacts.GL_3_2, "Adreno (TM) 1234567890"),
+                Outcome(OLD),
+            ),
         )
 
     @Test
@@ -133,6 +143,16 @@ class MediaCodecHelperInitializeTest : MediaCodecHelperTestBase() {
             scenario(
                 "Adreno 530 is neither",
                 GlFacts(GlFacts.GL_3_2, "Adreno (TM) 530"),
+                Outcome(MODERN),
+            ),
+            scenario(
+                "Adreno 6400 is not low end: its model is not the 400 of its last digits",
+                GlFacts(GlFacts.GL_3_2, "Adreno (TM) 6400"),
+                Outcome(MODERN),
+            ),
+            scenario(
+                "Adreno 6620 is not an Adreno 620",
+                GlFacts(GlFacts.GL_3_2, "Adreno (TM) 6620"),
                 Outcome(MODERN),
             ),
         )

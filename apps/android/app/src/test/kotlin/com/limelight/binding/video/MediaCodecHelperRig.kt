@@ -369,7 +369,7 @@ class CodecBuilder(private val name: String) {
                 object : HashMap<String, MediaCodecInfo.CodecCapabilities>(real) {
                     override fun get(key: String): MediaCodecInfo.CodecCapabilities? {
                         reads?.incrementAndGet()
-                        if (brokenCapabilities) throw IllegalArgumentException("buggy decoder")
+                        require(!brokenCapabilities) { "buggy decoder" }
                         return super.get(key)
                     }
                 },

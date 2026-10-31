@@ -25,6 +25,7 @@ object MediaCodecHelper {
     // OpenGL ES 3.0 is the first version with Tegra K1 class reference frame invalidation.
     private const val GL_ES_VERSION_3_0 = 0x30000
     private const val ADRENO_GLES_31_FIRST_MODEL = 400
+    private const val ADRENO_MODEL_DIGITS = 3
     private const val ADRENO_620_MODEL = 620
     private const val LOW_END_SNAPDRAGON_MAX_RFI_HEIGHT = 720
 
@@ -262,7 +263,7 @@ object MediaCodecHelper {
 
         // The current logic is to identify low-end SoCs based on a zero in the x0x place of the
         // three-digit models; a longer model number is a newer generation.
-        return modelNumber.length == 3 && modelNumber[1] == '0'
+        return modelNumber.length == ADRENO_MODEL_DIGITS && modelNumber[1] == '0'
     }
 
     private fun getAdrenoRendererModelNumber(glRenderer: String): Int {

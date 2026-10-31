@@ -313,7 +313,7 @@ class MediaCodecHelperInitializeTest : MediaCodecHelperTestBase() {
         override fun getSystemService(name: String): Any? {
             if (name == Context.ACTIVITY_SERVICE && failures > 0) {
                 failures--
-                throw IllegalStateException(NOT_THERE)
+                error(NOT_THERE)
             }
             return super.getSystemService(name)
         }
@@ -329,13 +329,12 @@ class MediaCodecHelperInitializeTest : MediaCodecHelperTestBase() {
         val flaky = FlakyContext(context, failures = 1)
         val rows = Rows()
 
-        val additions =
-            retried.additionsDuring {
-                rows.checkThrows("the first run", IllegalStateException::class.java, NOT_THERE) {
-                    retried.initialize(flaky, gl.renderer)
-                }
+        val additions = retried.additionsDuring {
+            rows.checkThrows("the first run", IllegalStateException::class.java, NOT_THERE) {
                 retried.initialize(flaky, gl.renderer)
             }
+            retried.initialize(flaky, gl.renderer)
+        }
 
         rows.check("the lists after the retry", expected) { additions }
         rows.check("the retry ends initialized", true) { retried.flag("initialized") }

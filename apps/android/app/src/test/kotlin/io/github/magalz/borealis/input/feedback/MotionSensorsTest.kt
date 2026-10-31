@@ -251,7 +251,7 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `only the first pad with the controller number is configured`() {
+    fun `every pad with the controller number is configured`() {
         val second = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
         val rig = sensorRig()
         wake(rig, padSensors, id = 5)
@@ -260,7 +260,7 @@ class MotionSensorsTest : FeedbackTestBase() {
         rig.motionState(GYRO, 100)
 
         assertThat(sensors.log).containsExactly("register 4 10000")
-        assertThat(Hardware.sensors(second).log).isEmpty()
+        assertThat(Hardware.sensors(second).log).containsExactly("register 4 10000")
     }
 
     @Test

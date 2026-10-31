@@ -2703,12 +2703,12 @@ class ControllerHandler(
         // If the button hasn't been down long enough, sleep for a bit before sending the up event
         // This allows "instant" button presses (like OUYA's virtual menu button) to work. This
         // path should not be triggered during normal usage.
-        val buttonDownTime = (event.eventTime - event.downTime).toInt()
-        if (buttonDownTime < MINIMUM_BUTTON_DOWN_TIME_MS) {
+        val waitMs = waitBeforeReleaseMs(event.eventTime - event.downTime)
+        if (waitMs > 0) {
             // Since our sleep time is so short (<= 25 ms), it shouldn't cause a problem doing this
             // in the UI thread.
             try {
-                Thread.sleep((MINIMUM_BUTTON_DOWN_TIME_MS - buttonDownTime).toLong())
+                Thread.sleep(waitMs)
             } catch (e: InterruptedException) {
                 e.printStackTrace()
 
@@ -4040,9 +4040,10 @@ class ControllerHandler(
             }
         }
 
-        // Not wired yet: handleButtonUp still works the wait out itself, with the same int cast
+        // How long a key held for heldMs still waits before its release goes out: what is missing
+        // of 25 ms, whatever the times of the event say (a key can come up before it went down)
         internal fun waitBeforeReleaseMs(heldMs: Long): Long =
-            (MINIMUM_BUTTON_DOWN_TIME_MS - heldMs.toInt()).toLong()
+            MINIMUM_BUTTON_DOWN_TIME_MS - heldMs.coerceIn(0L, MINIMUM_BUTTON_DOWN_TIME_MS.toLong())
 
         private fun getMotionRangeForJoystickAxis(
             dev: InputDevice,

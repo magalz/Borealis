@@ -751,7 +751,7 @@ object MediaCodecHelper {
         // OMX.qcom.video.decoder.hevcswvdec
         // OMX.SEC.hevc.sw.dec
         //
-        if (decoderInfo.name.contains("sw")) {
+        if (decoderInfo.name.contains("sw", ignoreCase = true)) {
             LimeLog.info("Disallowing HEVC on software decoder: " + decoderInfo.name)
             return false
         } else if (
@@ -804,7 +804,7 @@ object MediaCodecHelper {
         // OMX.qcom.video.decoder.hevcswvdec
         // OMX.SEC.hevc.sw.dec
         //
-        if (decoderInfo.name.contains("sw")) {
+        if (decoderInfo.name.contains("sw", ignoreCase = true)) {
             LimeLog.info("Disallowing AV1 on software decoder: " + decoderInfo.name)
             return false
         } else if (!decoderInfo.isHardwareAccelerated || decoderInfo.isSoftwareOnly) {

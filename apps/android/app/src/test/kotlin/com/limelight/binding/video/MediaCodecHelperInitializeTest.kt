@@ -1,5 +1,7 @@
 package com.limelight.binding.video
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -286,6 +288,40 @@ class MediaCodecHelperInitializeTest : MediaCodecHelperTestBase() {
         )
     }
 
+    /** A context whose activity manager is not there for the first [failures] times it is asked. */
+    private class FlakyContext(base: Context, private var failures: Int) : ContextWrapper(base) {
+        override fun getSystemService(name: String): Any? {
+            if (name == Context.ACTIVITY_SERVICE && failures > 0) {
+                failures--
+                throw IllegalStateException(NOT_THERE)
+            }
+            return super.getSystemService(name)
+        }
+    }
+
+    @Test
+    fun `a retry after an exception adds what one run adds`() {
+        val gl = GlFacts(GlFacts.GL_3_2, "PowerVR Rogue GX6250")
+        val single = fresh()
+        setGl(gl, fireTv = true)
+        val expected = single.additionsDuring { single.initialize(context, gl.renderer) }
+        val retried = fresh()
+        val flaky = FlakyContext(context, failures = 1)
+        val rows = Rows()
+
+        val additions =
+            retried.additionsDuring {
+                rows.checkThrows("the first run", IllegalStateException::class.java, NOT_THERE) {
+                    retried.initialize(flaky, gl.renderer)
+                }
+                retried.initialize(flaky, gl.renderer)
+            }
+
+        rows.check("the lists after the retry", expected) { additions }
+        rows.check("the retry ends initialized", true) { retried.flag("initialized") }
+        rows.verify()
+    }
+
     @Test
     fun `initialize runs only once`() {
         val loaded = fresh()
@@ -312,6 +348,7 @@ class MediaCodecHelperInitializeTest : MediaCodecHelperTestBase() {
     }
 
     private companion object {
+        const val NOT_THERE = "the activity manager is not there yet"
         const val AVC_RFI = "refFrameInvalidationAvcPrefixes"
         const val HEVC_RFI = "refFrameInvalidationHevcPrefixes"
         const val HEVC_WHITE = "whitelistedHevcDecoders"

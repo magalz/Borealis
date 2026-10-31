@@ -263,16 +263,45 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `every pad with the controller number is configured`() {
+    fun `of two pads with the controller number only the first reports each motion type`() {
         val second = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
         val rig = sensorRig()
         wake(rig, padSensors, id = 5)
         wake(rig, second, id = 6)
 
         rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 50)
+
+        assertThat(sensors.log).containsExactly("register 4 10000", "register 1 20000").inOrder()
+        assertThat(Hardware.sensors(second).log).isEmpty()
+    }
+
+    @Test
+    fun `a pad with sensors of its own goes before a pad that borrows the phone's`() {
+        val rig = sensorRig { gamepadMotionSensorsFallbackToDevice = true }
+        // The first pad has no sensors and, as player one, borrows the phone's
+        rig.wake(rig.connectPad(id = 5))
+        wake(rig, padSensors, id = 6)
+
+        rig.motionState(GYRO, 100)
 
         assertThat(sensors.log).containsExactly("register 4 10000")
-        assertThat(Hardware.sensors(second).log).containsExactly("register 4 10000")
+        assertThat(Hardware.sensors(rig.phoneSensors).log).isEmpty()
+    }
+
+    @Test
+    fun `sensors spread over two pads of one number report each from the pad that has it`() {
+        val onlyAccel = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER)
+        val onlyGyro = Hardware.sensorManager(Sensor.TYPE_GYROSCOPE)
+        val rig = sensorRig()
+        wake(rig, onlyAccel, id = 5)
+        wake(rig, onlyGyro, id = 6)
+
+        rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 50)
+
+        assertThat(Hardware.sensors(onlyAccel).log).containsExactly("register 1 20000")
+        assertThat(Hardware.sensors(onlyGyro).log).containsExactly("register 4 10000")
     }
 
     @Test

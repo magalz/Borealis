@@ -1120,5 +1120,6 @@ internal class PollingTuple(
     @JvmField var thread: Thread?,
 ) {
     @JvmField val networkLock = Any()
-    @JvmField var lastSuccessfulPollMs: Long = 0
+    // The polling thread writes it under networkLock and startPolling reads it under pollingTuples.
+    @Volatile @JvmField var lastSuccessfulPollMs: Long = 0
 }

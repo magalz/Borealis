@@ -186,6 +186,13 @@ class MediaCodecHelperLogTest : MediaCodecHelperTestBase() {
             val helper = helper()
             logged { helper.whitelistedForAv1(codec("c2.vendor.sw.av1") { mime = av1 }) }
         }
+        rows.check(
+            "SW in capitals",
+            infos("Disallowing AV1 on software decoder: c2.vendor.SW.av1"),
+        ) {
+            val helper = helper()
+            logged { helper.whitelistedForAv1(codec("c2.vendor.SW.av1") { mime = av1 }) }
+        }
         rows.check("software only", infos("Disallowing AV1 on software decoder: c2.vendor.av1")) {
             val helper = helper()
             logged {

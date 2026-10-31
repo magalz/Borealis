@@ -1057,12 +1057,13 @@ class ControllerHandler(
         } else {
             // From Android S the system says whether the pad has a battery: tell the host once
             // that it has none, if the pad claimed a battery in its arrival (an external pad, see
-            // sendControllerArrival): the host has nothing to correct for a pad that did not, and
-            // a number can be shared with a pad that has a real battery. The same goes for a
-            // device without joystick axes, the touchpad of a pad: it takes the number of its
-            // joystick, which owns the battery. Before S we cannot know, and the pad claims no
-            // battery.
-            val ownsBattery = context.external && context.hasJoystickAxes
+            // sendControllerArrival): the host has nothing to correct for a pad that did not. The
+            // same goes for a device without joystick axes, the touchpad of a pad: it takes the
+            // number of its joystick, which owns the battery. With a single controller pads that
+            // claimed one share the number, and the host keeps one battery for it: the pad that
+            // has none stays silent, or it would wipe what the other reports and the poll sends
+            // only a change. Before S we cannot know, and the pad claims no battery.
+            val ownsBattery = claimsBattery(context) && !sharesNumberWithClaimant(context)
             if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                     ownsBattery &&
@@ -1109,6 +1110,26 @@ class ControllerHandler(
             context.lastReportedBatteryStatus = currentBatteryStatus
             context.lastReportedBatteryCapacity = currentBatteryCapacity
         }
+    }
+
+    // The pad claimed a battery in its arrival: an external one, not the touchpad of a pad
+    private fun claimsBattery(context: InputDeviceContext) =
+        context.external && context.hasJoystickAxes
+
+    // Another pad on the controller number of the context that claimed a battery too
+    private fun sharesNumberWithClaimant(context: InputDeviceContext): Boolean {
+        fun isOtherOnItsNumber(other: InputDeviceContext) =
+            other !== context &&
+                other.assignedControllerNumber &&
+                other.controllerNumber == context.controllerNumber
+
+        var shared = false
+        inputDeviceContexts.forEachValue {
+            if (isOtherOnItsNumber(it) && claimsBattery(it)) {
+                shared = true
+            }
+        }
+        return shared
     }
 
     private fun sendControllerInputPacket(context: GenericControllerContext) {

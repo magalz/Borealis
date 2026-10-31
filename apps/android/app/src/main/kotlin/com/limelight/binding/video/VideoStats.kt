@@ -30,12 +30,16 @@ internal class VideoStats {
         frameLossEvents += other.frameLossEvents
         framesLost += other.framesLost
 
-        minHostProcessingLatency =
-            if (minHostProcessingLatency == Char.MIN_VALUE) {
-                other.minHostProcessingLatency
-            } else {
-                minOf(minHostProcessingLatency.code, other.minHostProcessingLatency.code).toChar()
-            }
+        // A window without host latency (the char 0) leaves the minimum alone
+        if (other.minHostProcessingLatency != Char.MIN_VALUE) {
+            minHostProcessingLatency =
+                if (minHostProcessingLatency == Char.MIN_VALUE) {
+                    other.minHostProcessingLatency
+                } else {
+                    minOf(minHostProcessingLatency.code, other.minHostProcessingLatency.code)
+                        .toChar()
+                }
+        }
         maxHostProcessingLatency =
             maxOf(maxHostProcessingLatency.code, other.maxHostProcessingLatency.code).toChar()
         totalHostProcessingLatency += other.totalHostProcessingLatency

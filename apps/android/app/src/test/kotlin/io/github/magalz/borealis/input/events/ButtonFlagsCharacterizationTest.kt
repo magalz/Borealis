@@ -305,19 +305,51 @@ class ButtonFlagsCharacterizationTest {
     }
 
     @Test
-    fun `a key that goes down again while it is held sends its packet again`() {
+    fun `a key that goes down again while it is held sends no packet`() {
         pad.press(KEYCODE_BUTTON_A)
         pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 1))
         pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 2))
 
-        assertThat(rig.buttons()).containsExactly(A_FLAG, A_FLAG, A_FLAG)
+        assertThat(rig.buttons()).containsExactly(A_FLAG)
     }
 
     @Test
-    fun `a key up for a button that is not down still sends a packet`() {
+    fun `a key up for a button that is not down sends nothing`() {
         pad.release(KEYCODE_BUTTON_B, downTime = rig.now - 100)
 
-        assertThat(rig.packets).containsExactly(Sent(0, 1, 0))
+        assertThat(rig.packets).isEmpty()
+    }
+
+    @Test
+    fun `a key up for a button that is not down leaves the buttons that are`() {
+        pad.press(KEYCODE_BUTTON_A)
+
+        pad.release(KEYCODE_BUTTON_B, downTime = rig.now - 100)
+        pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 1))
+
+        assertThat(rig.buttons()).containsExactly(A_FLAG)
+        assertThat(pad.inputMap).isEqualTo(A_FLAG)
+    }
+
+    @Test
+    fun `a digital trigger sends its packet down and up, and none for a repeat or a spurious up`() {
+        pad.release(KEYCODE_BUTTON_L2, downTime = rig.now - 100)
+        pad.press(KEYCODE_BUTTON_L2)
+        pad.press(KEYCODE_BUTTON_L2, KeyDetail(repeat = 1))
+        rig.advanceBy(100)
+        pad.release(KEYCODE_BUTTON_L2)
+        pad.release(KEYCODE_BUTTON_L2, downTime = rig.now - 100)
+
+        assertThat(rig.packets.map { it.leftTrigger }).containsExactly(-1, 0).inOrder()
+    }
+
+    @Test
+    fun `a repeat that adds a button the pad was not holding is sent`() {
+        pad.press(KEYCODE_BUTTON_A)
+
+        pad.press(KEYCODE_BUTTON_B, KeyDetail(repeat = 1))
+
+        assertThat(rig.buttons()).containsExactly(A_FLAG, A_FLAG or B_FLAG).inOrder()
     }
 
     @Test

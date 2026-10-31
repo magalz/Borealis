@@ -13,6 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.logging.Level
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,8 +64,13 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
      * What the platform does when the registration of [callback] fails: its handler thread forgets
      * the callback, and only then delivers the failure. Unregistering it again throws.
      */
-    private fun registrationFails(callback: NsdManager.ServiceInfoCallback) {
+    private fun platformDrops(callback: NsdManager.ServiceInfoCallback) {
         nsdManager.unregisterServiceInfoCallback(callback)
+    }
+
+    /** The whole failure: the platform drops [callback] and then delivers the failure. */
+    private fun registrationFails(callback: NsdManager.ServiceInfoCallback) {
+        platformDrops(callback)
         callback.onServiceInfoCallbackRegistrationFailed(5)
     }
 
@@ -516,15 +522,98 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     }
 
     @Test
-    fun `closing the agent shuts the executor down even when stopping the discovery throws`() {
-        // The platform dropped the callback, and its failure has not reached the agent yet, so
-        // unregistering it throws. The agent must still release its executor.
+    fun `a callback that the platform dropped before its failure arrived lets the service found again register a new one`() {
+        // The platform forgets the callback on its handler thread and only then posts the failure
+        // to the executor of the agent, so the agent still holds the dead callback when the
+        // service is found again.
         val discovery = startAndConfirm()
         val found = service("Den PC")
         discovery.onServiceFound(found)
-        nsdManager.unregisterServiceInfoCallback(callbacks(found).single())
+        val dropped = callbacks(found).single()
+        platformDrops(dropped)
 
-        runCatching { agent.close() }
+        discovery.onServiceFound(found)
+
+        assertThat(callbacks(found)).hasSize(1)
+        assertThat(callbacks(found)).doesNotContain(dropped)
+        // The new callback is stored, so the stop unregisters it.
+        agent.stopDiscovery()
+        assertThat(callbacks(found)).isEmpty()
+    }
+
+    @Test
+    fun `a callback that the platform dropped before its failure arrived does not make the service lost throw`() {
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        platformDrops(callbacks(found).single())
+
+        discovery.onServiceLost(found)
+
+        assertThat(log.messages(Level.INFO)).contains("NSD: Machine lost: Den PC")
+        // The entry is gone, so the stop has nothing left to unregister: no second warning.
+        agent.stopDiscovery()
+        assertThat(discoveries()).isEmpty()
+        assertThat(log.messages(Level.WARNING)).hasSize(1)
+    }
+
+    @Test
+    fun `a callback that the platform dropped before its failure arrived does not stop the stop from unregistering the others`() {
+        val discovery = startAndConfirm()
+        val denPc = service("Den PC")
+        val laptop = service("Laptop")
+        discovery.onServiceFound(denPc)
+        discovery.onServiceFound(laptop)
+        platformDrops(callbacks(denPc).single())
+
+        agent.stopDiscovery()
+
+        assertThat(discoveries()).isEmpty()
+        assertThat(callbacks(denPc)).isEmpty()
+        assertThat(callbacks(laptop)).isEmpty()
+    }
+
+    @Test
+    fun `a callback that the platform dropped before its failure arrived does not make the close throw`() {
+        val discovery = startAndConfirm()
+        val denPc = service("Den PC")
+        val laptop = service("Laptop")
+        discovery.onServiceFound(denPc)
+        discovery.onServiceFound(laptop)
+        platformDrops(callbacks(denPc).single())
+
+        agent.close()
+
+        assertThat(discoveries()).isEmpty()
+        assertThat(callbacks(laptop)).isEmpty()
+        assertThat((platform.serviceInfoExecutors.first() as ThreadPoolExecutor).isShutdown)
+            .isTrue()
+    }
+
+    @Test
+    fun `a callback that the platform no longer holds is logged as a warning with the service name and no address`() {
+        val discovery = startAndConfirm()
+        val found = resolved("Den PC", 47989, "192.168.1.5")
+        discovery.onServiceFound(found)
+        platformDrops(callbacks(found).single())
+
+        discovery.onServiceLost(found)
+
+        val warning = log.messages(Level.WARNING).single()
+        assertThat(warning).contains("Den PC")
+        assertThat(warning).doesNotContain("192.168.1.5")
+    }
+
+    @Test
+    fun `closing the agent shuts the executor down even when stopping the discovery throws`() {
+        // The platform forgot the discovery, and the agent does not know yet, so stopping it
+        // throws. The agent must still release its executor.
+        val discovery = startAndConfirm()
+        discovery.onServiceFound(service("Den PC"))
+        platform.holdStops = true
+        nsdManager.stopServiceDiscovery(discovery)
+
+        assertThrows(IllegalArgumentException::class.java) { agent.close() }
 
         assertThat((platform.serviceInfoExecutors.first() as ThreadPoolExecutor).isShutdown)
             .isTrue()

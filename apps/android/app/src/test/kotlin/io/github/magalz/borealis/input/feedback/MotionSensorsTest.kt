@@ -141,28 +141,31 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a negative rate is a rate of zero, which registers nothing`() {
+    fun `a rate past the sign bit is read as unsigned and cut at 200`() {
         val rig = sensorRig()
         val pad = wake(rig)
 
-        rig.motionState(GYRO, -5)
-        rig.motionState(ACCEL, -8)
+        // The host sends the rate as an unsigned short: these are 65531 Hz and 32768 Hz
+        rig.motionState(GYRO, 65531)
+        rig.motionState(ACCEL, 32768)
 
-        assertThat(sensors.log).isEmpty()
-        assertThat(storedRate(rig, pad, "gyroReportRateHz")).isEqualTo(0)
-        assertThat(storedRate(rig, pad, "accelReportRateHz")).isEqualTo(0)
+        assertThat(sensors.log).containsExactly("register 4 5000", "register 1 5000").inOrder()
+        assertThat(storedRate(rig, pad, "gyroReportRateHz")).isEqualTo(200)
+        assertThat(storedRate(rig, pad, "accelReportRateHz")).isEqualTo(200)
     }
 
     @Test
-    fun `a negative rate unregisters the sensor that was on`() {
+    fun `a rate past the sign bit does not turn the sensor off, it replaces the listener`() {
         val rig = sensorRig()
         wake(rig)
         rig.motionState(GYRO, 100)
 
-        rig.motionState(GYRO, -5)
+        rig.motionState(GYRO, 65535)
 
-        assertThat(sensors.log).containsExactly("register 4 10000", "unregister 4").inOrder()
-        assertThat(sensors.registrations).isEmpty()
+        assertThat(sensors.log)
+            .containsExactly("register 4 10000", "unregister 4", "register 4 5000")
+            .inOrder()
+        assertThat(sensors.registrations.map { it.sensor.type }).containsExactly(4)
     }
 
     @Test

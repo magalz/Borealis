@@ -116,12 +116,14 @@ class MediaCodecDecoderRenderer(
     private val spsBuffers = ArrayList<ByteArray>()
     private val ppsBuffers = ArrayList<ByteArray>()
     private var submittedCsd = false
-    private var currentHdrMetadata: ByteArray? = null
+    // BOREALIS: setHdrMode (control stream thread) and setup each write one of these two fields and
+    // read the other, so both are volatile: a stale read on both sides would lose the HDR restart
+    @Volatile private var currentHdrMetadata: ByteArray? = null
 
     private var nextInputBufferIndex = -1
     private var nextInputBuffer: ByteBuffer? = null
 
-    private var videoDecoder: MediaCodec? = null
+    @Volatile private var videoDecoder: MediaCodec? = null
     private var rendererThread: Thread? = null
     private var adaptivePlayback = false
     private var directSubmit = false

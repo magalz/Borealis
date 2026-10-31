@@ -336,6 +336,24 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(log.lines()).contains("INFO: SPS replay complete")
     }
 
+    @Test
+    fun `the same IDR frame sent again after a failed replay is replayed with the SPS that was kept`() {
+        install(codec("omx.intel.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        renderer.begin()
+        renderer.sendParameterSets()
+        ShadowRecordingVideoCodec.failAfter(CodecPoint.QUEUE_INPUT, 1, transient)
+        assertThat(renderer.submit(idrSlice())).isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        // No new parameter sets: the ones of the frame are still held, and so is its SPS.
+        val outcome = runCatching { renderer.submit(idrSlice()) }
+
+        assertThat(outcome.exceptionOrNull()).isNull()
+        assertThat(outcome.getOrNull()).isEqualTo(MoonBridge.DR_OK)
+        assertThat(log.lines()).contains("INFO: SPS replay complete")
+    }
+
     /**
      * The replay is not reached with an input buffer to fetch: `queueNextInputBuffer` fetches the
      * next one before it answers true, so the fetch in `replaySps` never has to. It is called here

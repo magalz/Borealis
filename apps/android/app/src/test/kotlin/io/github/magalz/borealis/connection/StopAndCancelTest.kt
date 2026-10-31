@@ -64,12 +64,12 @@ class StopAndCancelTest {
             .inOrder()
     }
 
-    /** A connection that never took the place still gives one back: the places can pile up. */
+    /** A connection that never took the place gives none back: the places must not pile up. */
     @Test
-    fun `stop gives a place back even to a connection that never took one`() {
+    fun `stop gives no place back to a connection that never took one`() {
         rig.connection(config = null).stop()
 
-        assertThat(rig.permits()).isEqualTo(2)
+        assertThat(rig.permits()).isEqualTo(1)
     }
 
     @Test
@@ -80,6 +80,49 @@ class StopAndCancelTest {
         assertThat(rig.permits()).isEqualTo(0)
 
         connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a second stop of a stream that runs gives no second place back`() {
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+
+        connection.stop()
+        connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /** The start gave its place back when the native connection failed: the stop has none to give. */
+    @Test
+    fun `the stop of a start whose native connection failed gives no place back`() {
+        ShadowRecordingBridge.onStartConnection = { -1 }
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        assertThat(rig.permits()).isEqualTo(1)
+
+        connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a stop that comes while the native connection fails to start leaves one place`() {
+        val gate = CountDownLatch(1)
+        ShadowRecordingBridge.onStartConnection = {
+            check(gate.await(WAIT_MS, TimeUnit.MILLISECONDS)) { "never interrupted" }
+            -1
+        }
+        ShadowRecordingBridge.onInterrupt = { gate.countDown() }
+        val connection = rig.connection()
+        startAndConnect(connection)
+
+        connection.stop()
+        listener.awaitEnded()
 
         assertThat(rig.permits()).isEqualTo(1)
     }
@@ -217,6 +260,29 @@ class StopAndCancelTest {
 
         assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
         assertThat(secondListener.events("stageFailed")).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /** The place that lets it through is the one of the stream that runs, not one that a stop adds. */
+    @Test
+    fun `the stop of a start that waits for the place does not let it through`() {
+        val first = rig.connection()
+        startAndConnect(first)
+        listener.awaitEnded()
+        val secondListener = rig.newListener()
+        val second = rig.connection()
+        rig.start(second, listener = secondListener)
+        secondListener.await("stageComplete")
+        val thread = secondListener.threads.single()
+        awaitParked(thread)
+
+        second.stop()
+        assertThat(thread.state).isEqualTo(Thread.State.WAITING)
+        second.cancelLaunch()
+        first.stop()
+        secondListener.awaitEnded()
+
+        assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
         assertThat(rig.permits()).isEqualTo(1)
     }
 

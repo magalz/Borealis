@@ -226,14 +226,28 @@ class ShortcutHelperCharacterizationTest {
     }
 
     @Test
-    fun `disabling a host disables the pinned shortcuts of every id that starts with its own`() {
+    fun `disabling a host disables the pinned shortcuts of its id followed by an app id, no more`() {
         pin("uuid-1")
         pin("uuid-10")
         pin("uuid-10-and-more")
 
         helper.disableComputerShortcut(computer(), "PC deleted")
 
-        assertThat(disabledIds()).containsExactly("uuid-1", "uuid-10", "uuid-10-and-more")
+        assertThat(disabledIds()).containsExactly("uuid-1", "uuid-10")
+    }
+
+    @Test
+    fun `disabling a host leaves the shortcuts of a host whose id starts with its own`() {
+        pin("ab")
+        pin("ab5")
+        pin("abc")
+        pin("abc5")
+        // Not an app id: the ids of the apps are written with the ASCII digits.
+        pin("ab٥")
+
+        helper.disableComputerShortcut(computer(uuid = "ab"), "PC deleted")
+
+        assertThat(disabledIds()).containsExactly("ab", "ab5")
     }
 
     @Test

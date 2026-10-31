@@ -3,15 +3,21 @@ package io.github.magalz.borealis.library
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.PairingManager.PairState
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -337,6 +343,60 @@ class ComputerManagerConnectionTest {
         collector.cancelAndJoin()
     }
 
+    // Real threads: the wait that the pause cancels blocks a thread of the IO dispatcher.
+    @Test
+    fun `a pause cancelled while it waits for the polls interrupts the wait and resumes polling`() {
+        val inWait = CountDownLatch(1)
+        val pollsStopped = CountDownLatch(1)
+        val interrupted = AtomicBoolean(false)
+        val started = CountDownLatch(1)
+        binder.onStartPolling = { started.countDown() }
+        val waiting =
+            object : CmsBinder by binder {
+                override fun waitForPollingStopped() {
+                    binder.record("waitForPollingStopped")
+                    inWait.countDown()
+                    try {
+                        pollsStopped.await()
+                    } catch (e: InterruptedException) {
+                        interrupted.set(true)
+                        throw e
+                    }
+                }
+            }
+        val connector =
+            object : CmsConnector {
+                override suspend fun connect(): CmsBinder = waiting
+            }
+        val connection = ComputerManagerConnection(connector, Dispatchers.IO)
+
+        runBlocking {
+            val collector = launch(Dispatchers.IO) { connection.hostUpdates().collect {} }
+            try {
+                assertThat(started.await(WAIT_S, TimeUnit.SECONDS)).isTrue()
+                val paused =
+                    launch(Dispatchers.IO) { connection.pausePolling { binder.record("inside") } }
+                assertThat(inWait.await(WAIT_S, TimeUnit.SECONDS)).isTrue()
+
+                paused.cancel()
+                val ended =
+                    withTimeoutOrNull(PROMPT_MS) {
+                        paused.join()
+                        true
+                    }
+
+                assertThat(ended).isTrue()
+                assertThat(interrupted.get()).isTrue()
+                assertThat(binder.events).doesNotContain("inside")
+                assertThat(binder.events.last()).isEqualTo("startPolling")
+            } finally {
+                // A wait that is not interrupted holds its thread until the test lets it go.
+                pollsStopped.countDown()
+                collector.cancelAndJoin()
+            }
+        }
+    }
+
     @Test
     fun `a certificate that was pinned makes the host paired and its state unknown before any poll`() =
         runTest {
@@ -457,4 +517,9 @@ class ComputerManagerConnectionTest {
 
             assertThat(connection.updates.value).isEmpty()
         }
+
+    private companion object {
+        const val WAIT_S = 10L
+        const val PROMPT_MS = 1_000L
+    }
 }

@@ -30,7 +30,8 @@ import org.robolectric.shadows.ShadowSystemClock
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the two
  * about a host that is offline (S12-15), which pin the fixed behaviour: the listener hears that a
  * host is offline once, and an offline poll does not keep the state of the host past the time to
- * live.
+ * live; and the one about a wait for the polls to stop that is interrupted (S12-12), which ends
+ * with the exception instead of waiting on.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerPollingCharacterizationTest {
@@ -461,6 +462,40 @@ class ManagerPollingCharacterizationTest {
         awaitUntil("the poll threads to end") { liveThreads(PARALLEL_THREAD).isEmpty() }
         assertThat(updates.events.filter { it.thread !== caller }).isEmpty()
         assertThat(rig.binder.getComputer(UUID_1)?.state).isEqualTo(UNKNOWN)
+    }
+
+    @Test
+    fun `a wait for the polls to stop that is interrupted ends with the exception`() {
+        val host = rig.host()
+        val answerNow = rig.gate()
+        host.handler = { _ ->
+            answerNow.await()
+            HostReply.xml(hostInfo(UUID_1))
+        }
+        rig.seed(saved(UUID_1, "ONE-PC", manual = host.address))
+        rig.start()
+        rig.binder.startPolling(Updates())
+        awaitUntil("a poll in flight") { host.serverInfoRequests() > 0 }
+        val failure = AtomicReference<Throwable?>()
+        val waiter =
+            thread(isDaemon = true) {
+                try {
+                    rig.binder.waitForPollingStopped()
+                } catch (e: InterruptedException) {
+                    failure.set(e)
+                }
+            }
+        awaitUntil("the wait to start") { waiter.state == Thread.State.TIMED_WAITING }
+
+        waiter.interrupt()
+        waiter.join(SETTLE_MS)
+        // A wait that swallows the interrupt keeps waiting: the end of the poll lets it out.
+        val ended = !waiter.isAlive
+        rig.binder.stopPolling()
+        waiter.join(WAIT_MS)
+
+        assertThat(ended).isTrue()
+        assertThat(failure.get()).isInstanceOf(InterruptedException::class.java)
     }
 
     private companion object {

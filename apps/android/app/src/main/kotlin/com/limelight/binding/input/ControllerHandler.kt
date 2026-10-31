@@ -3823,9 +3823,11 @@ class ControllerHandler(
             // add/remove cycle for the gamepad which may break some games.
             oldContext.destroy()
 
-            // Copy over existing controller number state
+            // Copy over existing controller number state, and whether the log named the pad when
+            // it got none
             this.assignedControllerNumber = oldContext.assignedControllerNumber
             this.reservedControllerNumber = oldContext.reservedControllerNumber
+            this.refusedControllerNumber = oldContext.refusedControllerNumber
             this.controllerNumber = oldContext.controllerNumber
 
             // The buttons the pad holds stay held, with the flags of the ones it emulates, so the
@@ -3833,6 +3835,12 @@ class ControllerHandler(
             this.inputMap = oldContext.inputMap
             this.emulatingButtonFlags = oldContext.emulatingButtonFlags
             this.mouseEmulationLastInputMap = oldContext.mouseEmulationLastInputMap
+
+            // The times that tell a Start held from a Start pressed, and a bumper that went up just
+            // before the Start
+            this.startDownTime = oldContext.startDownTime
+            this.lastLbUpTime = oldContext.lastLbUpTime
+            this.lastRbUpTime = oldContext.lastRbUpTime
             if (mouseEmulation) {
                 setMouseEmulation(true, false)
             }

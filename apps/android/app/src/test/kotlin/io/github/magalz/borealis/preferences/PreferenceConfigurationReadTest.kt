@@ -349,28 +349,6 @@ class PreferenceConfigurationReadTest {
         assertThat(read().bitrate).isEqualTo(28_000)
     }
 
-    @Test
-    fun `the default bitrate of a context reads the stored resolution and frame rate`() {
-        assertThat(PreferenceConfiguration.getDefaultBitrate(context)).isEqualTo(10_000)
-
-        preferences
-            .edit()
-            .putString("list_resolution", "3840x2160")
-            .putString("list_fps", "60")
-            .commit()
-
-        assertThat(PreferenceConfiguration.getDefaultBitrate(context)).isEqualTo(80_000)
-    }
-
-    @Test
-    fun `the default bitrate of a context does not convert a legacy resolution name`() {
-        preferences.edit().putString("list_resolution", "1080p").commit()
-
-        assertThrows(NumberFormatException::class.java) {
-            PreferenceConfiguration.getDefaultBitrate(context)
-        }
-    }
-
     private companion object {
         /** The value of every public field after reading empty preferences, on the default SDK. */
         val EMPTY_PREFERENCES_VALUES: Map<String, Any?> =

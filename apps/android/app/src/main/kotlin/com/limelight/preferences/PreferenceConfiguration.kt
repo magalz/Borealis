@@ -335,15 +335,6 @@ class PreferenceConfiguration {
             return Math.round(resolutionFactor * frameRateFactor).toInt() * KBPS_PER_MBPS
         }
 
-        @JvmStatic
-        fun getDefaultBitrate(context: Context): Int {
-            val prefs = defaultPreferences(context)
-            return getDefaultBitrate(
-                prefs.getRequiredString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION),
-                prefs.getRequiredString(FPS_PREF_STRING, DEFAULT_FPS),
-            )
-        }
-
         private fun getVideoFormatValue(context: Context): FormatOption {
             val prefs = defaultPreferences(context)
 

@@ -2001,8 +2001,9 @@ From the Sprint 13 conversion (2026-10-25). Item (a) is scheduled for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code), item (b) for
 [Sprint 16](#sprint-16-fixes-of-the-converted-code), the open entries of item (c) for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (d) for
-[Sprint 17](#sprint-17-general-fixes) (owner, 2026-10-28). None of the bugs is fixed yet: the
-conversion keeps behaviour (ADR 0059, rule 10). Paths are under
+[Sprint 17](#sprint-17-general-fixes) (owner, 2026-10-28). None of the bugs was fixed by the
+conversion: it keeps behaviour (ADR 0059, rule 10). [Sprint 16](#sprint-16-fixes-of-the-converted-code)
+took item (b), and each of its entries now ends with its triage id and what Sprint 16 did. Paths are under
 `apps/android/app/src/main/kotlin/com/limelight/binding/input/`, unless an item says otherwise.
 
 - **(a) Refactor the converted code.** The 65 places marked `(Sprint 13 backlog)` sit in 22
@@ -2043,111 +2044,187 @@ conversion keeps behaviour (ADR 0059, rule 10). Paths are under
   - `virtual_controller/VirtualControllerElement.kt`: 1
 
   That is 65 places in 22 files.
-- **(b) Bugs and oddities found during the conversion, by area.** Each one is kept as it was.
+- **(b) Bugs and oddities found during the conversion, by area.** Each one was kept as it was. In
+  Sprint 16, 44 are fixed, 5 are recorded with no change, U10 is closed, and K6, C4 and C18 are
+  moved. The batches are #109 (keyboard, capture, touch and the on-screen controller) and #108
+  (the USB drivers and `ControllerHandler`).
   - **Keyboard and capture** (`KeyboardTranslator.kt`, `capture/`):
     - A negative key code for a device with a layout throws `ArrayIndexOutOfBoundsException` in
-      `translate` and `hasNormalizedMapping`: only the upper bound is checked.
+      `translate` and `hasNormalizedMapping`: only the upper bound is checked. **K1, Sprint 16:**
+      fixed (#109). A negative key code is ignored.
     - A key code above `KeyEvent.getMaxKeyCode()` from a device crashes the `KeyboardMapping`
-      constructor.
+      constructor. **K2, Sprint 16:** fixed (#109). A layout place outside the key code range is
+      left out of the mapping.
     - The delayed pointer-capture request (500 ms) checks for a capture device when it fires,
       not whether capture is still on. `disableCapture()` within those 500 ms still ends with
-      `requestPointerCapture()`.
+      `requestPointerCapture()`. **K3, Sprint 16:** fixed (#109). The delayed request is dropped
+      when capture ended or the cursor is shown.
     - `hideCursor()` and `showCursor()` register and unregister the device listener
       unconditionally. `showCursor()` releases a capture that was never requested (harmless).
+      **K4, Sprint 16:** fixed (#109). The listener is registered once, and only what was hidden
+      is released.
     - `InputCaptureManager` logs "Android O+ native mouse capture", though there is one provider.
-    - The Windows `VK_*` codes are duplicated in `borealis/stream/.../KeyboardLayout.kt`.
+      **K5, Sprint 16:** fixed (#109). The line reads "Using the native pointer capture".
+    - The Windows `VK_*` codes are duplicated in `borealis/stream/.../KeyboardLayout.kt`. **K6,
+      Sprint 16:** moved to [Sprint 18](#sprint-18-refactor-of-the-converted-code).
   - **Touch** (`touch/`):
     - `RelativeTouchContext`: the release runnables of the middle, X1 and X2 buttons are
-      unreachable, because `getMouseButtonIndex` gives only left or right.
-    - A view of width or height 0 gives an infinite scale factor, so a delta becomes -1.
-    - In a two-finger scroll, an x-only move sends `sendMouseHighResScroll(0)`.
-    - `AbsoluteTouchContext.lastTouchLocationX` is written and never read.
+      unreachable, because `getMouseButtonIndex` gives only left or right. **T1, Sprint 16:**
+      deleted (#109).
+    - A view of width or height 0 gives an infinite scale factor, so a delta becomes -1. **T2,
+      Sprint 16:** fixed (#109). The trackpad sends no move or scroll while the view has no size.
+    - In a two-finger scroll, an x-only move sends `sendMouseHighResScroll(0)`. **T3, Sprint 16:**
+      fixed (#109). A zero scroll is not sent.
+    - `AbsoluteTouchContext.lastTouchLocationX` is written and never read. **T4, Sprint 16:**
+      deleted (#109).
     - A first tap within 250 ms of time 0 near (0,0) skips the reposition (unreachable with uptime).
+      **T5, Sprint 16:** fixed (#109). A first tap has no double-tap window.
   - **USB drivers** (`driver/`):
     - `AbstractController.supportedButtonFlags` is never assigned, so a USB pad's arrival reports
-      0 supported buttons to the host.
-    - An Xbox One pad shows Guide pressed in its first reports, until a 0x07 report.
+      0 supported buttons to the host. **U1, Sprint 16:** fixed (#108). The Xbox drivers set the
+      buttons they support.
+    - An Xbox One pad shows Guide pressed in its first reports, until a 0x07 report. **U2,
+      Sprint 16:** fixed (#108) by the change of U1, with the owner's OK (2026-10-30): the
+      constructor had set the all-buttons mask on the live button flags, so a pad now starts with
+      no button down. The triage had listed U2 as intended.
     - `stop()` sends `rumble(0, 0)`, which keeps the Xbox One trigger motors running. A host of
       LuminalShine 26.10.0 or later can send trigger rumble (control message 0x5500, from the VHF
       backend; [contract, section 12](host-contract/luminalshine.md#12-control-stream)), so
-      this path can run now. The VHF round of 2026-10-28 did not test trigger rumble.
+      this path can run now. The VHF round of 2026-10-28 did not test trigger rumble. **U3,
+      Sprint 16:** fixed (#108), an owner choice. The trigger motors are zeroed when the driver
+      stops and at stream end (`ControllerHandler.stop()`). The triage found that only GIP pads (Xbox
+      One and Series) have trigger motors: the owner's 8BitDo `2DC8:310B` uses the Xbox 360 driver,
+      whose `rumbleTriggers` does nothing.
     - Races: `stopped` is not volatile, and `controllers` is not synchronized while `stop()` on
       the input thread re-enters `deviceRemoved`. A `ConcurrentModificationException` or a
-      skipped entry is possible.
+      skipped entry is possible. **U4, Sprint 16:** fixed (#108). The stop flag is volatile and
+      flips with `compareAndSet`, the controllers are a copy-on-write list, and the stop works on
+      a snapshot.
     - An attach broadcast with no device throws a `NullPointerException` after 1 s on the main
-      looper; a permission broadcast with no device throws at once.
+      looper; a permission broadcast with no device throws at once. **U5, Sprint 16:** fixed
+      (#108). Both are ignored with a log.
     - `Xbox360WirelessDongle.start()` always returns false, so its `stop`, `rumble` and
-      `rumbleTriggers` never run, and the `else` of the claim chain is unreachable.
+      `rumbleTriggers` never run, and the `else` of the claim chain is unreachable. **U6,
+      Sprint 16:** the dead `else` is deleted (#108); the dongle is the last branch, and its
+      `start()` still returns false.
     - Y axes: `~raw / 32767f` gives about -1.00003 at the extreme. The Xbox One triggers are not
-      clamped: values above 1023 or negative pass through.
+      clamped: values above 1023 or negative pass through. **U7, Sprint 16:** the triggers are
+      clamped to 0 and 1 in the driver (#108). The Y axis is recorded with no change: the triage
+      found that it gives no packet out of range.
     - A blocked `bulkTransfer` ignores `interrupt()`, so after `stop()` the input thread lingers
-      up to the 3 s timeout.
-    - `onCreate`, `onDestroy` and `onReceive` of the service do not call `super`.
+      up to the 3 s timeout. **U8, Sprint 16:** recorded, no change (#108). Not a defect: `stop()`
+      never waits for the thread, which ends when the connection is closed or at the timeout.
+    - `onCreate`, `onDestroy` and `onReceive` of the service do not call `super`. **U9,
+      Sprint 16:** fixed (#108). `onCreate` and `onDestroy` call `super`; `onReceive` has none to
+      call.
     - The Kotlin reads `listener` once where the Java read it twice. The review accepted this:
-      a race that threw on the input thread no longer throws.
+      a race that threw on the input thread no longer throws. **U10, Sprint 16:** closed. The
+      Kotlin is the fixed form.
   - **On-screen controller** (`virtual_controller/`):
     - The Y button's flag `0x8000` is sign-extended from a `short` into `reportOscState(int)`,
       so the packet carries `0xFFFF8000`. This is latent: `moonlight-common-c` masks negative
       button flags with `0xFFFF` (`core/third_party/moonlight-common-c/src/InputStream.c`, lines
-      1012 to 1021).
+      1012 to 1021). **O1, Sprint 16:** fixed (#109). Y reaches the handler as `0x8000`.
     - A finger exactly above or below the stick's centre gets the opposite angle. One pixel off
-      is right.
-    - The first stick touch within 350 ms of time 0 is a double click.
-    - A stick whose way is 0 pixels gives NaN (0/0), sent as `(short)NaN = 0`.
-    - MOVE or UP with no DOWN inside the stick's circle sends revoke and a movement of (0,0).
-    - The right-down line of the pad starts 5 px further out than the other lines.
-    - A second finger is answered true even when the element refuses it.
-    - The icon branch of `DigitalButton` is unreachable: `setIcon` is always -1.
-    - A corrupt saved-layout entry applies its earlier numbers before the `JSONException`.
+      is right. **O2, Sprint 16:** fixed (#109).
+    - The first stick touch within 350 ms of time 0 is a double click. **O3, Sprint 16:** fixed
+      (#109). The first press is a click.
+    - A stick whose way is 0 pixels gives NaN (0/0), sent as `(short)NaN = 0`. **O4, Sprint 16:**
+      fixed (#109). It sends no movement.
+    - MOVE or UP with no DOWN inside the stick's circle sends revoke and a movement of (0,0). **O5,
+      Sprint 16:** fixed (#109). A stick that was not pressed says nothing.
+    - The right-down line of the pad starts 5 px further out than the other lines. **O6,
+      Sprint 16:** fixed (#109). It starts at the same margin.
+    - A second finger is answered true even when the element refuses it. **O7, Sprint 16:**
+      recorded, no change: the second finger is consumed on purpose.
+    - The icon branch of `DigitalButton` is unreachable: `setIcon` is always -1. **O8, Sprint 16:**
+      deleted (#109).
+    - A corrupt saved-layout entry applies its earlier numbers before the `JSONException`. **O9,
+      Sprint 16:** fixed (#109). The entry's four numbers are read before the element moves.
     - `keyLong` is always 0 in `createDigitalButton`, so a long click only resends the same state.
-    - `createDefaultLayout` reads and writes the default preferences on every call.
+      **O10, Sprint 16:** the inert long-click path is removed (#109), an owner choice. A held
+      button sends its press and three resends, and nothing at 3 s.
+    - `createDefaultLayout` reads and writes the default preferences on every call. **O11,
+      Sprint 16:** fixed (#109). The layout is built from a configuration that the caller reads
+      once per build. `refreshLayout` still reads the preferences at each rebuild (see
+      [Sprint 17](#sprint-17-general-fixes), Input).
   - **ControllerHandler** (events, devices and feedback):
     - Combining: `x |= maxByMagnitude(x, v)` can send bits of two pads on one controller number.
-      Ties take the later pad.
+      Ties take the later pad. **C1, Sprint 16:** recorded, no change: the combining is intended.
     - `handleSetMotionEventState` stops after the first pad with a matching controller number
       that has a sensor manager (a matching pad without one is skipped with `continue`). So when
-      two pads on one number both have a sensor manager, only the first gets the state.
+      two pads on one number both have a sensor manager, only the first gets the state. **C2,
+      Sprint 16:** fixed (#108). Every pad on the number gets the state, and one pad of a number
+      reports each motion type to the host (a choice of the batch's review).
     - `handleRumbleTriggers` passes a possibly null `vibratorManager` to `rumbleQuadVibrators`.
       A host of LuminalShine 26.10.0 or later (VHF backend) can send trigger rumble now, so
-      this path can run. The VHF round of 2026-10-28 did not test trigger rumble.
+      this path can run. The VHF round of 2026-10-28 did not test trigger rumble. **C3,
+      Sprint 16:** fixed (#108) with `?.let`. The triage found no null path today: a pad is marked
+      quad only with a manager.
     - The controller-input fusing block is written out three times (about lines 1479 to 1514 of
-      the Java).
-    - The `gestures` constructor property is stored and never read.
+      the Java). **C4, Sprint 16:** moved to [Sprint 18](#sprint-18-refactor-of-the-converted-code).
+    - The `gestures` constructor property is stored and never read. **C5, Sprint 16:** deleted in
+      wave 2 (#108), with its argument at the `Game` call site and in the test rigs.
     - `(byte)(lt * 0xFF)` turns negative above 0.5; `(short)(x * 0x7FFE)` wraps past plus or
-      minus 1.
+      minus 1. **C6, Sprint 16:** fixed (#108). Triggers compare as unsigned bytes, and stick and
+      trigger values past 1 are held at the limit.
     - The held-time `(int)` cast: a hold of 2^32 + 10 ms looks like 10 ms. A hold of 2^31 ms or
       more makes the sleep negative, and `handleButtonUp` throws `IllegalArgumentException`.
+      **C7, Sprint 16:** fixed (#108). The wait is worked out in long arithmetic and held to 0 to
+      25 ms.
     - An unknown paddle scan code makes the whole handler return false: no packet, and no
-      emulation checks.
+      emulation checks. **C8, Sprint 16:** fixed (#108). The unknown paddle is ignored and the
+      event goes on.
     - The raw D-pad codes 704 to 707 are tried first, so 0x2c3 is Down on a pad with paddles.
-    - A zero-width touchpad range divides by zero and sends NaN coordinates.
+      **C9, Sprint 16:** recorded, no change. The defect it describes does not exist: 707 is not a
+      paddle code.
+    - A zero-width touchpad range divides by zero and sends NaN coordinates. **C10, Sprint 16:**
+      fixed (#108). The coordinate is 0.
     - A key up for a button that is not down still sends a packet, and key repeats resend.
+      **C11, Sprint 16:** fixed (#108). A key event that changes nothing sends no packet.
     - `onInputDeviceChanged` forgets the held buttons and turns the gamepad mouse off for that
-      device.
-    - Removing a pad that shares controller 0 zeroes it for the pad that is left.
+      device. **C12, Sprint 16:** fixed (#108). A device change keeps the held buttons, the
+      triggers, the gamepad mouse and the button timings of the pad.
+    - Removing a pad that shares controller 0 zeroes it for the pad that is left. **C13,
+      Sprint 16:** fixed (#108). The pad that is left keeps the number, and the host gets what
+      that pad holds.
     - The 17th pad shares controller 0 without reserving it. The mask is `1 << count` and wraps
-      at 16.
+      at 16. **C14, Sprint 16:** fixed (#108). A pad past the sixteenth number gets none and is not
+      reported.
     - `isExternal` matches `gpio`, `joy_key` and `keypad` case-sensitively; the other names are not.
+      **C15, Sprint 16:** fixed (#108). The match ignores the case.
     - A Shield comment says small stick deadzones, but the code only sets `searchIsMode` and
-      `hasMode`.
+      `hasMode`. **C16, Sprint 16:** fixed (#108). The comment says what the code does.
     - ADT-1 and ASUS set the trigger deadzone with no trigger axes. ADT-1 forces `hasSelect` and
       `hasMode`; Thrustmaster Score A forces `hasMode = false`; the Xbox One S firmware check
-      tests only gas.
+      tests only gas. **C17, Sprint 16:** recorded, no change: these device fix-ups are intended.
+      The triage corrected the entry: ADT-1 sets `hasSelect = true` and `hasMode = false`.
     - Any non-PlayStation pad with a sensor manager is reported as UNKNOWN, shows a toast and
-      gets clickpad emulation.
+      gets clickpad emulation. **C18, Sprint 16:** moved to the open owner decision under Pads in
+      [Sprint 17](#sprint-17-general-fixes).
     - Sensors: a first all-zero reading is dropped as a repeat; a negative rate gives a negative
       period; a second pad on the same number gets no sensor registration; `destroy()` leaves the
-      listeners set, so a later `disableSensors()` sends a stationary gyro event.
+      listeners set, so a later `disableSensors()` sends a stationary gyro event. **C19,
+      Sprint 16:** fixed (#108). The first reading is never a repeat; the report rate is read as
+      an unsigned 16-bit value and capped at 200, so it is never negative; `destroy()` clears the
+      listeners. The second pad is C2, fixed there.
     - Battery: the percentage goes through a float and a truncating byte (53 becomes 52, 59
       becomes 58; out of range wraps). A host of LuminalShine 26.10.0 or later accepts a battery
       state for a DualShock 4, a DualSense or a Switch Pro Controller
       ([contract, section 13](host-contract/luminalshine.md#13-input)), so a value can reach a
       game now. Android showed no battery for either pad in the VHF round of 2026-10-28, so
       the path did not run. `LI_BATTERY_STATE_NOT_PRESENT` is never used, and an
-      unknown status is retried at every poll.
+      unknown status is retried at every poll. **C20, Sprint 16:** fixed (#108). The percentage is
+      rounded and kept in 0 to 100. From Android 12, a pad that claimed a battery in its arrival
+      and has none tells the host so once, unless another pad that claims a battery shares its
+      number.
+      The retry of an unknown status was not reproduced: the triage found that it is not retried.
     - Rumble: small motors truncate to an amplitude of 0 and cancel the vibration.
       `sceManager.rumble` gets sign-extended shorts (0xC000 arrives as -16384), which is probably
-      a bug. A USB pad that sent no input answers to controller 0.
+      a bug. A USB pad that sent no input answers to controller 0. **C21, Sprint 16:** fixed (#108).
+      A motor that is not zero keeps an amplitude of at least 1, and only a real zero cancels; the
+      SHIELD service gets the motor values unsigned; rumble reaches only the pads that have a
+      controller number.
 - **(c) Test and tooling items.**
   - **Done in Sprint 14 (`s14-format`, merge `728aae024`).** Spotless (ktfmt) covered
     `borealis/**` and `build-logic/**`, tests included. Of `:app`, only `app/src/main/kotlin`

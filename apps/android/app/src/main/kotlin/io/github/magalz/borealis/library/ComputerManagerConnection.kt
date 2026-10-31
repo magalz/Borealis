@@ -137,7 +137,7 @@ constructor(
                 gate.pause(binder)
                 paused.set(true)
             }
-            withContext(io) { binder.waitForPollingStopped() }
+            runInterruptible(io) { binder.waitForPollingStopped() }
             return block()
         } finally {
             if (paused.get()) withContext(NonCancellable) { locked { gate.resume(binder) } }

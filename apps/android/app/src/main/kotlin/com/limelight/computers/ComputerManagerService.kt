@@ -289,21 +289,12 @@ class ComputerManagerService : Service() {
             }
         }
 
-        // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
-        // instead is a behaviour change (Sprint 12 backlog).
-        @Suppress("PrintStackTrace")
+        // An interrupt ends the wait: the Java swallowed it and went on waiting, so a thread that
+        // was interrupted spun until the polls ended.
+        @Throws(InterruptedException::class)
         fun waitForPollingStopped() {
             while (activePolls.get() != 0) {
-                try {
-                    Thread.sleep(POLLING_STOPPED_WAIT_MS)
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
-
-                    // InterruptedException clears the thread's interrupt status. Since we can't
-                    // handle that here, we will re-interrupt the thread to set the interrupt
-                    // status back to true.
-                    Thread.currentThread().interrupt()
-                }
+                Thread.sleep(POLLING_STOPPED_WAIT_MS)
             }
         }
 

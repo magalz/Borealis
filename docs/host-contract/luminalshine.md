@@ -194,6 +194,10 @@ client's stored certificate (`src/nvhttp.cpp:3683-3693`).
 (`src/nvhttp.cpp:2680-2689`). `IsHdrSupported` reflects only whether HEVC
 Main10 is active on the host (`video::active_hevc_mode == 3`,
 `src/nvhttp.cpp:2685`); it says nothing about AV1 Main10 or PyroWave HDR.
+The host writes the app list as UTF-8 XML, with Boost `write_xml` and its default settings
+(`src/nvhttp.cpp:2708-2733` at the tag `26.10.1`), and since Sprint 16 (S12-08 of the
+[roadmap](../roadmap.md#backlog-not-scheduled)) the client reads it as UTF-8, not in the
+platform charset.
 
 The host gives no field for the kind of app, so a client cannot tell Desktop from
 a game by data. Borealis recognises Desktop by its title: the app titled

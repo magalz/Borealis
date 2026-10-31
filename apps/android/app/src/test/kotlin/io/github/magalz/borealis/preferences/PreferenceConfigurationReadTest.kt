@@ -199,47 +199,76 @@ class PreferenceConfigurationReadTest {
     }
 
     @Test
-    fun `a resolution that is not a number fails with a number format exception`() {
-        for (stored in listOf("axb", "1280xabc", "x720")) {
+    fun `a resolution that is not a size reads as the default resolution and stays in the file`() {
+        // Both sides fall back together: a good width beside a bad height is not kept.
+        for (stored in listOf("axb", "1920xabc", "abcx1080", "x720", "1920x", "1920xx")) {
             preferences.edit().putString("list_resolution", stored).commit()
+            val recording = RecordingContext(context)
+
+            val config = PreferenceConfiguration.readPreferences(recording)
 
             assertWithMessage("list_resolution = $stored")
-                .that(runCatching { read() }.exceptionOrNull())
-                .isInstanceOf(NumberFormatException::class.java)
+                .that(config.width to config.height)
+                .isEqualTo(1280 to 720)
+            assertWithMessage("writes for $stored").that(recording.log).isEmpty()
+            assertWithMessage("stored $stored")
+                .that(preferences.getString("list_resolution", null))
+                .isEqualTo(stored)
         }
     }
 
     @Test
-    fun `a resolution without a height fails with an array index exception`() {
-        for (stored in listOf("1280x", "1280xx")) {
-            preferences.edit().putString("list_resolution", stored).commit()
-
-            assertThrows(ArrayIndexOutOfBoundsException::class.java) { read() }
-        }
-    }
-
-    @Test
-    fun `a frame rate that is not a number fails with a number format exception`() {
+    fun `a frame rate that is not a number reads as the default frame rate and stays in the file`() {
         for (stored in listOf("", "abc", "60.0", " 60")) {
             preferences.edit().putString("list_fps", stored).commit()
+            val recording = RecordingContext(context)
 
-            assertWithMessage("list_fps = '$stored'")
-                .that(runCatching { read() }.exceptionOrNull())
-                .isInstanceOf(NumberFormatException::class.java)
+            val config = PreferenceConfiguration.readPreferences(recording)
+
+            assertWithMessage("list_fps = '$stored'").that(config.fps).isEqualTo(60)
+            assertWithMessage("writes for '$stored'").that(recording.log).isEmpty()
+            assertWithMessage("stored '$stored'")
+                .that(preferences.getString("list_fps", null))
+                .isEqualTo(stored)
         }
     }
 
     @Test
-    fun `a frame rate that is not a number fails even when a bitrate is stored`() {
-        // With no stored bitrate the automatic one parses the frame rate a second time and fails
-        // too, so this pins the first parse on its own.
+    fun `a frame rate that is not a number reads as the default one even when a bitrate is stored`() {
         preferences
             .edit()
-            .putInt("seekbar_bitrate_kbps", 10_000)
+            .putInt("seekbar_bitrate_kbps", 25_000)
             .putString("list_fps", "abc")
             .commit()
 
-        assertThrows(NumberFormatException::class.java) { read() }
+        val config = read()
+
+        assertThat(config.fps).isEqualTo(60)
+        assertThat(config.bitrate).isEqualTo(25_000)
+    }
+
+    @Test
+    fun `the automatic bitrate follows the resolved size and frame rate when a stored one is bad`() {
+        preferences
+            .edit()
+            .putString("list_resolution", "1920x1080")
+            .putString("list_fps", "abc")
+            .commit()
+        assertThat(read().bitrate).isEqualTo(20_000)
+
+        preferences
+            .edit()
+            .putString("list_resolution", "1920xabc")
+            .putString("list_fps", "120")
+            .commit()
+        assertThat(read().bitrate).isEqualTo(14_000)
+
+        preferences
+            .edit()
+            .putString("list_resolution", "1920xabc")
+            .putString("list_fps", "abc")
+            .commit()
+        assertThat(read().bitrate).isEqualTo(10_000)
     }
 
     @Test

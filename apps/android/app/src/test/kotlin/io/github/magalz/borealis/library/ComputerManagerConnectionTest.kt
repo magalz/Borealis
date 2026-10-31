@@ -344,6 +344,7 @@ class ComputerManagerConnectionTest {
     }
 
     // Real threads: the wait that the pause cancels blocks a thread of the IO dispatcher.
+    @Suppress("InjectDispatcher")
     @Test
     fun `a pause cancelled while it waits for the polls interrupts the wait and resumes polling`() {
         val inWait = CountDownLatch(1)
@@ -364,11 +365,7 @@ class ComputerManagerConnectionTest {
                     }
                 }
             }
-        val connector =
-            object : CmsConnector {
-                override suspend fun connect(): CmsBinder = waiting
-            }
-        val connection = ComputerManagerConnection(connector, Dispatchers.IO)
+        val connection = ComputerManagerConnection(CmsConnector { waiting }, Dispatchers.IO)
 
         runBlocking {
             val collector = launch(Dispatchers.IO) { connection.hostUpdates().collect {} }

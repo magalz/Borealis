@@ -233,10 +233,11 @@ open class NvConnection(
         startStep = verb // BOREALIS: host.failure
         context.listener.launchStarting("resume" == verb) // BOREALIS: host.failure
         // BOREALIS: a stop or a cancel during /serverinfo, /applist or the connection-type
-        // detection must keep the first request from being sent: a GFE host is never asked again,
-        // and the runner below checks the cancel only for the other hosts. The callers take
-        // CANCELLED as "the user left, nothing to report" (host.launch)
-        if (launchCancelled) {
+        // detection must keep the first request from being sent. Only a GFE host needs it here: its
+        // request is made at once, while the runner below checks the cancel before the first
+        // request to any other host, and records it in the audit trail, which this return would
+        // skip. The callers take CANCELLED as "the user left, nothing to report" (host.launch)
+        if (context.isNvidiaServerSoftware && launchCancelled) {
             return LaunchOutcome.CANCELLED
         }
         return LaunchRetries.run(

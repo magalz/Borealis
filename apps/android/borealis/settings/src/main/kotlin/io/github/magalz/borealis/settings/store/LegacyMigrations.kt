@@ -12,12 +12,19 @@ internal object LegacyMigrations {
     private const val OLD_BITRATE_MBPS = "seekbar_bitrate"
     private const val KBPS_PER_MBPS = 1000
 
+    /** The 5.1 surround switch, from before the audio configuration was a list. */
+    private const val OLD_SURROUND_51 = "checkbox_51_surround"
+    private const val AUDIO_CONFIG_51 = "51"
+
     /**
      * - A stored `checkbox_enable_perf_overlay=true` with no `borealis_perf_overlay` becomes
      *   Detailed, and the old key is removed whatever its value, so this happens once.
      * - A stored `seekbar_bitrate` (Mbps) with no `seekbar_bitrate_kbps` becomes that many kbps and
      *   the old key is removed. The inherited code reads the old key too, but the snapshot does
      *   not. A stored 0 stays as it is: it means automatic.
+     * - A stored `checkbox_51_surround=true` with no `list_audio_config` becomes the audio
+     *   configuration 51. A stored audio configuration is the user's choice and stays. The old key
+     *   is removed whatever its value, and the stream start no longer reads it.
      */
     fun run(preferences: SharedPreferences) {
         val stored = preferences.all
@@ -43,6 +50,18 @@ internal object LegacyMigrations {
         ) {
             editor.putInt(Settings.BITRATE_KBPS.key, oldBitrate * KBPS_PER_MBPS)
             editor.remove(OLD_BITRATE_MBPS)
+            changed = true
+        }
+
+        if (stored.containsKey(OLD_SURROUND_51)) {
+            if (
+                !stored.containsKey(Settings.AUDIO_CONFIG.key) && stored[OLD_SURROUND_51] == true
+            ) {
+                editor.putString(Settings.AUDIO_CONFIG.key, AUDIO_CONFIG_51)
+            }
+            // Left in place, the old switch would win again after the user cleared the audio
+            // configuration.
+            editor.remove(OLD_SURROUND_51)
             changed = true
         }
 

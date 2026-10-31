@@ -70,7 +70,6 @@ class PreferenceConfiguration {
     @Suppress("TooManyFunctions")
     companion object {
         private const val LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps"
-        private const val LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround"
 
         private const val RESOLUTION_PREF_STRING = "list_resolution"
         private const val FPS_PREF_STRING = "list_fps"
@@ -420,16 +419,8 @@ class PreferenceConfiguration {
             val prefs = defaultPreferences(context)
             val config = PreferenceConfiguration()
 
-            // Migrate legacy preferences to the new locations
-            if (prefs.contains(LEGACY_ENABLE_51_SURROUND_PREF_STRING)) {
-                if (prefs.getBoolean(LEGACY_ENABLE_51_SURROUND_PREF_STRING, false)) {
-                    prefs.edit {
-                        remove(LEGACY_ENABLE_51_SURROUND_PREF_STRING)
-                        putString(AUDIO_CONFIG_PREF_STRING, "51")
-                    }
-                }
-            }
-
+            // Migrate legacy preferences to the new locations. The 5.1 surround switch is not one
+            // of them: LegacyMigrations moves it when the app starts.
             val str = prefs.getString(LEGACY_RES_FPS_PREF_STRING, null)
             if (str != null) {
                 // Should never get an unknown string: it means 720p at 60 FPS

@@ -608,7 +608,7 @@ class Game :
                 PlatformBinding.getCryptoProvider(this),
                 serverCert,
             )
-        controllerHandler = ControllerHandler(this, conn, this, prefConfig)
+        controllerHandler = ControllerHandler(this, conn, prefConfig)
         keyboardTranslator = KeyboardTranslator()
 
         val inputManager = getSystemService(Context.INPUT_SERVICE) as InputManager

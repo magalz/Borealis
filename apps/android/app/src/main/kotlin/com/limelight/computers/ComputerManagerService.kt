@@ -1018,8 +1018,3 @@ internal class PollingTuple(
     @JvmField val networkLock = Any()
     @JvmField var lastSuccessfulPollMs: Long = 0
 }
-
-internal class ReachabilityTuple(
-    @JvmField val computer: ComputerDetails,
-    @JvmField val reachableAddress: String,
-)

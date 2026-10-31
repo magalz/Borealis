@@ -113,6 +113,16 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
                                 LimeLog.severe(
                                     "NSD: Service info callback registration failed: $errorCode"
                                 )
+
+                                // The platform dropped this callback before it reported the
+                                // failure, and it refuses to unregister a callback it no longer
+                                // holds, so the agent forgets it too. The callback that replaced
+                                // this one, if any, is registered and stays.
+                                synchronized(listenerLock) {
+                                    if (serviceCallbacks[nsdServiceInfo.serviceName] === this) {
+                                        serviceCallbacks.remove(nsdServiceInfo.serviceName)
+                                    }
+                                }
                                 listener.notifyDiscoveryFailure(
                                     RuntimeException(
                                         "onServiceInfoCallbackRegistrationFailed(): $errorCode"

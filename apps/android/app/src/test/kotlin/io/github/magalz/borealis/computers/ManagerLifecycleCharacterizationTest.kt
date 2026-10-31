@@ -27,7 +27,9 @@ import org.robolectric.shadows.ShadowNetwork
  * bound, unbound and destroyed, and what its network callback does. The platform is Robolectric; no
  * test starts a request to a host that is not a fake on the loopback interface.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
+ * about a saved host without an id (S12-16), which pins the fixed behaviour: the list leaves it out
+ * and every other saved host stays.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerLifecycleCharacterizationTest {
@@ -259,6 +261,18 @@ class ManagerLifecycleCharacterizationTest {
         computer.state = ComputerDetails.State.ONLINE
         connectivity.networkCallbacks.single().onAvailable(ShadowNetwork.newInstance(1))
         assertThat(computer.state).isEqualTo(UNKNOWN)
+    }
+
+    @Test
+    fun `creating the service leaves out a saved host that has no id and lists the others`() {
+        rig.seedRow(null, "NO-ID-PC", "{}")
+        rig.seed(saved(GOOD_UUID, "GOOD-PC"))
+
+        val started = runCatching { rig.start() }
+
+        assertThat(started.exceptionOrNull()).isNull()
+        assertThat(rig.binder.getComputer(GOOD_UUID)?.name).isEqualTo("GOOD-PC")
+        assertThat(log.warnings()).contains("Leaving a host out of the list: it has no id")
     }
 
     private companion object {

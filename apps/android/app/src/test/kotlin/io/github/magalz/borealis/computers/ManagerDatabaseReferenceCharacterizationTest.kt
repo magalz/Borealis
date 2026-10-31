@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.computers
 
+import android.database.sqlite.SQLiteException
 import com.google.common.truth.Truth.assertThat
 import com.limelight.computers.ComputerDatabaseManager
 import com.limelight.nvstream.http.ComputerDetails
@@ -20,7 +21,8 @@ import org.robolectric.RobolectricTestRunner
  * `removeComputer`.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the two
- * that throw out of a poll (S12-13), which pin the fixed behaviour.
+ * that throw out of a poll (S12-13) and the two that throw out of `removeComputer` (S12-16), which
+ * pin the fixed behaviour.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerDatabaseReferenceCharacterizationTest {
@@ -189,6 +191,30 @@ class ManagerDatabaseReferenceCharacterizationTest {
 
         rig.binder.removeComputer(saved(UUID_1))
 
+        destroyAndProbe()
+    }
+
+    @Test
+    fun `removing a host that was saved without an id deletes it and gives its reference back`() {
+        rig.seedRow(null, "NO-ID-PC", "{}")
+        rig.start()
+
+        val failure = runCatching { rig.binder.removeComputer(ComputerDetails()) }.exceptionOrNull()
+
+        assertThat(failure).isNull()
+        assertThat(rig.savedRows()).isEmpty()
+        destroyAndProbe()
+    }
+
+    @Test
+    fun `removing a host whose row cannot be deleted gives its reference back`() {
+        rig.seed(saved(UUID_1, "ONE-PC"))
+        rig.refuseDeletes()
+        rig.start()
+
+        val failure = runCatching { rig.binder.removeComputer(saved(UUID_1)) }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SQLiteException::class.java)
         destroyAndProbe()
     }
 

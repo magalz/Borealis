@@ -21,7 +21,9 @@ import org.robolectric.RobolectricTestRunner
  * updated, how a host is removed and what happens to its state. The hosts are fakes on the loopback
  * interface.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
+ * about a host that is handed over as online and does not answer (S12-16), which pins the fixed
+ * behaviour: a host is added when a poll answered, not because it was handed over as online.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerHostsCharacterizationTest {
@@ -361,6 +363,26 @@ class ManagerHostsCharacterizationTest {
 
         assertThat(invalidated.get()).isTrue()
         assertThat(details.state).isEqualTo(ComputerDetails.State.UNKNOWN)
+    }
+
+    @Test
+    fun `a host handed over as online that does not answer is not added, and the next is`() {
+        val host = reachable(UUID_1)
+        rig.start()
+        val handedOver =
+            ComputerDetails().also {
+                it.state = ComputerDetails.State.ONLINE
+                it.manualAddress = gone()
+            }
+
+        val added = rig.binder.addComputerBlocking(handedOver)
+
+        assertThat(added).isFalse()
+        val details = ComputerDetails().also { it.manualAddress = host.address }
+        val next = runCatching { rig.binder.addComputerBlocking(details) }
+        assertThat(next.exceptionOrNull()).isNull()
+        assertThat(next.getOrNull()).isTrue()
+        assertThat(rig.binder.getComputer(UUID_1)).isSameInstanceAs(details)
     }
 
     private companion object {

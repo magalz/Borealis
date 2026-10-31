@@ -198,6 +198,16 @@ class ManagerRule : ExternalResource() {
         }
     }
 
+    /** Makes the saved list refuse to delete a row, so that removing a host throws. */
+    fun refuseDeletes() {
+        openFile { database ->
+            database.execSQL(
+                "CREATE TRIGGER refuse_delete BEFORE DELETE ON Computers " +
+                    "BEGIN SELECT RAISE(ABORT, 'deleting is refused'); END"
+            )
+        }
+    }
+
     /**
      * Replaces the table of the saved list with a view of a table that is not there, so that the
      * database opens and the saved hosts cannot be read.

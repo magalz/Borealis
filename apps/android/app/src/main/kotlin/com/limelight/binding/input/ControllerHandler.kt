@@ -451,14 +451,15 @@ class ControllerHandler(
             }
 
             // If the gamepad doesn't have motion sensors, use the on-device sensors as a fallback
-            // for player 1
-            if (
-                !refused &&
+            // for player 1. A pad that waits for a number is not player 1
+            if (!refused) {
+                if (
                     prefConfig.gamepadMotionSensorsFallbackToDevice &&
-                    context.controllerNumber.toInt() == 0 &&
-                    devContext.sensorManager == null
-            ) {
-                devContext.sensorManager = deviceSensorManager
+                        context.controllerNumber.toInt() == 0 &&
+                        devContext.sensorManager == null
+                ) {
+                    devContext.sensorManager = deviceSensorManager
+                }
             }
         } else {
             if (prefConfig.multiController) {

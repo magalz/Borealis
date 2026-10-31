@@ -42,6 +42,8 @@ static jmethodID BridgeClSetControllerLEDMethod;
 static jbyteArray DecodedFrameBuffer;
 static jshortArray DecodedAudioBuffer;
 
+void BridgeClLogMessage(const char* format, ...); // BOREALIS: the exception checks below log with it
+
 void DetachThread(void* context) {
     (*JVM)->DetachCurrentThread(JVM);
 }
@@ -129,12 +131,24 @@ void BridgeDrStart(void) {
     JNIEnv* env = GetThreadEnv();
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeDrStartMethod);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeDrStart: the Java call threw an exception\n");
+    }
 }
 
 void BridgeDrStop(void) {
     JNIEnv* env = GetThreadEnv();
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeDrStopMethod);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeDrStop: the Java call threw an exception\n");
+    }
 }
 
 void BridgeDrCleanup(void) {
@@ -143,6 +157,12 @@ void BridgeDrCleanup(void) {
     (*env)->DeleteGlobalRef(env, DecodedFrameBuffer);
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeDrCleanupMethod);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeDrCleanup: the Java call threw an exception\n");
+    }
 }
 
 int BridgeDrSubmitDecodeUnit(PDECODE_UNIT decodeUnit) {
@@ -235,12 +255,24 @@ void BridgeArStart(void) {
     JNIEnv* env = GetThreadEnv();
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeArStartMethod);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeArStart: the Java call threw an exception\n");
+    }
 }
 
 void BridgeArStop(void) {
     JNIEnv* env = GetThreadEnv();
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeArStopMethod);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeArStop: the Java call threw an exception\n");
+    }
 }
 
 void BridgeArCleanup() {
@@ -251,6 +283,12 @@ void BridgeArCleanup() {
     (*env)->DeleteGlobalRef(env, DecodedAudioBuffer);
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeArCleanupMethod);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeArCleanup: the Java call threw an exception\n");
+    }
 }
 
 void BridgeArDecodeAndPlaySample(char* sampleData, int sampleLength) {
@@ -284,24 +322,48 @@ void BridgeClStageStarting(int stage) {
     JNIEnv* env = GetThreadEnv();
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClStageStartingMethod, stage);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeClStageStarting: the Java call threw an exception\n");
+    }
 }
 
 void BridgeClStageComplete(int stage) {
     JNIEnv* env = GetThreadEnv();
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClStageCompleteMethod, stage);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeClStageComplete: the Java call threw an exception\n");
+    }
 }
 
 void BridgeClStageFailed(int stage, int errorCode) {
     JNIEnv* env = GetThreadEnv();
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClStageFailedMethod, stage, errorCode);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeClStageFailed: the Java call threw an exception\n");
+    }
 }
 
 void BridgeClConnectionStarted(void) {
     JNIEnv* env = GetThreadEnv();
 
     (*env)->CallStaticVoidMethod(env, GlobalBridgeClass, BridgeClConnectionStartedMethod);
+    if ((*env)->ExceptionCheck(env)) {
+        // BOREALIS: this is called on a Java thread, so we must not detach; log it and clear it before the next call into Java
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+        BridgeClLogMessage("BridgeClConnectionStarted: the Java call threw an exception\n");
+    }
 }
 
 void BridgeClConnectionTerminated(int errorCode) {

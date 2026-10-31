@@ -20,8 +20,20 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
     private var pendingListener: NsdManager.DiscoveryListener? = null
     private var activeListener: NsdManager.DiscoveryListener? = null
     private val serviceCallbacks = HashMap<String?, NsdManager.ServiceInfoCallback>()
+    private var closed = false
+
+    // NsdManager runs the callbacks, among them the confirmation that a callback was unregistered,
+    // on this executor from its own thread, so one can come after close() has shut it down. It is
+    // dropped, not rejected: a rejection would throw on that thread.
     private val executor =
-        ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, LinkedBlockingQueue<Runnable>())
+        ThreadPoolExecutor(
+            1,
+            1,
+            0,
+            TimeUnit.SECONDS,
+            LinkedBlockingQueue<Runnable>(),
+            ThreadPoolExecutor.DiscardPolicy(),
+        )
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     @Suppress("LongMethod")
@@ -101,6 +113,16 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
                                 LimeLog.severe(
                                     "NSD: Service info callback registration failed: $errorCode"
                                 )
+
+                                // The platform dropped this callback before it reported the
+                                // failure, and it refuses to unregister a callback it no longer
+                                // holds, so the agent forgets it too. The callback that replaced
+                                // this one, if any, is registered and stays.
+                                synchronized(listenerLock) {
+                                    if (serviceCallbacks[nsdServiceInfo.serviceName] === this) {
+                                        serviceCallbacks.remove(nsdServiceInfo.serviceName)
+                                    }
+                                }
                                 listener.notifyDiscoveryFailure(
                                     RuntimeException(
                                         "onServiceInfoCallbackRegistrationFailed(): $errorCode"
@@ -127,6 +149,12 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
                             override fun onServiceInfoCallbackUnregistered() = Unit
                         }
 
+                    // A service that is found again replaces its callback in the map, so the old
+                    // one is unregistered first, or nothing would unregister it later
+                    serviceCallbacks.remove(nsdServiceInfo.serviceName)?.let {
+                        unregisterServiceInfoCallback(nsdServiceInfo.serviceName, it)
+                    }
+
                     nsdManager.registerServiceInfoCallback(
                         nsdServiceInfo,
                         executor,
@@ -148,7 +176,10 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
 
                     val serviceInfoCallback = serviceCallbacks.remove(nsdServiceInfo.serviceName)
                     if (serviceInfoCallback != null) {
-                        nsdManager.unregisterServiceInfoCallback(serviceInfoCallback)
+                        unregisterServiceInfoCallback(
+                            nsdServiceInfo.serviceName,
+                            serviceInfoCallback,
+                        )
                     }
                 }
             }
@@ -157,8 +188,8 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
     override fun startDiscovery(discoveryIntervalMs: Int) {
         synchronized(listenerLock) {
             // Register a new service discovery listener if there's not already one starting or
-            // running
-            if (pendingListener == null && activeListener == null) {
+            // running, and the agent is not closed
+            if (!closed && pendingListener == null && activeListener == null) {
                 val discoveryListener = createDiscoveryListener()
                 pendingListener = discoveryListener
                 nsdManager.discoverServices(
@@ -191,10 +222,42 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
             }
 
             // Unregister all service info callbacks
-            for (callback in serviceCallbacks.values) {
-                nsdManager.unregisterServiceInfoCallback(callback)
+            for ((serviceName, callback) in serviceCallbacks) {
+                unregisterServiceInfoCallback(serviceName, callback)
             }
             serviceCallbacks.clear()
+        }
+    }
+
+    // The platform forgets a callback on its own thread when its registration fails, and the
+    // failure reaches this agent only afterwards on its executor, so until then the agent can
+    // still hold a callback that the platform refuses to unregister. The callback is gone, which
+    // is all that the caller wants, so that refusal is only logged. The log has the name of the
+    // service and not its addresses.
+    private fun unregisterServiceInfoCallback(
+        serviceName: String?,
+        callback: NsdManager.ServiceInfoCallback,
+    ) {
+        try {
+            nsdManager.unregisterServiceInfoCallback(callback)
+        } catch (e: IllegalArgumentException) {
+            LimeLog.warning(
+                "NSD: Service info callback of $serviceName is gone already: ${e.message}"
+            )
+        }
+    }
+
+    // The end of the agent: it stops discovery, unregisters its callbacks and frees its executor,
+    // and does not discover again. Calling it again does nothing. The executor is shut down even
+    // when the stop throws, or its thread would outlive the agent.
+    override fun close() {
+        try {
+            synchronized(listenerLock) {
+                closed = true
+                stopDiscovery()
+            }
+        } finally {
+            executor.shutdown()
         }
     }
 

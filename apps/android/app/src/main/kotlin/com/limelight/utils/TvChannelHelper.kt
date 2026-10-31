@@ -54,7 +54,7 @@ class TvChannelHelper(private val context: Context) {
         }
 
         val intent = Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE)
-        intent.putExtra(TvContract.EXTRA_CHANNEL_ID, getChannelId(computer.uuid))
+        intent.putExtra(TvContract.EXTRA_CHANNEL_ID, channelId)
         try {
             context.startActivityForResult(intent, 0)
         } catch (ignored: Exception) {
@@ -141,8 +141,7 @@ class TvChannelHelper(private val context: Context) {
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
         val width = context.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_width)
-        // The height reads the width dimension too, as the Java did (reported in Sprint 12).
-        val height = context.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_width)
+        val height = context.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_height)
 
         val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -345,11 +344,6 @@ class TvChannelHelper(private val context: Context) {
 
         fun setIntent(intent: Intent?): PreviewProgramBuilder {
             values.put(TvContract.PreviewPrograms.COLUMN_INTENT_URI, toUriString(intent))
-            return this
-        }
-
-        fun setIntentUri(uri: Uri?): PreviewProgramBuilder {
-            values.put(TvContract.PreviewPrograms.COLUMN_INTENT_URI, toValueString(uri))
             return this
         }
 

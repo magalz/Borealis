@@ -7,6 +7,7 @@ import com.limelight.nvstream.mdns.MdnsDiscoveryListener
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.net.Inet4Address
 import java.net.Inet6Address
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.logging.Level
 import org.junit.Rule
 import org.junit.Test
@@ -16,7 +17,10 @@ import org.junit.Test
  * resolved: which computers it reports, how it de-duplicates them and how it picks the IPv6 address
  * to connect to. A small concrete subclass stands in for the network.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
+ * ones about the lock of the computer set (Sprint 16, S12-06): the Java class added an IPv6-only
+ * host outside the lock and told the listener from inside it, and now it adds under the lock and
+ * tells the listener after it.
  */
 class MdnsDiscoveryAgentCharacterizationTest {
     @get:Rule val log = LimeLogCapture()
@@ -32,6 +36,22 @@ class MdnsDiscoveryAgentCharacterizationTest {
 
         fun report(name: String, port: Int, v4: List<Inet4Address>, v6: List<Inet6Address>) =
             reportNewComputer(name, port, v4.toTypedArray(), v6.toTypedArray())
+
+        /** The monitor that guards the computer set. */
+        val monitor: Any
+            get() = computers
+    }
+
+    /** Remembers, for each computer it is told of, whether this thread held the agent's lock. */
+    private class LockProbingListener : MdnsDiscoveryListener {
+        lateinit var monitor: Any
+        val lockHeld = CopyOnWriteArrayList<Boolean>()
+
+        override fun notifyComputerAdded(computer: MdnsComputer) {
+            lockHeld += Thread.holdsLock(monitor)
+        }
+
+        override fun notifyDiscoveryFailure(e: Exception) = Unit
     }
 
     private fun report(
@@ -302,6 +322,68 @@ class MdnsDiscoveryAgentCharacterizationTest {
     }
 
     @Test
+    fun `the listener is told of an IPv4 host after the report left the lock`() {
+        val probe = LockProbingListener()
+        val probing = ReportingAgent(probe).also { probe.monitor = it.monitor }
+
+        probing.report("Den PC", 47989, listOf(ip4("192.168.1.5")), emptyList())
+
+        assertThat(probe.lockHeld).containsExactly(false)
+    }
+
+    @Test
+    fun `the listener is told of an IPv6-only host after the report left the lock`() {
+        val probe = LockProbingListener()
+        val probing = ReportingAgent(probe).also { probe.monitor = it.monitor }
+
+        probing.report("Den PC", 47989, emptyList(), listOf(ip6("fe80::1"), ip6("2001:db8::1")))
+
+        assertThat(probe.lockHeld).containsExactly(false)
+    }
+
+    @Test
+    fun `an IPv4 host is added under the lock of the computer set`() {
+        assertReportWaitsForLock(v4 = listOf(ip4("192.168.1.5")))
+    }
+
+    @Test
+    fun `an IPv6-only host is added under the lock of the computer set`() {
+        assertReportWaitsForLock(v6 = listOf(ip6("fe80::1"), ip6("2001:db8::1")))
+    }
+
+    /**
+     * Holds the lock of the computer set while another thread reports a host. The report has to
+     * block on the lock, and add and tell the listener only when this thread lets it go.
+     */
+    private fun assertReportWaitsForLock(
+        v4: List<Inet4Address> = emptyList(),
+        v6: List<Inet6Address> = emptyList(),
+    ) {
+        val reporter = Thread { report(v4 = v4, v6 = v6) }
+
+        synchronized(agent.monitor) {
+            reporter.start()
+            // The report ends or blocks on the lock; no timing decides which.
+            val deadline = System.nanoTime() + SETTLE_MS * NANOS_PER_MS
+            while (
+                reporter.state != Thread.State.BLOCKED &&
+                    reporter.state != Thread.State.TERMINATED &&
+                    System.nanoTime() < deadline
+            ) {
+                Thread.sleep(POLL_MS)
+            }
+
+            assertThat(reporter.state).isEqualTo(Thread.State.BLOCKED)
+            assertThat(listener.added).isEmpty()
+        }
+        reporter.join(SETTLE_MS)
+
+        assertThat(reporter.isAlive).isFalse()
+        assertThat(listener.added).hasSize(1)
+        assertThat(agent.getComputerSet()).hasSize(1)
+    }
+
+    @Test
     fun `a failure of the listener reaches the caller of the report`() {
         val failing =
             object : MdnsDiscoveryListener {
@@ -319,5 +401,11 @@ class MdnsDiscoveryAgentCharacterizationTest {
 
         assertThat(error).isInstanceOf(IllegalStateException::class.java)
         assertThat(error).hasMessageThat().isEqualTo("listener failed")
+    }
+
+    private companion object {
+        const val SETTLE_MS = 10_000L
+        const val POLL_MS = 1L
+        const val NANOS_PER_MS = 1_000_000L
     }
 }

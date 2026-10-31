@@ -26,6 +26,8 @@ class LegacyMigrationsTest {
 
     private fun overlay(): String? = preferences.getString(Settings.PERF_OVERLAY.key, null)
 
+    private fun audioConfig(): String? = preferences.getString(Settings.AUDIO_CONFIG.key, null)
+
     @Test
     fun `the old performance overlay switch that is on becomes detailed`() {
         preferences.edit().putBoolean(Settings.PERF_OVERLAY_LEGACY.key, true).commit()
@@ -126,5 +128,65 @@ class LegacyMigrationsTest {
 
         assertThat(preferences.contains(Settings.PERF_OVERLAY_LEGACY.key)).isFalse()
         assertThat(overlay()).isEqualTo(Settings.PERF_OVERLAY_COMPACT)
+    }
+
+    @Test
+    fun `the old 5,1 surround switch that is on becomes the audio configuration 51 and is removed`() {
+        preferences.edit().putBoolean(OLD_SURROUND_51, true).commit()
+
+        LegacyMigrations.run(preferences)
+
+        assertThat(audioConfig()).isEqualTo("51")
+        assertThat(preferences.contains(OLD_SURROUND_51)).isFalse()
+    }
+
+    @Test
+    fun `the old 5,1 surround switch that is on does not replace an audio configuration the user chose`() {
+        preferences
+            .edit()
+            .putBoolean(OLD_SURROUND_51, true)
+            .putString(Settings.AUDIO_CONFIG.key, "71")
+            .commit()
+
+        LegacyMigrations.run(preferences)
+
+        assertThat(audioConfig()).isEqualTo("71")
+        assertThat(preferences.contains(OLD_SURROUND_51)).isFalse()
+    }
+
+    @Test
+    fun `the old 5,1 surround switch that is off is removed and stores no audio configuration`() {
+        preferences.edit().putBoolean(OLD_SURROUND_51, false).commit()
+
+        LegacyMigrations.run(preferences)
+
+        assertThat(audioConfig()).isNull()
+        assertThat(preferences.contains(OLD_SURROUND_51)).isFalse()
+    }
+
+    @Test
+    fun `the old 5,1 surround switch is migrated once, so a cleared audio configuration stays unset`() {
+        preferences.edit().putBoolean(OLD_SURROUND_51, true).commit()
+        LegacyMigrations.run(preferences)
+        preferences.edit().remove(Settings.AUDIO_CONFIG.key).commit()
+
+        LegacyMigrations.run(preferences)
+
+        assertThat(audioConfig()).isNull()
+    }
+
+    @Test
+    fun `an old 5,1 surround entry of another type is removed and stores no audio configuration`() {
+        preferences.edit().putString(OLD_SURROUND_51, "true").commit()
+
+        LegacyMigrations.run(preferences)
+
+        assertThat(audioConfig()).isNull()
+        assertThat(preferences.contains(OLD_SURROUND_51)).isFalse()
+    }
+
+    private companion object {
+        /** The key of the 5.1 surround switch from before the audio configuration had a list. */
+        const val OLD_SURROUND_51 = "checkbox_51_surround"
     }
 }

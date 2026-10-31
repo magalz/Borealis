@@ -50,6 +50,7 @@ import java.security.NoSuchAlgorithmException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.BooleanSupplier
 import java.util.function.Supplier
 import javax.crypto.KeyGenerator
@@ -79,7 +80,9 @@ open class NvConnection(
     private val context = ConnectionContext()
     private val isMonkey: Boolean
 
-    // BOREALIS: set by cancelLaunch() when the user leaves before the stream started (host.launch)
+    // BOREALIS: set by cancelLaunch() when the user leaves before the stream started, and by stop()
+    // too. Nothing resets it: a stopped NvConnection is never started again, one serves one stream
+    // (host.launch)
     @Volatile private var launchCancelled = false
 
     // BOREALIS: one resolution of "an app is already running" per launch (host.launch)
@@ -108,6 +111,15 @@ open class NvConnection(
     // lock (stream.keyframe)
     @Volatile private var connected = false
 
+    // BOREALIS: true while this connection holds the place of connectionAllowed, from the acquire
+    // of its start until stop(), or a start that ends without a stream, gives it back (host.launch)
+    private val holdsPlace = AtomicBoolean(false)
+
+    // BOREALIS: the app that this start asks for: the configured one, or the one that the lookup by
+    // name found when the configuration came without an id; set by startApp, on the start thread
+    // (host.launch)
+    private lateinit var appToStart: NvApp
+
     init {
         context.serverAddress = host
         context.httpsPort = httpsPort
@@ -126,6 +138,10 @@ open class NvConnection(
         get() = checkNotNull(connListener)
 
     fun stop() {
+        // BOREALIS: first, so that a start still on its way ends without a stream that nobody
+        // would stop: the start thread checks it after it got the place and again under the bridge
+        // monitor, which the stop below takes after this (host.launch)
+        cancelLaunch()
         connected = false // BOREALIS: no new keyframe request from here on (stream.keyframe)
         // Interrupt any pending connection. This is thread-safe.
         MoonBridge.interruptConnection()
@@ -141,11 +157,19 @@ open class NvConnection(
         }
 
         // Now a pending connection can be processed
-        connectionAllowed.release()
+        releasePlace()
     }
 
-    // BOREALIS: ends the retry wait of start() without stop(): the semaphore is only released by
-    // stop() (host.launch)
+    // BOREALIS: gives the place back once, and only when this connection holds it: stop() of a
+    // connection that never took one, or a second stop(), must not add a place (host.launch)
+    private fun releasePlace() {
+        if (holdsPlace.compareAndSet(true, false)) {
+            connectionAllowed.release()
+        }
+    }
+
+    // BOREALIS: ends the retry wait of start() without stop(): a stream's place is only given back
+    // by stop() (host.launch)
     fun cancelLaunch() {
         launchCancelled = true
     }
@@ -215,7 +239,7 @@ open class NvConnection(
     // (host.launch)
     @Throws(IOException::class, XmlPullParserException::class)
     private fun joinRunning(h: NvHTTP, context: ConnectionContext, appId: Int): LaunchOutcome {
-        val askedFor = appId == checkNotNull(checkNotNull(context.streamConfig).app).appId
+        val askedFor = appId == appToStart.appId
         if (askedFor && !collisions.settleBeforeResume()) {
             return LaunchOutcome.CANCELLED
         }
@@ -245,8 +269,7 @@ open class NvConnection(
 
     private fun requestedApp(context: ConnectionContext): RequestedApp {
         val streamConfig = checkNotNull(context.streamConfig)
-        val app = checkNotNull(streamConfig.app)
-        return RequestedApp(app.appId, app.appName, streamConfig.resumeChosen)
+        return RequestedApp(appToStart.appId, appToStart.appName, streamConfig.resumeChosen)
     }
 
     // BOREALIS: another app is running although /serverinfo said none, or a launch was refused
@@ -527,6 +550,7 @@ open class NvConnection(
             }
             app = found
         }
+        appToStart = app // BOREALIS: launch and ask with the id that was found
 
         // If there's a game running, resume it
         if (h.getCurrentGame(serverInfo) != 0) {
@@ -639,8 +663,7 @@ open class NvConnection(
     private fun launchNotRunningApp(h: NvHTTP, context: ConnectionContext): Boolean {
         // Launch the app since it's not running
         // BOREALIS: retries and cancellation
-        val launched =
-            launchWithRetry(h, "launch", checkNotNull(checkNotNull(context.streamConfig).app).appId)
+        val launched = launchWithRetry(h, "launch", appToStart.appId)
         if (launched == LaunchOutcome.CANCELLED) { // BOREALIS
             return false
         }
@@ -700,6 +723,10 @@ open class NvConnection(
             }
             context.listener.stageComplete(appName)
         } catch (e: HostHttpResponseException) {
+            // BOREALIS: the user left during the request, nothing to report
+            if (launchCancelled) {
+                return
+            }
             // BOREALIS: the log masks addresses; the screen never shows the exception text
             StartFailureLog.failed(startStep, e)
             recordStartFailure(e) // BOREALIS: host.failure
@@ -714,7 +741,7 @@ open class NvConnection(
             return
         }
 
-        // BOREALIS: before the semaphore, which only stop() releases
+        // BOREALIS: before the semaphore, whose place a stream gives back only by stop()
         if (launchCancelled) {
             return
         }
@@ -733,15 +760,25 @@ open class NvConnection(
             context.listener.stageFailed(startStep, 0, 0)
             return
         }
+        // BOREALIS: before the cancel check, so that a stop() from here on gives the place back
+        // too (host.launch)
+        holdsPlace.set(true)
         // BOREALIS: left while waiting for the semaphore
         if (launchCancelled) {
-            connectionAllowed.release()
+            releasePlace()
             return
         }
 
         // Moonlight-core is not thread-safe with respect to connection start and stop, so
         // we must not invoke that functionality in parallel.
         synchronized(MoonBridge::class.java) {
+            // BOREALIS: a whole stop() may have come since the check above, and the native start
+            // would reset its interrupt: the start is either complete before the stop takes the
+            // monitor, and the stop then stops it, or it never begins (host.launch)
+            if (launchCancelled) {
+                releasePlace()
+                return
+            }
             // BOREALIS: hold an RTSP failure that collides with another device
             MoonBridge.setupBridge(
                 videoDecoderRenderer,
@@ -776,7 +813,7 @@ open class NvConnection(
                 // LiStartConnection() failed, so the caller is not expected
                 // to stop the connection themselves. We need to release their
                 // semaphore count for them.
-                connectionAllowed.release()
+                releasePlace()
                 // BOREALIS: restart the whole start once
                 if (collisions.restartAfterFailure()) {
                     start(audioRenderer, videoDecoderRenderer, connectionListener)

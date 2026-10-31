@@ -24,10 +24,10 @@ import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes what `PreferenceConfiguration` writes while it reads, and the migrations and
- * overrides behind those writes: the legacy resolution, frame rate, audio and frame pacing keys,
- * the Android 12 motion sensor override, the Shield firmware check and the streaming reset. A
- * recording context logs each edit with its keys, values and order, and whether it was applied or
- * committed, so a conversion that changes any of those fails here.
+ * overrides behind those writes: the legacy resolution, frame rate and frame pacing keys, the
+ * Android 12 motion sensor override, the Shield firmware check and the streaming reset. A recording
+ * context logs each edit with its keys, values and order, and whether it was applied or committed,
+ * so a conversion that changes any of those fails here.
  */
 @Suppress("DEPRECATION", "LargeClass", "TooManyFunctions")
 @RunWith(RobolectricTestRunner::class)
@@ -56,28 +56,23 @@ class PreferenceConfigurationMigrationTest {
     private val log: MutableList<String>
         get() = recording.log
 
+    // The legacy 5,1 surround switch is migrated at the start of the app, by `LegacyMigrations`
+    // (see `LegacyMigrationsTest`). The stream start only reads the audio configuration.
     @Test
-    fun `a legacy 5,1 surround switch that is on becomes the audio configuration 51 and is removed`() {
+    fun `a legacy 5,1 surround switch that is on is neither read nor rewritten at the stream start`() {
         preferences.edit().putBoolean("checkbox_51_surround", true).commit()
 
         val config = read()
 
-        assertThat(log)
-            .containsExactly(
-                "edit",
-                "remove(checkbox_51_surround)",
-                "putString(list_audio_config=51)",
-                "apply()",
-            )
-            .inOrder()
-        assertThat(preferences.contains("checkbox_51_surround")).isFalse()
-        assertThat(preferences.getString("list_audio_config", null)).isEqualTo("51")
+        assertThat(log).isEmpty()
+        assertThat(preferences.getBoolean("checkbox_51_surround", false)).isTrue()
+        assertThat(preferences.contains("list_audio_config")).isFalse()
         assertThat(config.audioConfiguration)
-            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_STEREO)
     }
 
     @Test
-    fun `a legacy 5,1 surround switch that is on replaces a stored audio configuration`() {
+    fun `a legacy 5,1 surround switch that is on does not replace a stored audio configuration`() {
         preferences
             .edit()
             .putBoolean("checkbox_51_surround", true)
@@ -87,12 +82,13 @@ class PreferenceConfigurationMigrationTest {
         val config = read()
 
         assertThat(config.audioConfiguration)
-            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
-        assertThat(preferences.getString("list_audio_config", null)).isEqualTo("51")
+            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_71_SURROUND)
+        assertThat(preferences.getString("list_audio_config", null)).isEqualTo("71")
+        assertThat(log).isEmpty()
     }
 
     @Test
-    fun `a legacy 5,1 surround switch that is off writes nothing and stays in the file`() {
+    fun `a legacy 5,1 surround switch that is off is left alone at the stream start`() {
         preferences.edit().putBoolean("checkbox_51_surround", false).commit()
 
         val config = read()
@@ -170,7 +166,7 @@ class PreferenceConfigurationMigrationTest {
             .inOrder()
         assertThat(preferences.getString("list_resolution", null)).isEqualTo("1920x1080")
         assertThat(preferences.getString("list_fps", null)).isEqualTo("30")
-        // The automatic bitrate uses what the migration has just written.
+        // The automatic bitrate is that of the migrated resolution and frame rate.
         assertThat(config.bitrate).isEqualTo(10_000)
     }
 
@@ -194,20 +190,28 @@ class PreferenceConfigurationMigrationTest {
     }
 
     @Test
-    fun `an unknown resolution name without an x becomes 720p`() {
+    fun `an unknown resolution name without an x reads as 720p and is not written back`() {
         for (legacy in listOf("", "Native", "native", "8K", "720")) {
-            preferences.edit().clear().putString("list_resolution", legacy).commit()
+            preferences
+                .edit()
+                .clear()
+                .putString("list_resolution", legacy)
+                .putString("list_fps", "144")
+                .commit()
             log.clear()
 
             val config = read()
 
             assertWithMessage("fields for '$legacy'")
-                .that(config.width to config.height)
-                .isEqualTo(1280 to 720)
-            assertWithMessage("writes for '$legacy'")
-                .that(log)
-                .containsExactly("edit", "putString(list_resolution=1280x720)", "apply()")
+                .that(listOf(config.width, config.height, config.fps))
+                .containsExactly(1280, 720, 144)
                 .inOrder()
+            // The automatic bitrate is that of the resolution the stream uses.
+            assertWithMessage("bitrate for '$legacy'").that(config.bitrate).isEqualTo(15_000)
+            assertWithMessage("writes for '$legacy'").that(log).isEmpty()
+            assertWithMessage("stored '$legacy'")
+                .that(preferences.getString("list_resolution", null))
+                .isEqualTo(legacy)
         }
     }
 
@@ -313,7 +317,8 @@ class PreferenceConfigurationMigrationTest {
 
     @Test
     @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
-    fun `the edits of one read come in the order audio, resolution and frame rate, motion, frame pacing`() {
+    fun `the edits of one read come in the order resolution and frame rate, motion, frame pacing`() {
+        // checkbox_51_surround shows that the reader ignores the legacy key: no edit is for it.
         preferences
             .edit()
             .putBoolean("checkbox_51_surround", true)
@@ -325,10 +330,6 @@ class PreferenceConfigurationMigrationTest {
 
         assertThat(log)
             .containsExactly(
-                "edit",
-                "remove(checkbox_51_surround)",
-                "putString(list_audio_config=51)",
-                "apply()",
                 "edit",
                 "remove(list_resolution_fps)",
                 "putString(list_resolution=1280x720)",
@@ -348,6 +349,7 @@ class PreferenceConfigurationMigrationTest {
     @Test
     @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `a legacy resolution name is converted before the motion override and the frame pacing migration`() {
+        // checkbox_51_surround shows that the reader ignores the legacy key: no edit is for it.
         preferences
             .edit()
             .putBoolean("checkbox_51_surround", true)
@@ -359,10 +361,6 @@ class PreferenceConfigurationMigrationTest {
 
         assertThat(log)
             .containsExactly(
-                "edit",
-                "remove(checkbox_51_surround)",
-                "putString(list_audio_config=51)",
-                "apply()",
                 "edit",
                 "putString(list_resolution=1920x1080)",
                 "apply()",
@@ -381,7 +379,6 @@ class PreferenceConfigurationMigrationTest {
     fun `a second read finds the migration done and writes nothing`() {
         preferences
             .edit()
-            .putBoolean("checkbox_51_surround", true)
             .putString("list_resolution_fps", "4K30")
             .putBoolean("checkbox_disable_frame_drop", true)
             .commit()
@@ -395,8 +392,6 @@ class PreferenceConfigurationMigrationTest {
             .containsExactly(3840, 2160, 30)
             .inOrder()
         assertThat(config.framePacing).isEqualTo(PreferenceConfiguration.FRAME_PACING_BALANCED)
-        assertThat(config.audioConfiguration)
-            .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
     }
 
     @Test

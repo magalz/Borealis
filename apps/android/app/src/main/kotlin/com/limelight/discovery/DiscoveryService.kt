@@ -71,4 +71,10 @@ class DiscoveryService : Service() {
         boundListener = null
         return false
     }
+
+    override fun onDestroy() {
+        // The agent ends for good, whatever it held (a NsdManager agent has an executor)
+        discoveryAgent.close()
+        super.onDestroy()
+    }
 }

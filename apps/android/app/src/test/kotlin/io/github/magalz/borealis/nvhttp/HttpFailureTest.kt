@@ -15,7 +15,6 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.ConnectException
 import java.net.ServerSocket
-import java.nio.charset.Charset
 import java.util.logging.Level
 import org.junit.After
 import org.junit.Assert.assertThrows
@@ -222,11 +221,11 @@ class HttpFailureTest {
     }
 
     @Test
-    fun `a release build reads the app list from the stream, with the default charset`() {
+    fun `a release build reads the app list from the stream as UTF-8`() {
         val host = host()
         host.answer(
             "/applist",
-            HostReply.root("<App><AppTitle>Café Über</AppTitle><ID>5</ID></App>"),
+            HostReply.root("<App><AppTitle>Café Über 日本語</AppTitle><ID>5</ID></App>"),
             "https",
         )
         val http = clientOf(host, serverCert = pinned)
@@ -234,13 +233,11 @@ class HttpFailureTest {
         val release = withVerbose(false) { http.getAppList() }
         val debug = withVerbose(true) { http.getAppList() }
 
-        // A debug build reads the text of OkHttp, which is UTF-8; a release build reads the bytes
-        // with the default charset of the platform.
-        assertThat(debug.map { it.appName }).containsExactly("Café Über")
-        assertThat(release.map { it.appName })
-            .containsExactly(
-                String("Café Über".toByteArray(Charsets.UTF_8), Charset.defaultCharset())
-            )
+        // The host writes the app list in UTF-8: a debug build reads the text of OkHttp, which is
+        // UTF-8, and a release build reads the bytes as UTF-8 too, not with the default charset of
+        // the platform (a JVM whose default is UTF-8 cannot tell the two apart).
+        assertThat(debug.map { it.appName }).containsExactly("Café Über 日本語")
+        assertThat(release.map { it.appName }).containsExactly("Café Über 日本語")
         assertThat(release.map { it.appId }).containsExactly(5)
     }
 

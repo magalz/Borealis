@@ -15,7 +15,8 @@ import org.junit.Test
  * default, and what the defaults do. `Game` (Java) implements the interface, `MoonBridge` and
  * `NvConnection` (Java) call it, and `HeldStageFailures` (Kotlin) wraps it.
  *
- * Characterization: these tests pass on the Java interface and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java interface and on its Kotlin conversion, except the
+ * last one, which pins what `HeldStageFailures` does with the launch callbacks since Sprint 16.
  */
 class NvConnectionListenerCharacterizationTest {
     /**
@@ -152,11 +153,11 @@ class NvConnectionListenerCharacterizationTest {
 
     /**
      * `MoonBridge` is the only caller of a `HeldStageFailures`, and it never calls the launch
-     * callbacks, so this path is not reached while streaming. What the wrapper does with them: it
-     * keeps the defaults of the interface and does not forward them.
+     * callbacks, so this path is not reached while streaming. The wrapper forwards them to the
+     * listener that it wraps, like every other callback, and the answer is that listener's to give.
      */
     @Test
-    fun `the held stage failures keep the defaults of the launch callbacks`() {
+    fun `the held stage failures forward the launch callbacks to the listener they wrap`() {
         val inner = LaunchRecorder()
         val held =
             HeldStageFailures(inner, ResumeCollisions({ false }, { _, _, _, _ -> }, { null })) {
@@ -168,7 +169,13 @@ class NvConnectionListenerCharacterizationTest {
         held.launchStarting(false)
         held.launchConflict(7, "Steam", 8, null, answer)
 
-        assertThat(inner.calls).isEmpty()
-        assertThat(answer.chosen()).isEqualTo(ConflictChoice.CANCEL)
+        assertThat(inner.calls)
+            .containsExactly(
+                "launchRetrying 1 2 3 4",
+                "launchStarting false",
+                "launchConflict 7 Steam 8 null",
+            )
+            .inOrder()
+        assertThat(answer.chosen()).isNull()
     }
 }

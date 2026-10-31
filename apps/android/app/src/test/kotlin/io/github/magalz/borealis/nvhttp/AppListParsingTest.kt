@@ -7,7 +7,6 @@ import com.limelight.nvstream.http.NvApp
 import com.limelight.nvstream.http.NvHTTP
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.StringReader
-import java.util.NoSuchElementException
 import java.util.logging.Level
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -209,15 +208,18 @@ class AppListParsingTest {
     }
 
     @Test
-    fun `text outside an app, before the first app, is a NoSuchElementException`() {
-        // The code reads the last app of the list for every text it sees, and there is none yet.
-        assertThrows(NoSuchElementException::class.java) {
-            parse("""<root status_code="200"><note>hello</note></root>""")
-        }
-        // Even white space between the root and the first app counts as text.
-        assertThrows(NoSuchElementException::class.java) {
-            parse("<root status_code=\"200\">\n  ${app("Pretty", "1")}\n</root>")
-        }
+    fun `text before the first app is ignored`() {
+        // No app has started yet, so the text belongs to none.
+        assertThat(parse("""<root status_code="200"><note>hello</note></root>""")).isEmpty()
+
+        // White space before the first app is text too, and the apps after it are read.
+        val pretty = parse("<root status_code=\"200\">\n  ${app("Pretty", "1")}\n</root>")
+        assertThat(pretty.map { it.summary() }).containsExactly("Pretty/1/false")
+
+        val noted = parse(list("<note>hello</note>", app("One", "1"), app("Two", "2")))
+        assertThat(noted.map { it.summary() })
+            .containsExactly("One/1/false", "Two/2/false")
+            .inOrder()
     }
 
     @Test
@@ -260,12 +262,17 @@ class AppListParsingTest {
     }
 
     @Test
-    fun `text that comes before the first app ends the list, also when it is a web page`() {
-        assertThrows(NoSuchElementException::class.java) {
-            parse("<html><body>error</body></html>")
-        }
-        assertThrows(NoSuchElementException::class.java) {
-            parse("""<root status_code="200"><hostname>x""")
+    fun `a web page, or a cut off answer, with text before the first app is a malformed list`() {
+        // The text is ignored, so the list fails on its missing end of the root tag, an error the
+        // callers of the app list already handle.
+        for (xml in
+            listOf(
+                "<html><body>error</body></html>",
+                """<root status_code="200"><hostname>x""",
+            )) {
+            assertWithMessage(xml)
+                .that(assertThrows(XmlPullParserException::class.java) { parse(xml) }.message)
+                .isEqualTo("Malformed XML: Root tag was not terminated")
         }
     }
 

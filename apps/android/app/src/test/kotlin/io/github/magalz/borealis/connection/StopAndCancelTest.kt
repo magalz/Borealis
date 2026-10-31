@@ -2,7 +2,10 @@ package io.github.magalz.borealis.connection
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.library.RecordingLog
+import io.github.magalz.borealis.nvhttp.HostReply
+import java.lang.management.ManagementFactory
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Rule
@@ -49,6 +52,20 @@ class StopAndCancelTest {
         }
     }
 
+    /** Waits until [thread] waits to enter the monitor of the bridge, which the test holds. */
+    private fun awaitBlockedOnBridge(thread: Thread) {
+        val bridge = System.identityHashCode(MoonBridge::class.java)
+        val threads = ManagementFactory.getThreadMXBean()
+        val limit = System.currentTimeMillis() + WAIT_MS
+        while (threads.getThreadInfo(thread.id)?.lockInfo?.identityHashCode != bridge) {
+            check(System.currentTimeMillis() < limit) {
+                "The thread did not wait for the bridge; it is ${thread.state}; " +
+                    "calls: ${ShadowRecordingBridge.names}"
+            }
+            Thread.sleep(POLL_MS)
+        }
+    }
+
     @Test
     fun `stop interrupts the connection first, then stops and cleans up holding the monitor`() {
         val connection = rig.connection(config = null)
@@ -64,12 +81,12 @@ class StopAndCancelTest {
             .inOrder()
     }
 
-    /** A connection that never took the place still gives one back: the places can pile up. */
+    /** A connection that never took the place gives none back: the places must not pile up. */
     @Test
-    fun `stop gives a place back even to a connection that never took one`() {
+    fun `stop gives no place back to a connection that never took one`() {
         rig.connection(config = null).stop()
 
-        assertThat(rig.permits()).isEqualTo(2)
+        assertThat(rig.permits()).isEqualTo(1)
     }
 
     @Test
@@ -80,6 +97,51 @@ class StopAndCancelTest {
         assertThat(rig.permits()).isEqualTo(0)
 
         connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a second stop of a stream that runs gives no second place back`() {
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+
+        connection.stop()
+        connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The start gave its place back when the native connection failed: the stop has none to give.
+     */
+    @Test
+    fun `the stop of a start whose native connection failed gives no place back`() {
+        ShadowRecordingBridge.onStartConnection = { -1 }
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        assertThat(rig.permits()).isEqualTo(1)
+
+        connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a stop that comes while the native connection fails to start leaves one place`() {
+        val gate = CountDownLatch(1)
+        ShadowRecordingBridge.onStartConnection = {
+            check(gate.await(WAIT_MS, TimeUnit.MILLISECONDS)) { "never interrupted" }
+            -1
+        }
+        ShadowRecordingBridge.onInterrupt = { gate.countDown() }
+        val connection = rig.connection()
+        startAndConnect(connection)
+
+        connection.stop()
+        listener.awaitEnded()
 
         assertThat(rig.permits()).isEqualTo(1)
     }
@@ -218,6 +280,73 @@ class StopAndCancelTest {
         assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
         assertThat(secondListener.events("stageFailed")).isEmpty()
         assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The place that lets it through is the one of the stream that runs, not one that a stop adds:
+     * the stop does not free the waiting thread, and the start that gets the place later ends
+     * without a stream and without a failure, with no `cancelLaunch` to tell it. The stop comes
+     * before the thread has the place, as a stop between its `acquire` and its cancel check does.
+     */
+    @Test
+    fun `the stop of a start that waits for the place ends it when it gets the place, without a stream`() {
+        val first = rig.connection()
+        startAndConnect(first)
+        listener.awaitEnded()
+        val secondListener = rig.newListener()
+        val second = rig.connection()
+        rig.start(second, listener = secondListener)
+        secondListener.await("stageComplete")
+        awaitParked(secondListener.threads.single())
+
+        second.stop()
+        first.stop()
+        secondListener.awaitEnded()
+
+        assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
+        assertThat(secondListener.events("stageFailed")).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The test holds the monitor of the bridge, so the start thread passes its last cancel check
+     * and waits to enter it, and a whole stop, which runs under the same monitor by the same
+     * thread, comes first. The stop alone, with no `cancelLaunch`, must keep that start from
+     * beginning a stream whose place the stop already gave back.
+     */
+    @Test
+    fun `a stop that completes before the start enters the native connection leaves no stream`() {
+        val connection = rig.connection()
+
+        synchronized(MoonBridge::class.java) {
+            rig.start(connection)
+            listener.await("stageComplete")
+            awaitBlockedOnBridge(listener.threads.single())
+            connection.stop()
+        }
+        listener.awaitEnded()
+
+        assertThat(ShadowRecordingBridge.names)
+            .containsExactly("interruptConnection", "stopConnection", "cleanupBridge")
+            .inOrder()
+        assertThat(listener.events("stageFailed")).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The user left while the host answered `/serverinfo` with an error: nobody is left to tell.
+     */
+    @Test
+    fun `a start that is cancelled while the host answers with an error tells nothing`() {
+        val connection = rig.connection()
+        rig.script.serverInfoReplies += HostReply.failure("500", "boom")
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        listener.await("stageStarting")
+        listener.awaitEnded()
+
+        assertThat(listener.events).containsExactly("stageStarting $DESKTOP_NAME")
     }
 
     @Test

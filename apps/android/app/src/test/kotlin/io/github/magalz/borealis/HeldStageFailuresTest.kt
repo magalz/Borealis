@@ -2,6 +2,7 @@ package io.github.magalz.borealis
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.NvConnectionListener
+import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ResumeCollisions
 import org.junit.Test
 
@@ -12,6 +13,7 @@ class HeldStageFailuresTest {
 
         val failures = mutableListOf<Failure>()
         val messages = mutableListOf<String>()
+        val launches = mutableListOf<String>()
 
         override fun stageFailed(stage: String, portFlags: Int, errorCode: Int) {
             failures += Failure(stage, portFlags, errorCode)
@@ -19,6 +21,25 @@ class HeldStageFailuresTest {
 
         override fun displayMessage(message: String) {
             messages += message
+        }
+
+        override fun launchRetrying(category: Int, attempt: Int, maxAttempts: Int, delayMs: Int) {
+            launches += "launchRetrying $category $attempt $maxAttempts $delayMs"
+        }
+
+        override fun launchStarting(resume: Boolean) {
+            launches += "launchStarting $resume"
+        }
+
+        override fun launchConflict(
+            runningAppId: Int,
+            runningAppName: String?,
+            requestedAppId: Int,
+            requestedAppName: String?,
+            answer: ConflictAnswer,
+        ) {
+            launches +=
+                "launchConflict $runningAppId $runningAppName $requestedAppId $requestedAppName"
         }
 
         override fun stageStarting(stage: String?) = Unit
@@ -110,6 +131,21 @@ class HeldStageFailuresTest {
         held.displayMessage("hello")
 
         assertThat(inner.messages).containsExactly("hello")
+    }
+
+    @Test
+    fun `the launch callbacks go to the inner listener`() {
+        held.launchRetrying(1, 2, 3, 4)
+        held.launchStarting(true)
+        held.launchConflict(7, "Steam", 8, "Desktop", ConflictAnswer())
+
+        assertThat(inner.launches)
+            .containsExactly(
+                "launchRetrying 1 2 3 4",
+                "launchStarting true",
+                "launchConflict 7 Steam 8 Desktop",
+            )
+            .inOrder()
     }
 
     private companion object {

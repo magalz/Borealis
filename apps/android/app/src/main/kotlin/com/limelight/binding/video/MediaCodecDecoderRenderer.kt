@@ -1762,8 +1762,10 @@ class MediaCodecDecoderRenderer(
 
                     if (needsBaselineSpsHack) {
                         if (!replaySps()) {
-                            // The decoder still has the baseline SPS: the next IDR frame says
+                            // The decoder still has the baseline SPS. Forget the CSD that went, so
+                            // the next IDR frame gets here again, fused decoders too: it says
                             // baseline again and replays
+                            submittedCsd = false
                             return MoonBridge.DR_NEED_IDR
                         }
 

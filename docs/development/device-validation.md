@@ -1,6 +1,6 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 15 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 16 on two devices against
 LuminalShine 26.09.1, 26.10.0-beta.1 and 26.10.1 running on the owner's Windows PC. It is
 for the owner and for the orchestrator who runs the checks. Run the steps in
 order and record the results as a new section with a table, like sections 7 to
@@ -3866,7 +3866,9 @@ Findings:
      are in the [roadmap](../roadmap.md#sprint-19-secops). An independent review
      recommended against a `/unpair` cancel route. Option D, sending phase 4 with
      an invalid secret after a wrong PIN, is not chosen.
-   - **Not filed upstream yet.** The host-side table of the roadmap has the row.
+   - **Filed upstream on 2026-10-29** as
+     [NortheBridge/luminalshine#216](https://github.com/NortheBridge/luminalshine/issues/216). The
+     host-side table of the roadmap has the row.
 
 ## 16. Results: Sprint 11
 
@@ -4971,7 +4973,8 @@ to. The round's notes numbered the pad items differently. On the S22, items 3 to
 2. With both pads off, the Touch row came back in the stream menu. The row is shown only
    without a pad, which is expected.
 3. The S22 log still reads "Using Android O+ native mouse capture". This text is already in
-   the Sprint 13 backlog, item (b).
+   the Sprint 13 backlog, item (b). Sprint 16 changed the line to "Using the native pointer
+   capture" (K5).
 4. S22 rumble on the Ultimate 2: "Rumble on gamepad 0: 0000 7f00", then "0000 0000".
 
 ### Owner items and open points

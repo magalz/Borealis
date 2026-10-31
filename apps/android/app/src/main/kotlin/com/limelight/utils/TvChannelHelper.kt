@@ -54,7 +54,7 @@ class TvChannelHelper(private val context: Context) {
         }
 
         val intent = Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE)
-        intent.putExtra(TvContract.EXTRA_CHANNEL_ID, getChannelId(computer.uuid))
+        intent.putExtra(TvContract.EXTRA_CHANNEL_ID, channelId)
         try {
             context.startActivityForResult(intent, 0)
         } catch (ignored: Exception) {

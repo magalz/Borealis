@@ -76,14 +76,29 @@ class ComputerManagerService : Service() {
         }
 
     // Returns true if the details object was modified
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount", "CyclomaticComplexMethod", "NestedBlockDepth")
     @Throws(InterruptedException::class)
     private fun runPoll(details: ComputerDetails, newPc: Boolean, offlineCount: Int): Boolean {
         if (!getLocalDatabaseReference()) {
             return false
         }
 
+        // The reference goes back on every way out, a throw of the database or of the listener
+        // included.
+        try {
+            return pollAndReport(details, newPc, offlineCount)
+        } finally {
+            releaseLocalDatabaseReference()
+        }
+    }
+
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    @Suppress("ReturnCount", "CyclomaticComplexMethod", "NestedBlockDepth")
+    @Throws(InterruptedException::class)
+    private fun pollAndReport(
+        details: ComputerDetails,
+        newPc: Boolean,
+        offlineCount: Int,
+    ): Boolean {
         val pollTriesBeforeOffline =
             if (details.state == ComputerDetails.State.UNKNOWN) {
                 INITIAL_POLL_TRIES
@@ -98,15 +113,11 @@ class ComputerManagerService : Service() {
             if (!pollComputer(details)) {
                 if (!newPc && offlineCount < pollTriesBeforeOffline) {
                     // Return without calling the listener
-                    releaseLocalDatabaseReference()
                     return false
                 }
 
                 details.state = ComputerDetails.State.OFFLINE
             }
-        } catch (e: InterruptedException) {
-            releaseLocalDatabaseReference()
-            throw e
         } finally {
             activePolls.decrementAndGet()
         }
@@ -119,7 +130,6 @@ class ComputerManagerService : Service() {
             // removed after this was issued
             if (!newPc && existingComputer == null) {
                 // It's gone
-                releaseLocalDatabaseReference()
                 return false
             }
 
@@ -155,7 +165,6 @@ class ComputerManagerService : Service() {
             listener?.notifyComputerUpdated(details)
         }
 
-        releaseLocalDatabaseReference()
         return true
     }
 

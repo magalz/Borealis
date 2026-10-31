@@ -1850,8 +1850,11 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
   - `utils/TvChannelHelper.kt`: 6
 
   That is 49 suppressions in 18 files.
-- **(b) Bugs found during the Sprint 12 conversion.** Only the first is fixed. The conversion keeps
-  behaviour (ADR 0059, rule 10).
+- **(b) Bugs found during the Sprint 12 conversion.** Only the first was fixed before Sprint 16. The
+  conversion keeps behaviour (ADR 0059, rule 10). [Sprint 16](#sprint-16-fixes-of-the-converted-code)
+  took the other 34. Each entry now ends with its triage id (S12-01 to S12-20, P1 to P14) and what
+  Sprint 16 did: 32 fixed, P4 closed and P9 moved. The batches are #111 (network, discovery,
+  preferences and support) and #112 (the host store).
   - **Priority, fixed by issue #69:** `utils/ShortcutHelper.kt`, `reapShortcutsForDynamicAdd`,
     looped forever when the dynamic shortcut list was full and `forceAdd` was true, because
     it never re-read the list. `library/UpstreamHostShortcuts.kt`, `reportHostOpened`, runs
@@ -1860,76 +1863,129 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
     shrink it.
   - `nvstream/http/ComputerDetails.kt`: `update()` overwrites `state`, `name`, `uuid`,
     `rawAppList` and other fields without a condition. `library/ComputerManagerConnection.kt`
-    works around it with `withListFrom`.
+    works around it with `withListFrom`. **S12-01, Sprint 16:** fixed (#112). An update keeps the
+    app list and the name that the new details do not have. `withListFrom` stays, because the
+    service and `ComputerManagerConnection.addComputer` still publish fresh details with no list
+    for a known host.
   - `nvstream/http/ComputerDetails.kt`: `AddressTuple` is mutable, and its `hashCode`
-    depends on the mutable fields. A latent hazard, not a live bug.
+    depends on the mutable fields. A latent hazard, not a live bug. **S12-02, Sprint 16:** fixed
+    (#112). The port is final, and an update replaces the remote tuple.
   - `HeldStageFailures.kt` (`io/github/magalz/borealis/`): does not forward
-    `launchRetrying`, `launchStarting` or `launchConflict`. Unreachable today.
+    `launchRetrying`, `launchStarting` or `launchConflict`. Unreachable today. **S12-03,
+    Sprint 16:** fixed (#111). It forwards the three.
   - `preferences/PreferenceConfiguration.kt`: `readPreferences` throws
     `NumberFormatException` on a bad stored `list_fps`, width or height, and no caller
-    catches it.
+    catches it. **P1, Sprint 16:** fixed (#111). A value that cannot be read is the default, and
+    nothing is written back.
   - `preferences/PreferenceConfiguration.kt`: a stored resolution with no "x" that is not a
-    legacy name (for example `"Native"`) is silently rewritten as 1280x720.
+    legacy name (for example `"Native"`) is silently rewritten as 1280x720. **P2, Sprint 16:**
+    fixed (#111). The stream uses the default, and the stored value is not written back.
   - `preferences/PreferenceConfiguration.kt`: `checkbox_51_surround=true` overwrites a
-    user-chosen `list_audio_config`. When it is false, the legacy key stays forever.
+    user-chosen `list_audio_config`. When it is false, the legacy key stays forever. **P3,
+    Sprint 16:** fixed (#111). `LegacyMigrations` migrates the key at app start: true gives 5.1
+    only when no audio choice is stored, and the key is removed either way.
   - `preferences/PreferenceConfiguration.kt`: the legacy `seekbar_bitrate` is read but never
-    migrated; only the streaming-settings reset removes it.
+    migrated; only the streaming-settings reset removes it. **P4, Sprint 16:** closed. The entry
+    was wrong: `LegacyMigrations` migrates `seekbar_bitrate`. Only the name of its test changed.
   - `preferences/PreferenceConfiguration.kt`: `isSquarishScreen(0, y)` gives NaN or
-    Infinity, and so returns false.
+    Infinity, and so returns false. **P5, Sprint 16:** fixed (#111). An explicit guard answers
+    false for a zero or negative side.
   - `utils/TvChannelHelper.kt`: uses the logo width as its height. The logo is always square.
-  - `grid/assets/DiskAssetLoader.kt`: `LoaderTuple` has `equals` without `hashCode`.
+    **P6, Sprint 16:** fixed (#111). The height comes from its own dimension (80 dp, as before).
+  - `grid/assets/DiskAssetLoader.kt`: `LoaderTuple` has `equals` without `hashCode`. **P7,
+    Sprint 16:** fixed (#111).
   - `utils/ShortcutHelper.kt`: `disableComputerShortcut` matches by prefix, so a host `ab`
-    catches the shortcuts of host `abc`.
-  - `PosterContentProvider.kt`: `openFile` serves any three-segment path as box art.
+    catches the shortcuts of host `abc`. **P8, Sprint 16:** fixed (#111). A shortcut matches when
+    its id is the host's id, or the host's id and then the digits of an app id (with one leading
+    minus sign for a negative id).
+  - `PosterContentProvider.kt`: `openFile` serves any three-segment path as box art. **P9,
+    Sprint 16:** moved to [Sprint 19](#sprint-19-secops), with the CodeQL alert on the same
+    provider.
   - `utils/TvChannelHelper.kt`: `setIntentUri` is unused. `requestChannelOnHomeScreen`
-    queries the provider twice.
+    queries the provider twice. **P10, Sprint 16:** fixed (#111). `setIntentUri` is deleted, and
+    the request queries the provider once.
   - `computers/ComputerDatabaseManager.kt`: `updateComputer` throws
-    `SQLiteConstraintException` for a null name.
+    `SQLiteConstraintException` for a null name. **P11, Sprint 16:** fixed (#112). It returns
+    false with a log.
   - `computers/ComputerDatabaseManager.kt`: `getAllComputers` throws on one bad row and hides
-    the whole list. `ComputerManagerService.onCreate` calls it without a guard.
+    the whole list. `ComputerManagerService.onCreate` calls it without a guard. **P12,
+    Sprint 16:** fixed (#112). The list skips a row it cannot read, with a log, and the service
+    starts when the list cannot be read.
   - `computers/ComputerDatabaseManager.kt`: a row with a null uuid is stored and can never be
-    deleted.
+    deleted. **P13, Sprint 16:** fixed (#112). A host without a uuid is not saved, and a delete
+    without a uuid removes the rows that have none.
   - `computers/IdentityManager.kt`: "UID written to disk" is logged before the flush. The
-    client id file has no hex check.
+    client id file has no hex check. **P14, Sprint 16:** fixed (#112). The line is logged after
+    the file is flushed and closed. A client id that is not hex is kept, with a warning that does
+    not hold the id (owner choice: a new id would unpair the client from every host).
   - `nvstream/mdns/NsdManagerDiscoveryAgent.kt`: leaks a `ServiceInfoCallback` when a service
     is found twice. Its executor is never shut down, and `DiscoveryService.kt` has no
-    `onDestroy`.
+    `onDestroy`. **S12-04, Sprint 16:** fixed (#111). A service found again unregisters its old
+    callback. The agent has a `close` that stops discovery and shuts its executor down, and
+    `DiscoveryService.onDestroy` calls it. A callback whose registration failed is forgotten, and
+    the unregister tolerates a callback that the platform already dropped.
   - `nvstream/wol/WakeOnLanSender.kt`: the port maths overflows above an HTTP port of about
-    65514. The `IllegalArgumentException` that follows aborts the whole send.
+    65514. The `IllegalArgumentException` that follows aborts the whole send. **S12-05,
+    Sprint 16:** fixed (#111). A port out of range is skipped with a log, and the other packets
+    are sent.
   - `nvstream/mdns/MdnsDiscoveryAgent.kt`: the IPv6-only add and notify run outside
-    `synchronized(computers)`.
+    `synchronized(computers)`. **S12-06, Sprint 16:** fixed (#111). Both paths add under the lock
+    and notify after it.
   - `nvstream/mdns/JmDNSDiscoveryAgent.kt`: a dead `catch (UnsupportedEncodingException)`.
+    **S12-07, Sprint 16:** deleted (#111).
   - `nvstream/http/NvHTTP.kt`, kept as they are: an app id above `Int.MAX_VALUE` is dropped;
     `status_code` is truncated to 32 bits; text before the first `<App>` throws an unchecked
-    `NoSuchElementException`; the release path uses the platform default charset.
+    `NoSuchElementException`; the release path uses the platform default charset. **S12-08,
+    Sprint 16:** the last two are fixed (#111): text before the first app is ignored, and the app
+    list is read as UTF-8. The first two stay as they are, as intended.
   - `nvstream/NvConnection.kt`: `stop()` releases a semaphore permit even when the connection
     never took one, and a failed `startConnection` releases one too. Permits can exceed 1, so
-    two connections could start together.
+    two connections could start together. **S12-09, Sprint 16:** fixed (#111). The triage found
+    that a failed start is balanced; only `stop()` added a permit. `stop()` now gives back only a
+    place its connection took. It also cancels a start that is still on its way, and the start
+    checks the cancel again under the bridge monitor. A connection is single-use.
   - `nvstream/NvConnection.kt`: a start whose app has no id finds the app by name but launches
-    with `appid=0`. `Game` always passes an id.
+    with `appid=0`. `Game` always passes an id. **S12-10, Sprint 16:** fixed (#111). The launch and
+    the conflict prompt use the app that the lookup found.
   - `nvstream/NvConnection.kt`: the `HostHttpResponseException` catch of the start thread does
     not check `launchCancelled`. The 470 and 525 messages also apply to errors while
-    resolving a conflict (Join).
+    resolving a conflict (Join). **S12-11, Sprint 16:** fixed (#111). The catch checks
+    `launchCancelled`. The 470 and 525 messages stay, the same text as for a resume.
   - `computers/ComputerManagerService.kt`: `waitForPollingStopped` spins and prints stack
-    traces while it is interrupted during a poll. Not reachable today.
+    traces while it is interrupted during a poll. Not reachable today. **S12-12, Sprint 16:**
+    fixed (#112). An interrupted wait ends with the exception, and a cancelled pause interrupts
+    it.
   - `computers/ComputerManagerService.kt`: `getLocalDatabaseReference` is a non-atomic
     check-then-increment. `runPoll` leaks a database reference if the listener or the
-    database throws.
+    database throws. **S12-13, Sprint 16:** fixed (#112). The count is checked and raised in one
+    step, and a poll gives its reference back in a `finally`.
   - `computers/ComputerManagerService.kt`: `populateExternalAddress` leaks `defaultNetworkLock`
-    when STUN throws, and has a redundant condition.
+    when STUN throws, and has a redundant condition. **S12-14, Sprint 16:** fixed (#112). The
+    triage found that STUN does not throw; the calls that can are the network queries and
+    `bindProcessToNetwork`. A `finally` releases the lock and the process binding, and the
+    redundant condition is gone.
   - `computers/ComputerManagerService.kt`: an offline host is re-notified every fourth failed
-    poll, and the OFFLINE write counts as a success for the TTL.
+    poll, and the OFFLINE write counts as a success for the TTL. **S12-15, Sprint 16:** fixed
+    (#112), an owner choice. An OFFLINE poll no longer refreshes the TTL, so a host that stayed
+    offline shows UNKNOWN after a re-open, and the Library hears OFFLINE once. ONLINE is still
+    told at every poll, by design.
   - `computers/ComputerManagerService.kt`: `addComputerBlocking` adds a preset-ONLINE computer
-    without a uuid, so the next `addTuple` hits an NPE.
+    without a uuid, so the next `addTuple` hits an NPE. **S12-16, Sprint 16:** fixed (#112). A host
+    is added when a poll answered, and a host without a uuid is left out of the list.
   - `computers/ComputerManagerService.kt`: `startPolling` without discovery throws after it has
     already changed its state. `invalidateStateForComputer` blocks for the length of an
-    in-flight poll.
+    in-flight poll. **S12-17, Sprint 16:** fixed (#112). `startPolling` reads the discovery binder
+    before it changes anything, and still throws `IllegalStateException` without it. The wait of
+    `invalidateStateForComputer` stays.
   - `computers/ComputerManagerService.kt`: the mDNS `notifyComputerAdded` polls on the agent's
-    single executor.
+    single executor. **S12-18, Sprint 16:** fixed (#112). The add runs on an executor of the
+    service, so the agent's thread never waits for a poll.
   - `computers/ComputerManagerService.kt` (low): calling `ApplistPoller.start()` twice orphans
     the first thread. `lastSuccessfulPollMs` is read under a different lock than the one it is
-    written under.
+    written under. **S12-19, Sprint 16:** fixed (#112). A second `start` does nothing, and the
+    field is `@Volatile`.
   - `computers/ComputerManagerService.kt`: `ReachabilityTuple` is dead code. It is kept.
+    **S12-20, Sprint 16:** deleted (#112).
 - **(c) For SecOps (Sprint 19).** The security observations of the conversion are listed
   under [Sprint 19](#sprint-19-secops), one line each, with their files.
 - **(d) From the Sprint 12 device round (2026-10-23).**

@@ -230,18 +230,18 @@ class ComputerDetailsTest {
     }
 
     @Test
-    fun `an update takes the name, the uuid and the state, even when they are missing`() {
+    fun `an update keeps a name that the new details lack, and takes a missing uuid and state`() {
         val details = full()
 
         details.update(ComputerDetails().also { it.state = null })
 
-        assertThat(details.name).isNull()
+        assertThat(details.name).isEqualTo("Den PC")
         assertThat(details.uuid).isNull()
         assertThat(details.state).isNull()
     }
 
     @Test
-    fun `an update takes the plain fields, even when they are empty`() {
+    fun `an update takes the plain fields, even when they are empty, but keeps the app list`() {
         val details = full()
 
         details.update(ComputerDetails())
@@ -252,8 +252,33 @@ class ComputerDetailsTest {
         assertThat(details.runningGameId).isEqualTo(0)
         assertThat(details.nvidiaServer).isFalse()
         assertThat(details.borealis).isNull()
-        assertThat(details.rawAppList).isNull()
+        assertThat(details.rawAppList).isEqualTo("<apps/>")
         assertThat(details.state).isEqualTo(ComputerDetails.State.UNKNOWN)
+    }
+
+    @Test
+    fun `an update takes a new name and a new app list`() {
+        val details = full()
+
+        details.update(
+            ComputerDetails().also {
+                it.name = "Study PC"
+                it.rawAppList = "<apps><App/></apps>"
+            }
+        )
+
+        assertThat(details.name).isEqualTo("Study PC")
+        assertThat(details.rawAppList).isEqualTo("<apps><App/></apps>")
+    }
+
+    @Test
+    fun `an update without a name or an app list leaves details that had none without them`() {
+        val details = ComputerDetails()
+
+        details.update(ComputerDetails())
+
+        assertThat(details.name).isNull()
+        assertThat(details.rawAppList).isNull()
     }
 
     @Test

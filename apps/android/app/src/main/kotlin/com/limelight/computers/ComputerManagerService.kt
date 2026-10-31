@@ -75,11 +75,27 @@ class ComputerManagerService : Service() {
             }
         }
 
-    // Returns true if the details object was modified
+    // How a poll ended, for the thread that counts the polls that failed in a row.
+    private enum class PollResult {
+        // The host answered, and the listener was told.
+        ONLINE,
+
+        // Enough polls failed in a row: the host is offline. The listener was told if that is a
+        // change, so a host that stays down is announced once.
+        OFFLINE,
+
+        // No verdict: too few polls failed yet, the host is not saved any more, or the database is
+        // closed. The listener was not told.
+        UNDECIDED,
+    }
+
+    // Polls the host once and tells the listener what it learned: an online host after every poll,
+    // so a change of its game, pair state, name or app list arrives; an offline host when its
+    // state changes.
     @Throws(InterruptedException::class)
-    private fun runPoll(details: ComputerDetails, newPc: Boolean, offlineCount: Int): Boolean {
+    private fun runPoll(details: ComputerDetails, newPc: Boolean, offlineCount: Int): PollResult {
         if (!getLocalDatabaseReference()) {
-            return false
+            return PollResult.UNDECIDED
         }
 
         // The reference goes back on every way out, a throw of the database or of the listener
@@ -91,14 +107,17 @@ class ComputerManagerService : Service() {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Two things differ from the Java: runPoll gives the reference back (the Java kept it when the
+    // database or the listener threw), and a host that is offline already is not told again (the
+    // Java told it every fourth failed poll).
     @Suppress("ReturnCount", "CyclomaticComplexMethod", "NestedBlockDepth")
     @Throws(InterruptedException::class)
     private fun pollAndReport(
         details: ComputerDetails,
         newPc: Boolean,
         offlineCount: Int,
-    ): Boolean {
+    ): PollResult {
         val pollTriesBeforeOffline =
             if (details.state == ComputerDetails.State.UNKNOWN) {
                 INITIAL_POLL_TRIES
@@ -109,13 +128,15 @@ class ComputerManagerService : Service() {
         activePolls.incrementAndGet()
 
         // Poll the machine
+        var wasOffline = false
         try {
             if (!pollComputer(details)) {
                 if (!newPc && offlineCount < pollTriesBeforeOffline) {
                     // Return without calling the listener
-                    return false
+                    return PollResult.UNDECIDED
                 }
 
+                wasOffline = details.state == ComputerDetails.State.OFFLINE
                 details.state = ComputerDetails.State.OFFLINE
             }
         } finally {
@@ -130,7 +151,7 @@ class ComputerManagerService : Service() {
             // removed after this was issued
             if (!newPc && existingComputer == null) {
                 // It's gone
-                return false
+                return PollResult.UNDECIDED
             }
 
             // If we already have an entry for this computer in the DB, we must
@@ -160,12 +181,14 @@ class ComputerManagerService : Service() {
             }
         }
 
-        // Don't call the listener if this is a failed lookup of a new PC
-        if (!newPc || details.state == ComputerDetails.State.ONLINE) {
+        // Don't call the listener if this is a failed lookup of a new PC, or if the host was
+        // offline already: it was told, and its state did not change.
+        val online = details.state == ComputerDetails.State.ONLINE
+        if (online || (!newPc && !wasOffline)) {
             listener?.notifyComputerUpdated(details)
         }
 
-        return true
+        return if (online) PollResult.ONLINE else PollResult.OFFLINE
     }
 
     private fun createPollingThread(tuple: PollingTuple): Thread {
@@ -177,15 +200,20 @@ class ComputerManagerService : Service() {
                         try {
                             // Only allow one request to the machine at a time
                             synchronized(tuple.networkLock) {
-                                // Check if this poll has modified the details
-                                if (!runPoll(tuple.computer, false, offlineCount)) {
-                                    LimeLog.warning(
-                                        "${tuple.computer.name} is offline (try $offlineCount)"
-                                    )
-                                    offlineCount++
-                                } else {
-                                    tuple.lastSuccessfulPollMs = SystemClock.elapsedRealtime()
-                                    offlineCount = 0
+                                when (runPoll(tuple.computer, false, offlineCount)) {
+                                    PollResult.ONLINE -> {
+                                        // Only an answer keeps the polled state of the host from
+                                        // timing out: an offline poll does not.
+                                        tuple.lastSuccessfulPollMs = SystemClock.elapsedRealtime()
+                                        offlineCount = 0
+                                    }
+                                    PollResult.OFFLINE -> offlineCount = 0
+                                    PollResult.UNDECIDED -> {
+                                        LimeLog.warning(
+                                            "${tuple.computer.name} is offline (try $offlineCount)"
+                                        )
+                                        offlineCount++
+                                    }
                                 }
                             }
 

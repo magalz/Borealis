@@ -258,7 +258,7 @@ class RendererStatsTest : RendererTestBase() {
     }
 
     @Test
-    fun `the lowest host latency reads zero when the newer window has none`() {
+    fun `the lowest host latency is kept when the newer window has none`() {
         val renderer = counting()
         renderer.feed(pFrame(1, times(latency = 30)))
         renderer.feed(pFrame(2, times(latency = 10)))
@@ -268,10 +268,10 @@ class RendererStatsTest : RendererTestBase() {
 
         renderer.feed(pFrame(4))
 
-        // The windows hold 30 and 10, then none: the merged lowest is 0 where the first alone
-        // says 1.0. The average and the largest come from the first window only.
+        // The windows hold 30 and 10, then none: the merged lowest stays 1.0, where the first
+        // alone says it. The average and the largest come from the first window only.
         assertThat(snapshots[0].hostLatency).isEqualTo(LatencyRange(min = 1f, avg = 2f, max = 3f))
-        assertThat(snapshots[1].hostLatency).isEqualTo(LatencyRange(min = 0f, avg = 2f, max = 3f))
+        assertThat(snapshots[1].hostLatency).isEqualTo(LatencyRange(min = 1f, avg = 2f, max = 3f))
     }
 
     @Test

@@ -10,6 +10,7 @@ import io.github.magalz.borealis.testing.LimeLogCapture
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import org.junit.Rule
 import org.junit.Test
@@ -242,6 +243,31 @@ class ManagerPollingCharacterizationTest {
         assertThat(third.on(caller).single().state).isEqualTo(UNKNOWN)
         assertThat(log.lines().count { it == "INFO: Timing out polled state for DEN-PC" })
             .isEqualTo(2)
+    }
+
+    @Test
+    fun `a host that stays online is told to the listener after every poll, so a change of it arrives`() {
+        val host = rig.host()
+        val name = AtomicReference("DEN-PC")
+        host.handler = { _ -> HostReply.xml(hostInfo(UUID_1, name.get())) }
+        rig.start()
+        rig.binder.addComputerBlocking(ComputerDetails().also { it.manualAddress = host.address })
+        val updates = Updates()
+        rig.binder.startPolling(updates)
+
+        // Nothing changes between these polls, and the listener still hears of each one.
+        awaitUntil("three polls that were told") {
+            updates.events.count { it.thread !== caller && it.state == ONLINE } >= THREE_POLLS
+        }
+        name.set("RENAMED-PC")
+        awaitUntil("the new name") {
+            updates.events.any { it.thread !== caller && it.name == "RENAMED-PC" }
+        }
+        rig.binder.stopPolling()
+
+        assertThat(updates.events.map { it.state }).doesNotContain(OFFLINE)
+        assertThat(updates.events.filter { it.thread !== caller }.map { it.state }.toSet())
+            .containsExactly(ONLINE)
     }
 
     @Test

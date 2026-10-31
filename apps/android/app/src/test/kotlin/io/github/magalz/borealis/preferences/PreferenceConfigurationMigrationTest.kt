@@ -318,6 +318,7 @@ class PreferenceConfigurationMigrationTest {
     @Test
     @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `the edits of one read come in the order resolution and frame rate, motion, frame pacing`() {
+        // checkbox_51_surround shows that the reader ignores the legacy key: no edit is for it.
         preferences
             .edit()
             .putBoolean("checkbox_51_surround", true)
@@ -348,6 +349,7 @@ class PreferenceConfigurationMigrationTest {
     @Test
     @Config(sdk = [ANDROID_12], shadows = [ShadowRecordingBridge::class])
     fun `a legacy resolution name is converted before the motion override and the frame pacing migration`() {
+        // checkbox_51_surround shows that the reader ignores the legacy key: no edit is for it.
         preferences
             .edit()
             .putBoolean("checkbox_51_surround", true)

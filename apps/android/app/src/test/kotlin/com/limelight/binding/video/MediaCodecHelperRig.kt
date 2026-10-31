@@ -292,7 +292,8 @@ class CodecBuilder(private val name: String) {
 
     /**
      * Lists the capabilities but throws when asked for a feature of them, as a buggy decoder does.
-     * Needs `@Config(shadows = [ShadowBrokenFeatureCheckCapabilities::class])`.
+     * Needs `@Config(shadows = [ShadowBrokenFeatureCheckCapabilities::class])`; the rig fails at
+     * once when the test lacks it.
      */
     var brokenFeatureCheck = false
 
@@ -347,12 +348,22 @@ class CodecBuilder(private val name: String) {
                 }
                 formatHook()
             }
-        return MediaCodecInfoBuilder.CodecCapabilitiesBuilder.newBuilder()
-            .setMediaFormat(format)
-            .setIsEncoder(encoder)
-            .setProfileLevels(levels.toTypedArray())
-            .setColorFormats(intArrayOf())
-            .build()
+        val capabilities =
+            MediaCodecInfoBuilder.CodecCapabilitiesBuilder.newBuilder()
+                .setMediaFormat(format)
+                .setIsEncoder(encoder)
+                .setProfileLevels(levels.toTypedArray())
+                .setColorFormats(intArrayOf())
+                .build()
+        if (brokenFeatureCheck) {
+            // Without the shadow the decoder would only lack the feature, and a test that wants the
+            // throw would pass without exercising the guard.
+            check(Shadow.extract<Any>(capabilities) is ShadowBrokenFeatureCheckCapabilities) {
+                "$name sets brokenFeatureCheck, which needs " +
+                    "@Config(shadows = [ShadowBrokenFeatureCheckCapabilities::class]) on the test"
+            }
+        }
+        return capabilities
     }
 
     fun build(): MediaCodecInfo {

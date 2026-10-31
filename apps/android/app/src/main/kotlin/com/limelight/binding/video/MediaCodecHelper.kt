@@ -893,26 +893,27 @@ object MediaCodecHelper {
         return null
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     @JvmStatic
     fun findProbableSafeDecoder(mimeType: String, requiredProfile: Int): MediaCodecInfo? {
         requireInitialized()
 
         // Now look for decoders we know are safe
+        return findKnownSafeDecoder(mimeType, requiredProfile)
+    }
+
+    // Some bad decoders throw IllegalArgumentExceptions from getCapabilitiesForType. The Java gave
+    // up the whole search for one of them and took the first decoder, whatever the required
+    // profile; a decoder that throws is skipped now and the search goes on.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun readCapabilities(codecInfo: MediaCodecInfo, mimeType: String): CodecCapabilities? {
         return try {
-            // If this function completes, it will determine if the decoder is safe
-            findKnownSafeDecoder(mimeType, requiredProfile)
+            codecInfo.getCapabilitiesForType(mimeType)
         } catch (e: Exception) {
-            // Some buggy devices seem to throw exceptions
-            // from getCapabilitiesForType() so we'll just assume
-            // they're okay and go with the first one we find
-            findFirstDecoder(mimeType)
+            LimeLog.info("Skipping decoder that throws for its capabilities: ${codecInfo.name}")
+            null
         }
     }
 
-    // The Java declared this method as explicitly throwing Exception, since some bad decoders can
-    // throw IllegalArgumentExceptions unexpectedly, and its only caller catches it.
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress("NestedBlockDepth", "LoopWithTooManyJumpStatements", "CyclomaticComplexMethod")
     private fun findKnownSafeDecoder(mimeType: String, requiredProfile: Int): MediaCodecInfo? {
@@ -950,7 +951,7 @@ object MediaCodecHelper {
                             continue
                         }
 
-                        val caps = codecInfo.getCapabilitiesForType(mime)
+                        val caps = readCapabilities(codecInfo, mime) ?: continue
 
                         if (i == 0 && !capabilitiesSupportAndroidRLowLatency(caps)) {
                             LimeLog.info(

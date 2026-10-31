@@ -295,7 +295,8 @@ class ManagerPollingCharacterizationTest {
         assertThat(details.state).isEqualTo(OFFLINE)
 
         // The host stays down for more polls than it takes to declare it offline, and the
-        // listener hears nothing of them: its state does not change.
+        // listener hears nothing of them: its state does not change. The declaration starts the
+        // count of failed polls again, so these polls warn from try 0 on.
         val declared = polls("DEN-PC")
         awaitUntil("polls of the host that is down") { polls("DEN-PC") >= declared + MORE_POLLS }
         flaky.down = false
@@ -303,8 +304,12 @@ class ManagerPollingCharacterizationTest {
         updates.awaitOtherThan(caller, ONLINE, seen)
         rig.binder.stopPolling()
 
-        assertThat(failures("DEN-PC").take(3))
+        // Three warnings before the declaration, and three after it, which starts the count again.
+        assertThat(failures("DEN-PC").take(WARNINGS_OF_TWO_COUNTS))
             .containsExactly(
+                "WARNING: DEN-PC is offline (try 0)",
+                "WARNING: DEN-PC is offline (try 1)",
+                "WARNING: DEN-PC is offline (try 2)",
                 "WARNING: DEN-PC is offline (try 0)",
                 "WARNING: DEN-PC is offline (try 1)",
                 "WARNING: DEN-PC is offline (try 2)",
@@ -514,6 +519,7 @@ class ManagerPollingCharacterizationTest {
         const val TTL_MS = 30_000L
         const val SETTLE_MS = 500L
         const val MORE_POLLS = 5
+        const val WARNINGS_OF_TWO_COUNTS = 6
         const val OFFLINE_AFTER_S = 20L
     }
 }

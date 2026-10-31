@@ -30,6 +30,8 @@ import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.LinkedList
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -51,6 +53,12 @@ class ComputerManagerService : Service() {
     private val activePolls = AtomicInteger(0)
     private var pollingActive = false
     private val defaultNetworkLock: Lock = ReentrantLock()
+
+    // The adds of the hosts that mDNS finds run one at a time on this executor. Tests read it, to
+    // wait for the adds that they started.
+    internal val discoveryAdds: ExecutorService = Executors.newSingleThreadExecutor { task ->
+        Thread(task, DISCOVERY_ADD_THREAD)
+    }
 
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
@@ -871,6 +879,8 @@ class ComputerManagerService : Service() {
     }
 
     override fun onDestroy() {
+        discoveryAdds.shutdownNow()
+
         val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         connMgr.unregisterNetworkCallback(networkCallback)
 
@@ -1071,6 +1081,8 @@ class ComputerManagerService : Service() {
         // The waits of the binder, in milliseconds.
         private const val DISCOVERY_WAIT_MS = 1000L
         private const val POLLING_STOPPED_WAIT_MS = 250L
+
+        private const val DISCOVERY_ADD_THREAD = "mDNS add thread"
 
         private const val STUN_SERVER = "stun.moonlight-stream.org"
         private const val STUN_PORT = 3478

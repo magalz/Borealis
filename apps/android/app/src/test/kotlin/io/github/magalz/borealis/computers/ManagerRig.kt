@@ -23,6 +23,7 @@ import java.net.InetAddress
 import java.security.cert.X509Certificate
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import org.junit.rules.ExternalResource
 import org.robolectric.Robolectric
@@ -40,6 +41,7 @@ private const val NANOS_PER_MS = 1_000_000L
 internal const val POLLING_THREAD = "Polling thread for "
 internal const val PARALLEL_THREAD = "Parallel Poll - "
 internal const val APP_LIST_THREAD = "App list polling thread for "
+internal const val ADD_THREAD = "mDNS add thread"
 
 /** The service type that the discovery service asks the platform for. */
 private const val SERVICE_TYPE = "_nvstream._tcp"
@@ -116,6 +118,9 @@ internal class Updates : ComputerManagerListener {
 
     /** The calls that were made on [thread]. */
     fun on(thread: Thread): List<Update> = all.filter { it.thread === thread }
+
+    /** The calls that were made on the threads named [name]. */
+    fun named(name: String): List<Update> = all.filter { it.thread.name == name }
 
     fun awaitState(state: ComputerDetails.State, from: Int = 0) =
         awaitUntil("an update with the state $state") {
@@ -295,6 +300,15 @@ class ManagerRule : ExternalResource() {
             .getDiscoveryListeners(SERVICE_TYPE)
             .orEmpty()
 
+    /**
+     * Waits until every add that mDNS handed to the service so far has ended. The executor of the
+     * adds runs one task at a time in the order it got them, so a task that it has run is behind
+     * them all. Not after [destroy]: the executor refuses it then.
+     */
+    fun awaitAdds() {
+        service.discoveryAdds.submit(Runnable {}).get(WAIT_MS, TimeUnit.MILLISECONDS)
+    }
+
     /** Has the platform find [name] and resolve it to the IPv4 address [address] and [port]. */
     fun findAndResolve(name: String, address: String, port: Int) {
         val platform = shadowOf(app.getSystemService(NsdManager::class.java))
@@ -323,7 +337,7 @@ class ManagerRule : ExternalResource() {
         if (controller != null && !destroyed) {
             checkNotNull(controller).destroy()
         }
-        for (prefix in listOf(POLLING_THREAD, PARALLEL_THREAD, APP_LIST_THREAD)) {
+        for (prefix in listOf(POLLING_THREAD, PARALLEL_THREAD, APP_LIST_THREAD, ADD_THREAD)) {
             liveThreads(prefix).forEach { it.join(JOIN_MS) }
         }
     }

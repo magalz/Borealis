@@ -11,7 +11,9 @@ import io.github.magalz.borealis.computers.ShadowFailingConnectivityManager.Call
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.nvhttp.NvFakeHost
 import io.github.magalz.borealis.testing.LimeLogCapture
-import java.util.concurrent.atomic.AtomicBoolean
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 import org.junit.Before
 import org.junit.Rule
@@ -31,7 +33,9 @@ import org.robolectric.shadows.ShadowNetworkInfo
  * bound to the network under a VPN. The platform is Robolectric; the STUN request is a shadow of
  * `MoonBridge` and no test reaches a host that is not a fake on the loopback interface.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization, except for the thread of the add: the Java class added the host on the thread
+ * of the discovery agent, and the service now adds it on an executor of its own (S12-18), which the
+ * tests wait for with `awaitAdds`.
  */
 @Suppress("DEPRECATION")
 @Config(shadows = [ShadowStunMoonBridge::class, ShadowFailingConnectivityManager::class])
@@ -97,7 +101,7 @@ class ManagerDiscoveryCharacterizationTest {
     }
 
     @Test
-    fun `a host that mDNS finds and that answers is added with its local address, and the listener hears it`() {
+    fun `a host that mDNS finds is added with its local address and the listener hears it from the adding thread`() {
         val host = rig.reachable(UUID_1, "DEN-PC")
         rig.start()
         val updates = Updates()
@@ -105,13 +109,15 @@ class ManagerDiscoveryCharacterizationTest {
         val caller = Thread.currentThread()
 
         rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
+        rig.awaitAdds()
 
         val computer = checkNotNull(rig.binder.getComputer(UUID_1))
         assertThat(computer.localAddress).isEqualTo(host.address)
         assertThat(computer.activeAddress).isEqualTo(host.address)
         assertThat(computer.state).isEqualTo(ComputerDetails.State.ONLINE)
         assertThat(rig.savedRows().single().localAddress).isEqualTo(host.address)
-        assertThat(updates.on(caller).map { it.state })
+        assertThat(updates.on(caller)).isEmpty()
+        assertThat(updates.named(ADD_THREAD).map { it.state })
             .containsExactly(ComputerDetails.State.ONLINE)
         assertThat(log.lines()).contains("INFO: New PC (DEN-PC) is UUID $UUID_1")
     }
@@ -123,37 +129,132 @@ class ManagerDiscoveryCharacterizationTest {
         val gone = rig.gone()
 
         rig.findAndResolve("Gone PC", "127.0.0.1", gone.port)
+        rig.awaitAdds()
 
         val template = ComputerDetails().also { it.localAddress = gone }
         assertThat(log.lines()).contains("WARNING: Auto-discovered PC failed to respond: $template")
         assertThat(rig.savedRows()).isEmpty()
     }
 
-    @Test
-    fun `a host that mDNS found is not added when its poll is interrupted, and the interrupt stays`() {
-        val host = rig.host()
-        val answerNow = rig.gate()
-        host.handler = { _ ->
-            answerNow.await()
-            HostReply.xml(hostInfo(UUID_1, httpsPort = host.httpsPort))
+    /**
+     * The platform resolves a host on a thread of its own, so that a blocked add cannot hang a
+     * test.
+     */
+    private fun resolveOnThreadOfItsOwn(name: String, host: NvFakeHost): Thread =
+        thread(isDaemon = true) {
+            runCatching { rig.findAndResolve(name, "127.0.0.1", host.httpPort) }
         }
+
+    /** A host that answers `/serverinfo` as [uuid] once [answerNow] is open. */
+    private fun slowHost(uuid: String, answerNow: CountDownLatch): NvFakeHost =
+        rig.host().also { host ->
+            host.handler = { _ ->
+                answerNow.await()
+                HostReply.xml(hostInfo(uuid, httpsPort = host.httpsPort))
+            }
+        }
+
+    @Test
+    fun `the callback of the discovery returns while the poll of the host is still going`() {
+        val host = slowHost(UUID_1, rig.gate())
         rig.start()
         rig.binder.startPolling(Updates())
-        val interrupted = AtomicBoolean(false)
-        val finder =
-            thread(isDaemon = true) {
-                rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
-                interrupted.set(Thread.currentThread().isInterrupted)
-            }
+        val finder = resolveOnThreadOfItsOwn("Den PC", host)
         awaitUntil("the poll in flight") { host.serverInfoRequests() > 0 }
 
-        finder.interrupt()
-        finder.join(WAIT_MS)
+        finder.join(PROMPT_MS)
 
         assertThat(finder.isAlive).isFalse()
-        assertThat(interrupted.get()).isTrue()
+    }
+
+    @Test
+    fun `an add that is in flight ends when the service is destroyed, quietly and without a host`() {
+        val host = slowHost(UUID_1, rig.gate())
+        rig.start()
+        rig.binder.startPolling(Updates())
+        val finder = resolveOnThreadOfItsOwn("Den PC", host)
+        awaitUntil("the poll in flight") { host.serverInfoRequests() > 0 }
+        finder.join(PROMPT_MS)
+        assertThat(liveThreads(ADD_THREAD)).hasSize(1)
+        val printed = ByteArrayOutputStream()
+        val standardError = System.err
+        System.setErr(PrintStream(printed, true))
+
+        try {
+            rig.destroy()
+            // The executor is shut down: its thread ends, and the add with it.
+            awaitUntil("the add thread to end") { liveThreads(ADD_THREAD).isEmpty() }
+        } finally {
+            System.setErr(standardError)
+        }
+
         assertThat(rig.binder.getComputer(UUID_1)).isNull()
         assertThat(log.lines().filter { it.contains("failed to respond") }).isEmpty()
+        assertThat(printed.toString()).doesNotContain("InterruptedException")
+    }
+
+    @Test
+    fun `a host that mDNS finds after the service is destroyed is dropped without an error`() {
+        val host = rig.reachable(UUID_1)
+        rig.start()
+        rig.binder.startPolling(Updates())
+        rig.destroy()
+
+        // The discovery agent goes on calling until it is stopped: it must hear no exception.
+        rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
+
+        assertThat(host.serverInfoRequests()).isEqualTo(0)
+        assertThat(liveThreads(ADD_THREAD)).isEmpty()
+    }
+
+    @Test
+    fun `an add that throws is logged without the id, and the next host is still added`() {
+        val unreadable = rig.reachable(UUID_1)
+        val other = rig.reachable(UUID_2, "OTHER-PC")
+        // A saved host whose addresses cannot be read: looking it up throws.
+        rig.seedRow(UUID_1, "Den PC", "not addresses")
+        rig.start()
+        rig.binder.startPolling(Updates())
+
+        val heard = runCatching {
+            rig.findAndResolve("Den PC", "127.0.0.1", unreadable.httpPort)
+        }
+            .exceptionOrNull()
+        rig.awaitAdds()
+        rig.findAndResolve("Other PC", "127.0.0.1", other.httpPort)
+        rig.awaitAdds()
+
+        assertThat(heard).isNull()
+        assertThat(log.lines())
+            .contains("SEVERE: Could not add an auto-discovered PC: RuntimeException")
+        assertThat(log.lines().filter { it.contains(UUID_1) }).isEmpty()
+        assertThat(rig.binder.getComputer(UUID_1)).isNull()
+        assertThat(checkNotNull(rig.binder.getComputer(UUID_2)).name).isEqualTo("OTHER-PC")
+    }
+
+    @Test
+    fun `adds that arrive together run one after the other, in the order they arrived`() {
+        val answerNow = rig.gate()
+        val first = slowHost(UUID_1, answerNow)
+        val second = rig.reachable(UUID_2, "OTHER-PC")
+        rig.start()
+        val updates = Updates()
+        rig.binder.startPolling(updates)
+        resolveOnThreadOfItsOwn("Den PC", first).join(PROMPT_MS)
+        awaitUntil("the poll of the first host") { first.serverInfoRequests() > 0 }
+        resolveOnThreadOfItsOwn("Other PC", second).join(PROMPT_MS)
+
+        // The second host waits for the first, whose poll has not ended.
+        Thread.sleep(SETTLE_MS)
+        assertThat(second.serverInfoRequests()).isEqualTo(0)
+        answerNow.countDown()
+        awaitUntil("both hosts") {
+            rig.binder.getComputer(UUID_1) != null && rig.binder.getComputer(UUID_2) != null
+        }
+
+        assertThat(updates.named(ADD_THREAD).map { it.name })
+            .containsExactly("DEN-PC", "OTHER-PC")
+            .inOrder()
     }
 
     @Test
@@ -191,6 +292,7 @@ class ManagerDiscoveryCharacterizationTest {
         rig.binder.startPolling(Updates())
 
         rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
+        rig.awaitAdds()
 
         assertThat(ShadowStunMoonBridge.requests).isEmpty()
         assertThat(checkNotNull(rig.binder.getComputer(UUID_1)).remoteAddress).isNull()
@@ -205,6 +307,7 @@ class ManagerDiscoveryCharacterizationTest {
         rig.binder.startPolling(Updates())
 
         rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
+        rig.awaitAdds()
 
         val request = ShadowStunMoonBridge.requests.single()
         assertThat(request.host).isEqualTo("stun.moonlight-stream.org")
@@ -228,6 +331,7 @@ class ManagerDiscoveryCharacterizationTest {
         rig.binder.startPolling(Updates())
 
         rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
+        rig.awaitAdds()
 
         assertThat(ShadowStunMoonBridge.requests).isEmpty()
         assertThat(rig.app.getSystemService(ConnectivityManager::class.java).boundNetworkForProcess)
@@ -244,6 +348,7 @@ class ManagerDiscoveryCharacterizationTest {
         rig.binder.startPolling(Updates())
 
         rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
+        rig.awaitAdds()
 
         assertThat(ShadowStunMoonBridge.requests).hasSize(1)
         assertThat(checkNotNull(rig.binder.getComputer(UUID_1)).remoteAddress).isNull()
@@ -264,6 +369,7 @@ class ManagerDiscoveryCharacterizationTest {
         rig.binder.startPolling(Updates())
 
         runCatching { rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort) }
+        rig.awaitAdds()
     }
 
     @Test
@@ -307,6 +413,9 @@ class ManagerDiscoveryCharacterizationTest {
 
     private companion object {
         const val UUID_1 = "00000000-0000-0000-0000-0000000000c1"
+        const val UUID_2 = "00000000-0000-0000-0000-0000000000c2"
+        const val SETTLE_MS = 500L
+        const val PROMPT_MS = 1_000L
         const val VPN_ID = 17
         const val WIFI_ID = 1
         const val CELLULAR_ID = 0

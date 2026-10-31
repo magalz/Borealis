@@ -156,6 +156,8 @@ class MediaCodecDecoderRenderer(
 
     private var needsBaselineSpsHack = false
     private var savedSps: SeqParameterSet? = null
+    // The profile the stream said, before the hack made savedSps say baseline
+    private var savedSpsProfileIdc = 0
 
     private var initialException: RendererException? = null
     private var initialExceptionTimestamp = 0L
@@ -1640,6 +1642,7 @@ class MediaCodecDecoderRenderer(
                 // If we need to hack this SPS to say we're baseline, do so now
                 if (needsBaselineSpsHack) {
                     LimeLog.info("Hacking SPS to baseline")
+                    savedSpsProfileIdc = sps.profileIdc
                     sps.profileIdc = PROFILE_BASELINE
                     savedSps = sps
                 }
@@ -1748,12 +1751,13 @@ class MediaCodecDecoderRenderer(
                     submittedCsd = true
 
                     if (needsBaselineSpsHack) {
-                        needsBaselineSpsHack = false
-
                         if (!replaySps()) {
+                            // The decoder still has the baseline SPS: the next IDR frame says
+                            // baseline again and replays
                             return MoonBridge.DR_NEED_IDR
                         }
 
+                        needsBaselineSpsHack = false
                         LimeLog.info("SPS replay complete")
                     }
                 }
@@ -1858,9 +1862,9 @@ class MediaCodecDecoderRenderer(
         // Write the Annex B header
         requireInputBuffer().put(byteArrayOf(0x00, 0x00, 0x00, 0x01, SPS_NAL_HEADER))
 
-        // Switch the H264 profile back to high
+        // Switch the H264 profile back to the one the stream said
         val sps = savedSps.orNpe("The saved SPS")
-        sps.profileIdc = PROFILE_HIGH
+        sps.profileIdc = savedSpsProfileIdc
 
         // Patch the SPS constraint flags
         doProfileSpecificSpsPatching(sps)
@@ -1870,11 +1874,15 @@ class MediaCodecDecoderRenderer(
         val escapedNalu = H264Utils.writeSPS(sps, REPLAYED_SPS_SIZE)
         requireInputBuffer().put(escapedNalu)
 
+        // Queue the new SPS
+        if (!queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)) {
+            // Keep the SPS: the retry may come with no new one
+            return false
+        }
+
         // No need for the SPS anymore
         savedSps = null
-
-        // Queue the new SPS
-        return queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)
+        return true
     }
 
     override fun getCapabilities(): Int {

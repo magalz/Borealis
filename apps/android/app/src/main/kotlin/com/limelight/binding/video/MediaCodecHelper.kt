@@ -239,14 +239,16 @@ object MediaCodecHelper {
             return null
         }
 
-        val modelNumberPattern = Pattern.compile("(.*)([0-9]{3})(.*)")
+        // The model number is the number that follows "adreno", at least three digits and at most
+        // nine, so that it fits an Int.
+        val modelNumberPattern = Pattern.compile("adreno[^0-9]*([0-9]{3,9})(?![0-9])")
 
         val matcher = modelNumberPattern.matcher(renderer)
-        if (!matcher.matches()) {
+        if (!matcher.find()) {
             return null
         }
 
-        val modelNumber: String? = matcher.group(2)
+        val modelNumber: String? = matcher.group(1)
         LimeLog.info("Found Adreno GPU: $modelNumber")
         return modelNumber
     }
@@ -258,8 +260,9 @@ object MediaCodecHelper {
             return false
         }
 
-        // The current logic is to identify low-end SoCs based on a zero in the x0x place.
-        return modelNumber[1] == '0'
+        // The current logic is to identify low-end SoCs based on a zero in the x0x place of the
+        // three-digit models; a longer model number is a newer generation.
+        return modelNumber.length == 3 && modelNumber[1] == '0'
     }
 
     private fun getAdrenoRendererModelNumber(glRenderer: String): Int {

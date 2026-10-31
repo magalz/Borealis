@@ -616,6 +616,9 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     fun `closing the agent shuts the executor down even when stopping the discovery throws`() {
         // The platform forgot the discovery, and the agent does not know yet, so stopping it
         // throws. The agent must still release its executor.
+        // This pins that the IllegalArgumentException of the discovery stop propagates out of
+        // close(): if that stop is ever made tolerant, rewrite the test and pin the finally
+        // another way.
         val discovery = startAndConfirm()
         discovery.onServiceFound(service("Den PC"))
         platform.holdStops = true

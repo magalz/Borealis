@@ -81,7 +81,8 @@ class Xbox360ControllerTest {
         assertThat(pad.controller.viaGetter("getType")).isEqualTo(1.toByte()) // LI_CTYPE_XBOX
         // LI_CCAP_ANALOG_TRIGGERS | LI_CCAP_RUMBLE
         assertThat(pad.controller.viaGetter("getCapabilities")).isEqualTo(3.toShort())
-        assertThat(pad.controller.viaGetter("getSupportedButtonFlags")).isEqualTo(0)
+        // The fifteen buttons of the pad are what its arrival tells the host it has.
+        assertThat(pad.controller.viaGetter("getSupportedButtonFlags")).isEqualTo(PAD_BUTTONS)
     }
 
     @Test
@@ -284,8 +285,8 @@ class Xbox360ControllerTest {
     }
 
     @Test
-    fun `the first report clears the buttons the controller starts with`() {
-        // The controller starts with every button flag set. The first report overwrites all
+    fun `the first report holds only the buttons it says are down`() {
+        // The controller starts with every button flag clear, and the first report overwrites all
         // fifteen.
         val pad = pad()
         pad.play(report())
@@ -582,5 +583,24 @@ class Xbox360ControllerTest {
 
         // Only the LED command was written.
         assertThat(pad.usb.writes).hasSize(1)
+    }
+
+    private companion object {
+        const val PAD_BUTTONS =
+            ControllerPacket.A_FLAG or
+                ControllerPacket.B_FLAG or
+                ControllerPacket.X_FLAG or
+                ControllerPacket.Y_FLAG or
+                ControllerPacket.UP_FLAG or
+                ControllerPacket.DOWN_FLAG or
+                ControllerPacket.LEFT_FLAG or
+                ControllerPacket.RIGHT_FLAG or
+                ControllerPacket.LB_FLAG or
+                ControllerPacket.RB_FLAG or
+                ControllerPacket.LS_CLK_FLAG or
+                ControllerPacket.RS_CLK_FLAG or
+                ControllerPacket.BACK_FLAG or
+                ControllerPacket.PLAY_FLAG or
+                ControllerPacket.SPECIAL_BUTTON_FLAG
     }
 }

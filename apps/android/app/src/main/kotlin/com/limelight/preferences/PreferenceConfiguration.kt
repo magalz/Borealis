@@ -249,7 +249,8 @@ class PreferenceConfiguration {
             return isSquarishScreen(width, height)
         }
 
-        private fun convertFromLegacyResolutionString(resString: String): String =
+        // Null for a name that is not a legacy one ("Native", "8K", an empty string).
+        private fun convertFromLegacyResolutionString(resString: String): String? =
             when {
                 resString.equals("360p", ignoreCase = true) -> RES_360P
                 resString.equals("480p", ignoreCase = true) -> RES_480P
@@ -257,8 +258,7 @@ class PreferenceConfiguration {
                 resString.equals("1080p", ignoreCase = true) -> RES_1080P
                 resString.equals("1440p", ignoreCase = true) -> RES_1440P
                 resString.equals("4K", ignoreCase = true) -> RES_4K
-                // Should be unreachable
-                else -> RES_720P
+                else -> null
             }
 
         // Java's String.split drops the trailing empty strings, and Kotlin's does not.
@@ -451,10 +451,13 @@ class PreferenceConfiguration {
                 var resStr: String =
                     prefs.getRequiredString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION)
 
-                // Convert legacy resolution strings to the new style
+                // Convert legacy resolution strings to the new style. Any other name without an
+                // "x" is not converted or written: it counts as the default one just below.
                 if (!resStr.contains("x")) {
-                    resStr = convertFromLegacyResolutionString(resStr)
-                    prefs.edit { putString(RESOLUTION_PREF_STRING, resStr) }
+                    convertFromLegacyResolutionString(resStr)?.let { legacy ->
+                        resStr = legacy
+                        prefs.edit { putString(RESOLUTION_PREF_STRING, legacy) }
+                    }
                 }
 
                 // A stored value that is not a size or a number counts as the default one, as the

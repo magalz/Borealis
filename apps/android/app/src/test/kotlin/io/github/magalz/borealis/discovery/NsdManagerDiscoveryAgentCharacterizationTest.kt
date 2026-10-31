@@ -34,8 +34,8 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
     @get:Rule val log = LimeLogCapture()
 
     private val app = ApplicationProvider.getApplicationContext<Application>()
-    private val platform =
-        shadowOf(app.getSystemService(NsdManager::class.java)) as HoldingNsdManager
+    private val nsdManager = app.getSystemService(NsdManager::class.java)
+    private val platform = shadowOf(nsdManager) as HoldingNsdManager
     private val listener = RecordingDiscoveryListener()
     private val agent = NsdManagerDiscoveryAgent(app, listener)
 
@@ -58,6 +58,15 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
             this.port = port
             hostAddresses = addresses.map { InetAddress.getByName(it) }
         }
+
+    /**
+     * What the platform does when the registration of [callback] fails: its handler thread forgets
+     * the callback, and only then delivers the failure. Unregistering it again throws.
+     */
+    private fun registrationFails(callback: NsdManager.ServiceInfoCallback) {
+        nsdManager.unregisterServiceInfoCallback(callback)
+        callback.onServiceInfoCallbackRegistrationFailed(5)
+    }
 
     /** Starts discovery and has the platform confirm it. */
     private fun startAndConfirm(): NsdManager.DiscoveryListener {
@@ -432,6 +441,76 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
 
         assertThat(callbacks(found)).hasSize(1)
         assertThat(callbacks(found)).doesNotContain(first)
+        agent.stopDiscovery()
+        assertThat(callbacks(found)).isEmpty()
+    }
+
+    @Test
+    fun `a callback whose registration failed is forgotten, so the service found again registers a new one`() {
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        val failed = callbacks(found).single()
+        registrationFails(failed)
+
+        discovery.onServiceFound(found)
+
+        assertThat(callbacks(found)).hasSize(1)
+        assertThat(callbacks(found)).doesNotContain(failed)
+        // The new callback is stored, so the stop unregisters it.
+        agent.stopDiscovery()
+        assertThat(callbacks(found)).isEmpty()
+    }
+
+    @Test
+    fun `a callback whose registration failed is forgotten, so the service lost afterwards is only logged`() {
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        registrationFails(callbacks(found).single())
+
+        discovery.onServiceLost(found)
+
+        assertThat(log.messages(Level.INFO)).contains("NSD: Machine lost: Den PC")
+    }
+
+    @Test
+    fun `a callback whose registration failed is forgotten, so the stop does not unregister it again`() {
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        registrationFails(callbacks(found).single())
+
+        agent.stopDiscovery()
+
+        assertThat(discoveries()).isEmpty()
+    }
+
+    @Test
+    fun `a callback whose registration failed is forgotten, so the close does not unregister it again`() {
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        registrationFails(callbacks(found).single())
+
+        agent.close()
+
+        assertThat(discoveries()).isEmpty()
+        assertThat((platform.serviceInfoExecutors.first() as ThreadPoolExecutor).isShutdown)
+            .isTrue()
+    }
+
+    @Test
+    fun `a late failure of a callback that was replaced leaves the callback that replaced it`() {
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        val first = callbacks(found).single()
+        discovery.onServiceFound(found)
+
+        first.onServiceInfoCallbackRegistrationFailed(5)
+
+        // The second callback is still stored, so the stop unregisters it.
         agent.stopDiscovery()
         assertThat(callbacks(found)).isEmpty()
     }

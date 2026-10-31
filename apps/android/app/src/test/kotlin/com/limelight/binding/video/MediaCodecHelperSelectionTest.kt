@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Characterizes how `MediaCodecHelper` picks a decoder from the list of the device:
@@ -583,6 +584,57 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
                 codec("c2.vendor.baseline") { profiles = listOf(baseline) },
                 codec("c2.vendor.buggy") { brokenCapabilities = true },
                 codec("c2.vendor.high") { profiles = listOf(high) },
+            )
+            probable(helper, profile = high)
+        }
+
+        rows.verify()
+    }
+
+    @Test
+    @Config(shadows = [ShadowBrokenFeatureCheckCapabilities::class])
+    fun `a decoder whose feature check throws lacks the feature and the search goes on`() {
+        val high = CodecProfileLevel.AVCProfileHigh
+        val baseline = CodecProfileLevel.AVCProfileBaseline
+        val rows = Rows()
+
+        rows.check("the first decoder is the one that throws", "c2.vendor.low") {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.buggy") { brokenFeatureCheck = true },
+                codec("c2.vendor.low") { lowLatency = true },
+            )
+            probable(helper)
+        }
+        rows.check("a later decoder throws and the one after it has the feature", "c2.vendor.low") {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.plain"),
+                codec("c2.vendor.buggy") { brokenFeatureCheck = true },
+                codec("c2.vendor.low") { lowLatency = true },
+            )
+            probable(helper)
+        }
+        rows.check("the decoder that throws is the second round's choice", "c2.vendor.buggy") {
+            val helper = helper()
+            installCodecs(codec("c2.vendor.buggy") { brokenFeatureCheck = true })
+            probable(helper)
+        }
+        rows.check("a decoder that throws leaves the required profile in force", "c2.vendor.low") {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.buggy") {
+                    brokenFeatureCheck = true
+                    profiles = listOf(high)
+                },
+                codec("c2.vendor.baseline") {
+                    lowLatency = true
+                    profiles = listOf(baseline)
+                },
+                codec("c2.vendor.low") {
+                    lowLatency = true
+                    profiles = listOf(high)
+                },
             )
             probable(helper, profile = high)
         }

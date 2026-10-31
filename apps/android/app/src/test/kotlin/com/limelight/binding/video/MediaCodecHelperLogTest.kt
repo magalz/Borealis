@@ -8,6 +8,7 @@ import java.util.logging.Level
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Characterizes what `MediaCodecHelper` logs through `LimeLog`: the text and the level of each
@@ -433,6 +434,33 @@ class MediaCodecHelperLogTest : MediaCodecHelperTestBase() {
         ) {
             val helper = helper()
             installCodecs(codec("c2.vendor.buggy") { brokenCapabilities = true })
+            logged { helper.findProbableSafeDecoder("video/avc", -1) }
+        }
+
+        rows.verify()
+    }
+
+    @Test
+    @Config(shadows = [ShadowBrokenFeatureCheckCapabilities::class])
+    fun `the probable safe decoder logs a decoder whose feature check throws`() {
+        val rows = Rows()
+
+        rows.check(
+            "the first decoder throws and the second has FEATURE_LowLatency",
+            infos(
+                "Examining decoder capabilities of c2.vendor.buggy (round 1)",
+                "Treating decoder that throws for its feature check as lacking FEATURE_LowLatency: " +
+                    "c2.vendor.buggy",
+                "Skipping decoder that lacks FEATURE_LowLatency for round 1",
+                "Examining decoder capabilities of c2.vendor.low (round 1)",
+                "Low latency decoding mode supported (FEATURE_LowLatency)",
+            ),
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.buggy") { brokenFeatureCheck = true },
+                codec("c2.vendor.low") { lowLatency = true },
+            )
             logged { helper.findProbableSafeDecoder("video/avc", -1) }
         }
 

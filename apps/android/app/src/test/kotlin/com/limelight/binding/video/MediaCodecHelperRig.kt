@@ -15,6 +15,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Rule
 import org.junit.rules.ExternalResource
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
+import org.robolectric.annotation.RealObject
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.MediaCodecInfoBuilder
 import org.robolectric.shadows.ShadowMediaCodecList
 import org.robolectric.util.ReflectionHelpers
@@ -286,6 +290,12 @@ class CodecBuilder(private val name: String) {
     var canonicalName: String? = null
     var brokenCapabilities = false
 
+    /**
+     * Lists the capabilities but throws when asked for a feature of them, as a buggy decoder does.
+     * Needs `@Config(shadows = [ShadowBrokenFeatureCheckCapabilities::class])`.
+     */
+    var brokenFeatureCheck = false
+
     /** Counts every read of the capabilities of the decoder, which is what the framework asks. */
     var capabilityReads: AtomicInteger? = null
 
@@ -325,6 +335,7 @@ class CodecBuilder(private val name: String) {
                 setString("size-range", "64x64-4096x2304")
                 setString("block-count-range", "1-100000")
                 setString("blocks-per-second-range", "1-10000000")
+                if (brokenFeatureCheck) setString(BROKEN_FEATURE_CHECK_KEY, "throws")
                 if (lowLatency) {
                     setFeatureEnabled(MediaCodecInfo.CodecCapabilities.FEATURE_LowLatency, true)
                 }
@@ -376,6 +387,36 @@ class CodecBuilder(private val name: String) {
             )
         }
         return info
+    }
+}
+
+/** The key of the capabilities format that tells the shadow to throw; `dup()` keeps the format. */
+private const val BROKEN_FEATURE_CHECK_KEY = "borealis-test-broken-feature-check"
+
+/**
+ * Capabilities that throw from `isFeatureSupported` when [CodecBuilder.brokenFeatureCheck] marked
+ * them, and answer as the framework does otherwise. The framework class is final, so a shadow is
+ * the way to make one decoder throw. Use it with `@Config(shadows =
+ * [ShadowBrokenFeatureCheckCapabilities::class])` on the tests that need it.
+ */
+@Implements(MediaCodecInfo.CodecCapabilities::class)
+class ShadowBrokenFeatureCheckCapabilities {
+    // Robolectric sets the field when it makes the shadow, so it cannot be a val.
+    @Suppress("VarCouldBeVal")
+    @RealObject
+    private lateinit var capabilities: MediaCodecInfo.CodecCapabilities
+
+    @Suppress("unused")
+    @Implementation
+    fun isFeatureSupported(name: String): Boolean {
+        val format = ReflectionHelpers.getField<MediaFormat?>(capabilities, "mDefaultFormat")
+        check(format?.containsKey(BROKEN_FEATURE_CHECK_KEY) != true) { "buggy feature check" }
+        return Shadow.directlyOn<Boolean, MediaCodecInfo.CodecCapabilities>(
+            capabilities,
+            MediaCodecInfo.CodecCapabilities::class.java,
+            "isFeatureSupported",
+            ReflectionHelpers.ClassParameter.from(String::class.java, name),
+        )
     }
 }
 

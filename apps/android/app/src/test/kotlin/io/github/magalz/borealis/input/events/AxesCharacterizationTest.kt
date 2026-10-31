@@ -26,6 +26,7 @@ import com.limelight.nvstream.input.ControllerPacket.DOWN_FLAG
 import com.limelight.nvstream.input.ControllerPacket.LEFT_FLAG
 import com.limelight.nvstream.input.ControllerPacket.RIGHT_FLAG
 import com.limelight.nvstream.input.ControllerPacket.UP_FLAG
+import io.github.magalz.borealis.input.FakeUsbController
 import io.github.magalz.borealis.testing.OwnedResources
 import org.junit.Rule
 import org.junit.Test
@@ -38,7 +39,8 @@ import org.robolectric.annotation.Config
  * the D-pad, the deadzones, and which axes a context reads. Events of device id 0 reach the default
  * context, which reads the left stick from X and Y, the right stick from Z and RZ, the triggers
  * from BRAKE and GAS and the hat from HAT_X and HAT_Y; it has a stick deadzone from the setting and
- * no trigger deadzone.
+ * no trigger deadzone. A USB pad reports its floats through `reportControllerState`, which makes
+ * the same shorts and bytes.
  */
 @RunWith(RobolectricTestRunner::class)
 class AxesCharacterizationTest {
@@ -87,15 +89,35 @@ class AxesCharacterizationTest {
     }
 
     @Test
-    fun `a stick value past 1 wraps at the sign bit`() {
-        // Android never reports more than 1, but the cast is a short of an int: 1.5 * 0x7FFE is
+    fun `a stick value past 1 is held at 1, not wrapped at the sign bit`() {
+        // Android never reports more than 1, but a short of an int would wrap: 1.5 * 0x7FFE is
         // 49149.
-        assertThat(send(AXIS_X to 1.5f).leftStickX).isEqualTo(-16387)
-        assertThat(send(AXIS_X to -1.5f).leftStickX).isEqualTo(16387)
-        assertThat(send(AXIS_X to 2f).leftStickX).isEqualTo(-4)
-        assertThat(send(AXIS_Y to 1.5f).leftStickY).isEqualTo(16387)
-        assertThat(send(AXIS_Z to 1.5f).rightStickX).isEqualTo(-16387)
-        assertThat(send(AXIS_RZ to 1.5f).rightStickY).isEqualTo(16387)
+        assertThat(send(AXIS_X to 1.5f).leftStickX).isEqualTo(32766)
+        assertThat(send(AXIS_X to -1.5f).leftStickX).isEqualTo(-32766)
+        assertThat(send(AXIS_X to 2f).leftStickX).isEqualTo(32766)
+        assertThat(send(AXIS_Y to 1.5f).leftStickY).isEqualTo(-32766)
+        assertThat(send(AXIS_Z to 1.5f).rightStickX).isEqualTo(32766)
+        assertThat(send(AXIS_RZ to 1.5f).rightStickY).isEqualTo(-32766)
+    }
+
+    @Test
+    fun `a stick value of a USB pad past 1 is held at 1 too`() {
+        rig.handler.deviceAdded(FakeUsbController(1, rig.handler))
+
+        rig.handler.reportControllerState(1, 0, 1.5f, -1.5f, -2f, 2f, 0f, 0f)
+
+        assertThat(rig.packets.last())
+            .isEqualTo(
+                Sent(
+                    controller = 0,
+                    activeMask = 1,
+                    buttons = 0,
+                    leftStickX = 32766,
+                    leftStickY = 32766,
+                    rightStickX = -32766,
+                    rightStickY = -32766,
+                )
+            )
     }
 
     @Test

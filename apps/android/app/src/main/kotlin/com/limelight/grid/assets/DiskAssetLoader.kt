@@ -32,8 +32,8 @@ class DiskAssetLoader(context: Context) {
     }
 
     // BOREALIS: moved here from the 12.2 asset loader that was removed with the host and app lists.
-    // Kept as the Java had it: equals without hashCode. Nothing uses a tuple as a key of a hash.
-    @Suppress("EqualsWithHashCodeExist")
+    // A tuple is its host id and its app id; one without a host id can be neither compared nor
+    // hashed.
     class LoaderTuple(@JvmField val computer: ComputerDetails, @JvmField val app: NvApp) {
         override fun equals(other: Any?): Boolean {
             if (other !is LoaderTuple) {
@@ -43,6 +43,8 @@ class DiskAssetLoader(context: Context) {
             return checkNotNull(computer.uuid) == other.computer.uuid &&
                 app.appId == other.app.appId
         }
+
+        override fun hashCode(): Int = 31 * checkNotNull(computer.uuid).hashCode() + app.appId
 
         override fun toString(): String = "(" + computer.uuid + ", " + app.appId + ")"
     }

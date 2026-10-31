@@ -2453,8 +2453,10 @@ triage ids of item (b) of the three conversion blocks of the roadmap. Record eac
 `fail`, `owner check` or `not applicable`, with a short note for each `fail`. A finding goes to
 Sprint 17 unless it is a Sprint 16 regression.
 
-Steps 1 to 8 need no hands on the devices beyond `adb`. Steps 9 to 16 need the owner: a mouse, a
-keyboard, a stylus, a pad, the fingers on the screen, the host asleep or stopped, or Samsung DeX. Do
+Steps 1 to 8 need no hands on the devices beyond `adb`; the picture and the sound of steps 4, 5
+and 7 are `owner check` items for the owner's eye and ear. Steps 9 to 17 need the owner: a mouse, a
+keyboard, a stylus, a pad, the fingers on the screen, the host asleep or stopped, a new pairing, or
+Samsung DeX. Do
 not record a host name, an address, a MAC address or a PIN, and take no screenshot of the stream
 (section 5).
 
@@ -2475,8 +2477,9 @@ Steps:
 2. mDNS discovery after leaving the app (S22). Entries S12-04 and S12-18. Source:
    `NsdManagerDiscoveryAgent`, `DiscoveryService.onDestroy`, `ComputerManagerService`.
    - Open the Library, press Home, wait about a minute, and open the app again. Do it three times.
-     Expected: the host is found each time, and logcat has no `RejectedExecutionException` and no
-     `listener not registered`.
+     Expected: the host is found each time, and logcat has no `RejectedExecutionException`. Note any
+     warning `NSD: Service info callback of <service> is gone already: <message>`: the agent
+     tolerates a callback that the platform already dropped, so it is not a `fail`.
    - Open Add host, add the host by its address, then try an address where nothing answers.
      Expected: the host that answers is added; the address that does not answer adds no host; the
      Library still lists the host that mDNS found.
@@ -2485,7 +2488,8 @@ Steps:
    `Game.stopConnection`.
    - Start a stream and press Back on the Connecting screen, before the stream starts. Expected: the
      Library, with no failure screen and no error popup, and no `<stage> failed` line at error level
-     in logcat.
+     in logcat. The pad is released (the controller handler stopped), and the audit trail (3.15)
+     has no `SESSION_START` left open.
    - Start the same app again at once. Expected: it starts, with no hang. Leave it and start a second
      stream right after. Expected: it starts too.
    - In the host log, check the first leave. Expected: if the leave came before the launch request, the
@@ -2493,21 +2497,23 @@ Steps:
      the host launches nothing (`not applicable` without a GFE host).
    - Back out during a launch retry, while the host answers 409 or 503 (a second device holding the
      host, as in 3.5 and 3.8). Expected: no ANR, and the next stream starts.
-   - Start a stream and choose Disconnect on the Starting screen. Expected: the Library in about 1 s.
+   - Start a stream and choose Disconnect on the Starting screen. Expected: the Library within 1 to
+     5 s (`GameStreamActions` keeps the Disconnecting screen at least 1 s and waits for the stop at
+     most 5 s).
    - If a native start fails (a stage failure), leave, then start again. Expected: the next stream
      starts.
 4. HDR and the decoder start (S22, TV). Entries B1, H2, H6 and R8. Source: `MediaCodecHelper`,
    `MediaCodecDecoderRenderer`, `MoonBridge.VIDEO_FORMAT_MASK_10BIT`.
    - Start an HDR stream, as in 3.12, on each device that supports it, with HEVC Main10 and with AV1
      Main10 where the device and the host support it, and a stream with HDR off. Expected: HDR starts
-     as before Sprint 16, and the picture is right.
+     as before Sprint 16, and the picture is right (an `owner check`).
    - In logcat, note the decoder names, any `Found Adreno GPU` line, and any `Skipping
      decoder that throws for its capabilities` line. A skipped decoder for HEVC or AV1 is a finding
      for the Sprint 17 item on H6, not a `fail`.
 5. A stream stop and restart (S22, TV). Entries B4, R1 and R3. Source: `callbacks.c`,
    `MediaCodecDecoderRenderer.stop` and `cleanup`.
    - Start a stream, Disconnect, start it again, and Quit. Do it twice on each device. Expected: each
-     start shows video and plays audio, and each stop reaches the Library.
+     start shows video and plays audio (an `owner check`), and each stop reaches the Library.
    - Expected in logcat: no line with `the Java call threw an exception` and no Java stack trace from
      the bridges.
 6. The host latency in the stats overlay (S22). Entry R4. Source: `VideoStats.add`.
@@ -2515,7 +2521,8 @@ Steps:
      values above zero, and its lowest value does not drop to 0 while the host sends latency.
 7. Audio start, stop and restart (S22, TV). Entries A1 to A7. Source: `AndroidAudioRenderer`.
    - Start a stream with sound playing on the PC, Disconnect, and start it again. Expected: the sound
-     plays after each start, and logcat has no exception from the audio renderer at the stop.
+     plays after each start (an `owner check`), and logcat has no exception from the audio renderer
+     at the stop.
 8. The upgrade with the legacy 5.1 switch (S22). Entry P3. Source: `LegacyMigrations`.
    - Put `checkbox_51_surround` = true in the default preferences of the installed debug build (with
      `run-as`, the app stopped), with `list_audio_config` set to 7.1 (`71`). Start the app. Expected:
@@ -2533,7 +2540,13 @@ Steps:
     `WakeOnLanSender`.
     - Wake the host from its Options. Expected: the PC wakes, and the host comes back Online. A port
       out of range needs an HTTP port above 65514 and is not checked here.
-11. Pointer capture on focus changes, and the external keyboard (S22, with a mouse and a keyboard).
+11. A host list with a forgotten host (S22). Entries P11 to P13 and S12-16. Needs the owner to pair
+    the host again afterwards. Source: `ComputerDatabaseManager`, `ComputerManagerService`.
+    - Forget the host from its Options, close the app and open it again. Expected: the Library opens
+      with no error, any other saved host is listed, and the forgotten host is no longer a saved host.
+    - Pair the host again (3.1), close the app and open it again. Expected: the host is listed once,
+      Online.
+12. Pointer capture on focus changes, and the external keyboard (S22, with a mouse and a keyboard).
     Entries K3, K4, K5 and G-K1. Source: `AndroidNativePointerCaptureProvider`, `Game.onWindowFocusChanged`.
     - Stream with the input grabbed. Pull down the notification shade and close it, three times.
       Expected: the mouse is captured again after each, and logcat has `Using the native pointer
@@ -2541,13 +2554,13 @@ Steps:
     - Press Ctrl+Alt+Shift+Q and keep Ctrl, Alt and Shift held. Pull down the shade, close it,
       release the keys, and press a letter in the Notepad test file (section 5). Expected: the
       letter is typed, and the stream does not disconnect.
-12. The mouse and stylus buttons (S22). Entries G-M1, G-M2 and G-M4. Source: `Game.handleMotionEvent`.
+13. The mouse and stylus buttons (S22). Entries G-M1, G-M2 and G-M4. Source: `Game.handleMotionEvent`.
     - With a mouse: click, right-click, middle-click and drag on the PC. Expected: each button acts
       once, and no button stays down.
     - With a stylus that has a button, if one is at hand: press with the button held, release the
       button while the tip stays down, then lift. Expected: no host button stays down, and none is
       pressed twice.
-13. The on-screen controller (S22). Entries O1 to O6, O9 and O10. Source: `virtual_controller/`.
+14. The on-screen controller (S22). Entries O1 to O6, O9 and O10. Source: `virtual_controller/`.
     - Turn the on-screen controller on, with no pad. Touch the left stick straight above its centre,
       then straight below. Expected: the stick moves up, then down.
     - Look at the D-pad. Expected: its four lines start at the same distance from the centre (an
@@ -2561,7 +2574,7 @@ Steps:
     - A corrupt saved layout: with the layout edited and saved, remove the height of one element from
       the saved entry (with `run-as`), and start a stream. Expected: that element is at its default
       place, and the others keep their saved places.
-14. The two-finger trackpad tap and scroll (S22, trackpad mode). Entries G-M7 and T3. Source:
+15. The two-finger trackpad tap and scroll (S22, trackpad mode). Entries G-M7 and T3. Source:
     `RelativeTouchContext`.
     - Tap with two fingers, lifting the second finger first, then lifting the first finger first.
       Expected: one right click each time.
@@ -2569,7 +2582,7 @@ Steps:
       is in the Sprint 17 item on the gaps of the tap).
     - Scroll with two fingers, drifting sideways. Expected: no scroll for the sideways drift; a slow
       vertical drift still scrolls.
-15. Pads (S22, and the TV with the owner's OK). Entries U3, C12, C20 and C21. Needs the owner's pads.
+16. Pads (S22, and the TV with the owner's OK). Entries U3, C12, C20 and C21. Needs the owner's pads.
     Source: `ControllerHandler`, `driver/`.
     - Weak rumble: in a game with light rumble, or the host's controller test, on a pad that rumbles
       through the phone's fallback or through Android. Expected: a weak rumble is felt, not dropped.
@@ -2584,7 +2597,7 @@ Steps:
       rumble in a game, then Quit. Expected: the trigger motors stop. The owner's 8BitDo
       `2DC8:310B` uses the Xbox 360 driver, which has no trigger motors: `not applicable` without a
       GIP pad.
-16. The DeX right click (S22 in Samsung DeX, with its touchpad). Entry G-M3. Needs the owner's DeX
+17. The DeX right click (S22 in Samsung DeX, with its touchpad). Entry G-M3. Needs the owner's DeX
     set-up. Source: `Game.handleMotionEvent`.
     - Right-click on the desktop of the PC with the DeX touchpad. Expected: the context menu opens,
       with no left click before it (no selection change).

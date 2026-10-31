@@ -337,6 +337,35 @@ class RendererRecoveryTest : RendererTestBase() {
     }
 
     @Test
+    fun `a replay of the SPS that failed is done again at the next IDR frame of a fused decoder`() {
+        // With adaptive playback the Intel decoder is sent the parameter sets in front of every
+        // IDR frame once the first of them has gone alone.
+        install(
+            codec("omx.intel.avc.decoder") {
+                mime = "video/avc"
+                adaptivePlayback = true
+            }
+        )
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        renderer.begin()
+        renderer.sendParameterSets()
+        ShadowRecordingVideoCodec.failAfter(CodecPoint.QUEUE_INPUT, 1, transient)
+        assertThat(renderer.submit(idrSlice())).isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        renderer.sendParameterSets(2)
+        val result = renderer.submit(idrSlice(2))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        // The decoder still has the baseline SPS, so the second IDR frame is not fused: it says
+        // baseline alone, replays the real profile, and the frame follows.
+        assertThat(events<CodecEvent.Queued>().map { it.flags })
+            .containsExactly(CODEC_CONFIG, CODEC_CONFIG, CODEC_CONFIG, SYNC_FRAME)
+            .inOrder()
+        assertThat(log.lines()).contains("INFO: SPS replay complete")
+    }
+
+    @Test
     fun `the same IDR frame sent again after a failed replay is replayed with the SPS that was kept`() {
         install(codec("omx.intel.avc.decoder") { mime = "video/avc" })
         val renderer = renderer()

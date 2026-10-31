@@ -21,8 +21,8 @@ import org.robolectric.RobolectricTestRunner
  * when the file is short, long, odd or cannot be read or written.
  *
  * Characterization: these tests passed on the Java class and on its Kotlin conversion. Sprint 16
- * changed what the log says about the write: "UID written to disk" comes only after the file was
- * flushed and closed.
+ * changed two things: "UID written to disk" is logged only after the file was flushed and closed,
+ * and an id of 16 characters that are not hex digits is still kept, now with a warning.
  */
 @RunWith(RobolectricTestRunner::class)
 class IdentityManagerCharacterizationTest {
@@ -167,22 +167,57 @@ class IdentityManagerCharacterizationTest {
     }
 
     @Test
-    fun `an id of 16 characters is taken as it is, whatever the characters are`() {
+    fun `a non-hex id of 16 characters is kept with one warning, and the file is not touched`() {
         writeIdFile("ABCDEF 0123 xyz!")
+        val files = IdFileContext(context)
 
-        val identity = IdentityManager(context)
+        val identity = IdentityManager(files)
 
         assertThat(identity.uniqueId).isEqualTo("ABCDEF 0123 xyz!")
         assertThat(idFile.readText()).isEqualTo("ABCDEF 0123 xyz!")
+        // The id is not regenerated, so the file is only read: regenerating it would unpair the
+        // client from every host.
+        assertThat(files.calls).containsExactly("in uniqueid")
+        assertThat(lines())
+            .containsExactly(
+                "INFO: Reading UID from disk",
+                "WARNING: UID file data is not hex digits, the saved id is kept",
+                "INFO: UID is now: ABCDEF 0123 xyz!",
+            )
+            .inOrder()
     }
 
     @Test
-    fun `a line break at the end of a short id counts as a character`() {
+    fun `the warning about an id that is not hex holds no part of the id`() {
+        val id = "Zq#Zq#Zq#Zq#Zq#Z"
+        writeIdFile(id)
+
+        IdentityManager(context)
+
+        assertThat(log.warnings()).hasSize(1)
+        // The id is the identity of the client toward every host: not even a piece of it.
+        val warning = log.warnings().single()
+        assertThat(id.windowed(4).filter { it in warning }).isEmpty()
+    }
+
+    @Test
+    fun `an id of 16 upper-case hex digits is hex, so it is kept without a warning`() {
+        writeIdFile("0123456789ABCDEF")
+
+        val identity = IdentityManager(context)
+
+        assertThat(identity.uniqueId).isEqualTo("0123456789ABCDEF")
+        assertThat(log.warnings()).isEmpty()
+    }
+
+    @Test
+    fun `a line break at the end of a short id counts as a character, and it is not hex`() {
         writeIdFile("0123456789abcde\n")
 
         val identity = IdentityManager(context)
 
         assertThat(identity.uniqueId).isEqualTo("0123456789abcde\n")
+        assertThat(log.warnings()).hasSize(1)
     }
 
     /** The id file as the code under test opens it, with the faults that a test asks for. */

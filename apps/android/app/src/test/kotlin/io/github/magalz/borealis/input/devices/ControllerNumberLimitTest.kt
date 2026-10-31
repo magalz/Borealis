@@ -59,6 +59,23 @@ class ControllerNumberLimitTest : DevicesTestBase() {
     }
 
     @Test
+    fun `a device change does not make the log name a pad that got no number again`() {
+        val rig = rig(multiController = true)
+        val pads = (1..17).map { pad(it) }
+        pads.forEach(rig::connect)
+        pads.forEach { rig.press(it, KEYCODE_BUTTON_A) }
+
+        val after = pad(17)
+        disconnectPad(pads.last())
+        connectPad(after)
+        rig.change(after)
+        rig.press(after, KEYCODE_BUTTON_B)
+
+        assertThat(log.warnings().filter { it.contains("device 17") }).hasSize(1)
+        assertThat(log.messages.count { it.contains("needs a controller number") }).isEqualTo(17)
+    }
+
+    @Test
     fun `a number that frees up goes to the pad that was left out`() {
         val rig = rig(multiController = true)
         val pads = (1..17).map { pad(it) }

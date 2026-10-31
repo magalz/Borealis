@@ -2489,11 +2489,18 @@ Steps:
    - Start the same app again at once. Expected: it starts, with no hang. Leave it and start a second
      stream right after. Expected: it starts too.
    - In the host log, check the first leave. Expected: if the leave came before the launch request, the
-     host launched nothing.
+     host launched nothing. On a GFE host, if one is at hand, cancel before the launch too. Expected:
+     the host launches nothing (`not applicable` without a GFE host).
+   - Back out during a launch retry, while the host answers 409 or 503 (a second device holding the
+     host, as in 3.5 and 3.8). Expected: no ANR, and the next stream starts.
+   - Start a stream and choose Disconnect on the Starting screen. Expected: the Library in about 1 s.
+   - If a native start fails (a stage failure), leave, then start again. Expected: the next stream
+     starts.
 4. HDR and the decoder start (S22, TV). Entries B1, H2, H6 and R8. Source: `MediaCodecHelper`,
    `MediaCodecDecoderRenderer`, `MoonBridge.VIDEO_FORMAT_MASK_10BIT`.
-   - Start an HDR stream, as in 3.12, on each device that supports it, and a stream with HDR off.
-     Expected: HDR starts as before Sprint 16, and the picture is right.
+   - Start an HDR stream, as in 3.12, on each device that supports it, with HEVC Main10 and with AV1
+     Main10 where the device and the host support it, and a stream with HDR off. Expected: HDR starts
+     as before Sprint 16, and the picture is right.
    - In logcat, note the decoder names, any `Found Adreno GPU` line, and any `Skipping
      decoder that throws for its capabilities` line. A skipped decoder for HEVC or AV1 is a finding
      for the Sprint 17 item on H6, not a `fail`.

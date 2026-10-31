@@ -915,6 +915,25 @@ object MediaCodecHelper {
         }
     }
 
+    // The Java gave up the whole search when the feature check of a decoder threw, like it did for
+    // its capabilities. A decoder whose feature check throws counts as one without the feature:
+    // round 1 skips it, and round 2, which does not ask for the feature, may still take it.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun supportsLowLatencyFeature(
+        codecInfo: MediaCodecInfo,
+        caps: CodecCapabilities,
+    ): Boolean {
+        return try {
+            capabilitiesSupportAndroidRLowLatency(caps)
+        } catch (e: Exception) {
+            LimeLog.info(
+                "Treating decoder that throws for its feature check as lacking " +
+                    "FEATURE_LowLatency: ${codecInfo.name}"
+            )
+            false
+        }
+    }
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress("NestedBlockDepth", "LoopWithTooManyJumpStatements", "CyclomaticComplexMethod")
     private fun findKnownSafeDecoder(mimeType: String, requiredProfile: Int): MediaCodecInfo? {
@@ -954,7 +973,7 @@ object MediaCodecHelper {
 
                         val caps = readCapabilities(codecInfo, mime) ?: continue
 
-                        if (i == 0 && !capabilitiesSupportAndroidRLowLatency(caps)) {
+                        if (i == 0 && !supportsLowLatencyFeature(codecInfo, caps)) {
                             LimeLog.info(
                                 "Skipping decoder that lacks FEATURE_LowLatency for round 1"
                             )

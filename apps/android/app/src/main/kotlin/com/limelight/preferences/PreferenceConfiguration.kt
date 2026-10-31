@@ -235,8 +235,8 @@ class PreferenceConfiguration {
         @JvmStatic
         fun isSquarishScreen(width: Int, height: Int): Boolean {
             // A side of 0 or less is not a screen shape: the ratio below would be NaN, infinite or
-            // negative, or one for two negative sides, and the answer would depend on how those
-            // compare.
+            // negative, or at most one for two negative sides, and the answer would depend on how
+            // those compare.
             if (width <= 0 || height <= 0) return false
 
             val longDim = max(width, height).toFloat()

@@ -753,6 +753,41 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
+    fun `when the pad that reports the motion goes away the next pad of the number takes over`() {
+        val second = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
+        val rig = sensorRig()
+        val first = wake(rig, padSensors, id = 5)
+        wake(rig, second, id = 6)
+        rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 50)
+
+        rig.handler.onInputDeviceRemoved(first.id)
+        rig.awaitBackground()
+
+        // The host asked once, and does not ask again: the pad left holds the rates
+        assertThat(sensors.registrations).isEmpty()
+        assertThat(Hardware.sensors(second).log)
+            .containsExactly("register 1 20000", "register 4 10000")
+            .inOrder()
+    }
+
+    @Test
+    fun `a pad that goes away without reporting the motion leaves the pad that does as it is`() {
+        val rig = sensorRig()
+        wake(rig, padSensors, id = 5)
+        wake(rig, Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER), id = 6)
+        val third = wake(rig, Hardware.sensorManager(Sensor.TYPE_GYROSCOPE), id = 7)
+        rig.motionState(GYRO, 100)
+        val log = sensors.log.toList()
+
+        rig.handler.onInputDeviceRemoved(third.id)
+        rig.awaitBackground()
+
+        assertThat(log).containsExactly("register 4 10000")
+        assertThat(sensors.log).isEqualTo(log)
+    }
+
+    @Test
     fun `disabling after a stop sends nothing and unregisters nothing again`() {
         val rig = sensorRig()
         wake(rig)

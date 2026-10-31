@@ -156,6 +156,9 @@ class Game :
     private val imeKeys = ImeKeyGate { ImeKeyGate.isImeVisible(window.decorView) }
     private var displayedFailureDialog = false
     private var connected = false
+    // BOREALIS: the stop ran (main thread only): a start callback that the connection thread posted
+    // before it must not open a stream that nobody ends (leave)
+    private var stopRan = false
     // BOREALIS: the first frame was on screen, so an ending stream "stopped" and did not fail to
     // start (stream)
     @Volatile private var firstFrameShown = false
@@ -2747,6 +2750,7 @@ class Game :
     internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
 
     private fun stopConnection(done: Runnable? = null) {
+        stopRan = true // BOREALIS: no stream starts after this (leave)
         startupGuard.cancel() // BOREALIS: first-frame watchdog
         if (connected) {
             connected = false
@@ -2942,6 +2946,9 @@ class Game :
 
     override fun connectionStarted() {
         runOnUiThread {
+            // BOREALIS: posted before the stop and run after it: nothing would end this stream, and
+            // the audit trail would keep a session that the stop never saw (leave)
+            if (stopRan) return@runOnUiThread
             connected = true
             updatePipAutoEnter()
             // BOREALIS: the chrome waits for the first frame

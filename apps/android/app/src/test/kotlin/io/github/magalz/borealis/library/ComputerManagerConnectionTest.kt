@@ -394,6 +394,23 @@ class ComputerManagerConnectionTest {
     }
 
     @Test
+    fun `a host that is added again keeps the app list that it had`() = runTest {
+        val connection = newConnection()
+        val job =
+            launch(UnconfinedTestDispatcher(testScheduler)) {
+                connection.hostUpdates().collect {}
+            }
+        binder.emit(details(uuid = "a", rawAppList = APP_LIST))
+
+        // The service tells the listener about an add with the details as they were polled, which
+        // are not its own object for a host that it already knows and have no app list.
+        assertThat(connection.addComputer(details(uuid = "a", rawAppList = null))).isTrue()
+
+        assertThat(connection.updates.value.getValue("a").rawAppList).isEqualTo(APP_LIST)
+        job.cancelAndJoin()
+    }
+
+    @Test
     fun `a new app list replaces the one that was kept`() = runTest {
         val connection = newConnection()
         val job =

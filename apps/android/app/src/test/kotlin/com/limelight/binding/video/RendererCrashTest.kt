@@ -110,12 +110,12 @@ class RendererCrashTest : RendererTestBase() {
     }
 
     @Test
-    fun `the exception has no message of its own, only its text`() {
+    fun `the message of the exception is its text`() {
         val renderer = small()
 
         val thrown = crash(renderer)
 
-        assertThat(thrown).hasMessageThat().isNull()
+        assertThat(thrown).hasMessageThat().isEqualTo(thrown.toString())
     }
 
     // The first line: how far the stream had got

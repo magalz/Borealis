@@ -1290,7 +1290,8 @@ sprints squarely (owner: "everything that is not conversion and does not fit per
 sprints already planned"). It comes after the fixes of the converted code, so that every fix comes
 before the refactor. Each item keeps its text, its source and its owner date, and says where it came
 from: Sprint 15, the [backlog](#backlog-not-scheduled), or the backlog by way of Sprint 15 on the
-same day.
+same day. The items marked "From Sprint 16" came from the reviews of the fixes of the converted
+code (2026-10-30 and 2026-10-31); none of them is a Sprint 16 regression, unless the item says so.
 
 The deferred RTSP parser rework is not here: it stays in the backlog, deferred by the owner. What
 the plan already holds for [SecOps](#sprint-19-secops) and
@@ -1461,6 +1462,24 @@ results are in
   release. A raw capture of the events of that mouse is needed first: the source, the key code and the button
   state of a press of the side button, with the setting on and off. The fix follows, with a test first.
 
+- **The gaps of the two-finger trackpad tap.** From Sprint 16 (G-M7, the reviews of #109). Sprint 16
+  made a two-finger tap a right click whichever finger lifts first (`RelativeTouchContext`), and
+  three gaps remain. Each touch context sees only its own finger, so a slide of the second finger is
+  lost when the first lifts first: the second finger can slide more than 20 px while the first stays
+  still, and both lifts within 250 ms still right-click. The inherited path has the mirror gap: a
+  tap of the second finger while the first scrolls still right-clicks. The two orders also use
+  different time windows: when the first finger lifts first, both lifts must come within 250 ms of
+  its down, so a second finger that lands more than about 150 ms later clicks only in the other
+  order. Closing the first two needs state that the contexts share, in `TouchContexts.kt` or
+  `Game.kt`.
+- **The key that arms a chord sends its up without a down.** From Sprint 16 (G-K3, the merge review
+  of #110). Sprint 16 eats the ups of the keys that a waiting chord ate, but the key that arms the
+  chord (Z, Q, C or M) still sends its up without a down when the modifiers are released first.
+- **The on-screen controller still reads the preferences at each rebuild.** From Sprint 16 (O11, the
+  reviews of #109). `VirtualController.refreshLayout` reads the whole preferences, with their
+  migration writes, at every rebuild (a rotation, picture-in-picture). Dropping that read needs
+  `Game` to pass its `prefConfig` to `VirtualController`.
+
 #### Pads
 
 Moved here from item (d) of the Sprint 14 block of the backlog (owner, 2026-10-28): the first two
@@ -1473,7 +1492,10 @@ facts of both items and added the third item and the open decision. See the
 
 - **Pad battery.** No battery reaches the PC. The client sends the battery state only when Android
   reports one for the pad (`InputDevice.batteryState.isPresent` on Android 12 and later, or the
-  SHIELD API; `ControllerHandler.sendControllerBatteryPacket` returns otherwise; 3.27 step 10). In
+  SHIELD API; `ControllerHandler.sendControllerBatteryPacket` returns otherwise; 3.27 step 10).
+  Sprint 16 changed this (C20, #108): the percentage is rounded and kept in 0 to 100, and from
+  Android 12 an external pad that claimed a battery in its arrival and has none tells the host once
+  that no battery is present. In
   the VHF round of 2026-10-28, Android showed no battery for either pad: the Ultimate 2 (over
   Bluetooth on the S22, and through its receiver in D-input on the TV) and the Pro 3 (on its
   receiver in Switch mode, on the S22). The host side has changed: it no longer makes an Xbox 360
@@ -1515,7 +1537,9 @@ facts of both items and added the third item and the open decision. See the
   is not usable outside Borealis on the TV (the `xpad` device match on that kernel). The kernel
   facts are in [device-validation section 19](development/device-validation.md#vhf-gamepad-round-2026-10-28).
 - **Open owner decision: a Nintendo pad whose sensors Android exposes.** Recorded on 2026-10-28
-  from the VHF gamepad round; the owner has not decided. When Android exposes the sensors of a
+  from the VHF gamepad round; the owner has not decided. Sprint 16 moved here the Sprint 13 entry
+  C18 ("any non-PlayStation pad with a sensor manager is reported as UNKNOWN"), which is the second
+  case below. When Android exposes the sensors of a
   Nintendo pad (the Pro 3 in Switch mode), should the host make it a Switch Pro Controller or a
   DualShock 4? The host's policy
   ([contract, section 13](host-contract/luminalshine.md#13-input)) gives one or the other by what
@@ -1534,6 +1558,28 @@ facts of both items and added the third item and the open decision. See the
   So, with the current client, a Nintendo pad with a sensor becomes a DualShock 4. A Switch Pro
   Controller needs the client to report the Nintendo type, or the host's `gamepad` setting (global
   or per client) set to `switch_pro`.
+
+- **DualSense adaptive triggers.** From Sprint 16 (the plan, 2026-10-30). A host of 26.10 sends
+  adaptive triggers (control message `0x5503`) for a DualSense, and Borealis drops them: it has no
+  handler, so moonlight-common-c puts in one that does nothing
+  ([contract, sections 12 and 13](host-contract/luminalshine.md#13-input)). It matters only when the
+  host makes a DualSense, which it does through its `gamepad` setting `dualsense` (see "Pad battery"
+  above).
+- **Battery gaps of pads without a battery.** From Sprint 16 (C20, the merge review of #108); the old
+  code behaves the same. With multi-controller off, a pad without a battery that told the host
+  "not present" before a pad with a battery joined its number does not tell it again after that pad
+  leaves. And two pads without a battery that share a number from before the first poll never send
+  "not present".
+- **The fused trigger of pads that share a number.** From Sprint 16 (C6, the merge review of #108).
+  Sprint 16 compares triggers as unsigned bytes, but when two pads share a controller number the
+  trigger sent is the bitwise OR of their values, not the larger one.
+- **Weak rumble on the USB drivers.** From Sprint 16 (C21, the merge review of #108). Sprint 16 keeps
+  a weak motor above zero in `ControllerHandler`, but the USB drivers still shift the motor values
+  down by 8 bits (`driver/XboxOneController.kt` and `driver/Xbox360Controller.kt`), so a motor below
+  256 still sends 0 to a USB pad.
+- **The cost of the stop on stuck USB pads.** From Sprint 16 (U3, the merge review of #108). To zero
+  the motors at stream end, `ControllerHandler.stop()` makes up to two bulk writes of 100 ms each for
+  every USB pad that does not answer. This is new with the U3 fix.
 
 #### Video and the stream screens
 
@@ -1582,6 +1628,16 @@ the round are in [device-validation section 20](development/device-validation.md
     (its cost on a TV), bitmap reuse against the hardware renderer, the colour of an HDR copy on the S22, and
     the delay of the first copy after the menu opens (129.7 ms on the S22 in the spike);
   - the new scrim and panel of the popups, and the screens that follow the Library.
+
+- **A silent frozen video on an invalid surface.** From Sprint 16 (the merge review of #113); older
+  than Sprint 16. Three branches of `MediaCodecDecoderRenderer` that catch the
+  `IllegalArgumentException` of an invalid `Surface` set `stopping` and report nothing: no crash
+  report and no popup, so the video freezes with no word.
+- **No decoder for a codec whose only decoder throws.** From Sprint 16 (H6, #113); a behaviour change
+  of Sprint 16. The search for a safe decoder now skips a decoder that throws for its capabilities.
+  On a device whose only HEVC or AV1 decoder throws there, that codec gets no decoder, where the old
+  search fell back to the first decoder; AVC still falls back. The device round compares the start
+  logs of both devices (3.31).
 
 #### Accessibility and layout
 
@@ -1660,6 +1716,10 @@ Planned, not started. Owner decision of 2026-10-28.
     (two Gradle runs at once on 2026-10-29) their accessibility tests ran out of memory. Only `:app`
     gets the 2 GB heap of `BorealisUnitTestHeap` (`build-logic`); decide whether these two modules
     need it too, or whether one Gradle run at a time stays the rule.
+  - **A flaky renderer test**, from Sprint 16 (the gates of #113): `RendererRecoveryTest`, "three
+    seconds after the first failure that is not recovered …", failed once in a full gate under load,
+    and passed 5 times out of 5 alone at the base and at the head of the batch. Make it
+    deterministic.
 - **Method:** behaviour does not change. The characterization tests guide the refactor. A
   refactored place loses its suppression and its marker.
 - **Ends with a device round.**
@@ -1726,14 +1786,18 @@ release. Sprint 19 is hardening and security testing.
   - A failed HTTPS serverinfo for a pinned host falls back to plain HTTP
     (`com/limelight/nvstream/http/NvHTTP.kt`).
   - The client id is logged at INFO with "UID is now" (`com/limelight/computers/IdentityManager.kt`).
+    Sprint 16 did not change that line, which still holds the whole id; the warning that P14 added
+    does not hold it.
   - `printStackTrace` writes to stderr, and can carry host names or addresses; the
     Wake-on-LAN sender is one case (`com/limelight/nvstream/wol/WakeOnLanSender.kt`).
   - The `FileNotFoundException` message carries the full URL; a debug log can show it
     (`com/limelight/nvstream/http/NvHTTP.kt`).
   - `defaultNetworkLock` has no `try`/`finally`, so an exception under a VPN wedges
-    discovery (`com/limelight/computers/ComputerManagerService.kt`).
+    discovery (`com/limelight/computers/ComputerManagerService.kt`). Fixed in Sprint 16 (S12-14,
+    #112).
   - `waitForPollingStopped` spins and prints stack traces while it is interrupted during
-    a poll (`com/limelight/computers/ComputerManagerService.kt`). Not reachable today.
+    a poll (`com/limelight/computers/ComputerManagerService.kt`). Not reachable today. Fixed in
+    Sprint 16 (S12-12, #112).
   - Not listed: the debug URL logging of the HTTP client. The `JulBridge` and the
     `Redactor` mask `rikey`, the salt and the client certificate.
 - **Addresses in the logs (owner, 2026-10-24).** Local addresses may stay in the logs;
@@ -1761,7 +1825,24 @@ release. Sprint 19 is hardening and security testing.
   Kotlin file (pull request #70). The host id is checked by `PosterRequest.checkedAppId`,
   which CodeQL does not see as a sanitizer. Owner decision of 2026-10-24: the alerts stay
   open until this sprint, which makes the check visible to CodeQL or dismisses them with
-  the reason.
+  the reason. Sprint 16 moved here, to be looked at with the alerts, the Sprint 12 entry P9:
+  `PosterContentProvider.openFile` serves any three-segment path as box art.
+- **From Sprint 16.** Moved here, or found by the reviews of the fixes of the converted code
+  (2026-10-31):
+  - **The video and audio start cannot report a failure.** B4 made the JNI bridges check, log and
+    clear a Java exception, but `DrStart` and `ArStart` return nothing: their typedefs in the
+    vendored `Limelight.h` are `void`, and moonlight-common-c ignores any result. A start that
+    throws is logged and cleared, and the stream goes on. Owner decision of 2026-10-31: keep the
+    log and clear, and look at it again with the audit of the JNI code in this sprint. A real
+    failure needs the vendored typedefs changed.
+  - **`ExceptionDescribe` bypasses the log redactor.** The B4 checks call `ExceptionDescribe`, which
+    writes the Java stack trace to logcat through `System.err`, outside `BorealisLog` and its
+    redactor.
+  - **The dead code of `simplejni.c`.** The Sprint 14 entry B3: the bodies after the early returns of
+    `findExternalAddressIP4` and `testClientConnectivity` are unreachable since
+    [ADR 0050](adr/0050-diagnostics-audit-and-interim-settings.md). The triage found that this is
+    a Borealis change of ADR 0050, not a defect of the conversion. It holds the STUN print named
+    under "Addresses in the logs" above.
 
 ### Sprint 20: release preparation
 
@@ -1770,7 +1851,13 @@ release. Sprint 19 is hardening and security testing.
 - The compatibility note. It cites LuminalShine 26.10.x once that is stable.
 - Show `LuminalShineVersion` from the HTTPS `/serverinfo` in Host details. The
   26.10.0-beta.1 host sends it (#199, release notes), and the client still shows
-  the protocol version `7.1.431.-1`.
+  the protocol version `7.1.431.-1`. Added from Sprint 16 (2026-10-30): the client parses no
+  `LuminalShine*` field yet. Parse `LuminalShineVersion`, and `LuminalShineApiLevel` and
+  `LuminalShineCapabilities` once the host sends them (the owner's draft
+  [NortheBridge/luminalshine#237](https://github.com/NortheBridge/luminalshine/pull/237), from
+  discussion #222), into the host capabilities line. In verbose mode, log `/serverinfo` only when its
+  body changes: today it is never logged, because `NvHTTP.kt` skips it, an inherited control of the
+  noise of the polls.
 - **Host details mapping.** Backlog item from the Sprint 9 quality review. Do it
   with the `LuminalShineVersion` item above, because both change the same mapping.
   `ComputerDetails.toDetailsFacts` in `ComputerHostRepository.kt` (in `:app`) maps

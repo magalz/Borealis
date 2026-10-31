@@ -132,8 +132,9 @@ class ComputerDatabaseManager(c: Context) {
     }
 
     // The lookups by id and by name still throw a RuntimeException caused by the JSON one for a row
-    // whose addresses are bad (Sprint 12 backlog); the list leaves such a row out (see
-    // getAllComputers).
+    // whose addresses are bad, and the IllegalArgumentException of the address tuple itself, not
+    // wrapped, for a port that is not positive (Sprint 12 backlog); the list leaves such a row out
+    // (see getAllComputers).
     @Suppress("TooGenericExceptionThrown")
     private fun getComputerFromCursor(c: Cursor): ComputerDetails =
         try {

@@ -4,9 +4,10 @@ import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 
 /**
- * An exact copy of these details that shares nothing mutable with them, address tuples included:
- * the service goes on mutating its own objects in place. Unlike the upstream copy constructor it
- * keeps every field as it is.
+ * An exact copy of these details that shares nothing mutable with them: the service goes on
+ * updating its own details in place. The address tuples are copied too as a precaution: the port of
+ * a tuple is final and nothing in production writes its address. Unlike the upstream copy
+ * constructor it keeps every field as it is.
  */
 internal fun ComputerDetails.snapshot(): ComputerDetails {
     val source = this

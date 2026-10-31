@@ -57,8 +57,7 @@ class ComputerManagerService : Service() {
 
     // The adds of the hosts that mDNS finds run one at a time on this executor, in the order they
     // came, and never on the thread of the discovery agent. Tests read it, to wait for the adds
-    // that
-    // they started.
+    // that they started.
     internal val discoveryAdds: ExecutorService = Executors.newSingleThreadExecutor { task ->
         Thread(task, DISCOVERY_ADD_THREAD)
     }

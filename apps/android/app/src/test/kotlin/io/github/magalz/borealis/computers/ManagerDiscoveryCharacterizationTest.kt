@@ -35,7 +35,9 @@ import org.robolectric.shadows.ShadowNetworkInfo
  *
  * Characterization, except for the thread of the add: the Java class added the host on the thread
  * of the discovery agent, and the service now adds it on an executor of its own (S12-18), which the
- * tests wait for with `awaitAdds`.
+ * tests wait for with `awaitAdds`. The four tests about the lock of the default network (S12-14)
+ * pin the fixed behaviour too: the lock is released when a call for the networks or the STUN
+ * request throws, and the process is freed from its network when the STUN request throws.
  */
 @Suppress("DEPRECATION")
 @Config(shadows = [ShadowStunMoonBridge::class, ShadowFailingConnectivityManager::class])

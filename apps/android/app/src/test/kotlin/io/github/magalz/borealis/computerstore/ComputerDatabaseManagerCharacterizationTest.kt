@@ -26,7 +26,11 @@ import org.robolectric.RobolectricTestRunner
  * file that the Java build wrote (`computerstore/computers4.db`, see [FIXTURE_HOSTS]), what it
  * writes, and what it does with a row or a file that is not what it expects.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests passed on the Java class and on its Kotlin conversion. Sprint 16
+ * changed three things, and the tests about them pin the fixed behaviour: a host without a name or
+ * without a uuid is refused with a log, where the Java class threw or saved it (P11, P13); deleting
+ * a host without a uuid removes the rows that have none (P13); and the list leaves out a row that
+ * it cannot read instead of throwing, while the lookups of that row still throw (P12).
  */
 @RunWith(RobolectricTestRunner::class)
 class ComputerDatabaseManagerCharacterizationTest {

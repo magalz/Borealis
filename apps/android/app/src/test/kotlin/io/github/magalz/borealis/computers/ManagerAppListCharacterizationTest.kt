@@ -22,7 +22,9 @@ import org.robolectric.RobolectricTestRunner
  * with its pinned certificate. A test wakes the poller with `pollNow` when it is idle, so that it
  * never waits for the two seconds of the retry period.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
+ * about a second start of a poller that runs (S12-19), which pins the fixed behaviour: it starts no
+ * second thread, so one stop ends the poller.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerAppListCharacterizationTest {

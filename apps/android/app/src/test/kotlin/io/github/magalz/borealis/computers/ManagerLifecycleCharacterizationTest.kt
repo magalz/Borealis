@@ -27,10 +27,11 @@ import org.robolectric.shadows.ShadowNetwork
  * bound, unbound and destroyed, and what its network callback does. The platform is Robolectric; no
  * test starts a request to a host that is not a fake on the loopback interface.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the two
- * that pin the fixed behaviour: a saved host without an id is left out of the list and every other
- * saved host stays (S12-16), and starting polling without the discovery service fails before it
- * changes anything (S12-17).
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
+ * four that pin the fixed behaviour: the service lists the saved hosts that it can read, leaves out
+ * a row that it cannot and starts with no hosts when the list cannot be read (P12); a saved host
+ * without an id is left out of the list and every other saved host stays (S12-16); and starting
+ * polling without the discovery service fails before it changes anything (S12-17).
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerLifecycleCharacterizationTest {

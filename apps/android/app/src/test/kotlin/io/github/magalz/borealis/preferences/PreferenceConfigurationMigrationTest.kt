@@ -25,9 +25,9 @@ import org.robolectric.util.ReflectionHelpers
 /**
  * Characterizes what `PreferenceConfiguration` writes while it reads, and the migrations and
  * overrides behind those writes: the legacy resolution, frame rate and frame pacing keys, the
- * Android 12 motion sensor override, the Shield firmware check and the streaming reset. A
- * recording context logs each edit with its keys, values and order, and whether it was applied or
- * committed, so a conversion that changes any of those fails here.
+ * Android 12 motion sensor override, the Shield firmware check and the streaming reset. A recording
+ * context logs each edit with its keys, values and order, and whether it was applied or committed,
+ * so a conversion that changes any of those fails here.
  */
 @Suppress("DEPRECATION", "LargeClass", "TooManyFunctions")
 @RunWith(RobolectricTestRunner::class)

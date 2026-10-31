@@ -54,9 +54,7 @@ internal object LegacyMigrations {
         }
 
         if (stored.containsKey(OLD_SURROUND_51)) {
-            if (
-                !stored.containsKey(Settings.AUDIO_CONFIG.key) && stored[OLD_SURROUND_51] == true
-            ) {
+            if (!stored.containsKey(Settings.AUDIO_CONFIG.key) && stored[OLD_SURROUND_51] == true) {
                 editor.putString(Settings.AUDIO_CONFIG.key, AUDIO_CONFIG_51)
             }
             // Left in place, the old switch would win again after the user cleared the audio

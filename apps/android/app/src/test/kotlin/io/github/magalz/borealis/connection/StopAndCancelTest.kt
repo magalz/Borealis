@@ -3,6 +3,7 @@ package io.github.magalz.borealis.connection
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.NvConnection
 import io.github.magalz.borealis.library.RecordingLog
+import io.github.magalz.borealis.nvhttp.HostReply
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Rule
@@ -284,6 +285,20 @@ class StopAndCancelTest {
 
         assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
         assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /** The user left while the host answered `/serverinfo` with an error: nobody is left to tell. */
+    @Test
+    fun `a start that is cancelled while the host answers with an error tells nothing`() {
+        val connection = rig.connection()
+        rig.script.serverInfoReplies += HostReply.failure("500", "boom")
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        listener.await("stageStarting")
+        listener.awaitEnded()
+
+        assertThat(listener.events).containsExactly("stageStarting $DESKTOP_NAME")
     }
 
     @Test

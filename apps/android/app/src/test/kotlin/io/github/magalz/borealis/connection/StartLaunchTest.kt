@@ -235,14 +235,16 @@ class StartLaunchTest {
     }
 
     @Test
-    fun `a native connection that does not start frees the place for the next start`() {
+    fun `a native connection that does not start frees the place for the next start and cleans the bridge up`() {
         ShadowRecordingBridge.onStartConnection = { -1 }
         startAndConnect(rig.connection())
 
         assertThat(rig.permits()).isEqualTo(1)
         assertThat(listener.events.last()).isEqualTo("stageComplete $DESKTOP_NAME")
+        // LiStartConnection undid its own work, so the start gives the bridge back too: no stop
+        // will come for it.
         assertThat(ShadowRecordingBridge.names)
-            .containsExactly("setupBridge", "startConnection")
+            .containsExactly("setupBridge", "startConnection", "cleanupBridge")
             .inOrder()
     }
 

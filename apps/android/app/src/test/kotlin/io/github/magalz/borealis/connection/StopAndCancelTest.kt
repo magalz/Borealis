@@ -66,19 +66,116 @@ class StopAndCancelTest {
         }
     }
 
+    /**
+     * The native calls are process-global: a connection that never set the bridge up must not
+     * interrupt, stop or clean up the stream of another one.
+     */
     @Test
-    fun `stop interrupts the connection first, then stops and cleans up holding the monitor`() {
+    fun `the stop of a connection that never set the bridge up makes no native call`() {
         val connection = rig.connection(config = null)
 
         connection.stop()
 
-        assertThat(ShadowRecordingBridge.calls.map { it.name to it.locked })
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    @Test
+    fun `the stop of a connection that never started leaves the stream that runs alone`() {
+        val first = rig.connection()
+        startAndConnect(first)
+        listener.awaitEnded()
+        val before = ShadowRecordingBridge.calls.size
+
+        rig.connection(config = null).stop()
+
+        assertThat(ShadowRecordingBridge.names.drop(before)).isEmpty()
+        assertThat(ShadowRecordingBridge.listener).isNotNull()
+        assertThat(rig.permits()).isEqualTo(0)
+    }
+
+    @Test
+    fun `the stop of a stream that runs interrupts it first, then stops and cleans up holding the monitor`() {
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        val before = ShadowRecordingBridge.calls.size
+
+        connection.stop()
+
+        assertThat(ShadowRecordingBridge.calls.drop(before).map { it.name to it.locked })
             .containsExactly(
                 "interruptConnection" to false,
                 "stopConnection" to true,
                 "cleanupBridge" to true,
             )
             .inOrder()
+    }
+
+    /** By the second stop another connection may own the bridge: the first one made its calls. */
+    @Test
+    fun `a second stop of a stream that ran makes no native call`() {
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        connection.stop()
+        val before = ShadowRecordingBridge.calls.size
+
+        connection.stop()
+
+        assertThat(ShadowRecordingBridge.names.drop(before)).isEmpty()
+    }
+
+    @Test
+    fun `a late stop of a stopped connection leaves the stream of the next one alone`() {
+        val first = rig.connection()
+        startAndConnect(first)
+        listener.awaitEnded()
+        first.stop()
+        val secondListener = rig.newListener()
+        rig.start(rig.connection(), listener = secondListener)
+        ShadowRecordingBridge.await("startConnection", count = 2)
+        secondListener.awaitEnded()
+        val before = ShadowRecordingBridge.calls.size
+
+        first.stop()
+
+        assertThat(ShadowRecordingBridge.names.drop(before)).isEmpty()
+        assertThat(ShadowRecordingBridge.listener).isNotNull()
+    }
+
+    /**
+     * `LiStartConnection` undoes what it did when it fails (`Connection.c`, `Cleanup:`), so the
+     * start gives the bridge back itself and nobody has to stop it.
+     */
+    @Test
+    fun `a native connection that failed to start cleans the bridge up itself, holding the monitor`() {
+        ShadowRecordingBridge.onStartConnection = { -1 }
+        val connection = rig.connection()
+
+        startAndConnect(connection)
+        listener.awaitEnded()
+
+        assertThat(ShadowRecordingBridge.calls.map { it.name to it.locked })
+            .containsExactly(
+                "setupBridge" to true,
+                "startConnection" to true,
+                "cleanupBridge" to true,
+            )
+            .inOrder()
+        assertThat(ShadowRecordingBridge.listener).isNull()
+    }
+
+    @Test
+    fun `the stop of a start whose native connection failed makes no native call`() {
+        ShadowRecordingBridge.onStartConnection = { -1 }
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        val before = ShadowRecordingBridge.calls.size
+
+        connection.stop()
+
+        assertThat(ShadowRecordingBridge.names.drop(before)).isEmpty()
     }
 
     /** A connection that never took the place gives none back: the places must not pile up. */
@@ -181,12 +278,12 @@ class StopAndCancelTest {
         connection.stop()
         listener.awaitEnded()
 
+        // The start failed, so it cleaned the bridge up itself: the stop has nothing left to stop.
         assertThat(ShadowRecordingBridge.calls.map { it.name to it.locked })
             .containsExactly(
                 "setupBridge" to true,
                 "startConnection" to true,
                 "interruptConnection" to false,
-                "stopConnection" to true,
                 "cleanupBridge" to true,
             )
             .inOrder()
@@ -326,9 +423,9 @@ class StopAndCancelTest {
         }
         listener.awaitEnded()
 
-        assertThat(ShadowRecordingBridge.names)
-            .containsExactly("interruptConnection", "stopConnection", "cleanupBridge")
-            .inOrder()
+        // The stop came before the start set the bridge up: it made no native call, and the start
+        // saw the cancel and never began.
+        assertThat(ShadowRecordingBridge.names).isEmpty()
         assertThat(listener.events("stageFailed")).isEmpty()
         assertThat(rig.permits()).isEqualTo(1)
     }

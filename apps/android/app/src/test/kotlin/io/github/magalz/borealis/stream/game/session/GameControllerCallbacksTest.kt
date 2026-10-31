@@ -1,7 +1,7 @@
 package io.github.magalz.borealis.stream.game.session
 
-import com.google.common.truth.Truth.assertThat
 import android.util.SparseArray
+import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.stream.game.GameTestBase

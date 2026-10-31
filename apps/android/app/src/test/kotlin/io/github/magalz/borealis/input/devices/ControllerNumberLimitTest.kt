@@ -102,6 +102,19 @@ class ControllerNumberLimitTest : DevicesTestBase() {
     }
 
     @Test
+    fun `a pad that waits for a number does not take the sensors of the phone`() {
+        val rig = rig(multiController = true) { gamepadMotionSensorsFallbackToDevice = true }
+        val pads = (1..17).map { pad(it) }
+        pads.forEach(rig::connect)
+
+        pads.forEach { rig.press(it, KEYCODE_BUTTON_A) }
+
+        // Player 1 has them; the pad that waits is not player 1
+        assertThat(rig.context(pads.first())["sensorManager"]).isNotNull()
+        assertThat(rig.context(pads.last())["sensorManager"]).isNull()
+    }
+
+    @Test
     fun `the seventeenth USB pad gets no number because only sixteen exist, and the host hears nothing of it`() {
         val rig = rig(multiController = true)
         val pads = (1..17).map { FakeUsbController(it, rig.handler) }

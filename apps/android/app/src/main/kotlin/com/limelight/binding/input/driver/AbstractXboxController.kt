@@ -30,7 +30,9 @@ abstract class AbstractXboxController(
         capabilities =
             (MoonBridge.LI_CCAP_ANALOG_TRIGGERS.toInt() or MoonBridge.LI_CCAP_RUMBLE.toInt())
                 .toShort()
-        buttonFlags =
+        // The buttons the pad has, for the arrival. The live buttonFlags start at 0: a report sets
+        // the buttons that are down.
+        supportedButtonFlags =
             ControllerPacket.A_FLAG or
                 ControllerPacket.B_FLAG or
                 ControllerPacket.X_FLAG or

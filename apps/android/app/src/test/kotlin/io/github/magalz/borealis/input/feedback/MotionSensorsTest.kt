@@ -141,16 +141,28 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a negative rate registers with a negative period`() {
+    fun `a negative rate is a rate of zero, which registers nothing`() {
         val rig = sensorRig()
-        wake(rig)
+        val pad = wake(rig)
 
         rig.motionState(GYRO, -5)
         rig.motionState(ACCEL, -8)
 
-        assertThat(sensors.log)
-            .containsExactly("register 4 -200000", "register 1 -125000")
-            .inOrder()
+        assertThat(sensors.log).isEmpty()
+        assertThat(storedRate(rig, pad, "gyroReportRateHz")).isEqualTo(0)
+        assertThat(storedRate(rig, pad, "accelReportRateHz")).isEqualTo(0)
+    }
+
+    @Test
+    fun `a negative rate unregisters the sensor that was on`() {
+        val rig = sensorRig()
+        wake(rig)
+        rig.motionState(GYRO, 100)
+
+        rig.motionState(GYRO, -5)
+
+        assertThat(sensors.log).containsExactly("register 4 10000", "unregister 4").inOrder()
+        assertThat(sensors.registrations).isEmpty()
     }
 
     @Test

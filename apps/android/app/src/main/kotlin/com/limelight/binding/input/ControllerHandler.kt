@@ -2864,7 +2864,8 @@ class ControllerHandler(
                         BTN_TRIGGER_HAPPY8 ->
                             context.inputMap =
                                 context.inputMap and ControllerPacket.PADDLE4_FLAG.inv()
-                        else -> return false
+                        // Another scan code is no paddle: it is ignored and the event goes on
+                        else -> {}
                     }
                 } else {
                     return false
@@ -3062,7 +3063,8 @@ class ControllerHandler(
                             context.inputMap = context.inputMap or ControllerPacket.PADDLE3_FLAG
                         BTN_TRIGGER_HAPPY8 ->
                             context.inputMap = context.inputMap or ControllerPacket.PADDLE4_FLAG
-                        else -> return false
+                        // Another scan code is no paddle: it is ignored and the event goes on
+                        else -> {}
                     }
                 } else {
                     return false

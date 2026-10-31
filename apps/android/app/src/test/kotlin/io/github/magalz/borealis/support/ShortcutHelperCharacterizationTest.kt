@@ -243,7 +243,7 @@ class ShortcutHelperCharacterizationTest {
         pin("abc")
         pin("abc5")
         // Not an app id: the ids of the apps are written with the ASCII digits.
-        pin("ab٥")
+        pin("ab\u0665")
 
         helper.disableComputerShortcut(computer(uuid = "ab"), "PC deleted")
 
@@ -268,7 +268,7 @@ class ShortcutHelperCharacterizationTest {
         pin("uuid-1--5")
         pin("uuid-1-5-")
         // Not an app id: the ids of the apps are written with the ASCII digits.
-        pin("uuid-1-٥")
+        pin("uuid-1-\u0665")
 
         helper.disableComputerShortcut(computer(), "PC deleted")
 

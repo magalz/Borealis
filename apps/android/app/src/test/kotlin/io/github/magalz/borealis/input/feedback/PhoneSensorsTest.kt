@@ -120,6 +120,36 @@ abstract class PhoneSensorsContract : FeedbackTestBase() {
     }
 
     @Test
+    fun `two pads of one controller number borrow the sensors of the phone once`() {
+        val rig = phoneRig { multiController = false }
+        rig.wake(rig.connectPad(id = 5))
+        rig.wake(rig.connectPad(id = 6))
+
+        rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 100)
+
+        assertThat(log(rig)).containsExactly("register 4 10000", "register 1 10000").inOrder()
+        deliver(rig, Sensor.TYPE_GYROSCOPE, 1f, 2f, 3f)
+        assertThat(rig.connection.motions).hasSize(1)
+    }
+
+    @Test
+    fun `a pad and its touchpad borrow the sensors of the phone once`() {
+        val rig = phoneRig()
+        val joystick = rig.connectPad(id = 5, vendorId = FeedbackRig.SONY_VENDOR)
+        val touchpad = rig.connectTouchpad(joystick)
+        // The touchpad sends input first, and its joystick takes the same number
+        rig.wake(touchpad)
+
+        rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 100)
+
+        assertThat(log(rig)).containsExactly("register 4 10000", "register 1 10000").inOrder()
+        deliver(rig, Sensor.TYPE_ACCELEROMETER, 1f, 2f, 3f)
+        assertThat(rig.connection.motions).hasSize(1)
+    }
+
+    @Test
     fun `a pad that borrows the sensors is reported with an unknown type and a toast`() {
         val rig = phoneRig()
         rig.wake(rig.connectPad(vendorId = FeedbackRig.XBOX_VENDOR))

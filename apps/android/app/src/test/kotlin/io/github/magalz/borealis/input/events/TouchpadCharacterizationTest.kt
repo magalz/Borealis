@@ -319,17 +319,23 @@ class TouchpadCharacterizationTest {
     }
 
     @Test
-    fun `a range with no width makes the coordinate not a number`() {
+    fun `a range with no width puts the coordinate at 0, not at not a number`() {
         val empty =
             touchpadPad(
                 deviceId = 8,
-                extra = mapOf("touchpadXRange" to motionRange(AXIS_X, 5f, 5f)),
+                extra =
+                    mapOf(
+                        "touchpadXRange" to motionRange(AXIS_X, 5f, 5f),
+                        "touchpadYRange" to motionRange(AXIS_Y, 0f, 0f),
+                        "touchpadPressureRange" to motionRange(AXIS_PRESSURE, 1f, 1f),
+                    ),
             )
 
-        empty.touch(ACTION_DOWN, listOf(finger(x = 5f)))
+        empty.touch(ACTION_DOWN, listOf(finger(x = 5f, y = 0f, pressure = 1f)))
+        empty.touch(ACTION_DOWN, listOf(finger(x = 90f, y = -3f, pressure = 4f)))
 
-        assertThat(touches.single().x).isNaN()
-        assertThat(touches.single().y).isEqualTo(0.25f)
+        assertThat(touches.map { Triple(it.x, it.y, it.pressure) })
+            .containsExactly(Triple(0f, 0f, 0f), Triple(0f, 0f, 0f))
     }
 
     // ----- The host without controller touch -----

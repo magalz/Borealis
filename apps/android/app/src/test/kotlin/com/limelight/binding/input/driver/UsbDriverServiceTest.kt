@@ -447,6 +447,27 @@ class UsbDriverServiceTest {
     }
 
     @Test
+    fun `a pad removed while the listener is replayed does not break the replay`() {
+        // The input thread of a failing pad removes it while the main thread replays the list.
+        plugIn(xbox360(name = "/dev/first"))
+        plugIn(xbox360(name = "/dev/second"))
+        createService()
+        binder.start()
+        val replayed = mutableListOf<AbstractController>()
+        val removing =
+            object : UsbDriverListener by RecordingListener() {
+                override fun deviceAdded(controller: AbstractController) {
+                    replayed += controller
+                    service.deviceRemoved(controller)
+                }
+            }
+
+        binder.setListener(removing)
+
+        assertThat(replayed).hasSize(2)
+    }
+
+    @Test
     fun `stopping a service that never started does nothing`() {
         createService()
 
@@ -469,6 +490,37 @@ class UsbDriverServiceTest {
         idle(1)
         assertThat(connections()).hasSize(1)
         assertThat(heldControllers()).hasSize(1)
+    }
+
+    @Test
+    fun `an attach broadcast that names no device is ignored`() {
+        plugIn(xbox360())
+        createService()
+        binder.start()
+        val before = connections().size
+
+        context.sendBroadcast(
+            Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).setPackage(context.packageName)
+        )
+        idle(1000)
+
+        assertThat(connections()).hasSize(before)
+    }
+
+    @Test
+    fun `a permission answer that names no device is ignored`() {
+        createService()
+        binder.start()
+
+        context.sendBroadcast(
+            Intent("com.limelight.USB_PERMISSION")
+                .setPackage(context.packageName)
+                .putExtra(UsbManager.EXTRA_PERMISSION_GRANTED, true)
+        )
+        idle()
+
+        assertThat(connections()).isEmpty()
+        assertThat(promptEvents).isEmpty()
     }
 
     @Test

@@ -135,6 +135,16 @@ class Pad(val device: InputDevice, val features: DeviceFeatures) {
 }
 
 /**
+ * What sets the device of a touchpad apart from the device of a joystick: the descriptor, the
+ * sources and the joystick axes it has. A pad has the axes X and Y by default.
+ */
+private class DeviceShape(
+    val descriptor: String,
+    val sources: Int = InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK,
+    val axes: List<Int> = listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y),
+)
+
+/**
  * A real [ControllerHandler] over a [FeedbackConnection], with the hardware that gives feedback
  * made by the test: the phone's vibrator and sensors, and the vibrators, sensors, lights and
  * battery of each pad. The phone's hardware is installed as the activity's system services, so the
@@ -266,6 +276,31 @@ class FeedbackRig(
     }
 
     /**
+     * Connects the touchpad of [joystick], the input device of its own that a pad like the
+     * DualShock 4 shows next to its joystick: the same descriptor, no joystick axes, and the id
+     * just before the joystick's.
+     */
+    fun connectTouchpad(
+        joystick: Pad,
+        external: Boolean = true,
+        features: DeviceFeatures = DeviceFeatures(),
+    ): Pad {
+        val id = joystick.id - 1
+        val device =
+            newPadDevice(
+                id,
+                joystick.device.vendorId,
+                joystick.device.productId,
+                external,
+                DeviceShape(joystick.device.descriptor, InputDevice.SOURCE_MOUSE, emptyList()),
+            )
+        ShadowFeedbackInputDevice.features[id] = features.withAbsentHardware()
+        shadowOf(RuntimeEnvironment.getApplication().getSystemService(InputManager::class.java))
+            .addInputDevice(device)
+        return Pad(device, features)
+    }
+
+    /**
      * Gives [pad] its context in the handler, and its controller number, with a first button press:
      * that is what a real pad does the first time it is used.
      */
@@ -295,17 +330,18 @@ class FeedbackRig(
             Shadow.extract<ShadowInputEvent>(event).setDevice(pad.device)
         }
 
-    /** An input device with the joystick axes X and Y. */
+    /** An input device with the joystick axes X and Y, unless the [shape] says otherwise. */
     private fun newPadDevice(
         id: Int,
         vendorId: Int,
         productId: Int,
         external: Boolean,
+        shape: DeviceShape = DeviceShape("descriptor-$id"),
     ): InputDevice =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            builtPadDevice(id, vendorId, productId, external)
+            builtPadDevice(id, vendorId, productId, external, shape)
         } else {
-            fieldPadDevice(id, vendorId, productId, external)
+            fieldPadDevice(id, vendorId, productId, external, shape)
         }
 
     private fun builtPadDevice(
@@ -313,17 +349,18 @@ class FeedbackRig(
         vendorId: Int,
         productId: Int,
         external: Boolean,
+        shape: DeviceShape,
     ): InputDevice {
         val builder =
             InputDeviceBuilder.newBuilder()
                 .setId(id)
                 .setName("pad-$id")
-                .setDescriptor("descriptor-$id")
+                .setDescriptor(shape.descriptor)
                 .setVendorId(vendorId)
                 .setProductId(productId)
                 .setExternal(external)
-                .setSources(InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK)
-        for (axis in listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y)) {
+                .setSources(shape.sources)
+        for (axis in shape.axes) {
             builder.addMotionRange(axis, InputDevice.SOURCE_JOYSTICK, -1f, 1f, 0f, 0f, 0f)
         }
         return builder.build()
@@ -338,21 +375,18 @@ class FeedbackRig(
         vendorId: Int,
         productId: Int,
         external: Boolean,
+        shape: DeviceShape,
     ): InputDevice {
         val device = Shadow.newInstanceOf(InputDevice::class.java)
         ReflectionHelpers.setField(device, "mId", id)
         ReflectionHelpers.setField(device, "mName", "pad-$id")
-        ReflectionHelpers.setField(device, "mDescriptor", "descriptor-$id")
+        ReflectionHelpers.setField(device, "mDescriptor", shape.descriptor)
         ReflectionHelpers.setField(device, "mVendorId", vendorId)
         ReflectionHelpers.setField(device, "mProductId", productId)
         ReflectionHelpers.setField(device, "mIsExternal", external)
-        ReflectionHelpers.setField(
-            device,
-            "mSources",
-            InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK,
-        )
+        ReflectionHelpers.setField(device, "mSources", shape.sources)
         ReflectionHelpers.setField(device, "mMotionRanges", ArrayList<Any>())
-        for (axis in listOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y)) {
+        for (axis in shape.axes) {
             ReflectionHelpers.callInstanceMethod<Any>(
                 device,
                 "addMotionRange",

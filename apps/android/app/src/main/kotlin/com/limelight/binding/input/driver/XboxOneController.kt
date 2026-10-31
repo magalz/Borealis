@@ -47,8 +47,10 @@ class XboxOneController(
         setButtonFlag(ControllerPacket.LS_CLK_FLAG, b and LEFT_STICK_CLICK_BIT)
         setButtonFlag(ControllerPacket.RS_CLK_FLAG, b and RIGHT_STICK_CLICK_BIT)
 
-        leftTrigger = buffer.getShort() / TRIGGER_MAX
-        rightTrigger = buffer.getShort() / TRIGGER_MAX
+        // The raw value is a signed short over 1023: a pad that reports more (or less) must not
+        // wrap when the handler turns the trigger into a byte.
+        leftTrigger = (buffer.getShort() / TRIGGER_MAX).coerceIn(0.0f, 1.0f)
+        rightTrigger = (buffer.getShort() / TRIGGER_MAX).coerceIn(0.0f, 1.0f)
 
         leftStickX = buffer.getShort() / STICK_MAX
         leftStickY = buffer.getShort().toInt().inv() / STICK_MAX
@@ -180,6 +182,13 @@ class XboxOneController(
         this.leftTriggerMotor = leftTrigger
         this.rightTriggerMotor = rightTrigger
         sendRumblePacket()
+    }
+
+    override fun stop() {
+        // The stop's rumble(0, 0) sends the trigger motors too, so zero them first
+        leftTriggerMotor = 0
+        rightTriggerMotor = 0
+        super.stop()
     }
 
     private class InitPacket(val vendorId: Int, val productId: Int, val data: ByteArray)

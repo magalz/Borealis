@@ -254,13 +254,13 @@ class ButtonFlagsCharacterizationTest {
     }
 
     @Test
-    fun `an unknown scan code on a pad with paddles leaves the whole event to the system, down and up`() {
+    fun `an unknown scan code on a pad with paddles is no paddle, and the event goes on, down and up`() {
         pad.set("hasPaddles", true)
 
         for (scanCode in listOf(0x2c8, 0x2c9, 0)) {
             assertWithMessage("down $scanCode")
                 .that(pad.press(KEYCODE_UNKNOWN, KeyDetail(scanCode = scanCode)))
-                .isFalse()
+                .isTrue()
             assertWithMessage("up $scanCode")
                 .that(
                     pad.release(
@@ -269,11 +269,21 @@ class ButtonFlagsCharacterizationTest {
                         downTime = rig.now - 100,
                     )
                 )
-                .isFalse()
+                .isTrue()
         }
+    }
 
-        // Nothing after the switch ran for them: no packet, and no quit combo or emulation check.
-        assertThat(rig.packets).isEmpty()
+    @Test
+    fun `an unknown scan code that comes up while Select is emulated ends that Select like any key up`() {
+        pad.set("hasPaddles", true)
+        pad.press(KEYCODE_BUTTON_L1)
+        pad.press(KEYCODE_BUTTON_START)
+        assertThat(rig.buttons().last()).isEqualTo(BACK_FLAG)
+
+        pad.release(KEYCODE_UNKNOWN, KeyDetail(scanCode = 0x2c8), downTime = rig.now - 100)
+
+        // The emulation check after the switch ran for the key, and the packet went out.
+        assertThat(rig.buttons().last()).isEqualTo(0)
     }
 
     @Test
@@ -295,19 +305,51 @@ class ButtonFlagsCharacterizationTest {
     }
 
     @Test
-    fun `a key that goes down again while it is held sends its packet again`() {
+    fun `a key that goes down again while it is held sends no packet`() {
         pad.press(KEYCODE_BUTTON_A)
         pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 1))
         pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 2))
 
-        assertThat(rig.buttons()).containsExactly(A_FLAG, A_FLAG, A_FLAG)
+        assertThat(rig.buttons()).containsExactly(A_FLAG)
     }
 
     @Test
-    fun `a key up for a button that is not down still sends a packet`() {
+    fun `a key up for a button that is not down sends nothing`() {
         pad.release(KEYCODE_BUTTON_B, downTime = rig.now - 100)
 
-        assertThat(rig.packets).containsExactly(Sent(0, 1, 0))
+        assertThat(rig.packets).isEmpty()
+    }
+
+    @Test
+    fun `a key up for a button that is not down leaves the buttons that are`() {
+        pad.press(KEYCODE_BUTTON_A)
+
+        pad.release(KEYCODE_BUTTON_B, downTime = rig.now - 100)
+        pad.press(KEYCODE_BUTTON_A, KeyDetail(repeat = 1))
+
+        assertThat(rig.buttons()).containsExactly(A_FLAG)
+        assertThat(pad.inputMap).isEqualTo(A_FLAG)
+    }
+
+    @Test
+    fun `a digital trigger sends its packet down and up, and none for a repeat or a spurious up`() {
+        pad.release(KEYCODE_BUTTON_L2, downTime = rig.now - 100)
+        pad.press(KEYCODE_BUTTON_L2)
+        pad.press(KEYCODE_BUTTON_L2, KeyDetail(repeat = 1))
+        rig.advanceBy(100)
+        pad.release(KEYCODE_BUTTON_L2)
+        pad.release(KEYCODE_BUTTON_L2, downTime = rig.now - 100)
+
+        assertThat(rig.packets.map { it.leftTrigger }).containsExactly(-1, 0).inOrder()
+    }
+
+    @Test
+    fun `a repeat that adds a button the pad was not holding is sent`() {
+        pad.press(KEYCODE_BUTTON_A)
+
+        pad.press(KEYCODE_BUTTON_B, KeyDetail(repeat = 1))
+
+        assertThat(rig.buttons()).containsExactly(A_FLAG, A_FLAG or B_FLAG).inOrder()
     }
 
     @Test

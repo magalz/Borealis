@@ -141,16 +141,31 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a negative rate registers with a negative period`() {
+    fun `a rate past the sign bit is read as unsigned and cut at 200`() {
+        val rig = sensorRig()
+        val pad = wake(rig)
+
+        // The host sends the rate as an unsigned short: these are 65531 Hz and 32768 Hz
+        rig.motionState(GYRO, 65531)
+        rig.motionState(ACCEL, 32768)
+
+        assertThat(sensors.log).containsExactly("register 4 5000", "register 1 5000").inOrder()
+        assertThat(storedRate(rig, pad, "gyroReportRateHz")).isEqualTo(200)
+        assertThat(storedRate(rig, pad, "accelReportRateHz")).isEqualTo(200)
+    }
+
+    @Test
+    fun `a rate past the sign bit does not turn the sensor off, it replaces the listener`() {
         val rig = sensorRig()
         wake(rig)
+        rig.motionState(GYRO, 100)
 
-        rig.motionState(GYRO, -5)
-        rig.motionState(ACCEL, -8)
+        rig.motionState(GYRO, 65535)
 
         assertThat(sensors.log)
-            .containsExactly("register 4 -200000", "register 1 -125000")
+            .containsExactly("register 4 10000", "unregister 4", "register 4 5000")
             .inOrder()
+        assertThat(sensors.registrations.map { it.sensor.type }).containsExactly(4)
     }
 
     @Test
@@ -251,16 +266,45 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `only the first pad with the controller number is configured`() {
+    fun `of two pads with the controller number only the first reports each motion type`() {
         val second = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
         val rig = sensorRig()
         wake(rig, padSensors, id = 5)
         wake(rig, second, id = 6)
 
         rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 50)
+
+        assertThat(sensors.log).containsExactly("register 4 10000", "register 1 20000").inOrder()
+        assertThat(Hardware.sensors(second).log).isEmpty()
+    }
+
+    @Test
+    fun `a pad with sensors of its own goes before a pad that borrows the phone's`() {
+        val rig = sensorRig { gamepadMotionSensorsFallbackToDevice = true }
+        // The first pad has no sensors and, as player one, borrows the phone's
+        rig.wake(rig.connectPad(id = 5))
+        wake(rig, padSensors, id = 6)
+
+        rig.motionState(GYRO, 100)
 
         assertThat(sensors.log).containsExactly("register 4 10000")
-        assertThat(Hardware.sensors(second).log).isEmpty()
+        assertThat(Hardware.sensors(rig.phoneSensors).log).isEmpty()
+    }
+
+    @Test
+    fun `sensors spread over two pads of one number report each from the pad that has it`() {
+        val onlyAccel = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER)
+        val onlyGyro = Hardware.sensorManager(Sensor.TYPE_GYROSCOPE)
+        val rig = sensorRig()
+        wake(rig, onlyAccel, id = 5)
+        wake(rig, onlyGyro, id = 6)
+
+        rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 50)
+
+        assertThat(Hardware.sensors(onlyAccel).log).containsExactly("register 1 20000")
+        assertThat(Hardware.sensors(onlyGyro).log).containsExactly("register 4 10000")
     }
 
     @Test
@@ -387,16 +431,17 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a first reading of all zeros is taken for a repeat and dropped`() {
+    fun `a first reading of all zeros is sent, and the zeros that follow are repeats`() {
         val rig = sensorRig()
         wake(rig)
         rig.motionState(ACCEL, 100)
 
         sensors.deliver(Sensor.TYPE_ACCELEROMETER, 0f, 0f, 0f)
+        sensors.deliver(Sensor.TYPE_ACCELEROMETER, 0f, 0f, 0f)
         sensors.deliver(Sensor.TYPE_ACCELEROMETER, 0f, 0f, 1f)
         sensors.deliver(Sensor.TYPE_ACCELEROMETER, 0f, 0f, 0f)
 
-        assertThat(rig.connection.motions.map { it.z }).containsExactly(1f, 0f).inOrder()
+        assertThat(rig.connection.motions.map { it.z }).containsExactly(0f, 1f, 0f).inOrder()
     }
 
     @Test
@@ -708,7 +753,42 @@ class MotionSensorsTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `disabling after a stop still sends the stop of the gyroscope`() {
+    fun `when the pad that reports the motion goes away the next pad of the number takes over`() {
+        val second = Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)
+        val rig = sensorRig()
+        val first = wake(rig, padSensors, id = 5)
+        wake(rig, second, id = 6)
+        rig.motionState(GYRO, 100)
+        rig.motionState(ACCEL, 50)
+
+        rig.handler.onInputDeviceRemoved(first.id)
+        rig.awaitBackground()
+
+        // The host asked once, and does not ask again: the pad left holds the rates
+        assertThat(sensors.registrations).isEmpty()
+        assertThat(Hardware.sensors(second).log)
+            .containsExactly("register 1 20000", "register 4 10000")
+            .inOrder()
+    }
+
+    @Test
+    fun `a pad that goes away without reporting the motion leaves the pad that does as it is`() {
+        val rig = sensorRig()
+        wake(rig, padSensors, id = 5)
+        wake(rig, Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER), id = 6)
+        val third = wake(rig, Hardware.sensorManager(Sensor.TYPE_GYROSCOPE), id = 7)
+        rig.motionState(GYRO, 100)
+        val log = sensors.log.toList()
+
+        rig.handler.onInputDeviceRemoved(third.id)
+        rig.awaitBackground()
+
+        assertThat(log).containsExactly("register 4 10000")
+        assertThat(sensors.log).isEqualTo(log)
+    }
+
+    @Test
+    fun `disabling after a stop sends nothing and unregisters nothing again`() {
         val rig = sensorRig()
         wake(rig)
         rig.motionState(GYRO, 100)
@@ -716,7 +796,20 @@ class MotionSensorsTest : FeedbackTestBase() {
 
         rig.handler.disableSensors()
 
-        assertThat(rig.connection.motions).containsExactly(Motion(0, GYRO, 0f, 0f, 0f))
+        assertThat(rig.connection.motions).isEmpty()
+        assertThat(sensors.log).containsExactly("register 4 10000", "unregister 4").inOrder()
+    }
+
+    @Test
+    fun `a capture after a stop sends no stop of the gyroscope, since the sensors are gone`() {
+        val rig = sensorRig()
+        wake(rig)
+        rig.motionState(GYRO, 100)
+        rig.handler.stop()
+
+        rig.handler.setCaptured(true)
+
+        assertThat(rig.connection.motions).isEmpty()
     }
 
     // ---- what the pad reports on arrival

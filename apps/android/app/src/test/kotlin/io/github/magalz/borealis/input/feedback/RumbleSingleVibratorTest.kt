@@ -10,9 +10,10 @@ import org.robolectric.annotation.Config
 /**
  * A pad that has one vibrator, or that the phone's vibrator stands in for: the two motors become
  * one amplitude, 80% of the low motor's high byte plus 33% of the high motor's, cut at 255, and
- * truncated to an int. A vibrator without amplitude control gets the same amplitude as a duty cycle
- * of 20 ms. What the vibrator is handed depends on the Android version: the media usage of
- * `VibrationAttributes` from Android 13, a game `AudioAttributes` before it.
+ * truncated to an int, but at least 1 while a motor is not zero. A vibrator without amplitude
+ * control gets the same amplitude as a duty cycle of 20 ms. What the vibrator is handed depends on
+ * the Android version: the media usage of `VibrationAttributes` from Android 13, a game
+ * `AudioAttributes` before it.
  */
 abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     /** What a vibrator is handed for a one-shot of [amplitude]. */
@@ -79,21 +80,14 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     }
 
     @Test
-    fun `an amplitude that truncates to zero cancels even when the motors are not zero`() {
+    fun `an amplitude that truncates to zero is raised to 1 while a motor is not zero`() {
         val rig = padWithOneVibrator()
 
-        rig.rumble(0, 0x0100) // 0.33
-        rig.rumble(0x0100, 0) // 0.8
-        rig.rumble(0, 0x0300) // 0.99
-        rig.rumble(0x00FF, 0x00FF)
-
-        assertThat(Hardware.calls(padVibrator))
-            .containsExactly(
-                VibratorCall.Cancel,
-                VibratorCall.Cancel,
-                VibratorCall.Cancel,
-                VibratorCall.Cancel,
-            )
+        assertThat(amplitudeOf(rig, 0, 0x0100)).isEqualTo(oneShot(1)) // 0.33
+        assertThat(amplitudeOf(rig, 0x0100, 0)).isEqualTo(oneShot(1)) // 0.8
+        assertThat(amplitudeOf(rig, 0, 0x0300)).isEqualTo(oneShot(1)) // 0.99
+        assertThat(amplitudeOf(rig, 0x00FF, 0x00FF)).isEqualTo(oneShot(1)) // high bytes at zero
+        assertThat(amplitudeOf(rig, 0, 0x0001)).isEqualTo(oneShot(1))
     }
 
     @Test
@@ -299,6 +293,27 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
     }
 
     @Test
+    fun `a motor that is not zero is not scaled down to zero by the fallback strength`() {
+        val results = mutableListOf<List<VibratorCall>>()
+        for ((low, high) in listOf(0x0001 to 0, 0 to 0x0001, 0x0001 to 0x0001)) {
+            val phone = Hardware.vibrator()
+            val rig =
+                rig(phoneVibrator = phone) {
+                    vibrateFallbackToDevice = true
+                    vibrateFallbackToDeviceStrength = 50
+                }
+            rig.wake(rig.connectPad())
+            rig.rumble(low, high)
+            results += Hardware.calls(phone).toList()
+        }
+
+        // 1 * 50 / 100 is 0, which would cancel the phone
+        assertThat(results)
+            .containsExactly(listOf(oneShot(1)), listOf(oneShot(1)), listOf(oneShot(1)))
+            .inOrder()
+    }
+
+    @Test
     fun `a fallback strength of zero cancels the phone`() {
         val phone = Hardware.vibrator()
         val rig =
@@ -309,6 +324,21 @@ abstract class RumbleSingleVibratorContract : FeedbackTestBase() {
         rig.wake(rig.connectPad())
 
         rig.rumble(0xFFFF, 0xFFFF)
+
+        assertThat(Hardware.calls(phone)).containsExactly(VibratorCall.Cancel)
+    }
+
+    @Test
+    fun `a fallback strength of zero cancels the phone for a weak motor too`() {
+        val phone = Hardware.vibrator()
+        val rig =
+            rig(phoneVibrator = phone) {
+                vibrateFallbackToDevice = true
+                vibrateFallbackToDeviceStrength = 0
+            }
+        rig.wake(rig.connectPad())
+
+        rig.rumble(0x0001, 0x0001)
 
         assertThat(Hardware.calls(phone)).containsExactly(VibratorCall.Cancel)
     }

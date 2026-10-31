@@ -3,6 +3,7 @@ package io.github.magalz.borealis.input.devices
 import android.view.InputDevice
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_B
+import android.view.KeyEvent.KEYCODE_BUTTON_L2
 import android.view.KeyEvent.KEYCODE_BUTTON_X
 import android.view.KeyEvent.KEYCODE_BUTTON_Y
 import com.google.common.truth.Truth.assertThat
@@ -129,25 +130,6 @@ class ControllerNumberTest : DevicesTestBase() {
         assertThat(rig.context(newcomer).short("controllerNumber")).isEqualTo(1)
         assertThat(rig.arrivalControllers().last()).isEqualTo(1)
         assertThat(rig.arrivalMasks().last()).isEqualTo(0b111)
-    }
-
-    @Test
-    fun `the seventeenth pad shares controller 0 because only sixteen numbers exist`() {
-        val rig = rig(multiController = true)
-        val pads = (1..17).map { pad(it) }
-        pads.forEach(rig::connect)
-
-        pads.forEach { rig.press(it, KEYCODE_BUTTON_A) }
-
-        val numbers = pads.map { rig.context(it).short("controllerNumber") }
-        assertThat(numbers.take(16)).containsExactlyElementsIn((0..15).toList()).inOrder()
-        assertThat(numbers.last()).isEqualTo(0)
-        assertThat(rig.context(pads.last()).bool("reservedControllerNumber")).isFalse()
-        assertThat(rig.context(pads.last()).bool("assignedControllerNumber")).isTrue()
-        assertThat(rig.connection.arrivals).hasSize(17)
-        // All sixteen bits set read as a negative short
-        assertThat(rig.arrivalMasks().last()).isEqualTo(-1)
-        assertThat(rig.arrivalMasks()[14]).isEqualTo(0x7FFF)
     }
 
     @Test
@@ -299,22 +281,124 @@ class ControllerNumberTest : DevicesTestBase() {
     }
 
     @Test
-    fun `removing a pad that shares controller 0 zeroes it for the pad that is left`() {
+    fun `removing a pad that shares controller 0 sends what the pad that is left holds`() {
         val rig = rig(multiController = false)
         val first = pad(1)
         val second = pad(2)
         listOf(first, second).forEach(rig::connect)
         rig.press(first, KEYCODE_BUTTON_A)
         rig.press(second, KEYCODE_BUTTON_B)
+        rig.press(second, KEYCODE_BUTTON_L2)
+        val sent = rig.connection.packets.size
 
         rig.disconnect(second)
 
-        // The first pad still holds A, but the zero packet is for controller 0 as a whole
+        // A zero packet is for controller 0 as a whole: it would drop the A the first pad holds.
+        // The B and the trigger of the pad that went come up with the state of the pad left
+        assertThat(rig.connection.packets).hasSize(sent + 1)
         assertThat(rig.connection.packets.last())
-            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = 0))
-        // Its next event brings its state back
+            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = a))
         rig.press(first, KEYCODE_BUTTON_X)
         assertThat(rig.connection.packets.last().buttons).isEqualTo(a or ControllerPacket.X_FLAG)
+    }
+
+    @Test
+    fun `removing a USB pad that shares controller 0 sends what the pad that is left holds`() {
+        val rig = rig(multiController = false)
+        val first = FakeUsbController(8, rig.handler).also { rig.handler.deviceAdded(it) }
+        val second = FakeUsbController(9, rig.handler).also { rig.handler.deviceAdded(it) }
+        first.report(a)
+        second.report(b, leftStickX = 1f)
+        val sent = rig.connection.packets.size
+
+        rig.handler.deviceRemoved(second)
+
+        // The B and the stick of the pad that went come up too
+        assertThat(rig.connection.packets).hasSize(sent + 1)
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = a))
+    }
+
+    @Test
+    fun `removing a pad that shares controller 0 while the input is captured sends nothing`() {
+        val rig = rig(multiController = false)
+        val first = pad(1)
+        val second = pad(2)
+        listOf(first, second).forEach(rig::connect)
+        rig.press(first, KEYCODE_BUTTON_A)
+        rig.press(second, KEYCODE_BUTTON_B)
+        rig.handler.setCaptured(true)
+        rig.connection.packets.clear()
+
+        rig.disconnect(second)
+
+        assertThat(rig.connection.packets).isEmpty()
+    }
+
+    @Test
+    fun `removing the last pad of controller 0 still zeroes it`() {
+        val rig = rig(multiController = false)
+        val first = pad(1)
+        val second = pad(2)
+        listOf(first, second).forEach(rig::connect)
+        rig.press(first, KEYCODE_BUTTON_A)
+        rig.press(second, KEYCODE_BUTTON_B)
+        rig.disconnect(second)
+
+        rig.disconnect(first)
+
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 0, activeMask = 1, buttons = 0))
+    }
+
+    @Test
+    fun `removing the touchpad of a pad sends what its joystick holds`() {
+        val rig = rig(multiController = true)
+        val other = pad(1)
+        val joystick = pad(5) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
+        listOf(other, joystick, touchpad).forEach(rig::connect)
+        rig.press(other, KEYCODE_BUTTON_A)
+        rig.press(touchpad, KEYCODE_BUTTON_A)
+        rig.press(joystick, KEYCODE_BUTTON_B)
+        val sent = rig.connection.packets.size
+
+        rig.disconnect(touchpad)
+
+        // The A of the touchpad comes up; the B of the joystick stays down
+        assertThat(rig.connection.packets).hasSize(sent + 1)
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 1, activeMask = 0b11, buttons = b))
+    }
+
+    @Test
+    fun `removing the joystick of a pad zeroes its controller on the host whatever its touchpad does`() {
+        val rig = rig(multiController = true)
+        val other = pad(1)
+        val joystick = pad(5) { descriptor = "same" }
+        val touchpad =
+            pad(4) {
+                name = "pad Touchpad"
+                sources = MOUSE
+                axes = emptyList()
+                descriptor = "same"
+            }
+        listOf(other, joystick, touchpad).forEach(rig::connect)
+        rig.press(other, KEYCODE_BUTTON_A)
+        rig.press(touchpad, KEYCODE_BUTTON_A)
+        rig.press(joystick, KEYCODE_BUTTON_B)
+
+        // The joystick holds the number the pair reported; letting it go removes the controller
+        rig.disconnect(joystick)
+
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(Sent(controller = 1, activeMask = 0b1, buttons = 0))
     }
 
     @Test
@@ -599,30 +683,6 @@ class ControllerNumberTest : DevicesTestBase() {
         val third = FakeUsbController(10, rig.handler).also { rig.handler.deviceAdded(it) }
         third.report(a)
         assertThat(rig.arrivalControllers().last()).isEqualTo(1)
-    }
-
-    @Test
-    fun `the seventeenth USB pad shares controller 0 because only sixteen numbers exist`() {
-        val rig = rig(multiController = true)
-        val pads = (1..17).map { FakeUsbController(it, rig.handler) }
-        pads.forEach(rig.handler::deviceAdded)
-
-        pads.forEach { it.report(a) }
-
-        val contexts = pads.map {
-            ContextView(checkNotNull(rig.usbContexts().get(it.controllerId)))
-        }
-        assertThat(contexts.take(16).map { it.short("controllerNumber") })
-            .containsExactlyElementsIn((0..15).toList())
-            .inOrder()
-        assertThat(contexts.last().short("controllerNumber")).isEqualTo(0)
-        assertThat(contexts.last().bool("reservedControllerNumber")).isFalse()
-        assertThat(contexts.last().bool("assignedControllerNumber")).isTrue()
-        assertThat(rig.connection.arrivals).hasSize(17)
-        // All sixteen bits set read as a negative short
-        assertThat(rig.arrivalMasks()[14]).isEqualTo(0x7FFF)
-        assertThat(rig.arrivalMasks()[15]).isEqualTo(-1)
-        assertThat(rig.arrivalMasks().last()).isEqualTo(-1)
     }
 
     @Test

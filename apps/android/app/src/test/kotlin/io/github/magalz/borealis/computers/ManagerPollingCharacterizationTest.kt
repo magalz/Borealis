@@ -27,7 +27,10 @@ import org.robolectric.shadows.ShadowSystemClock
  * polling period is real time (one and a half seconds), so a test that needs several polls takes
  * several seconds; every wait ends on what the service does, not on a fixed delay.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the two
+ * about a host that is offline (S12-15), which pin the fixed behaviour: the listener hears that a
+ * host is offline once, and an offline poll does not keep the state of the host past the time to
+ * live.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerPollingCharacterizationTest {
@@ -54,6 +57,10 @@ class ManagerPollingCharacterizationTest {
     /** The warnings that say how many polls of [name] failed in a row. */
     private fun failures(name: String): List<String> =
         log.lines().filter { it.startsWith("WARNING: $name is offline (try ") }
+
+    /** How many polls of [name] have started: the service logs one line for each. */
+    private fun polls(name: String): Int =
+        log.lines().count { it.startsWith("INFO: Starting parallel poll for $name (") }
 
     @Test
     fun `starting polling reports each host first, then polls it and saves what it learned`() {
@@ -271,7 +278,7 @@ class ManagerPollingCharacterizationTest {
     }
 
     @Test
-    fun `a host that was online is offline after four polls in a row that failed`() {
+    fun `a host that was online is told offline once after four polls in a row that failed, and online when it answers`() {
         val host = rig.host()
         val flaky = Flaky(host, hostInfo(UUID_1))
         rig.start()
@@ -284,18 +291,60 @@ class ManagerPollingCharacterizationTest {
         flaky.down = true
         val since = updates.events.size
         updates.awaitState(OFFLINE, since)
+        assertThat(details.state).isEqualTo(OFFLINE)
+
+        // The host stays down for more polls than it takes to declare it offline, and the
+        // listener hears nothing of them: its state does not change.
+        val declared = polls("DEN-PC")
+        awaitUntil("polls of the host that is down") { polls("DEN-PC") >= declared + MORE_POLLS }
+        flaky.down = false
+        val seen = updates.events.size
+        updates.awaitOtherThan(caller, ONLINE, seen)
         rig.binder.stopPolling()
 
-        assertThat(failures("DEN-PC"))
+        assertThat(failures("DEN-PC").take(3))
             .containsExactly(
                 "WARNING: DEN-PC is offline (try 0)",
                 "WARNING: DEN-PC is offline (try 1)",
                 "WARNING: DEN-PC is offline (try 2)",
             )
             .inOrder()
-        assertThat(updates.events.drop(since).map { it.state }.filter { it != ONLINE })
-            .containsExactly(OFFLINE)
-        assertThat(details.state).isEqualTo(OFFLINE)
+        assertThat(updates.events.drop(since).filter { it.state == OFFLINE }).hasSize(1)
+        assertThat(updates.events.drop(seen).map { it.state }.toSet()).containsExactly(ONLINE)
+        assertThat(details.state).isEqualTo(ONLINE)
+    }
+
+    @Test
+    fun `a host that stayed offline is unknown again when polling starts thirty seconds after its last answer`() {
+        val host = rig.host()
+        val flaky = Flaky(host, hostInfo(UUID_1))
+        rig.start()
+        rig.binder.addComputerBlocking(ComputerDetails().also { it.manualAddress = host.address })
+        val first = Updates()
+        rig.binder.startPolling(first)
+        first.awaitOtherThan(caller, ONLINE)
+        awaitAsleep()
+
+        // No poll answers from here on. The host is declared offline twenty seconds after its
+        // last answer.
+        flaky.down = true
+        awaitUntil("a failed poll") { failures("DEN-PC").isNotEmpty() }
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(OFFLINE_AFTER_S))
+        first.awaitState(OFFLINE)
+        awaitAsleep()
+        rig.binder.stopPolling()
+
+        // Twenty seconds after that it is forty after the last answer: only an answer keeps the
+        // state of a host, not an offline poll.
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(OFFLINE_AFTER_S))
+        val second = Updates()
+        rig.binder.startPolling(second)
+
+        assertThat(second.on(caller).single().state).isEqualTo(UNKNOWN)
+        assertThat(log.lines()).contains("INFO: Timing out polled state for DEN-PC")
+        // It is a change, so the Library hears it when the host is declared offline again.
+        second.awaitOtherThan(caller, OFFLINE)
+        rig.binder.stopPolling()
     }
 
     @Test
@@ -429,5 +478,7 @@ class ManagerPollingCharacterizationTest {
         const val LONG_AGO_S = 100L
         const val TTL_MS = 30_000L
         const val SETTLE_MS = 500L
+        const val MORE_POLLS = 5
+        const val OFFLINE_AFTER_S = 20L
     }
 }

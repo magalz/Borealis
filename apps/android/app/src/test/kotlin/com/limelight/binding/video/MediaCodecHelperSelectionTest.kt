@@ -2,6 +2,7 @@ package com.limelight.binding.video
 
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.os.Build
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -439,6 +440,52 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
                 codec("c2.vendor.plain") { profiles = listOf(high) },
             )
             probable(helper, profile = high)
+        }
+
+        rows.verify()
+    }
+
+    @Test
+    fun `the probable safe decoder reads the capabilities of a decoder once per round`() {
+        val rows = Rows()
+
+        rows.check("a decoder with the feature is read once", 1) {
+            val helper = helper()
+            val reads = AtomicInteger()
+            installCodecs(
+                codec("c2.vendor.low") {
+                    lowLatency = true
+                    capabilityReads = reads
+                }
+            )
+            probable(helper)
+            reads.get()
+        }
+        rows.check("a decoder without it is read once in each of the two rounds", 2) {
+            val helper = helper()
+            val reads = AtomicInteger()
+            installCodecs(codec("c2.vendor.plain") { capabilityReads = reads })
+            probable(helper)
+            reads.get()
+        }
+        rows.check("Android 10 does not look at the feature, so one read in each round", 2) {
+            val helper = helper(DeviceBuild(sdk = Build.VERSION_CODES.Q))
+            val reads = AtomicInteger()
+            installCodecs(codec("c2.vendor.plain") { capabilityReads = reads })
+            probable(helper)
+            reads.get()
+        }
+        rows.check("a required profile does not read them again", 1) {
+            val helper = helper()
+            val reads = AtomicInteger()
+            installCodecs(
+                codec("c2.vendor.low") {
+                    lowLatency = true
+                    capabilityReads = reads
+                }
+            )
+            probable(helper, profile = CodecProfileLevel.AVCProfileHigh)
+            reads.get()
         }
 
         rows.verify()

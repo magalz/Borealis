@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertWithMessage
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Rule
 import org.junit.rules.ExternalResource
 import org.robolectric.Shadows.shadowOf
@@ -285,6 +286,9 @@ class CodecBuilder(private val name: String) {
     var canonicalName: String? = null
     var brokenCapabilities = false
 
+    /** Counts every read of the capabilities of the decoder, which is what the framework asks. */
+    var capabilityReads: AtomicInteger? = null
+
     /**
      * Sets more keys of the capabilities format, or replaces the ones set here (the size, block and
      * rate ranges, the performance points), after all of them were set.
@@ -350,8 +354,10 @@ class CodecBuilder(private val name: String) {
                 .setCapabilities(*mimes.map { capabilities(it) }.toTypedArray())
                 .build()
         canonicalName?.let { ReflectionHelpers.setField(info, "mCanonicalName", it) }
-        if (brokenCapabilities) {
-            // A decoder that lists its types but throws when asked for their capabilities.
+        val reads = capabilityReads
+        if (brokenCapabilities || reads != null) {
+            // A decoder that counts the reads of its capabilities, or lists its types but throws
+            // when asked for their capabilities.
             val real =
                 ReflectionHelpers.getField<Map<String, MediaCodecInfo.CodecCapabilities>>(
                     info,
@@ -361,8 +367,11 @@ class CodecBuilder(private val name: String) {
                 info,
                 "mCaps",
                 object : HashMap<String, MediaCodecInfo.CodecCapabilities>(real) {
-                    override fun get(key: String): MediaCodecInfo.CodecCapabilities? =
-                        throw IllegalArgumentException("buggy decoder")
+                    override fun get(key: String): MediaCodecInfo.CodecCapabilities? {
+                        reads?.incrementAndGet()
+                        if (brokenCapabilities) throw IllegalArgumentException("buggy decoder")
+                        return super.get(key)
+                    }
                 },
             )
         }

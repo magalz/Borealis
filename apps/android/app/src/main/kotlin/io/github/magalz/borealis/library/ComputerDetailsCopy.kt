@@ -41,9 +41,7 @@ internal fun ComputerDetails.withListFrom(previous: ComputerDetails?): ComputerD
     return snapshot().also { it.rawAppList = list }
 }
 
-/** The tuple constructor rejects a port that is not positive: such a tuple is shared as it is. */
-private fun AddressTuple?.copied(): AddressTuple? =
-    if (this == null || port <= 0) this else AddressTuple(address, port)
+private fun AddressTuple?.copied(): AddressTuple? = this?.let { AddressTuple(address, port) }
 
 /** These details, or a copy of them with [list] when they have no app list and [list] is set. */
 internal fun ComputerDetails.withListIfNone(list: String?): ComputerDetails =

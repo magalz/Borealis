@@ -13,7 +13,8 @@ import org.robolectric.annotation.Config
  * when the pad arrives, then every 120 seconds, and only when the status or the capacity changed
  * since the last report. The status becomes the host's battery state, and the capacity its
  * percentage from 0 to 100, rounded; 255 means unknown. An external pad that has no battery says so
- * once; a pad that is not external claims no battery, and says nothing.
+ * once, unless another external pad shares its number: the host keeps one battery for the number,
+ * and the pad that has one owns it. A pad that is not external claims no battery, and says nothing.
  */
 @RunWith(RobolectricTestRunner::class)
 class BatteryReportTest : FeedbackTestBase() {
@@ -203,6 +204,30 @@ class BatteryReportTest : FeedbackTestBase() {
         assertThat(rig.connection.arrivals.map { it.controller }).containsExactly(0, 0)
         assertThat(events())
             .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
+    }
+
+    @Test
+    fun `a pad without a battery does not overwrite the battery of a pad that shares its number`() {
+        val rig = rig()
+        padWith(rig, battery(), id = 5)
+
+        // Both pads are controller 0, which has one battery on the host
+        padWith(rig, battery(present = false), id = 6)
+        poll(rig)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
+    }
+
+    @Test
+    fun `a pad with a battery reports it after a pad without one that shares its number`() {
+        val rig = rig()
+        padWith(rig, battery(present = false), id = 5)
+
+        padWith(rig, battery(), id = 6)
+
+        assertThat(events().last())
+            .isEqualTo(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
     }
 
     @Test

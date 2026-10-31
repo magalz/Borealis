@@ -482,12 +482,19 @@ class ComputerManagerService : Service() {
             }
         }
 
+    // A host without an id is left out of the list, so that no host in it is without one. (The Java
+    // listed it, and a later add threw a NullPointerException on its missing id.)
     private fun addTuple(details: ComputerDetails) {
+        val uuid = details.uuid
+        if (uuid == null) {
+            LimeLog.warning("Leaving a host out of the list: it has no id")
+            return
+        }
+
         synchronized(pollingTuples) {
             for (tuple in pollingTuples) {
-                // Check if this is the same computer. The Java called equals on the saved id, so
-                // a saved computer without one threw a NullPointerException.
-                if (checkNotNull(tuple.computer.uuid) == details.uuid) {
+                // Check if this is the same computer
+                if (tuple.computer.uuid == uuid) {
                     // Update the saved computer with potentially new details
                     tuple.computer.update(details)
 
@@ -519,11 +526,13 @@ class ComputerManagerService : Service() {
 
         // We cannot use runPoll() here because it will attempt to persist the state of the machine
         // in the database, which would be bad because we don't have our pinned cert loaded yet.
-        if (pollComputer(fakeDetails)) {
-            // See if we have record of this PC to pull its pinned cert
+        val answered = pollComputer(fakeDetails)
+        if (answered) {
+            // See if we have record of this PC to pull its pinned cert. The poll set the id of
+            // fakeDetails, so a saved computer without one is not this PC.
             synchronized(pollingTuples) {
                 for (tuple in pollingTuples) {
-                    if (checkNotNull(tuple.computer.uuid) == fakeDetails.uuid) {
+                    if (tuple.computer.uuid == fakeDetails.uuid) {
                         fakeDetails.serverCert = tuple.computer.serverCert
                         break
                     }
@@ -535,8 +544,10 @@ class ComputerManagerService : Service() {
             runPoll(fakeDetails, true, 0)
         }
 
-        // If the machine is reachable, it was successful
-        if (fakeDetails.state == ComputerDetails.State.ONLINE) {
+        // If a poll got an answer and the poll that saves the host did not find it offline, it was
+        // successful. The state that the caller handed over says nothing: the Java read it, and
+        // listed a host that never answered if it was handed over as online.
+        if (answered && fakeDetails.state == ComputerDetails.State.ONLINE) {
             LimeLog.info("New PC (${fakeDetails.name}) is UUID ${fakeDetails.uuid}")
 
             // Start a polling thread for this machine
@@ -552,26 +563,29 @@ class ComputerManagerService : Service() {
             return
         }
 
-        // Remove it from the database
-        dbManager.deleteComputer(computer)
+        // The reference goes back on every way out, a throw of the database included.
+        try {
+            // Remove it from the database
+            dbManager.deleteComputer(computer)
 
-        synchronized(pollingTuples) {
-            // Remove the computer from the computer list
-            for (tuple in pollingTuples) {
-                if (checkNotNull(tuple.computer.uuid) == computer.uuid) {
-                    val polling = tuple.thread
-                    if (polling != null) {
-                        // Interrupt the thread on this entry
-                        polling.interrupt()
-                        tuple.thread = null
+            synchronized(pollingTuples) {
+                // Remove the computer from the computer list
+                for (tuple in pollingTuples) {
+                    if (tuple.computer.uuid == computer.uuid) {
+                        val polling = tuple.thread
+                        if (polling != null) {
+                            // Interrupt the thread on this entry
+                            polling.interrupt()
+                            tuple.thread = null
+                        }
+                        pollingTuples.remove(tuple)
+                        break
                     }
-                    pollingTuples.remove(tuple)
-                    break
                 }
             }
+        } finally {
+            releaseLocalDatabaseReference()
         }
-
-        releaseLocalDatabaseReference()
     }
 
     // The count is checked and raised in one step: a release that closes the database cannot come

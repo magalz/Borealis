@@ -251,6 +251,31 @@ class ShortcutHelperCharacterizationTest {
     }
 
     @Test
+    fun `disabling a host disables the shortcut of an app whose id is negative`() {
+        // The host builds an app id as abs((int32_t) crc32), and abs(INT32_MIN) stays negative.
+        helper.createPinnedGameShortcut(computer(), NvApp("Hades II", Int.MIN_VALUE, true), null)
+        helper.createPinnedGameShortcut(computer(), NvApp("Steam", 7, false), null)
+        pin("uuid-2")
+
+        helper.disableComputerShortcut(computer(), "PC deleted")
+
+        assertThat(disabledIds()).containsExactly("uuid-1-2147483648", "uuid-17")
+    }
+
+    @Test
+    fun `disabling a host leaves a shortcut whose app id part is a lone minus or not a number`() {
+        pin("uuid-1-")
+        pin("uuid-1--5")
+        pin("uuid-1-5-")
+        // Not an app id: the ids of the apps are written with the ASCII digits.
+        pin("uuid-1-٥")
+
+        helper.disableComputerShortcut(computer(), "PC deleted")
+
+        assertThat(disabledIds()).isEmpty()
+    }
+
+    @Test
     fun `disabling a host that has no shortcut changes nothing`() {
         pin("uuid-2")
 

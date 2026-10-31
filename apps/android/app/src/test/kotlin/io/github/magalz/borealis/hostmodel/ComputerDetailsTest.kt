@@ -11,7 +11,12 @@ import io.github.magalz.borealis.nativecore.HostCaps
 import io.github.magalz.borealis.nativecore.HostFamily
 import org.junit.Test
 
-/** Characterizes the host details of the host model as they were before the Kotlin conversion. */
+/**
+ * Characterizes the host details of the host model as they were before the Kotlin conversion,
+ * except the update tests that pin the fixed behaviour: an update keeps the app list and the name
+ * that the new details lack (S12-01) and replaces the remote tuple instead of writing its port
+ * (S12-02).
+ */
 class ComputerDetailsTest {
     private fun tuple(address: String, port: Int = 47989) = AddressTuple(address, port)
 

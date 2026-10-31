@@ -7,7 +7,10 @@ import java.util.Objects
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
-/** Characterizes the address tuple of the host model as it was before the Kotlin conversion. */
+/**
+ * Characterizes the address tuple of the host model as it was before the Kotlin conversion, except
+ * its port, which is final since S12-02.
+ */
 class AddressTupleTest {
     @Test
     fun `the constructor keeps the address and the port`() {

@@ -376,7 +376,7 @@ class ComputerManagerService : Service() {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The Java called getAllNetworks, which is deprecated since Android 12 and is still the call
     // that finds the network under a VPN. It unlocked the network state without a finally, so a
     // call that threw kept the lock for good, and the process bound to its network.
@@ -959,7 +959,7 @@ class ComputerManagerService : Service() {
             return null
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+        // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
         // The stack traces go to the standard error stream, as in the inherited Java. Logging them
         // instead is a behaviour change.
         @Suppress(

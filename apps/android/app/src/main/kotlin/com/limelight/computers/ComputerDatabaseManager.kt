@@ -78,7 +78,7 @@ class ComputerDatabaseManager(c: Context) {
     // A host without a name or without an id is refused, with a log: the name column is NOT NULL,
     // so the insert would throw, and a row without an id could not be deleted by its id.
     //
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The JSON failure is still rethrown as a RuntimeException, and the stack trace of a
     // certificate that cannot be encoded still goes to the standard error stream. Logging it
     // instead is a behaviour change.

@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.database.sqlite.SQLiteException
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -769,7 +770,16 @@ class ComputerManagerService : Service() {
             return
         }
 
-        for (computer in dbManager.getAllComputers()) {
+        // A database that cannot be read must not stop the service: it starts with no hosts.
+        val savedComputers =
+            try {
+                dbManager.getAllComputers()
+            } catch (e: SQLiteException) {
+                LimeLog.severe("Could not read the saved hosts: ${e.message}")
+                emptyList()
+            }
+
+        for (computer in savedComputers) {
             // Add tuples for each computer
             addTuple(computer)
         }

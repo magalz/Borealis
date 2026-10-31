@@ -109,8 +109,8 @@ open class NvConnection(
     // lock (stream.keyframe)
     @Volatile private var connected = false
 
-    // BOREALIS: true while this connection holds the place of connectionAllowed: from the acquire of
-    // its start until stop(), or a start that ends without a stream, gives it back (host.launch)
+    // BOREALIS: true while this connection holds the place of connectionAllowed, from the acquire
+    // of its start until stop(), or a start that ends without a stream, gives it back (host.launch)
     private val holdsPlace = AtomicBoolean(false)
 
     // BOREALIS: the app that this start asks for: the configured one, or the one that the lookup by

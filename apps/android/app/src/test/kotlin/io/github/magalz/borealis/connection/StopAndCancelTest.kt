@@ -97,7 +97,9 @@ class StopAndCancelTest {
         assertThat(rig.permits()).isEqualTo(1)
     }
 
-    /** The start gave its place back when the native connection failed: the stop has none to give. */
+    /**
+     * The start gave its place back when the native connection failed: the stop has none to give.
+     */
     @Test
     fun `the stop of a start whose native connection failed gives no place back`() {
         ShadowRecordingBridge.onStartConnection = { -1 }
@@ -264,7 +266,9 @@ class StopAndCancelTest {
         assertThat(rig.permits()).isEqualTo(1)
     }
 
-    /** The place that lets it through is the one of the stream that runs, not one that a stop adds. */
+    /**
+     * The place that lets it through is the one of the stream that runs, not one that a stop adds.
+     */
     @Test
     fun `the stop of a start that waits for the place does not let it through`() {
         val first = rig.connection()
@@ -287,7 +291,9 @@ class StopAndCancelTest {
         assertThat(rig.permits()).isEqualTo(1)
     }
 
-    /** The user left while the host answered `/serverinfo` with an error: nobody is left to tell. */
+    /**
+     * The user left while the host answered `/serverinfo` with an error: nobody is left to tell.
+     */
     @Test
     fun `a start that is cancelled while the host answers with an error tells nothing`() {
         val connection = rig.connection()

@@ -152,7 +152,7 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
                     // A service that is found again replaces its callback in the map, so the old
                     // one is unregistered first, or nothing would unregister it later
                     serviceCallbacks.remove(nsdServiceInfo.serviceName)?.let {
-                        nsdManager.unregisterServiceInfoCallback(it)
+                        unregisterServiceInfoCallback(nsdServiceInfo.serviceName, it)
                     }
 
                     nsdManager.registerServiceInfoCallback(
@@ -176,7 +176,10 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
 
                     val serviceInfoCallback = serviceCallbacks.remove(nsdServiceInfo.serviceName)
                     if (serviceInfoCallback != null) {
-                        nsdManager.unregisterServiceInfoCallback(serviceInfoCallback)
+                        unregisterServiceInfoCallback(
+                            nsdServiceInfo.serviceName,
+                            serviceInfoCallback,
+                        )
                     }
                 }
             }
@@ -219,10 +222,26 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
             }
 
             // Unregister all service info callbacks
-            for (callback in serviceCallbacks.values) {
-                nsdManager.unregisterServiceInfoCallback(callback)
+            for ((serviceName, callback) in serviceCallbacks) {
+                unregisterServiceInfoCallback(serviceName, callback)
             }
             serviceCallbacks.clear()
+        }
+    }
+
+    // The platform forgets a callback on its own thread when its registration fails, and the
+    // failure reaches this agent only afterwards on its executor, so until then the agent can
+    // still hold a callback that the platform refuses to unregister. The callback is gone, which
+    // is all that the caller wants, so that refusal is only logged. The log has the name of the
+    // service and not its addresses.
+    private fun unregisterServiceInfoCallback(
+        serviceName: String?,
+        callback: NsdManager.ServiceInfoCallback,
+    ) {
+        try {
+            nsdManager.unregisterServiceInfoCallback(callback)
+        } catch (e: IllegalArgumentException) {
+            LimeLog.warning("NSD: Service info callback of $serviceName is gone already: ${e.message}")
         }
     }
 

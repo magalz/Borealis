@@ -1104,7 +1104,13 @@ class ControllerHandler(
         sendControllerInputPacket(context, SystemClock.uptimeMillis())
     }
 
-    private fun sendControllerInputPacket(context: GenericControllerContext, eventTime: Long) {
+    // [changed] is false for a key event that left what the pad sends as it was: the chord still
+    // follows the event, and the PC gets no packet for it
+    private fun sendControllerInputPacket(
+        context: GenericControllerContext,
+        eventTime: Long,
+        changed: Boolean = true,
+    ) {
         if (captured) {
             return
         }
@@ -1116,7 +1122,7 @@ class ControllerHandler(
         scheduleMenuChordCheck(context)
 
         // Releasing a button the PC never saw changes nothing for it
-        if (!chord.silent) {
+        if (!chord.silent && changed) {
             transmitControllerInput(context)
         }
 
@@ -1725,6 +1731,10 @@ class ControllerHandler(
             else -> keyCode
         }
     }
+
+    // What a key event can change of what a pad sends: its buttons and its two digital triggers
+    private fun keyState(context: GenericControllerContext) =
+        Triple(context.inputMap, context.leftTrigger, context.rightTrigger)
 
     private fun populateCachedVector(x: Float, y: Float): Vector2d {
         // Reinitialize our cached Vector2d object
@@ -2691,6 +2701,7 @@ class ControllerHandler(
     )
     fun handleButtonUp(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
+        val stateBefore = keyState(context)
 
         var keyCode = handleRemapping(context, event)
         if (keyCode < 0) {
@@ -2908,7 +2919,7 @@ class ControllerHandler(
             }
         }
 
-        sendControllerInputPacket(context, event.eventTime)
+        sendControllerInputPacket(context, event.eventTime, keyState(context) != stateBefore)
 
         if (context.pendingExit && context.inputMap == 0) {
             // All buttons from the quit combo are lifted. Finish the activity now.
@@ -2922,6 +2933,7 @@ class ControllerHandler(
     @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     fun handleButtonDown(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
+        val stateBefore = keyState(context)
 
         // A key that went down while the chrome had the input does nothing until it is let go
         if (captureEnd.began(event.downTime)) {
@@ -3130,10 +3142,10 @@ class ControllerHandler(
         context.inputMap = special.inputMap
         context.emulatingButtonFlags = special.emulatingFlags
 
-        // We don't need to send repeat key down events, but the platform
-        // sends us events that claim to be repeats but they're from different
-        // devices, so we just send them all and deal with some duplicates.
-        sendControllerInputPacket(context, event.eventTime)
+        // A repeat sends nothing when it changes nothing. The platform also sends events that claim
+        // to be repeats but come from different devices: each device has its own context, so its
+        // first event changes that context.
+        sendControllerInputPacket(context, event.eventTime, keyState(context) != stateBefore)
         return true
     }
 

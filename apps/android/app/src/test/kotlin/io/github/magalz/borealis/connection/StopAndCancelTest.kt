@@ -4,8 +4,15 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.NvConnection
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.library.RecordingLog
+import io.github.magalz.borealis.logging.AuditEvent
+import io.github.magalz.borealis.logging.AuditOutcome
+import io.github.magalz.borealis.logging.AuditSink
+import io.github.magalz.borealis.logging.AuditType
+import io.github.magalz.borealis.logging.BorealisAudit
+import io.github.magalz.borealis.logging.Redactor
 import io.github.magalz.borealis.nvhttp.HostReply
 import java.lang.management.ManagementFactory
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Rule
@@ -538,6 +545,35 @@ class StopAndCancelTest {
             .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=false")
             .inOrder()
         assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    /**
+     * The runner of the retries sees the cancel before its first request and ends the launch as
+     * cancelled, which it records: the audit trail must say that the user left, not leave a start
+     * that asked for an app and shows no answer. (A GFE host never reaches the runner, so it
+     * records nothing: the cancel is checked before it.)
+     */
+    @Test
+    fun `a start that is cancelled while a LuminalShine host answers serverinfo records the cancelled launch`() {
+        val trail = CopyOnWriteArrayList<AuditEvent>()
+        BorealisAudit.install(AuditSink { trail += it }, Redactor(), "test")
+        try {
+            val connection = rig.connection()
+            rig.script.onServerInfo = { connection.cancelLaunch() }
+
+            rig.start(connection)
+            awaitStartEnded()
+
+            assertThat(rig.paths()).containsExactly("/serverinfo")
+            assertThat(
+                    trail
+                        .filter { it.type == AuditType.LAUNCH_ATTEMPT }
+                        .map { it.outcome to it.detail }
+                )
+                .containsExactly(AuditOutcome.CANCELLED to "verb=launch result=cancelled")
+        } finally {
+            BorealisAudit.uninstall()
+        }
     }
 
     @Test

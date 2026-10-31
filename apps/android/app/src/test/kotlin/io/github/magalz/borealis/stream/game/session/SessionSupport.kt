@@ -165,6 +165,9 @@ internal class KnownPad(val handler: ControllerHandler, controllerNumber: Short)
                 CONTEXT_ID,
                 mapOf(
                     "controllerNumber" to controllerNumber,
+                    // The handler assigns a number on the first input of a pad, and the host's
+                    // feedback reaches only a pad that has one.
+                    "assignedControllerNumber" to true,
                     "hasRgbLed" to true,
                     // The change of the LED asks the input device for its lights, which a unit test
                     // has not.

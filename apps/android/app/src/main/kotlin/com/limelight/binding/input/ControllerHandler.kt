@@ -253,6 +253,11 @@ class ControllerHandler(
     }
 
     fun disableSensors() {
+        // stop() unregistered the sensors, and a stationary gyro would reach a pad that is gone
+        if (stopped) {
+            return
+        }
+
         inputDeviceContexts.forEachValue { deviceContext -> deviceContext.disableSensors() }
     }
 
@@ -3606,13 +3611,16 @@ class ControllerHandler(
             backgroundThreadHandler.removeCallbacks(enableSensorRunnable)
             backgroundThreadHandler.removeCallbacks(setLedStateRunnable)
 
+            // The listeners go with the registration: nothing is left for disableSensors to stop
             val gyro = gyroListener
             if (gyro != null) {
                 checkNotNull(sensorManager).unregisterListener(gyro)
+                gyroListener = null
             }
             val accel = accelListener
             if (accel != null) {
                 checkNotNull(sensorManager).unregisterListener(accel)
+                accelListener = null
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

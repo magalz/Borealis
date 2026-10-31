@@ -1262,10 +1262,10 @@ device round has not run; its checks are
   type and controller number; C19 (b), the report rate read as an unsigned 16-bit value and capped
   at 200; S12-01, `withListFrom` stays; S12-08 (a) and (b), an app id above `Int.MAX_VALUE` and the
   32-bit `status_code` stay, as intended; G-S2, the audit session is not ended when the user leaves
-  before the connection starts, which the plan had asked for (2026-10-31). No session of the
-  activity can be open there, because `connected` and the start of the audit session happen
-  together, and the audit session is process-wide, so ending it there could only end another
-  activity's session.
+  before the connection starts, which the wave 2 brief had asked for (the wave 2 merge review,
+  2026-10-31). No session of the activity can be open there, because `connected` and the start of
+  the audit session happen together, and the audit session is process-wide, so ending it there
+  could only end another activity's session.
 - **Method.** The fixes followed the [TDD rule](development/tdd.md): the test that pinned the defect
   was changed in a `test:` commit that failed on its assertions, then the `fix:` commit. The merge
   review of batch F noted two exceptions in follow-ups of its reviews: a test that came after its
@@ -1283,8 +1283,11 @@ device round has not run; its checks are
   which were merged before the owner asked for that review on 2026-10-31.
 - **Phase gate.** At `5c364487c`, with the six batches merged: `spotlessCheck detekt lint
   testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis` passed in
-  11 min 29 s, with 4,431 `:app` tests and no failure. The gate of wave 2 passed at `84bb6430d`; a
-  phase gate on `4e1985c6f` is not recorded here.
+  11 min 29 s, with 4,431 `:app` tests and no failure. The gate of wave 2 passed at `84bb6430d`.
+  The full phase gate passed again at `4e1985c6f`, with all the code (the six batches and wave 2):
+  BUILD SUCCESSFUL, 4,451 `:app` tests and no failure. The Roborazzi verify of
+  `:borealis:designsystem`, `:borealis:library`, `:borealis:stream` and `:borealis:settings` also
+  passed at `4e1985c6f`.
 - **What it found for later.** New items are in [Sprint 17](#sprint-17-general-fixes) (Input, Pads,
   Video and the stream screens, and the stream session),
   [Sprint 18](#sprint-18-refactor-of-the-converted-code) (a flaky
@@ -1576,7 +1579,7 @@ facts of both items and added the third item and the open decision. See the
   Controller needs the client to report the Nintendo type, or the host's `gamepad` setting (global
   or per client) set to `switch_pro`.
 
-- **DualSense adaptive triggers.** From Sprint 16 (the plan, 2026-10-30). A host of 26.10 sends
+- **DualSense adaptive triggers.** From Sprint 16 (the owner-approved triage, 2026-10-30). A host of 26.10 sends
   adaptive triggers (control message `0x5503`) for a DualSense, and Borealis drops them: it has no
   handler, so moonlight-common-c puts in one that does nothing
   ([contract, sections 12 and 13](host-contract/luminalshine.md#13-input)). It matters only when the
@@ -1663,13 +1666,19 @@ its reviews found and left for this sprint.
 
 - **A late stop and the next start.** `NvConnection.stop()` reads its bridge flag and calls
   `interruptConnection` outside the `MoonBridge` monitor. In a narrow window, a late stop of an old
-  connection can interrupt the start of the next one. A small lock around the read of the flag and
-  the `interruptConnection` call, in Kotlin, would close it; no native change is needed.
+  connection can interrupt the start of the next one. The wave 2 sessions judged that closing it
+  needs a token on the native side. The merge review thinks that a Kotlin lock, shared by the
+  start's write of `bridgeSetUp` and the stop's read of it and its `interruptConnection`, could
+  close it. Sprint 17 chooses.
 - **A late GFE quit and relaunch.** On a GFE host, a late quit-and-relaunch still sends `/quit`.
 - **A termination just before a Disconnect.** A termination that was dispatched just before a
-  Disconnect can still reach `onFailed`: `connectionTerminated` has no guard for the stop.
-- **`GameGestures` has no consumer left.** C5 removed the `gestures` property of `ControllerHandler`,
-  its only consumer; `Game` still implements the interface (`ui/GameGestures.kt`).
+  Disconnect can still reach `onFailed`: `Game.connectionTerminated` has no `stopRan` guard.
+- **A late `connectionStarted` after the surface is gone.** Before the connection starts, a
+  `connectionStarted` that arrives after `surfaceDestroyed` can open an audit session, which the
+  next `onStop` closes.
+- **`GameGestures` has no production consumer left.** C5 removed the `gestures` property of
+  `ControllerHandler`, its only production consumer; `Game` still implements the interface
+  (`ui/GameGestures.kt`).
 - **The 10-bit masks of `SessionAudit` and `MoonBridge`.** `SessionAudit` (`borealis/host`) keeps its
   own private copy of the 10-bit mask, now `0xAA00` too, and no test ties its masks to `MoonBridge`.
 - **`HDR_CODEC_MODES` and the 4:4:4 modes.** `NvConnection`'s `HDR_CODEC_MODES` (`0x20200`) does not
@@ -2784,16 +2793,16 @@ These are proposals and known issues in the LuminalShine host. The client works
 without them. On 2026-10-31 every item of the table was read again with `gh`, and the owner's pull
 request #226 was added: the states are unchanged, #194, #202, #204 and #205 are closed, the other
 issues, the pull requests #213, #215, #226 and #227 and the discussions #221 to #225 are open, and
-the owner's #237 (from #222) is a draft. The rest of this paragraph was written from the states
-read with `gh` on 2026-10-29. #199, #200 and #203 were merged
+the owner's #237 (from #222) is a draft. #199, #200 and #203 were merged
 on 2026-10-20, and 26.10.0-beta.1 (a prerelease of 2026-10-20) ships them
 (release notes). #194 and #202 are fixed on the host (release notes). On 2026-10-29 the owner
 closed #204 (as a duplicate of #212) and #205 (as fixed), and filed five issues, #216 to #220,
 and five discussions in the Ideas category, #221 to #225, from the findings of Borealis. The
-open ones are #198, #201, #212, #214, #216 to #220 and the owner's pull requests #213, #215 and #227
-(#198 and #201 were checked again on 2026-10-29 and are still open). The rows add what the Sprint 15 round saw
-on 2026-10-29 and 2026-10-30 ([device-validation section 20](development/device-validation.md#20-results-sprint-15));
-those observations were not read from GitHub, so the states stay as of 2026-10-29, except #227, read on 2026-10-30 (open).
+open ones are #198, #201, #212, #214, #216 to #220, the owner's pull requests #213, #215, #226 and
+#227, and the owner's draft pull request #237 (#198 and #201 were checked again on 2026-10-29 and are
+still open). The rows add what the Sprint 15 round saw on 2026-10-29 and 2026-10-30
+([device-validation section 20](development/device-validation.md#20-results-sprint-15)); those
+observations were not read from GitHub.
 
 | Item | Kind | Summary |
 | --- | --- | --- |

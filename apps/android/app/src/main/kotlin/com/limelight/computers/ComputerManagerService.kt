@@ -32,6 +32,7 @@ import java.net.UnknownHostException
 import java.util.LinkedList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -54,8 +55,10 @@ class ComputerManagerService : Service() {
     private var pollingActive = false
     private val defaultNetworkLock: Lock = ReentrantLock()
 
-    // The adds of the hosts that mDNS finds run one at a time on this executor. Tests read it, to
-    // wait for the adds that they started.
+    // The adds of the hosts that mDNS finds run one at a time on this executor, in the order they
+    // came, and never on the thread of the discovery agent. Tests read it, to wait for the adds
+    // that
+    // they started.
     internal val discoveryAdds: ExecutorService = Executors.newSingleThreadExecutor { task ->
         Thread(task, DISCOVERY_ADD_THREAD)
     }
@@ -441,11 +444,14 @@ class ComputerManagerService : Service() {
         }
     }
 
-    // The stack traces go to the standard error stream, as in the inherited Java. Logging them
-    // instead is a behaviour change (Sprint 12 backlog).
+    // The stack trace of a failed discovery goes to the standard error stream, as in the inherited
+    // Java. Logging it instead is a behaviour change (Sprint 12 backlog).
     @Suppress("PrintStackTrace")
     private fun createDiscoveryListener(): MdnsDiscoveryListener =
         object : MdnsDiscoveryListener {
+            // The discovery agent holds its list of hosts while it calls this (on API 34 and later
+            // it is the one thread that answers every resolve), so nothing here may wait for the
+            // network: the Java polled the host on this thread, and every other host waited.
             override fun notifyComputerAdded(computer: MdnsComputer) {
                 val details = ComputerDetails()
 
@@ -454,13 +460,6 @@ class ComputerManagerService : Service() {
                 if (localAddress != null) {
                     details.localAddress =
                         ComputerDetails.AddressTuple(localAddress.hostAddress, computer.port)
-
-                    // Since we're on the same network, we can use STUN to find
-                    // our WAN address, which is also very likely the WAN address
-                    // of the PC. We can use this later to connect remotely.
-                    if (localAddress is Inet4Address) {
-                        populateExternalAddress(details)
-                    }
                 }
                 val ipv6Address = computer.ipv6Address
                 if (ipv6Address != null) {
@@ -468,18 +467,17 @@ class ComputerManagerService : Service() {
                         ComputerDetails.AddressTuple(ipv6Address.hostAddress, computer.port)
                 }
 
-                try {
-                    // Kick off a blocking serverinfo poll on this machine
-                    if (!addComputerBlocking(details)) {
-                        LimeLog.warning("Auto-discovered PC failed to respond: $details")
-                    }
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
+                // Since we're on the same network, we can use STUN to find
+                // our WAN address, which is also very likely the WAN address
+                // of the PC. We can use this later to connect remotely.
+                val findExternalAddress = localAddress is Inet4Address
 
-                    // InterruptedException clears the thread's interrupt status. Since we can't
-                    // handle that here, we will re-interrupt the thread to set the interrupt
-                    // status back to true.
-                    Thread.currentThread().interrupt()
+                // The service adds one host at a time. After the service is destroyed the host is
+                // dropped: the agent gets no exception.
+                try {
+                    discoveryAdds.execute { addDiscoveredComputer(details, findExternalAddress) }
+                } catch (ignored: RejectedExecutionException) {
+                    LimeLog.info("Dropping an auto-discovered PC: the service is destroyed")
                 }
             }
 
@@ -488,6 +486,28 @@ class ComputerManagerService : Service() {
                 e.printStackTrace()
             }
         }
+
+    // Runs on the executor of the adds. Destroying the service interrupts it: the add ends without
+    // a trace, and the interrupt stays for the executor. Any other exception ends the add alone,
+    // so that the thread is there for the next host; only its class is logged, because its message
+    // can carry what a saved row holds.
+    @Suppress("TooGenericExceptionCaught")
+    private fun addDiscoveredComputer(details: ComputerDetails, findExternalAddress: Boolean) {
+        try {
+            if (findExternalAddress) {
+                populateExternalAddress(details)
+            }
+
+            // Kick off a blocking serverinfo poll on this machine
+            if (!addComputerBlocking(details)) {
+                LimeLog.warning("Auto-discovered PC failed to respond: $details")
+            }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        } catch (e: RuntimeException) {
+            LimeLog.severe("Could not add an auto-discovered PC: ${e.javaClass.simpleName}")
+        }
+    }
 
     // A host without an id is left out of the list, so that no host in it is without one. (The Java
     // listed it, and a later add threw a NullPointerException on its missing id.)

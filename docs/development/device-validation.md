@@ -4,7 +4,7 @@ This runbook checks Borealis Phase 1 and Sprints 2 to 16 on two devices against
 LuminalShine 26.09.1, 26.10.0-beta.1 and 26.10.1 running on the owner's Windows PC. It is
 for the owner and for the orchestrator who runs the checks. Run the steps in
 order and record the results as a new section with a table, like sections 7 to
-10. Sections 6 to 20 hold the results of Phase 1 and Sprints 2 to 15, in that
+10. Sections 6 to 21 hold the results of Phase 1 and Sprints 2 to 16, in that
 order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
@@ -5793,3 +5793,126 @@ reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md
   panel, and the screens that follow the Library, are the owner's next device check.
 - Left on the devices: the S22 has the build of `1455bcf0a`, and the TV has the debug build of `4429af309`, which
   was installed for the check of the Appearance rows on 2026-10-30 (the TV log reads `commit=4429af30927e`).
+
+## 21. Results: Sprint 16
+
+This section holds the agent part of the Sprint 16 device round, [section 3.31](#331-sprint-16-checks), run on
+2026-11-01 from 10:35 to 11:45 on the Google TV Streamer and the Samsung Galaxy S22, on the debug build of
+`baf64f5dc`. Steps 1 to 5, 7 and 8 ran; step 6 ran on the TV only. No step failed on the client side. One part of
+step 3 could not be produced (a leave before the launch request), and the 409/503 retry of step 3 is still
+open, because the TV was in use when its turn came. Steps 9 to 17, and the picture and sound of steps 4, 5 and 7,
+are for the owner. The findings are below.
+
+### Setup
+
+- Build: the debug build of `baf64f5dc`, made in the task worktree with `:app:assembleDebug`. It was installed with
+  `install -r`, so the data stayed: on the TV at 10:38:48 and on the S22 at 10:59:01. The first log line reads
+  `commit=baf64f5dc136` on both devices. Before the round both had earlier debug builds, installed on 2026-10-30.
+- Devices: the Google TV Streamer over wireless ADB, and the S22 over USB.
+- Host: LuminalShine 26.10.1, commit `dba21a9e` (the log header). Its log segment began on 2026-10-31 at 13:23:50,
+  and the host did not restart or crash during the round.
+- Clocks: the TV ran about 2.4 s ahead of the PC, and the S22 about 3.3 s ahead (each measured with five
+  `date` reads over adb). Host and device times below are each in their own clock.
+- Sound: a Windows sound was played on the PC in a loop during the streams of steps 5 and 7.
+- Method: logcat was captured whole (not only the tags of 1.4) and grepped. The screen was read with masked
+  `uiautomator` dumps on the TV, and on the S22 only in portrait. Inside an S22 stream, the stream was driven
+  by keys (Ctrl+Alt+Shift+Q to disconnect) and checked from logcat. Quit on the S22 used the Apps sheet after a
+  Disconnect (see the observations). The audit trail was read from the app's `audit.db` with `run-as`. No capture
+  of a stream was made.
+- No address, host name, serial, PIN or client name is recorded here.
+
+### Results
+
+| Step | Device | Result | Evidence and notes |
+| --- | --- | --- | --- |
+| 1 App list after polls | TV | pass | Apps open for 3 min 19 s: 12 dumps from 10:42:30 to 10:45:49 all list Desktop and Steam Big Picture. 7 app-list polls ran in that time. |
+| 1 App list after polls | S22 | pass | 12 dumps from 10:59:45 to 11:02:40, all whole. |
+| 1 Resume from the Library | TV | pass | After Disconnect, a tap on Desktop showed "Starting Desktop" (the name of the cached list), the choice was logged as `running app joined on the user's choice`, and `/resume` started the stream. |
+| 1 An HDR app resumes in HDR | S22 | pass | With HDR on, the start and the resume after Disconnect both logged `Display HDR mode: enabled` and `HEVC SPS: profile=Main10 chroma=4:2:0 depth=10/10`. The audit reads `hdr=true` for both `SESSION_START` entries. |
+| 2 mDNS after leaving the app, three times | S22 | pass | Home, 60 s, then open again, three times from 11:33 to 11:37. Each time: `NSD: Service discovery stopped`, then `started`, and the host appeared and resolved within 0.1 s. The host was Online each time. There was no `RejectedExecutionException` and no `is gone already` warning. |
+| 2 Add host by address | S22 | pass | The address of the PC: the poll found the host, and it merged into the existing record (same UUID). The list still shows the host once, Online. |
+| 2 Add host, no answer | S22 | pass | An address where nothing answers: "Unable to connect to the specified computer…" under the field, and no host was added (the database still holds 2 records). The host that mDNS found stays listed. |
+| 3 Back on the Connecting screen | TV, S22 | pass for the client | The Library, with no failure screen, no error popup and no `<stage> failed` line. The audit has a `LAUNCH_ATTEMPT` with no `SESSION_START` for each leave. No pad was connected, so the controller handler had nothing to release. See finding 2 for the request that still reached the host. |
+| 3 The host launched nothing | TV, S22 | not run | A leave before the launch request could not be produced: the request reached the host 0.5 to 0.8 s after the stream activity started, before any Back sent by adb. In each of the five leaves of the round the host launched the app and rolled it back 10 s later (finding 2). No GFE host is at hand: `not applicable` for the GFE part. |
+| 3 Start again at once, then a second stream | TV, S22 | pass | TV: the next start at 10:52:13 showed its first video 14 s after the tap, then Disconnect and a resume started too. S22: the same at 11:30:12 and 11:30:45. No hang. |
+| 3 Leave during a 409 or 503 retry | TV, S22 | not run | It needs both devices, and the TV was in use (another app was in front) when this step came. Left for the owner's session. |
+| 3 Disconnect on the Starting screen | TV, S22 | pass, with a note | The Starting screen offers Cancel only, and Ctrl+Alt+Shift+Q does nothing before the stream starts. Back while the host prepared `/resume`: the Library within about 0.5 s on the TV (10:53:39) and in 11 ms on the S22 (11:31:27), with no failure screen. |
+| 3 Start after a failed native start | TV, S22 | not run | No stage failure happened in the round. |
+| 4 HDR and the decoder start | S22 | pass; the picture is an owner check | HEVC Main10 with HDR on; HDR off gave `Display HDR mode: disabled` and an 8-bit Main stream. Decoder `c2.qti.hevc.decoder.low_latency`, `Found Adreno GPU: 730`, `No AV1 decoder found`, no `Skipping decoder that throws for its capabilities`. The HDR start restarts the decoder for the HDR metadata, as since Sprint 3 (`Restarting the decoder to apply HDR metadata`). |
+| 4 HDR and the decoder start | TV | not applicable for HDR; decoder pass | The TV display reports no HDR types (`mSupportedHdrTypes=[]`), and HDR is off in its settings. Decoders `c2.mtk.hevc.decoder.lowlatency` and `c2.mtk.avc.decoder.lowlatency`, `No AV1 decoder found`, no Adreno line (PowerVR GPU), no skipped decoder. |
+| 4 AV1 Main10 | TV, S22 | not applicable | The host has no AV1 encoder (`av1_nvenc` is not supported on this GPU), and neither device has an AV1 decoder. |
+| 5 Stop and restart, twice | TV | pass; video and sound are an owner check | Two cycles of start, Disconnect, start again and Quit (10:46 to 10:48:55, 10:49:21 to 10:51:01). Each start showed video, each stop reached the Library. Disconnect: `disconnect accepted` to `activity finished` in about 1.0 s. Quit: `quit cancel answered` in 5647 and 5585 ms, as in Sprint 15. |
+| 5 Stop and restart, twice | S22 | pass; video and sound are an owner check | Two cycles from 11:03 to 11:29: start, Disconnect, start again, then Disconnect and Quit from the Apps sheet (`quit cancel answered` in 707 and 577 ms). |
+| 5 No exception from the bridges | TV, S22 | pass | No `the Java call threw an exception`, no `AndroidRuntime` or `FATAL` line and no Java stack trace for the app processes, in the whole capture of each device. |
+| 6 Host latency in the overlay | TV | pass | The overlay was on (Detailed). It read "Host processing 2.8 / 3.1 / 3.5 ms (min/avg/max)" at 10:46 and "2.8 / 3.0 / 3.3" at 10:48: the lowest value stayed above 0. Read from the menu's dump, which shows the overlay text. |
+| 6 Host latency in the overlay | S22 | owner check | The overlay shows only on the screen in landscape, where no dump or capture is taken. |
+| 7 Audio start, stop and restart | TV | pass; the sound is an owner check | `Received first audio packet` after each start with the sound playing: 5200 ms at a launch, 300 ms at a resume (and 33500 ms in a resume where the sound started late). No exception from the audio renderer at the stops. |
+| 7 Audio start, stop and restart | S22 | pass; the sound is an owner check | First audio packet after 0 and 200 ms (HDR on), 0 and 100 ms (HDR off). No exception at the stops. |
+| 8 Upgrade with the legacy 5.1 switch | S22 | pass | With `checkbox_51_surround` = true and `list_audio_config` = `71`: after the start the value stays `71` and the legacy key is gone. With the key and no `list_audio_config`: after the start `list_audio_config` = `51`, the key is gone, and Settings shows "Channels: 5.1 surround". The preferences file was then put back byte for byte from a copy taken before the step. |
+| 9 to 17 | S22, TV | owner check | They need the owner (see Not run and owner items). |
+
+### Findings
+
+#### 1. The TV started the round unpaired (not a Sprint 16 regression)
+
+After the install the TV showed the PC as "Not paired" (Found on this network). The app still kept its record of
+the host, unchanged, but from the TV's first request at 10:39:02 the host treated the TV as a client it did not
+know. The host's client list was last written on 2026-10-30 at 19:58, before the round. The owner paired the TV
+again at 10:41 (`pairing ended state=PAIRED` at 10:41:57). The cause is on the host side, so it is not a
+regression. Why the host lost this client is not known.
+
+#### 2. A leave during the start does not stop the first launch request (Sprint 17)
+
+In each of the five leaves of the round (TV 10:51, 10:53 and 10:56; S22 11:29 and 11:31), the host received the
+`/launch` or `/resume`, launched the app or joined it, and rolled it back 10 s later (`Unclaimed launch rollback`,
+then `Rolled back unclaimed RTSP launch after timeout`). The first request reached the host 0.5 to 0.8 s after the
+stream activity started, so no key sent by adb came before it:
+
+- On the S22 the stream activity started at 11:29:33.48, the host received `/launch` at 11:29:33.97 (in the phone's
+  clock), and the Back reached `Game.onKeyDown` at 11:29:35.04. The leave came 1.1 s after the request.
+- On the TV, in the TV's clock: at 10:51 the activity started at 10:51:20.13, the host received `/launch` at about
+  10:51:20.9, and the Back was sent at about 10:51:22.4. At 10:56 the activity started at 10:56:45.71, and the
+  request reached the host and the activity finished within 0.1 s of each other, at about 10:56:46.5. The resume
+  of 10:53 was left about 5 s after the host had its request.
+- The only stop of the connection after such a leave is `connection stop done ms=0`, logged about 0.6 s after
+  `activity finished`. That matches 3.8: `Game` calls `cancelLaunch()` from `onStop` and `onDestroy`. A Back that
+  comes before the request is therefore seen by the cancel check of Sprint 16 only if `onStop` runs before the
+  request is sent.
+
+Every leave of the round came after its request, or with it, so the client did what the code says, and nothing
+here is a regression. Whether a leave before the request keeps the host from launching is not shown. It goes to
+Sprint 17, "The stream session", with the host's rollback as the case to cover.
+
+#### 3. The host retries a virtual display after each rollback (host side)
+
+After each of the five rollbacks, LuminalShine 26.10.1 ran `Virtual display recovery` for 2 to 5 attempts, about 10 s
+apart. Each attempt failed with `Display helper reported APPLY failure: Display configuration failed validation` and
+`stage 1/3 failed; Windows did not activate the LuminalVGD target`, and the loop ended with `requested capture
+reinit`. That makes 31 error lines in the round. The host did not crash. The PC display was back at its own mode
+both times it was checked during a loop, and a stream started during a loop worked (10:52). This is the host's
+behavior after an unclaimed launch, for the [host-side items](../roadmap.md#host-side-items-luminalshine).
+
+### Observations
+
+- Both devices still list an old host record with a custom port, Offline. It is polled every few seconds
+  (`<host> is offline (try n)`). It predates Sprint 16. Removing it is the owner's choice (step 11 forgets a
+  host).
+- After each stop, a second `connection stop done ms=0` follows `activity finished`. It is the duplicate log of a
+  second stop, already listed in the follow-ups of wave 2.
+- On the S22, Ctrl+Alt+Shift+M opened the in-game menu, but D-pad and Enter keys sent with `input keyevent` 30 ms
+  apart did not reach Quit. An injected `KEYCODE_BACK` then reached `Game.onKeyDown` and did not close the menu,
+  while the owner's own Back closed it. The cause is not known; it may be the injection. A Back key from a real
+  keyboard with the menu open is worth a check in Sprint 17. Because of this, the HDR stream of 11:03 stayed open
+  for 22 minutes, with the menu open, until the owner answered.
+
+### Not run and owner items
+
+- Step 3, the leave during a 409 or 503 retry, with both devices (the TV was in use).
+- Step 3, the leave before the launch request (finding 2) and the start after a failed native start.
+- The picture of steps 4 and 5, the sound of steps 5 and 7, and the S22 overlay of step 6.
+- Steps 9 to 17, which need the owner: the host stopped (9), the PC asleep (10), a forgotten host and a new
+  pairing (11), the mouse and the keyboard (12, 13), a stylus if one is at hand (13), the on-screen controller
+  (14), the trackpad mode (15), the pads (16; the trigger motors need a GIP pad, `not applicable` without one) and
+  DeX (17).
+- `KEYCODE_SLEEP` on the TV was not sent at the end of the agent part, because the TV was in use.
+- Left on the devices: the debug build of `baf64f5dc` on both, paired, with the S22 preferences as before the round.

@@ -5819,6 +5819,7 @@ are for the owner. The findings are below.
   by keys (Ctrl+Alt+Shift+Q to disconnect) and checked from logcat. Quit on the S22 used the Apps sheet after a
   Disconnect (see the observations). The audit trail was read from the app's `audit.db` with `run-as`. No capture
   of a stream was made.
+- Crash buffers: `logcat -b crash` was cleared at each install and was empty on both devices at 11:47.
 - No address, host name, serial, PIN or client name is recorded here.
 
 ### Results
@@ -5835,7 +5836,7 @@ are for the owner. The findings are below.
 | 3 Back on the Connecting screen | TV, S22 | pass for the client | The Library, with no failure screen, no error popup and no `<stage> failed` line. The audit has a `LAUNCH_ATTEMPT` with no `SESSION_START` for each leave. No pad was connected, so the controller handler had nothing to release. See finding 2 for the request that still reached the host. |
 | 3 The host launched nothing | TV, S22 | not run | A leave before the launch request could not be produced: the request reached the host 0.5 to 0.8 s after the stream activity started, before any Back sent by adb. In each of the five leaves of the round the host launched the app and rolled it back 10 s later (finding 2). No GFE host is at hand: `not applicable` for the GFE part. |
 | 3 Start again at once, then a second stream | TV, S22 | pass | TV: the next start at 10:52:13 showed its first video 14 s after the tap, then Disconnect and a resume started too. S22: the same at 11:30:12 and 11:30:45. No hang. |
-| 3 Leave during a 409 or 503 retry | TV, S22 | not run | It needs both devices, and the TV was in use (another app was in front) when this step came. Left for the owner's session. |
+| 3 Leave during a 409 or 503 retry | TV, S22 | not run | It needs both devices, and the TV was in use when this step came: at 11:02:21 the Home key went to the TV's launcher, and at 11:02:24 another app was opened from it. The Borealis process stayed alive. Left for the owner's session. |
 | 3 Disconnect on the Starting screen | TV, S22 | pass, with a note | The Starting screen offers Cancel only, and Ctrl+Alt+Shift+Q does nothing before the stream starts. Back while the host prepared `/resume`: the Library within about 0.5 s on the TV (10:53:39) and in 11 ms on the S22 (11:31:27), with no failure screen. |
 | 3 Start after a failed native start | TV, S22 | not run | No stage failure happened in the round. |
 | 4 HDR and the decoder start | S22 | pass; the picture is an owner check | HEVC Main10 with HDR on; HDR off gave `Display HDR mode: disabled` and an 8-bit Main stream. Decoder `c2.qti.hevc.decoder.low_latency`, `Found Adreno GPU: 730`, `No AV1 decoder found`, no `Skipping decoder that throws for its capabilities`. The HDR start restarts the decoder for the HDR metadata, as since Sprint 3 (`Restarting the decoder to apply HDR metadata`). |
@@ -5858,8 +5859,9 @@ are for the owner. The findings are below.
 After the install the TV showed the PC as "Not paired" (Found on this network). The app still kept its record of
 the host, unchanged, but from the TV's first request at 10:39:02 the host treated the TV as a client it did not
 know. The host's client list was last written on 2026-10-30 at 19:58, before the round. The owner paired the TV
-again at 10:41 (`pairing ended state=PAIRED` at 10:41:57). The cause is on the host side, so it is not a
-regression. Why the host lost this client is not known.
+again at 10:41 (`pairing ended state=PAIRED` at 10:41:57). The S22, on the same build, stayed paired and Online
+for the whole round. The cause is on the host side, so it is not a regression. Why the host lost this client is not
+known.
 
 #### 2. A leave during the start does not stop the first launch request (Sprint 17)
 
@@ -5910,9 +5912,12 @@ behavior after an unclaimed launch, for the [host-side items](../roadmap.md#host
 - Step 3, the leave during a 409 or 503 retry, with both devices (the TV was in use).
 - Step 3, the leave before the launch request (finding 2) and the start after a failed native start.
 - The picture of steps 4 and 5, the sound of steps 5 and 7, and the S22 overlay of step 6.
+- Step 5 on the S22, Quit from the in-game menu by touch: the S22 Quits of the round came from the Apps sheet after a
+  Disconnect, so the Quit of a running stream was checked on the TV only.
 - Steps 9 to 17, which need the owner: the host stopped (9), the PC asleep (10), a forgotten host and a new
   pairing (11), the mouse and the keyboard (12, 13), a stylus if one is at hand (13), the on-screen controller
   (14), the trackpad mode (15), the pads (16; the trigger motors need a GIP pad, `not applicable` without one) and
   DeX (17).
-- `KEYCODE_SLEEP` on the TV was not sent at the end of the agent part, because the TV was in use.
+- `KEYCODE_SLEEP` on the TV was not sent at the end of the agent part, because the TV was in use. The same app was
+  already in front at 10:37, before the round started on the TV.
 - Left on the devices: the debug build of `baf64f5dc` on both, paired, with the S22 preferences as before the round.

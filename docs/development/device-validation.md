@@ -5797,11 +5797,11 @@ reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md
 ## 21. Results: Sprint 16
 
 This section holds the agent part of the Sprint 16 device round, [section 3.31](#331-sprint-16-checks), run on
-2026-11-01 from 10:35 to 11:45 on the Google TV Streamer and the Samsung Galaxy S22, on the debug build of
-`baf64f5dc`. Steps 1 to 5, 7 and 8 ran; step 6 ran on the TV only. No step failed on the client side. One part of
-step 3 could not be produced (a leave before the launch request), and the 409/503 retry of step 3 is still
-open, because the TV was in use when its turn came. Steps 9 to 17, and the picture and sound of steps 4, 5 and 7,
-are for the owner. The findings are below.
+2026-11-01 from 10:35 to 11:45, and at 17:48 for one part of step 3, on the Google TV Streamer and the Samsung
+Galaxy S22, on the debug build of `baf64f5dc`. Steps 1 to 5, 7 and 8 ran; step 6 ran on the TV only. No step failed
+on the client side. Two parts of step 3 could not be produced: a leave before the launch request, and the 409/503
+retry, for which the host answers 400 instead. Steps 9 to 17, and the picture and sound of steps 4, 5 and 7, are
+for the owner. The findings are below.
 
 ### Setup
 
@@ -5836,7 +5836,7 @@ are for the owner. The findings are below.
 | 3 Back on the Connecting screen | TV, S22 | pass for the client | The Library, with no failure screen, no error popup and no `<stage> failed` line. The audit has a `LAUNCH_ATTEMPT` with no `SESSION_START` for each leave. No pad was connected, so the controller handler had nothing to release. See finding 2 for the request that still reached the host. |
 | 3 The host launched nothing | TV, S22 | not run | A leave before the launch request could not be produced: the request reached the host 0.5 to 0.8 s after the stream activity started, before any Back sent by adb. In each of the five leaves of the round the host launched the app and rolled it back 10 s later (finding 2). No GFE host is at hand: `not applicable` for the GFE part. |
 | 3 Start again at once, then a second stream | TV, S22 | pass | TV: the next start at 10:52:13 showed its first video 14 s after the tap, then Disconnect and a resume started too. S22: the same at 11:30:12 and 11:30:45. No hang. |
-| 3 Leave during a 409 or 503 retry | TV, S22 | not run | It needs both devices, and the TV was in use when this step came: at 11:02:21 the Home key went to the TV's launcher, and at 11:02:24 another app was opened from it. The Borealis process stayed alive. Left for the owner's session. |
+| 3 Leave during a 409 or 503 retry | TV, S22 | not applicable on this host; the conflict path passes | The TV was in use from 11:02 (the Home key, then another app opened from the launcher, with the Borealis process alive), so this ran at 17:48 with the owner's OK, the S22 over wireless ADB. The S22 started Desktop and left, so the host held an unclaimed launch, and the TV started Desktop 3.8 s after the S22. The host answered the TV's `/launch` within 2 s with 400 "An app is already running on this host", not 409 or 503, as in [section 19](#19-results-sprint-14), finding 1. The TV showed "An app is already running" with Cancel focused; Cancel returned to Apps (`choice=CANCEL`), with no error and no `/cancel`. The next TV start, at 17:50:04, streamed (first video about 7 s later), and its Quit ended in the Library. No ANR, and the crash buffers were empty on both devices. |
 | 3 Disconnect on the Starting screen | TV, S22 | pass, with a note | The Starting screen offers Cancel only, and Ctrl+Alt+Shift+Q does nothing before the stream starts. Back while the host prepared `/resume`: the Library within about 0.5 s on the TV (10:53:39) and in 11 ms on the S22 (11:31:27), with no failure screen. |
 | 3 Start after a failed native start | TV, S22 | not run | No stage failure happened in the round. |
 | 4 HDR and the decoder start | S22 | pass; the picture is an owner check | HEVC Main10 with HDR on; HDR off gave `Display HDR mode: disabled` and an 8-bit Main stream. Decoder `c2.qti.hevc.decoder.low_latency`, `Found Adreno GPU: 730`, `No AV1 decoder found`, no `Skipping decoder that throws for its capabilities`. The HDR start restarts the decoder for the HDR metadata, as since Sprint 3 (`Restarting the decoder to apply HDR metadata`). |
@@ -5909,7 +5909,8 @@ behavior after an unclaimed launch, for the [host-side items](../roadmap.md#host
 
 ### Not run and owner items
 
-- Step 3, the leave during a 409 or 503 retry, with both devices (the TV was in use).
+- Step 3, the leave during a 409 or 503 retry: LuminalShine 26.10.1 answers 400 instead, so the retry needs a host that
+  answers 409 or 503.
 - Step 3, the leave before the launch request (finding 2) and the start after a failed native start.
 - The picture of steps 4 and 5, the sound of steps 5 and 7, and the S22 overlay of step 6.
 - Step 5 on the S22, Quit from the in-game menu by touch: the S22 Quits of the round came from the Apps sheet after a
@@ -5918,6 +5919,7 @@ behavior after an unclaimed launch, for the [host-side items](../roadmap.md#host
   pairing (11), the mouse and the keyboard (12, 13), a stylus if one is at hand (13), the on-screen controller
   (14), the trackpad mode (15), the pads (16; the trigger motors need a GIP pad, `not applicable` without one) and
   DeX (17).
-- `KEYCODE_SLEEP` on the TV was not sent at the end of the agent part, because the TV was in use. The same app was
-  already in front at 10:37, before the round started on the TV.
+- The TV was in use from 11:02 to the owner's OK at 17:48 (the same app was already in front at 10:37, before the
+  round started on the TV). After the run of 17:48 the TV was put to sleep with `KEYCODE_SLEEP` at 17:51
+  (`mWakefulness=Asleep`).
 - Left on the devices: the debug build of `baf64f5dc` on both, paired, with the S22 preferences as before the round.

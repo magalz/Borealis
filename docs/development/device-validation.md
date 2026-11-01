@@ -5800,8 +5800,9 @@ This section holds the agent part of the Sprint 16 device round, [section 3.31](
 2026-11-01 from 10:35 to 11:45, and at 17:48 for one part of step 3, on the Google TV Streamer and the Samsung
 Galaxy S22, on the debug build of `baf64f5dc`. Steps 1 to 5, 7 and 8 ran; step 6 ran on the TV only. No step failed
 on the client side. Two parts of step 3 could not be produced: a leave before the launch request, and the 409/503
-retry, for which the host answers 400 instead. Steps 9 to 17, and the picture and sound of steps 4, 5 and 7, are
-for the owner. The findings are below.
+retry, for which the host answers 400 instead. The owner listened to the sound of steps 5 and 7 on both devices at
+17:55 to 18:08 (see the owner's sound check below). Steps 9 to 17, the picture of steps 4 and 5 and the S22 overlay
+of step 6 are for the owner. The findings are below.
 
 ### Setup
 
@@ -5842,13 +5843,13 @@ for the owner. The findings are below.
 | 4 HDR and the decoder start | S22 | pass; the picture is an owner check | HEVC Main10 with HDR on; HDR off gave `Display HDR mode: disabled` and an 8-bit Main stream. Decoder `c2.qti.hevc.decoder.low_latency`, `Found Adreno GPU: 730`, `No AV1 decoder found`, no `Skipping decoder that throws for its capabilities`. The HDR start restarts the decoder for the HDR metadata, as since Sprint 3 (`Restarting the decoder to apply HDR metadata`). |
 | 4 HDR and the decoder start | TV | not applicable for HDR; decoder pass | The TV display reports no HDR types (`mSupportedHdrTypes=[]`), and HDR is off in its settings. Decoders `c2.mtk.hevc.decoder.lowlatency` and `c2.mtk.avc.decoder.lowlatency`, `No AV1 decoder found`, no Adreno line (PowerVR GPU), no skipped decoder. |
 | 4 AV1 Main10 | TV, S22 | not applicable | The host has no AV1 encoder (`av1_nvenc` is not supported on this GPU), and neither device has an AV1 decoder. |
-| 5 Stop and restart, twice | TV | pass; video and sound are an owner check | Two cycles of start, Disconnect, start again and Quit (10:46 to 10:48:55, 10:49:21 to 10:51:01). Each start showed video, each stop reached the Library. Disconnect: `disconnect accepted` to `activity finished` in about 1.0 s. Quit: `quit cancel answered` in 5647 and 5585 ms, as in Sprint 15. |
-| 5 Stop and restart, twice | S22 | pass; video and sound are an owner check | Two cycles from 11:03 to 11:29: start, Disconnect, start again, then Disconnect and Quit from the Apps sheet (`quit cancel answered` in 707 and 577 ms). |
+| 5 Stop and restart, twice | TV | pass; sound confirmed by the owner, the picture is an owner check | Two cycles of start, Disconnect, start again and Quit (10:46 to 10:48:55, 10:49:21 to 10:51:01). Each start showed video, each stop reached the Library. Disconnect: `disconnect accepted` to `activity finished` in about 1.0 s. Quit: `quit cancel answered` in 5647 and 5585 ms, as in Sprint 15. |
+| 5 Stop and restart, twice | S22 | pass; sound confirmed by the owner, with clicks (finding 4); the picture is an owner check | Two cycles from 11:03 to 11:29: start, Disconnect, start again, then Disconnect and Quit from the Apps sheet (`quit cancel answered` in 707 and 577 ms). |
 | 5 No exception from the bridges | TV, S22 | pass | No `the Java call threw an exception`, no `AndroidRuntime` or `FATAL` line and no Java stack trace for the app processes, in the whole capture of each device. |
 | 6 Host latency in the overlay | TV | pass | The overlay was on (Detailed). It read "Host processing 2.8 / 3.1 / 3.5 ms (min/avg/max)" at 10:46 and "2.8 / 3.0 / 3.3" at 10:48: the lowest value stayed above 0. Read from the menu's dump, which shows the overlay text. |
 | 6 Host latency in the overlay | S22 | owner check | The overlay shows only on the screen in landscape, where no dump or capture is taken. |
-| 7 Audio start, stop and restart | TV | pass; the sound is an owner check | `Received first audio packet` after each start with the sound playing: 5200 ms at a launch, 300 ms at a resume (and 33500 ms in a resume where the sound started late). No exception from the audio renderer at the stops. |
-| 7 Audio start, stop and restart | S22 | pass; the sound is an owner check | First audio packet after 0 and 200 ms (HDR on), 0 and 100 ms (HDR off). No exception at the stops. |
+| 7 Audio start, stop and restart | TV | pass; the owner heard the sound after each start | `Received first audio packet` after each start with the sound playing: 5200 ms at a launch, 300 ms at a resume (and 33500 ms in a resume where the sound started late). No exception from the audio renderer at the stops. |
+| 7 Audio start, stop and restart | S22 | pass; the owner heard the sound after each start, with some clicks (finding 4) | First audio packet after 0 and 200 ms (HDR on), 0 and 100 ms (HDR off). No exception at the stops. |
 | 8 Upgrade with the legacy 5.1 switch | S22 | pass | With `checkbox_51_surround` = true and `list_audio_config` = `71`: after the start the value stays `71` and the legacy key is gone. With the key and no `list_audio_config`: after the start `list_audio_config` = `51`, the key is gone, and Settings shows "Channels: 5.1 surround". The preferences file was then put back byte for byte from a copy taken before the step. |
 | 9 to 17 | S22, TV | owner check | They need the owner (see Not run and owner items). |
 
@@ -5894,6 +5895,38 @@ reinit`. That makes 31 error lines in the round. The host did not crash. The PC 
 both times it was checked during a loop, and a stream started during a loop worked (10:52). This is the host's
 behavior after an unclaimed launch, for the [host-side items](../roadmap.md#host-side-items-luminalshine).
 
+#### 4. Clicks in the S22 sound: the known audio runs (Sprint 17, not a regression)
+
+In the owner's sound check the S22 sound had occasional clicks: "the sound seems good, but now and then
+there is a crackle, not constant, just a few clicks". In the same stream the log has 22 lines of
+`Too much pending audio data` (40 to 55 ms), in short runs (for example four at 18:07:09.85 and five at
+18:07:31.67). Each line is a decoded packet of 5 ms that `AndroidAudioRenderer` dropped by its 40 ms rule
+(`PENDING_AUDIO_LIMIT_MS`). The PC played one Windows sound in a loop, so the sound stopped and started again
+every few seconds. Sprint 16 did not change the rule: it only reads the pending duration once, so the log shows
+the value that the check saw. These are the "Audio runs on the S22 and on the TV" of
+[Sprint 17](../roadmap.md#sprint-17-general-fixes), Audio. On the TV the owner heard clean sound, with 20 such
+lines over its two streams.
+
+### Owner's sound check, 2026-11-01
+
+The owner listened on each device while the PC played a Windows sound in a loop, with the debug build of
+`baf64f5dc`. The S22 was on wireless ADB.
+
+| Device | Stream | What the owner heard | Log |
+| --- | --- | --- | --- |
+| TV | Start at 17:55:06 | Sound and picture good | First audio packet after 300 ms. |
+| TV | Resume after Disconnect, 17:56:02 | Sound and picture good | First audio packet after 200 ms. Quit then ended in the Library. |
+| S22 | Start at 17:57:19 and resume at 17:58:00, on the Wi-Fi link with MLO | Crackling | The owner put it down to the phone's MLO link, which works badly on the S22, and moved the S22 to the 5 GHz band. The checks were run again. |
+| S22 | Start at 18:02:13, 5 GHz | First two sounds at once, crackling; then clean, with the picture good | The agent had started a second sound loop by mistake while the first still played. With one sound, the owner heard it clean. |
+| S22 | Resume after Disconnect, 18:06:41, 5 GHz | Good, with a few clicks now and then | Finding 4. |
+
+- The S22 Quit from the in-game menu by touch (step 5): the owner quit two streams by touch, at 18:03:00 and
+  18:07:34. Each logged `quit accepted`, and the Library came back after `quit cancel answered` in 3496 and
+  3918 ms. Pass.
+- No crash on either device (empty crash buffers at 18:09). The TV was put to sleep again at 18:10.
+- Deviation: at 18:05 the agent's script sent the Disconnect keys and one tap to the S22 while the owner had
+  another app in front (the script read the focus but did not stop). The owner was told at once.
+
 ### Observations
 
 - Both devices still list an old host record with a custom port, Offline. It is polled every few seconds
@@ -5912,9 +5945,7 @@ behavior after an unclaimed launch, for the [host-side items](../roadmap.md#host
 - Step 3, the leave during a 409 or 503 retry: LuminalShine 26.10.1 answers 400 instead, so the retry needs a host that
   answers 409 or 503.
 - Step 3, the leave before the launch request (finding 2) and the start after a failed native start.
-- The picture of steps 4 and 5, the sound of steps 5 and 7, and the S22 overlay of step 6.
-- Step 5 on the S22, Quit from the in-game menu by touch: the S22 Quits of the round came from the Apps sheet after a
-  Disconnect, so the Quit of a running stream was checked on the TV only.
+- The picture of steps 4 and 5, and the S22 overlay of step 6. The sound was checked by the owner (see above).
 - Steps 9 to 17, which need the owner: the host stopped (9), the PC asleep (10), a forgotten host and a new
   pairing (11), the mouse and the keyboard (12, 13), a stylus if one is at hand (13), the on-screen controller
   (14), the trackpad mode (15), the pads (16; the trigger motors need a GIP pad, `not applicable` without one) and

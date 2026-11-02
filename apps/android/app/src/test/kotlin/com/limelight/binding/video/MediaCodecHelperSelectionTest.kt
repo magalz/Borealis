@@ -1,5 +1,6 @@
 package com.limelight.binding.video
 
+import android.media.MediaCodecInfo
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.os.Build
 import java.util.concurrent.atomic.AtomicInteger
@@ -586,6 +587,92 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
                 codec("c2.vendor.high") { profiles = listOf(high) },
             )
             probable(helper, profile = high)
+        }
+
+        rows.verify()
+    }
+
+    private fun allThrow(helper: HelperHandle, mime: String = avc) =
+        (helper.call("findDecoderWhenAllThrow", mime) as MediaCodecInfo?)?.name
+
+    @Test
+    fun `when every decoder of the type throws for its capabilities the first of them is the answer`() {
+        val rows = Rows()
+
+        rows.check("the only decoder throws", "c2.vendor.buggy") {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.buggy") {
+                    mime = hevc
+                    brokenCapabilities = true
+                }
+            )
+            allThrow(helper, hevc)
+        }
+        rows.check("the first of two that throw", "c2.vendor.first") {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.first") { brokenCapabilities = true },
+                codec("c2.vendor.second") { brokenCapabilities = true },
+            )
+            allThrow(helper)
+        }
+        rows.check("a decoder that reads after one that throws leaves no answer", null) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+                codec("c2.vendor.reads"),
+            )
+            allThrow(helper)
+        }
+        rows.check("a decoder that reads before one that throws leaves no answer", null) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.reads"),
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+            )
+            allThrow(helper)
+        }
+        rows.check("no decoder at all", null) {
+            val helper = helper()
+            installCodecs()
+            allThrow(helper)
+        }
+        rows.check("only a decoder of another type throws", null) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.hevc") {
+                    mime = hevc
+                    brokenCapabilities = true
+                }
+            )
+            allThrow(helper)
+        }
+        rows.check("an encoder that throws does not count", null) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.encoder") {
+                    encoder = true
+                    brokenCapabilities = true
+                }
+            )
+            allThrow(helper)
+        }
+        rows.check("a blacklisted decoder that throws does not count", null) {
+            val helper = helper()
+            installCodecs(codec("OMX.google.h264.decoder") { brokenCapabilities = true })
+            allThrow(helper)
+        }
+        rows.check(
+            "a blacklisted decoder that reads does not stop the one that throws",
+            "c2.vendor.buggy",
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("OMX.google.h264.decoder"),
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+            )
+            allThrow(helper)
         }
 
         rows.verify()

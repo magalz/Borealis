@@ -902,6 +902,10 @@ object MediaCodecHelper {
         return findKnownSafeDecoder(mimeType, requiredProfile)
     }
 
+    @JvmStatic
+    @Suppress("FunctionOnlyReturningConstant", "UNUSED_PARAMETER")
+    fun findDecoderWhenAllThrow(mimeType: String): MediaCodecInfo? = null
+
     // Some bad decoders throw IllegalArgumentExceptions from getCapabilitiesForType. The Java gave
     // up the whole search for one of them and took the first decoder, whatever the required
     // profile; a decoder that throws is skipped now and the search goes on.

@@ -203,7 +203,8 @@ internal constructor(
                     finishActivity()
                 }
                 is QuitResult.Failed -> {
-                    // The stream goes on, so the user can try again.
+                    // A stream that still runs goes on, so the user can try again; the session says
+                    // what follows for one that the host ended with the quit already.
                     quitting = false
                     SessionAudit.quitFailed()
                     onFailed(failureOf(result))

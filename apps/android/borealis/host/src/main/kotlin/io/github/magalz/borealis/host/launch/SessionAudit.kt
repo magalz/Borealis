@@ -76,7 +76,10 @@ object SessionAudit {
         quitPending = true
     }
 
-    /** The quit did not happen and the stream goes on. */
+    /**
+     * The quit did not happen: an end of the stream from here on is audited for its own reason, and
+     * a stream that ended with the quit already stays audited as it was.
+     */
     @JvmStatic
     fun quitFailed() {
         quitPending = false

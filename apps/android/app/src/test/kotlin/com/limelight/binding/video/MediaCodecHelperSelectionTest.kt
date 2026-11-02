@@ -17,6 +17,7 @@ import org.robolectric.annotation.Config
  * of the decoder that the helper chose.
  */
 @RunWith(RobolectricTestRunner::class)
+@Suppress("LargeClass")
 class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
     private val avc = "video/avc"
     private val hevc = "video/hevc"
@@ -617,7 +618,26 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
             )
             allThrow(helper)
         }
-        rows.check("a decoder that reads after one that throws leaves no answer", null) {
+        rows.check(
+            "a blacklisted decoder that reads does not stop the one that throws",
+            "c2.vendor.buggy",
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("OMX.google.h264.decoder"),
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+            )
+            allThrow(helper)
+        }
+
+        rows.verify()
+    }
+
+    @Test
+    fun `a decoder that reads, or that the search never takes, leaves no answer`() {
+        val rows = Rows()
+
+        rows.check("a decoder that reads after one that throws", null) {
             val helper = helper()
             installCodecs(
                 codec("c2.vendor.buggy") { brokenCapabilities = true },
@@ -625,7 +645,7 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
             )
             allThrow(helper)
         }
-        rows.check("a decoder that reads before one that throws leaves no answer", null) {
+        rows.check("a decoder that reads before one that throws", null) {
             val helper = helper()
             installCodecs(
                 codec("c2.vendor.reads"),
@@ -661,17 +681,6 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
         rows.check("a blacklisted decoder that throws does not count", null) {
             val helper = helper()
             installCodecs(codec("OMX.google.h264.decoder") { brokenCapabilities = true })
-            allThrow(helper)
-        }
-        rows.check(
-            "a blacklisted decoder that reads does not stop the one that throws",
-            "c2.vendor.buggy",
-        ) {
-            val helper = helper()
-            installCodecs(
-                codec("OMX.google.h264.decoder"),
-                codec("c2.vendor.buggy") { brokenCapabilities = true },
-            )
             allThrow(helper)
         }
 

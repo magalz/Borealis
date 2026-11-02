@@ -19,6 +19,7 @@ import org.robolectric.util.ReflectionHelpers
  * renderer thread, which comes by every 50 ms. A test that needs the recovery to run on its own
  * thread, to see what a failing recovery throws, makes the renderer thread meet the failure first.
  */
+@Suppress("LargeClass")
 class RendererRecoveryTest : RendererTestBase() {
     private fun running(
         pacing: Int = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY

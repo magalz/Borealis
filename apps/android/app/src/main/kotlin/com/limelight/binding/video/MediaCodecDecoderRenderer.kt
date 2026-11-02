@@ -365,8 +365,11 @@ class MediaCodecDecoderRenderer(
     ): Boolean {
         // BOREALIS: a decoder taken because it throws for its capabilities has none to read, so it
         // cannot be shown to meet the point
-        val avcCapabilities = capabilitiesOrNull(avcDecoderInfo, "video/avc") ?: return false
-        val hevcCapabilities = capabilitiesOrNull(hevcDecoderInfo, "video/hevc") ?: return false
+        val avcCapabilities = capabilitiesOrNull(avcDecoderInfo, "video/avc")
+        val hevcCapabilities = capabilitiesOrNull(hevcDecoderInfo, "video/hevc")
+        if (avcCapabilities == null || hevcCapabilities == null) {
+            return false
+        }
         val avcCaps = avcCapabilities.videoCapabilities
         val hevcCaps = hevcCapabilities.videoCapabilities
 
@@ -460,6 +463,7 @@ class MediaCodecDecoderRenderer(
 
     fun isAvcSupported(): Boolean = avcDecoder != null
 
+    @Suppress("ReturnCount")
     fun isHevcMain10Hdr10Supported(): Boolean {
         val decoder = hevcDecoder ?: return false
         val capabilities = capabilitiesOrNull(decoder, "video/hevc") ?: return false
@@ -476,6 +480,7 @@ class MediaCodecDecoderRenderer(
 
     fun isAv1Supported(): Boolean = av1Decoder != null
 
+    @Suppress("ReturnCount")
     fun isAv1Main10Supported(): Boolean {
         val decoder = av1Decoder ?: return false
         val capabilities = capabilitiesOrNull(decoder, "video/av01") ?: return false
@@ -968,10 +973,9 @@ class MediaCodecDecoderRenderer(
     }
 
     // BOREALIS: the codec refused our Surface, so the renderer stops. A stop that nothing else
-    // began
-    // is the stream's problem, so the listener hears of it (it was a silent frozen video before);
-    // while a stop is on its way the Surface goes with the rest and a warning is enough. Only the
-    // thread that does the recovery gets here, so the listener is told at most once.
+    // began is the stream's problem, so the listener hears of it (it was a silent frozen video
+    // before); while a stop is on its way the Surface goes with the rest and a warning is enough.
+    // Only the thread that does the recovery gets here, so the listener is told at most once.
     private fun stopForInvalidSurface() {
         val wasStopping = stopping
         stopping = true

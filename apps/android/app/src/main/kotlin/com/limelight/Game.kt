@@ -2944,7 +2944,11 @@ class Game :
 
         runOnUiThread {
             startupGuard.cancel() // BOREALIS: first-frame watchdog
-            SessionAudit.terminated(errorCode) // BOREALIS: audit trail
+            // BOREALIS: audit trail. The end that the session took for the quit's is the quit's
+            // here too, whether the host answered the cancel before or after it: the answer of a
+            // shared app (599) clears the quit that the audit waits for, and the end of the stream
+            // that follows is no error
+            if (endedByQuit) SessionAudit.quit() else SessionAudit.terminated(errorCode)
 
             // Let the display go to sleep now
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

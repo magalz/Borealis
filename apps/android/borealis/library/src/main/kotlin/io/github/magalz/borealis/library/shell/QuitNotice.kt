@@ -23,7 +23,8 @@ sealed interface LeaveNotice {
 
 /**
  * The notice that leaving the stream leaves for the Library: "App quit." after a Quit, which a Quit
- * from the Apps sheet shows too, or that the app is still running after a Disconnect. The stream
+ * from the Apps sheet shows too, that the app is still running after a Disconnect, or that it keeps
+ * running for another device after the Quit of a session that device started. The stream
  * [post]s it, and the Library, which is behind the stream and comes to the front when it ends,
  * shows it once with the host of its shell.
  *

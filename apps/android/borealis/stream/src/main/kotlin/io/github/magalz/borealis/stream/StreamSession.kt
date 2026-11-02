@@ -45,14 +45,16 @@ data class StreamDefaults(
  *
  * A quit of an app that the stream joined ([launchRequested]) can be answered with 599 by a host
  * that keeps the app for the device that started it, and ends only this stream, with the quit's
- * ENet disconnect ([endedByQuit]). That pair, in either order, is a clean leave and no failure: the
- * session asks the [QuitFailure] to leave, and the activity finishes with a notice for the Library.
- * With the 599 answered first the stream still runs, and the answer is held for
- * [SHARED_QUIT_WINDOW_MS] before it is shown, which gives the end of the stream the time to come.
- * Anything else, a session that launched the app, another error of the quit or another end of the
- * stream, goes the way it always went. A held answer is dropped when the user leaves, with a
- * disconnect or a leave, and when the connection stops: nothing is left to wait for, no end of the
- * stream is the quit's any more, and no toast may follow the activity.
+ * ENet disconnect or the graceful termination ([endedByQuit]). That pair, in either order, is a
+ * clean leave and no failure: the session asks the [QuitFailure] to leave, and the activity
+ * finishes with a notice for the Library. The graceful termination reports no failure, so the
+ * activity says that it ended the stream with [onGracefulEnd] instead of [onFailed]. With the 599
+ * answered first the stream still runs, and the answer is held for [SHARED_QUIT_WINDOW_MS] before
+ * it is shown, which gives the end of the stream the time to come. Anything else, a session that
+ * launched the app, another error of the quit or another end of the stream, goes the way it always
+ * went. A held answer is dropped when the user leaves, with a disconnect or a leave, and when the
+ * connection stops: nothing is left to wait for, no end of the stream is the quit's any more, and
+ * no toast may follow the activity.
  *
  * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
  * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
@@ -270,12 +272,7 @@ class StreamSession(
      * 599 waits for (see [endedByQuit]) is the quit's and no failure either: the session leaves.
      */
     fun onFailed(failure: StreamFailure) {
-        // The 599 answer came first, and this is the end that it holds for.
-        val held = heldQuit.get()
-        if (held != null && endedByTheQuit && heldQuit.compareAndSet(held, null)) {
-            leaveKeepingApp(held.failure)
-            return
-        }
+        if (leaveForHeldQuit()) return
         mutableState.update {
             val phase = it.phase
             when {
@@ -318,6 +315,14 @@ class StreamSession(
         }
     }
 
+    // The 599 answer came first, and the end of the stream that it holds for is here: leaves.
+    private fun leaveForHeldQuit(): Boolean {
+        val held = heldQuit.get()
+        if (held == null || !endedByTheQuit || !heldQuit.compareAndSet(held, null)) return false
+        leaveKeepingApp(held.failure)
+        return true
+    }
+
     private fun leaveKeepingApp(failure: QuitFailure) {
         BorealisLog.i(
             LogTag.APP,
@@ -331,8 +336,9 @@ class StreamSession(
      * The stream ended with [code], reported from the connection thread. True when that is the end
      * of the quit the user asked for, which the log then says with the time since the quit: the
      * host closes the stream when it gets the cancel, and the control stream reports that as the
-     * ENet disconnect, [ENET_DISCONNECT]. Any other code while a quit is pending is a network drop
-     * and goes the way of a failure.
+     * ENet disconnect, [ENET_DISCONNECT], or as the graceful termination, [GRACEFUL_TERMINATION],
+     * when the host sends that before it closes a cancelled session. Any other code while a quit is
+     * pending is a network drop and goes the way of a failure.
      *
      * A quit whose 599 answer came first, on a joined app, is still waiting for this end: it counts
      * for [SHARED_QUIT_WINDOW_MS] from the answer. The host closes the stream when it gets the
@@ -341,7 +347,8 @@ class StreamSession(
      */
     fun endedByQuit(code: Int): Boolean {
         val quitting = mutableState.value.phase is StreamPhase.Quitting
-        if (code != ENET_DISCONNECT || !(quitting || heldQuitOpen())) return false
+        val quitEnd = code == ENET_DISCONNECT || code == GRACEFUL_TERMINATION
+        if (!quitEnd || !(quitting || heldQuitOpen())) return false
         endedByTheQuit = true
         BorealisLog.i(
             LogTag.APP,
@@ -352,8 +359,15 @@ class StreamSession(
         return true
     }
 
-    /** The stream ended gracefully and the activity finishes with no failure to report. */
-    fun onGracefulEnd() = Unit
+    /**
+     * The activity finishes after the graceful termination that [endedByQuit] took for the quit's.
+     * It reports no failure for that end, so [onFailed] does not come: the 599 answer that was held
+     * for it leaves here, as it does there. Called on the main thread; a graceful end that was not
+     * the quit's changes nothing.
+     */
+    fun onGracefulEnd() {
+        leaveForHeldQuit()
+    }
 
     private fun heldQuitOpen(): Boolean {
         val held = heldQuit.get() ?: return false
@@ -545,3 +559,10 @@ private const val SHARED_QUIT_WINDOW_MS = 5_000L
  * (`ControlStream.c`, `ENET_EVENT_TYPE_DISCONNECT`), which the host causes by closing the stream.
  */
 private const val ENET_DISCONNECT = -1
+
+/**
+ * The code that the control stream reports when the host sends the graceful termination
+ * (`ML_ERROR_GRACEFUL_TERMINATION`). A host that sends it before it disconnects a cancelled session
+ * (NortheBridge/luminalshine#232) ends the user's Quit with it, and not with [ENET_DISCONNECT].
+ */
+private const val GRACEFUL_TERMINATION = 0

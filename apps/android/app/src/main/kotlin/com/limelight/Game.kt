@@ -2969,7 +2969,8 @@ class Game :
 
     override fun connectionTerminated(errorCode: Int) {
         // BOREALIS: the host ends the stream when it gets the Quit that the user confirmed, and the
-        // control stream reports the ENet disconnect (-1); that end is the quit's, so no
+        // control stream reports the ENet disconnect (-1), or the graceful termination (0) when the
+        // host sends it before it disconnects a cancelled session; that end is the quit's, so no
         // connectivity test and no error. Any other code is a network drop (leave)
         val endedByQuit = ::streamSession.isInitialized && streamSession.endedByQuit(errorCode)
 
@@ -3035,6 +3036,12 @@ class Game :
                         )
                     )
                 } else {
+                    // BOREALIS: the graceful end that was the quit's reports no failure, so the
+                    // session is told here: the 599 answer that waits for the end leaves now, with
+                    // the notice for the Library, before the activity finishes (stream)
+                    if (endedByQuit && errorCode == MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
+                        streamSession.onGracefulEnd()
+                    }
                     // BOREALIS: another exit may have finished the activity already (leave)
                     if (!isFinishing) finish()
                 }

@@ -2907,11 +2907,14 @@ class Game :
             if (!displayedFailureDialog) {
                 displayedFailureDialog = true
                 if (!endedByQuit) LimeLog.severe("Connection terminated: $errorCode")
+                // BOREALIS: a Disconnect does not mark the failure screen as shown, but its stop
+                // ran already: the end of the stream that the user left is no failure (leave)
+                val leaving = stopRan
                 stopConnection()
 
                 // Display the error dialog if it was an unexpected termination.
                 // Otherwise, just finish the activity immediately.
-                if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
+                if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION && !leaving) {
                     // BOREALIS: the chrome shows the classified failure (stream)
                     val portBlocked =
                         portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE &&

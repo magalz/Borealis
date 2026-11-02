@@ -3063,6 +3063,8 @@ class Game :
         LimeLog.severe("The video surface was lost")
         // The last frame is copied before the connection stops and the decoder goes
         if (firstFrameShown) chromeHost.freezeFrame()
+        // The audit says the error before the stop of the connection says that the user left
+        SessionAudit.failed("video_surface_lost")
         stopConnection()
         streamSession.onFailed(
             StreamFailure(

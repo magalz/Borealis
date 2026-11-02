@@ -10,7 +10,8 @@ import java.util.concurrent.atomic.AtomicReference
  * end however many paths report it (a stop by the user and a termination by the connection can both
  * arrive). The first end names the reason: `disconnect` and `quit` when the user chose them in the
  * menu, `user` when the user left the stream screen in another way, `host_ended` and `error` when
- * the connection ended. Nothing about the stream content is recorded.
+ * the connection ended (`error` also when the app ended a stream that could not go on). Nothing
+ * about the stream content is recorded.
  */
 object SessionAudit {
     private class Active(val host: String?, val startedAtMillis: Long)
@@ -103,9 +104,14 @@ object SessionAudit {
         }
     }
 
+    /**
+     * The stream could not go on and the app ends it, with no code from the connection: [cause]
+     * names why, as a token (`video_surface_lost`). The stop of the activity that follows is no
+     * second end.
+     */
     @JvmStatic
     fun failed(cause: String) {
-        // Unwired stub of the test commit.
+        end(AuditOutcome.FAILURE) { "reason=error cause=$cause duration_s=$it" }
     }
 
     private fun end(outcome: AuditOutcome, detail: (Long) -> String) {

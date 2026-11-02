@@ -3036,17 +3036,21 @@ class Game :
                         )
                     )
                 } else {
-                    // BOREALIS: the graceful end that was the quit's reports no failure, so the
-                    // session is told here: the 599 answer that waits for the end leaves now, with
-                    // the notice for the Library, before the activity finishes (stream)
-                    if (endedByQuit && errorCode == MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
-                        streamSession.onGracefulEnd()
-                    }
-                    // BOREALIS: another exit may have finished the activity already (leave)
-                    if (!isFinishing) finish()
+                    finishWithoutFailure(endedByQuit, errorCode)
                 }
             }
         }
+    }
+
+    // BOREALIS: the stream ended with no failure to report. A graceful end that was the quit's
+    // tells the session, so that the 599 answer that waits for the end leaves now, with the notice
+    // for the Library, before the activity finishes (stream)
+    private fun finishWithoutFailure(endedByQuit: Boolean, errorCode: Int) {
+        if (endedByQuit && errorCode == MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
+            streamSession.onGracefulEnd()
+        }
+        // BOREALIS: another exit may have finished the activity already (leave)
+        if (!isFinishing) finish()
     }
 
     // BOREALIS: the stream is over, whatever ended it: the display may sleep, the controller input

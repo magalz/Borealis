@@ -77,6 +77,56 @@ internal class GameQuitEndTest : GameTestBase() {
         assertThat(ShadowRecordingBridge.names).contains("stopConnection")
     }
 
+    // A host that sends the graceful termination before it ends a cancelled session
+    // (NortheBridge/luminalshine#232) ends the stream with code 0, not with the ENet disconnect.
+
+    @Test
+    fun `the graceful end that the quit caused is not tested for a blocked network`() {
+        streamWithQuitUnderWay()
+
+        rig.game.connectionTerminated(GRACEFUL)
+        rig.awaitStop()
+
+        assertThat(connectivityTests()).isEmpty()
+    }
+
+    @Test
+    fun `the graceful end that the quit caused is logged at info as the quit's, not as an error`() {
+        streamWithQuitUnderWay()
+
+        rig.game.connectionTerminated(GRACEFUL)
+        rig.awaitStop()
+
+        val ended = borealisLog.records.single { it.message == "quit stream ended" }
+        assertThat(ended.level).isEqualTo(LogLevel.INFO)
+        assertThat(ended.fields).contains("code" to "0")
+        assertThat(limeLog.entries.filter { it.first == Level.SEVERE }).isEmpty()
+        assertThat(limeLog.messages.filter { "Connection terminated" in it }).isEmpty()
+    }
+
+    @Test
+    fun `the graceful end that the quit caused finishes the activity and stops the connection`() {
+        streamWithQuitUnderWay()
+
+        rig.game.connectionTerminated(GRACEFUL)
+        rig.awaitStop()
+
+        assertThat(rig.game.isFinishing).isTrue()
+        assertThat(ShadowRecordingBridge.names).contains("stopConnection")
+    }
+
+    @Test
+    fun `a graceful end that no quit caused is tested for a blocked network and not the quit's`() {
+        rig.streaming()
+
+        rig.game.connectionTerminated(GRACEFUL)
+        rig.awaitStop()
+
+        assertThat(connectivityTests()).hasSize(1)
+        assertThat(borealisLog.records.map { it.message }).doesNotContain("quit stream ended")
+        assertThat(rig.game.isFinishing).isTrue()
+    }
+
     @Test
     fun `another end while a quit is under way is a network drop and is tested and logged`() {
         streamWithQuitUnderWay()
@@ -108,5 +158,6 @@ internal class GameQuitEndTest : GameTestBase() {
 
     private companion object {
         const val ENDED = -1
+        const val GRACEFUL = MoonBridge.ML_ERROR_GRACEFUL_TERMINATION
     }
 }

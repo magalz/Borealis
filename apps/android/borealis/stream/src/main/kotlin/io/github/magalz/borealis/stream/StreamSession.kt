@@ -352,6 +352,9 @@ class StreamSession(
         return true
     }
 
+    /** The stream ended gracefully and the activity finishes with no failure to report. */
+    fun onGracefulEnd() = Unit
+
     private fun heldQuitOpen(): Boolean {
         val held = heldQuit.get() ?: return false
         return clockMs() - held.answeredAtMs <= SHARED_QUIT_WINDOW_MS

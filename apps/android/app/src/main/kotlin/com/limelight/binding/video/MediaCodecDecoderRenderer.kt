@@ -149,6 +149,7 @@ class MediaCodecDecoderRenderer(
     // BOREALIS: the audio delay for the overlay, asked when a snapshot is built; the stream
     // activity sets the source of its audio renderer (stream.perf)
     @Volatile private var audioDelaySource: () -> Int? = { null }
+    private var audioDelayFailureLogged = false
 
     private val codecRecoveryType = AtomicInteger(CR_RECOVERY_TYPE_NONE)
     private val codecRecoveryMonitor = Any()
@@ -538,6 +539,21 @@ class MediaCodecDecoderRenderer(
         return decoder?.name
     }
 
+    // BOREALIS: the source belongs to the stream activity and runs on the native video submit
+    // thread: one that throws has no delay to show, and its failure is logged once, not thrown into
+    // the JNI callback (stream.perf)
+    @Suppress("TooGenericExceptionCaught")
+    private fun audioDelayOrNull(): Int? =
+        try {
+            audioDelaySource()
+        } catch (e: Exception) {
+            if (!audioDelayFailureLogged) {
+                audioDelayFailureLogged = true
+                LimeLog.warning("The audio delay source failed, the overlay has no audio delay: $e")
+            }
+            null
+        }
+
     // BOREALIS: builds the snapshot of the last two windows, the same numbers the text overlay
     // shows (stream.perf)
     private fun pushPerfSnapshot() {
@@ -562,7 +578,7 @@ class MediaCodecDecoderRenderer(
                     elapsedMs,
                 ),
                 MoonBridge.getEstimatedRttInfo(),
-                audioDelaySource(),
+                audioDelayOrNull(),
             )
         )
     }

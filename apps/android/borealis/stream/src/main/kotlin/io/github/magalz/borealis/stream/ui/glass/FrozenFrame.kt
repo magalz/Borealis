@@ -1,6 +1,8 @@
 package io.github.magalz.borealis.stream.ui.glass
 
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,6 +17,9 @@ import io.github.magalz.borealis.logging.LogTag
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val NANOS_PER_MILLI = 1_000_000L
+
+/** How long a copy may take before it is given up: a second, where the devices take 0.1 to 0.3. */
+private const val COPY_CAP_MS = 1_000L
 
 /**
  * The last frame of a stream that failed, which the popup of the error shows frozen behind it (the
@@ -36,19 +41,23 @@ private const val NANOS_PER_MILLI = 1_000_000L
  * leaves the frame at the last place that it had.
  *
  * Between the request and the end of the copy it is [pending], and the popup keeps the background
- * off the screen meanwhile. That relies on the source ending every copy that [request] asked for,
- * well or badly: `PixelCopy` answers each request it accepts on its handler, and [PixelCopySource]
- * answers one that it refuses. A copy that never ended would leave the popup on the black of the
- * frame, under its scrim, where it stays readable.
+ * off the screen meanwhile. The source ends every copy that [request] asked for, well or badly:
+ * `PixelCopy` answers each request it accepts on its handler, and [PixelCopySource] answers one
+ * that it refuses. The wait does not rely on that alone: a copy that has not ended after
+ * [COPY_CAP_MS] (it takes 0.1 to 0.3 s on the devices) is given up. Then it is no longer pending
+ * and there is no frame, so the popup sits on the background, and the copy that ends later is
+ * ignored. Without the cap, a copy that never ended would leave the popup on the black of the
+ * frame, under its scrim, with a solid panel.
  *
  * Only the first [request] copies. [release] lets go of the frame, once the activity is ending and
- * nothing draws it any more, and a copy that ends after it is dropped.
+ * nothing draws it any more, and a copy that ends after it is dropped. [schedule] runs an action on
+ * the main thread after a delay in milliseconds, for the cap; a test gives its own.
  */
 internal class FrozenFrame(
     private val source: VideoSource,
     private val origin: () -> IntOffset,
     private val clock: () -> Long = SystemClock::elapsedRealtimeNanos,
-    private val schedule: (Long, () -> Unit) -> Unit = { _, _ -> },
+    private val schedule: (Long, () -> Unit) -> Unit = ::postToMainThread,
 ) {
     /** A copy that worked: the picture, and where the video was when it was last seen. */
     private class Copy(val image: ImageBitmap, var bounds: VideoBounds)
@@ -79,6 +88,9 @@ internal class FrozenFrame(
         get() = hasFrame || pending
 
     private val asked = AtomicBoolean(false)
+
+    // The copy has ended, or the cap has given it up: whichever comes first, the other is ignored.
+    private val settled = AtomicBoolean(false)
     @Volatile private var released = false
 
     /** Whether the copy has been asked for. */
@@ -106,10 +118,20 @@ internal class FrozenFrame(
         )
         val startedAt = clock()
         pending = true
+        schedule(COPY_CAP_MS, ::givenUp)
         source.copy(bitmap) { ok -> finish(ok, bitmap, startedAt) }
     }
 
+    // The cap ran out, on the main thread: the copy is no frame, unless it ended first.
+    private fun givenUp() {
+        if (!settled.compareAndSet(false, true)) return
+        pending = false
+        if (released) return
+        BorealisLog.w(LogTag.VIDEO, "Frozen frame failed", "reason" to "timeout")
+    }
+
     private fun finish(ok: Boolean, bitmap: Bitmap, startedAt: Long) {
+        if (!settled.compareAndSet(false, true)) return
         pending = false
         if (released) return
         if (!ok) {
@@ -151,6 +173,10 @@ internal class FrozenFrame(
         pending = false
         copy = null
     }
+}
+
+private fun postToMainThread(delayMs: Long, action: () -> Unit) {
+    Handler(Looper.getMainLooper()).postDelayed({ action() }, delayMs)
 }
 
 /** The frozen frame behind the error popup. Null where there is no stream to have copied. */

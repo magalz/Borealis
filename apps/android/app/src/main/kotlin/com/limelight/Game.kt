@@ -3055,7 +3055,7 @@ class Game :
     // this only warns. The checks run here, not where the report was posted, so a leave that came
     // after the post counts (stream)
     private fun endStreamForLostSurface() {
-        if (stopRan || displayedFailureDialog || isFinishing || isDestroyed) {
+        if (streamEndsAlready()) {
             BorealisLog.w(LogTag.VIDEO, "video surface lost while the stream is ending")
             return
         }
@@ -3072,6 +3072,10 @@ class Game :
             )
         )
     }
+
+    // BOREALIS: the stop ran, a failure is on the screen, or the activity is going away (stream)
+    private fun streamEndsAlready(): Boolean =
+        stopRan || displayedFailureDialog || isFinishing || isDestroyed
 
     override fun connectionStatusUpdate(connectionStatus: Int) {
         runOnUiThread {

@@ -20,6 +20,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Rational
 import android.view.Display
 import android.view.InputDevice
@@ -499,16 +500,25 @@ class Game :
             MediaCodecDecoderRenderer(
                 this,
                 prefConfig,
-                CrashListener {
-                    // The MediaCodec instance is going down due to a crash
-                    // let's tell the user something when they open the app again
+                object : CrashListener {
+                    override fun notifyCrash(e: Exception) {
+                        // The MediaCodec instance is going down due to a crash
+                        // let's tell the user something when they open the app again
 
-                    // We must use commit because the app will crash when we return from this
-                    // function
-                    tombstonePrefs.edit(commit = true) {
-                        putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        // We must use commit because the app will crash when we return from this
+                        // function
+                        tombstonePrefs.edit(commit = true) {
+                            putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        }
+                        reportedCrash = true
                     }
-                    reportedCrash = true
+
+                    // BOREALIS: the codec refused the surface, which stopped the renderer. The
+                    // renderer calls this on the thread that recovers the codec, while the other
+                    // threads wait for it, so it only posts (stream)
+                    override fun surfaceLost() {
+                        Handler(Looper.getMainLooper()).post { endStreamForLostSurface() }
+                    }
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
                 willStreamHdr,
@@ -3036,6 +3046,31 @@ class Game :
                 }
             }
         }
+    }
+
+    // BOREALIS: the video surface was lost: the picture is gone and nothing else says so. On the
+    // main thread, a stream that runs ends as an error termination does: the chrome shows the
+    // failure over the last frame, and the connection stops. A stream that is ending already (the
+    // stop ran, a failure is shown, the activity is finishing) has said what there is to say, so
+    // this only warns. The checks run here and not where the report was posted, so a leave that came
+    // after the post counts (stream)
+    private fun endStreamForLostSurface() {
+        if (stopRan || displayedFailureDialog || isFinishing || isDestroyed) {
+            BorealisLog.w(LogTag.VIDEO, "video surface lost while the stream is ending")
+            return
+        }
+        displayedFailureDialog = true
+        LimeLog.severe("The video surface was lost")
+        // The last frame is copied before the connection stops and the decoder goes
+        if (firstFrameShown) chromeHost.freezeFrame()
+        stopConnection()
+        streamSession.onFailed(
+            StreamFailure(
+                if (firstFrameShown) FailureKind.STOPPED else FailureKind.GENERIC,
+                "The video surface was lost",
+                null,
+            )
+        )
     }
 
     override fun connectionStatusUpdate(connectionStatus: Int) {

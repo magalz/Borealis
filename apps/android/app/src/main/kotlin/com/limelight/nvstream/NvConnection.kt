@@ -39,6 +39,8 @@ import io.github.magalz.borealis.host.launch.RetryProgress
 import io.github.magalz.borealis.host.launch.RunningAppReader
 import io.github.magalz.borealis.host.launch.ServerInfoReader
 import io.github.magalz.borealis.host.pairing.CertificateMismatchException
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.StartFailureLog
 import io.github.magalz.borealis.stream.Utf8Text
 import java.io.IOException
@@ -51,6 +53,7 @@ import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.BooleanSupplier
 import java.util.function.Supplier
 import javax.crypto.KeyGenerator
@@ -114,12 +117,33 @@ open class NvConnection(
     // BOREALIS: true from the moment this connection takes the bridge until it gave it back: the
     // native calls are process-global, so stop() makes them only while this holds, and never for a
     // connection that did not set the bridge up (or whose bridge another connection may own by
-    // now). Written under the MoonBridge monitor only (host.launch)
+    // now). Written under the MoonBridge monitor and under bridgeFlagLock (host.launch)
     @Volatile private var bridgeSetUp = false
+
+    // BOREALIS: orders the read of bridgeSetUp and the interrupt that stop() makes on it against
+    // every write of the flag. The interrupt flag of the native library is process-global and the
+    // next start clears it: an interrupt that was decided while this connection had the bridge must
+    // be made before the flag goes false and the place goes back, or it lands on the start of the
+    // next connection. Held only for those steps, never across a native call that can block, so a
+    // stop can still interrupt a start that runs; taken inside the MoonBridge monitor, never the
+    // other way round (host.launch)
+    private val bridgeFlagLock = Any()
 
     // BOREALIS: true while this connection holds the place of connectionAllowed, from the acquire
     // of its start until stop(), or a start that ends without a stream, gives it back (host.launch)
     private val holdsPlace = AtomicBoolean(false)
+
+    // BOREALIS: the client of the /launch that the host accepted, until the native stream started:
+    // what a leave before the stream asks to /cancel. Only for a launch (a resume may join the app
+    // of another device, and a refused launch started nothing) and not for a GFE host (host.launch)
+    @Volatile private var acceptedLaunch: NvHTTP? = null
+
+    // BOREALIS: the launch generation that the accepted /launch took, meaningful while
+    // acceptedLaunch is set (host.launch)
+    @Volatile private var acceptedGeneration = 0L
+
+    // BOREALIS: the /cancel of an abandoned launch is sent once per connection (host.launch)
+    private val launchCancelSent = AtomicBoolean(false)
 
     // BOREALIS: the app that this start asks for: the configured one, or the one that the lookup by
     // name found when the configuration came without an id; set by startApp, on the start thread
@@ -155,8 +179,10 @@ open class NvConnection(
         // sees the cancel and never begins, or this sees the flag and interrupts. The opposite
         // order on the start side would let a start begin after a stop that skipped the interrupt
         // (host.launch)
-        if (bridgeSetUp) {
-            MoonBridge.interruptConnection()
+        synchronized(bridgeFlagLock) {
+            if (bridgeSetUp) {
+                MoonBridge.interruptConnection()
+            }
         }
 
         // Moonlight-core is not thread-safe with respect to connection start and stop, so
@@ -164,8 +190,10 @@ open class NvConnection(
         synchronized(MoonBridge::class.java) {
             // BOREALIS: the flag is consumed, so that a second stop makes no native call either:
             // by then another connection may own the bridge (host.launch)
-            val setUp = bridgeSetUp
-            bridgeSetUp = false
+            val setUp =
+                synchronized(bridgeFlagLock) {
+                    bridgeSetUp.also { bridgeSetUp = false }
+                }
             if (setUp) {
                 MoonBridge.stopConnection()
             }
@@ -246,7 +274,19 @@ open class NvConnection(
                 verb,
                 checkNotNull(context.serverAddress).address,
             ),
-            LaunchAttempt { h.launchApp(context, verb, appId, context.negotiatedHdr) },
+            LaunchAttempt {
+                // BOREALIS: right before the request goes out, so that a cancel that is late can
+                // tell that another connection asked the host for a session after this one
+                // (host.launch)
+                val generation = launchGeneration.incrementAndGet()
+                val accepted = h.launchApp(context, verb, appId, context.negotiatedHdr)
+                // BOREALIS: what a leave before the stream cancels (host.launch)
+                if (accepted && verb == "launch" && !context.isNvidiaServerSoftware) {
+                    acceptedGeneration = generation
+                    acceptedLaunch = h
+                }
+                accepted
+            },
             LaunchHooks(
                 HostErrorExtractor { e ->
                     if (e is HostHttpResponseException) HostError(e.errorCode, e.errorMessage)
@@ -658,8 +698,14 @@ open class NvConnection(
         }
     }
 
+    @Suppress("ReturnCount")
     @Throws(IOException::class, XmlPullParserException::class)
     protected open fun quitAndLaunch(h: NvHTTP, context: ConnectionContext): Boolean {
+        // BOREALIS: the user left, possibly with the answer Quit: the host's app, which may belong
+        // to another device, is not ended for a stream that nobody watches (host.launch)
+        if (launchCancelled) {
+            return false
+        }
         startStep = StartSteps.QUIT // BOREALIS: host.failure
         try {
             if (!h.quitApp()) {
@@ -683,6 +729,11 @@ open class NvConnection(
             }
         }
 
+        // BOREALIS: left while the host ended the app: no launch, and no word to the listener
+        // (host.launch)
+        if (launchCancelled) {
+            return false
+        }
         return launchNotRunningApp(h, context)
     }
 
@@ -716,7 +767,62 @@ open class NvConnection(
         videoDecoderRenderer: VideoDecoderRenderer?,
         connectionListener: NvConnectionListener?,
     ) {
-        Thread { runStart(audioRenderer, videoDecoderRenderer, connectionListener) }.start()
+        Thread {
+            runStart(audioRenderer, videoDecoderRenderer, connectionListener)
+            cancelAbandonedLaunch() // BOREALIS: host.launch
+        }
+            .start()
+    }
+
+    // BOREALIS: the start ended because the user left, after the host accepted its /launch and
+    // before a stream came: the host would start the app and roll it back later, so it is asked to
+    // cancel it, once, off the main thread (this runs on the thread of the start). A refused
+    // request is only logged: the rollback of the host is what is left. Not when another connection
+    // asked the host for a session since: every connection sends the same unique id and the host's
+    // cancel ends the session of whoever asks, so it would end the stream that the user started
+    // next. The generation is read right before the request. What is left is the time from that
+    // read until the host handles the cancel: a /launch or /resume of another connection that the
+    // host handles in it is ended too, and only a cancel that names its session could close that
+    // (host.launch)
+    private fun cancelAbandonedLaunch() {
+        val h = acceptedLaunch ?: return
+        if (
+            !launchCancelled ||
+                !launchCancelSent.compareAndSet(false, true) ||
+                launchGeneration.get() != acceptedGeneration
+        ) {
+            return
+        }
+        try {
+            h.cancelApp()
+        } catch (e: IOException) {
+            BorealisLog.w(LogTag.LAUNCH, "launch cancel failed", "error" to e.javaClass.simpleName)
+        } catch (e: XmlPullParserException) {
+            BorealisLog.w(LogTag.LAUNCH, "launch cancel failed", "error" to e.javaClass.simpleName)
+        }
+    }
+
+    // BOREALIS: sets the flag that says this connection has the bridge, and takes it back when the
+    // user already left: the start is then not to begin. The flag is written before the cancel is
+    // read, and the read of the stop (which writes the cancel and then reads the flag) is the same
+    // step against this one: the stop never sees the flag of a start that did not begin, and sees
+    // it, and interrupts, for one that did (host.launch)
+    private fun setBridgeUpUnlessCancelled(): Boolean =
+        synchronized(bridgeFlagLock) {
+            bridgeSetUp = true
+            val cancelled = launchCancelled
+            if (cancelled) {
+                bridgeSetUp = false
+            }
+            !cancelled
+        }
+
+    // BOREALIS: the native start answered: a stream that started has nothing left to cancel on the
+    // host (host.launch)
+    private fun nativeStartEnded(ret: Int) {
+        if (ret == 0) {
+            acceptedLaunch = null
+        }
     }
 
     /** What the thread of [start] does. */
@@ -736,6 +842,7 @@ open class NvConnection(
         lastFailureCause = CauseKind.NONE // BOREALIS: host.failure
         lastHttpCode = 0 // BOREALIS
         launchRetried = false // BOREALIS
+        acceptedLaunch = null // BOREALIS: host.launch
         startStep = StartSteps.SERVER_INFO // BOREALIS
 
         context.listener.stageStarting(appName)
@@ -808,9 +915,7 @@ open class NvConnection(
             // monitor to decide on the interrupt, so either this sees the cancel and never begins,
             // or the stop sees the flag and interrupts. The opposite order would let the start
             // begin after a stop that skipped the interrupt (host.launch)
-            bridgeSetUp = true
-            if (launchCancelled) {
-                bridgeSetUp = false
+            if (!setBridgeUpUnlessCancelled()) {
                 releasePlace()
                 return
             }
@@ -844,6 +949,7 @@ open class NvConnection(
                     streamConfig.colorRange,
                 )
             connected = ret == 0 // BOREALIS: stream.keyframe
+            nativeStartEnded(ret) // BOREALIS: host.launch
             if (ret != 0) {
                 // LiStartConnection() failed, so the caller is not expected
                 // to stop the connection themselves. We need to release their
@@ -852,9 +958,11 @@ open class NvConnection(
                 // is the renderers and the listener of this start, which must not outlive it. The
                 // flag goes before the place, because another connection may start right after
                 // this one gave it back, and a late stop() of this one must then make no native
-                // call; a restart sets it again (host.launch)
+                // call; a restart sets it again. A stop that read the flag has made its interrupt
+                // by the time the lock lets the clear through, so it cannot land on the start of
+                // the connection that takes the place next (host.launch)
                 MoonBridge.cleanupBridge()
-                bridgeSetUp = false
+                synchronized(bridgeFlagLock) { bridgeSetUp = false }
                 releasePlace()
                 // BOREALIS: restart the whole start once
                 if (collisions.restartAfterFailure()) {
@@ -1093,6 +1201,10 @@ open class NvConnection(
 
     companion object {
         private val connectionAllowed = Semaphore(1)
+
+        // BOREALIS: counts the /launch and /resume requests of every connection of the process, one
+        // more right before each goes out (host.launch)
+        private val launchGeneration = AtomicLong()
 
         private const val AES_KEY_BITS = 128
         private const val CONNECT_TIMEOUT_MS = 1000

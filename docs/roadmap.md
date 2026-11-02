@@ -2816,8 +2816,9 @@ on 2026-10-20, and 26.10.0-beta.1 (a prerelease of 2026-10-20) ships them
 (release notes). #194 and #202 are fixed on the host (release notes). On 2026-10-29 the owner
 closed #204 (as a duplicate of #212) and #205 (as fixed), and filed five issues, #216 to #220,
 and five discussions in the Ideas category, #221 to #225, from the findings of Borealis. The
-open ones are #198, #201, #212, #214, #216 to #220, the owner's pull requests #213, #215, #226 and
-#227, and the owner's draft pull request #237 (#198 and #201 were checked again on 2026-10-29 and are
+open ones are #198, #201, #212, #214, #216 to #220, the owner's pull
+requests #213, #215, #226 and #227, and the owner's draft pull request #237 (#198 and #201 were
+checked again on 2026-10-29 and are
 still open). The rows add what the Sprint 15 round saw on 2026-10-29 and 2026-10-30
 ([device-validation section 20](development/device-validation.md#20-results-sprint-15)); those
 observations were not read from GitHub.

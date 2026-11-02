@@ -123,7 +123,9 @@ object SessionAudit {
     private const val MASK_H264 = 0x000F
     private const val MASK_H265 = 0x0F00
     private const val MASK_AV1 = 0xF000
-    private const val MASK_10BIT = 0xAA00
+
+    /** Public for a test in the app, which ties it to `MoonBridge.VIDEO_FORMAT_MASK_10BIT`. */
+    const val MASK_10BIT = 0xAA00
     private const val GRACEFUL_TERMINATION = 0
     private const val MILLIS_PER_SECOND = 1000L
 }

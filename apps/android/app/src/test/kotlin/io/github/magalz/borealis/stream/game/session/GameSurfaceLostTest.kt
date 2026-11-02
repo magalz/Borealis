@@ -9,6 +9,7 @@ import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.library.RecordingLog
+import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.logging.LogLevel
@@ -18,6 +19,7 @@ import io.github.magalz.borealis.stream.game.RecordingSurfaceHolder
 import io.github.magalz.borealis.stream.game.phase
 import io.github.magalz.borealis.stream.game.recordSession
 import io.github.magalz.borealis.stream.game.session
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Rule
 import org.junit.Test
 import org.robolectric.shadows.ShadowLooper
@@ -34,7 +36,8 @@ private const val LOST_WARNING = "video surface lost while the stream is ending"
  * error screen and stops its connection, in picture in picture too: the stream keeps running there,
  * and the failure shows when it ends. A stream that is ending already, because the user left (the
  * surface went away, the activity stopped, a Disconnect, a finish) or because it failed, has
- * nothing more to say: a warning is all, in either order with the report.
+ * nothing more to say: a warning is all, in either order with the report. The audit says a stream
+ * that ends this way as an error, unless the user's Quit is under way: that end is the quit's.
  */
 internal class GameSurfaceLostTest : GameTestBase() {
     @get:Rule val log = RecordingLog()
@@ -122,6 +125,40 @@ internal class GameSurfaceLostTest : GameTestBase() {
         val end = rig.audit.single()
         assertThat(end.outcome).isEqualTo(AuditOutcome.SUCCESS)
         assertThat(end.detail).startsWith("reason=user")
+    }
+
+    @Test
+    fun `a Quit under way that succeeds after the lost surface is audited as the quit`() {
+        rig.streaming()
+        val quit = SharedQuitRig(rig, QuitResult.Quit)
+        val answer = CompletableDeferred<Unit>()
+        quit.apps.gate = answer
+        quit.session.quitApp()
+
+        surfaceLost()
+        ShadowLooper.idleMainLooper()
+        rig.awaitStop()
+        answer.complete(Unit)
+
+        val end = rig.audit.single { it.type == AuditType.SESSION_END }
+        assertThat(end.outcome).isEqualTo(AuditOutcome.SUCCESS)
+        assertThat(end.detail).startsWith("reason=quit duration_s=")
+    }
+
+    @Test
+    fun `a Quit under way that fails after the lost surface still ends the session once`() {
+        rig.streaming()
+        val quit = SharedQuitRig(rig, QuitResult.Failed("Boom"))
+        val answer = CompletableDeferred<Unit>()
+        quit.apps.gate = answer
+        quit.session.quitApp()
+
+        surfaceLost()
+        ShadowLooper.idleMainLooper()
+        rig.awaitStop()
+        answer.complete(Unit)
+
+        assertThat(rig.audit.filter { it.type == AuditType.SESSION_END }).hasSize(1)
     }
 
     @Test

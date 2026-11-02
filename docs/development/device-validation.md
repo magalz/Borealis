@@ -5802,8 +5802,7 @@ Galaxy S22, on the debug build of `baf64f5dc`. Steps 1 to 5, 7 and 8 ran; step 6
 on the client side. Two parts of step 3 could not be produced: a leave before the launch request, and the 409/503
 retry, for which the host answers 400 instead. The owner listened to the sound of steps 5 and 7 on both devices at
 17:55 to 18:08 (see the owner's sound check below), and later reported the picture of steps 4 and 5 and steps 9,
-10, 15 and 17 (see Results). Steps 11 to 14 and 16, and the S22 overlay of step 6, are still
-open. The findings are below.
+10, 12 to 15 and 17, and the S22 overlay of step 6 (see Results). Steps 11 and 16 are still open. The findings are below.
 
 ### Setup
 
@@ -5848,16 +5847,17 @@ open. The findings are below.
 | 5 Stop and restart, twice | S22 | pass for the stops and the picture; the sound crackles (finding 4) | Two cycles from 11:03 to 11:29: start, Disconnect, start again, then Disconnect and Quit from the Apps sheet (`quit cancel answered` in 707 and 577 ms). |
 | 5 No exception from the bridges | TV, S22 | pass | No `the Java call threw an exception`, no `AndroidRuntime` or `FATAL` line and no Java stack trace for the app processes, in the whole capture of each device. |
 | 6 Host latency in the overlay | TV | pass | The overlay was on (Detailed). It read "Host processing 2.8 / 3.1 / 3.5 ms (min/avg/max)" at 10:46 and "2.8 / 3.0 / 3.3" at 10:48: the lowest value stayed above 0. Read from the menu's dump, which shows the overlay text. |
-| 6 Host latency in the overlay | S22 | owner check | The overlay shows only on the screen in landscape, where no dump or capture is taken. |
+| 6 Host latency in the overlay | S22 | pass | Reported by the owner: the overlay works. The agent took no dump or capture of it in landscape. |
 | 7 Audio start, stop and restart | TV | pass; the owner heard the sound after each start | `Received first audio packet` after each start with the sound playing: 5200 ms at a launch, 300 ms at a resume (and 33500 ms in a resume where the sound started late). No exception from the audio renderer at the stops. |
 | 7 Audio start, stop and restart | S22 | pass for the start and stop; the sound crackles (finding 4) | First audio packet after 0 and 200 ms (HDR on), 0 and 100 ms (HDR off). No exception at the stops. |
 | 8 Upgrade with the legacy 5.1 switch | S22 | pass | With `checkbox_51_surround` = true and `list_audio_config` = `71`: after the start the value stays `71` and the legacy key is gone. With the key and no `list_audio_config`: after the start `list_audio_config` = `51`, the key is gone, and Settings shows "Channels: 5.1 surround". The preferences file was then put back byte for byte from a copy taken before the step. |
 | 9 The Library offline state after a re-open | S22 | pass | Reported by the owner: pass in every scenario. |
 | 10 Wake-on-LAN | S22 | not run | The owner's PC does not go to sleep, so it cannot be woken. |
 | 11 A host list with a forgotten host | S22 | owner check | Not reported yet. |
-| 12 Pointer capture and the external keyboard | S22 | owner check | Not reported yet. |
-| 13 The mouse and stylus buttons | S22 | owner check | Not reported yet. |
-| 14 The on-screen controller | S22 | owner check | Not reported yet. |
+| 12 Pointer capture and the external keyboard | S22 | pass | Reported by the owner (mouse and keyboard). |
+| 13 The mouse buttons | S22 | pass | Reported by the owner (mouse and keyboard). |
+| 13 The stylus buttons | S22 | not run | No stylus was reported. |
+| 14 The on-screen controller | S22 | pass | Reported by the owner. |
 | 15 The two-finger trackpad tap and scroll | S22 | pass | Reported by the owner: it works as it should. |
 | 16 Pads | S22, TV | owner check | The owner was testing it when this was written. |
 | 17 The DeX right click | S22 | not applicable | The owner has no DeX set-up. |
@@ -5957,10 +5957,9 @@ The owner listened on each device while the PC played a Windows sound in a loop,
 - Step 3, the leave during a 409 or 503 retry: LuminalShine 26.10.1 answers 400 instead, so the retry needs a host that
   answers 409 or 503.
 - Step 3, the leave before the launch request (finding 2) and the start after a failed native start.
-- The S22 overlay of step 6.
-- Steps 11 to 14 and 16, which need the owner: a forgotten host and a new pairing (11), the mouse and the keyboard
-  (12, 13), a stylus if one is at hand (13), the on-screen controller (14) and the pads (16; the trigger motors
-  need a GIP pad, `not applicable` without one). The owner reported steps 9, 10, 15 and 17 and the picture (see
+- Steps 11 and 16, which need the owner: a forgotten host and a new pairing (11), and the pads (16; the trigger
+  motors need a GIP pad, `not applicable` without one). The stylus part of step 13 was not run (no stylus
+  reported). The owner reported the picture, the S22 overlay of step 6 and steps 9, 10, 12 to 15 and 17 (see
   Results).
 - The TV was in use from 11:02 to the owner's OK at 17:48 (the same app was already in front at 10:37, before the
   round started on the TV). After the run of 17:48 the TV was put to sleep with `KEYCODE_SLEEP` at 17:51

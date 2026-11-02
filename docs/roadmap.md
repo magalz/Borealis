@@ -1198,10 +1198,12 @@ owner decides which to run.
 
 Owner decision of 2026-10-28; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
-Built in the phase branch `phase/s16-converted-fixes`, from `1220cc365`, in six batches and a wave 2.
-The six batches and wave 2 are merged: the phase gate passed at `5c364487c`, with the six batches,
-and wave 2 was merged on top of it as `4e1985c6f`. The phase pull request is still to come. The
-device round ran on 2026-11-01 ([section 3.31](development/device-validation.md#331-sprint-16-checks),
+Built in the phase branch `phase/s16-converted-fixes`, from `1220cc365`, in six batches and a wave 2
+([#108](https://github.com/magalz/Borealis/issues/108) to
+[#113](https://github.com/magalz/Borealis/issues/113)). The phase gate passed at `5c364487c`, with the
+six batches, and wave 2 was merged on top of it as `4e1985c6f`. The owner merged the phase pull
+request [#114](https://github.com/magalz/Borealis/pull/114) on 2026-11-02 (`437ab48cd`), and the
+issues are closed. The device round ran on 2026-11-01 ([section 3.31](development/device-validation.md#331-sprint-16-checks),
 results in [section 21](development/device-validation.md#21-results-sprint-16)): no step failed on
 the client side, and none of its findings is a Sprint 16 regression.
 

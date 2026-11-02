@@ -48,6 +48,7 @@ internal class FrozenFrame(
     private val source: VideoSource,
     private val origin: () -> IntOffset,
     private val clock: () -> Long = SystemClock::elapsedRealtimeNanos,
+    private val schedule: (Long, () -> Unit) -> Unit = { _, _ -> },
 ) {
     /** A copy that worked: the picture, and where the video was when it was last seen. */
     private class Copy(val image: ImageBitmap, var bounds: VideoBounds)

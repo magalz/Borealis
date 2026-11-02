@@ -22,9 +22,19 @@ class FrozenFrameTest {
     private val source = FakeVideoSource()
     private var origin = IntOffset.Zero
     private var nanos = 0L
-    private val frozen = FrozenFrame(source, { origin }, { nanos })
+
+    /** What the frame asked the main thread to run later, with the delay in milliseconds. */
+    private val scheduled = mutableListOf<Pair<Long, () -> Unit>>()
+    private val frozen =
+        FrozenFrame(source, { origin }, { nanos }, { delay, action -> scheduled += delay to action })
 
     private fun lines() = log.records.filter { it.tag == LogTag.VIDEO }
+
+    /** The time cap of the copy runs out, as the main thread would run it a second later. */
+    private fun capRunsOut() {
+        assertThat(scheduled).hasSize(1)
+        scheduled.single().second()
+    }
 
     // What a request is
 
@@ -173,6 +183,92 @@ class FrozenFrameTest {
 
         assertThat(frozen.pending).isFalse()
         assertThat(frozen.frame).isNull()
+    }
+
+    // The time cap of the copy
+
+    @Test
+    fun `a request gives the copy a second to end`() {
+        frozen.request()
+
+        assertThat(scheduled.map { it.first }).containsExactly(1_000L)
+    }
+
+    @Test
+    fun `a copy that does not end in time is no longer pending, and there is no frame`() {
+        frozen.request()
+
+        capRunsOut()
+
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.frame).isNull()
+        assertThat(frozen.coversBackground).isFalse()
+    }
+
+    @Test
+    fun `a copy that ends after the cap is ignored`() {
+        frozen.request()
+        capRunsOut()
+
+        source.finish()
+
+        assertThat(frozen.frame).isNull()
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.coversBackground).isFalse()
+    }
+
+    @Test
+    fun `a copy that ends before the cap works as before, and the cap then changes nothing`() {
+        frozen.request()
+        source.finish()
+
+        capRunsOut()
+
+        assertThat(frozen.frame).isNotNull()
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.coversBackground).isTrue()
+    }
+
+    @Test
+    fun `a copy that failed before the cap is not reported again by the cap`() {
+        frozen.request()
+        source.finish(ok = false)
+
+        capRunsOut()
+
+        assertThat(lines().filter { it.message == "Frozen frame failed" }).hasSize(1)
+    }
+
+    @Test
+    fun `a cap that runs out after release changes nothing`() {
+        frozen.request()
+        frozen.release()
+
+        capRunsOut()
+
+        assertThat(frozen.frame).isNull()
+        assertThat(frozen.pending).isFalse()
+        assertThat(lines().filter { it.message == "Frozen frame failed" }).isEmpty()
+    }
+
+    @Test
+    fun `a video with nothing to copy has no cap to wait for`() {
+        source.bounds = null
+
+        frozen.request()
+
+        assertThat(scheduled).isEmpty()
+    }
+
+    @Test
+    fun `a copy that did not end in time says so`() {
+        frozen.request()
+
+        capRunsOut()
+
+        val line = lines().single { it.message == "Frozen frame failed" }
+        assertThat(line.level).isEqualTo(LogLevel.WARN)
+        assertThat(line.fields).containsExactly("reason" to "timeout")
     }
 
     // What covers the background

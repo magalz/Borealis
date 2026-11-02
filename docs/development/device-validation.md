@@ -6126,12 +6126,13 @@ The owner listened on each device while the PC played a Windows sound in a loop,
 
 This section holds the Sprint 17a device round, [section 3.32](#332-sprint-17a-checks), on the Google TV
 Streamer and the Samsung Galaxy S22. The round ran on 2026-11-02, with the owner for the owner steps. It used
-the debug build of `a59162b5b` and, after the last fix, the debug build of `4539b943b`, against LuminalShine
+the debug build of `a59162b5b` and, after the fixes, the debug builds of `4539b943b` and `fc815b85a`, against LuminalShine
 26.10.1, except where a table names another host build. A power cut at about 14:00 local time restarted the PC,
 and the owner authorized adb again on the TV afterwards.
 
-The round found one client defect, the graceful end of a shared Quit (finding 2). It was fixed in `4539b943b`,
-and the retest passed. The other findings are for Sprint 17b and Sprint 19.
+The round found two client defects in the shared Quit, both with the host builds of the pull requests: the
+graceful end (finding 2, fixed in `4539b943b`) and the Quit of the device that started the app (finding 9, fixed
+in `fc815b85a`). Both retests passed. The other findings are for Sprint 17b and Sprint 19.
 
 ### Steps of section 3.32
 
@@ -6187,13 +6188,13 @@ OK, and the host ran it for the test shown here.
 | [#232](https://github.com/NortheBridge/luminalshine/pull/232), graceful end of a cancelled session | `0.0.160-nightly`, `882a92c4` (the PR head `eceb6021` merged into `dba21a9e`; the PR stacks on #227) | A simple Quit on the S22. A shared Quit: the S22 joined the TV's Desktop, then quit. A Quit and relaunch from the S22 with no session of its own. The retest of the shared Quit with the client build `4539b943b`. | The simple Quit ended with termination `0x80030023` and code 0, and left cleanly. The shared Quit left cleanly, but showed the 599 toast ("This session wasn't started by this device, so it cannot be quit...") instead of the notice (finding 2). With `4539b943b` the notice showed and the toast did not. The Quit and relaunch logged `Cancel scope: requester_only`, and the TV kept streaming. |
 | [#231](https://github.com/NortheBridge/luminalshine/pull/231), pairing retry | `0.0.159-nightly`, `67cb6cfe` | The S22 was unpaired, then paired with a wrong PIN, then paired again with the right PIN. The TV was also unpaired by this test, and the owner paired it again. | Paired on the retry. The host log has `Pairing exchange replaced by retry`. This is the case of [#216](https://github.com/NortheBridge/luminalshine/issues/216) that the S16 round left open. |
 | [#227](https://github.com/NortheBridge/luminalshine/pull/227), shared app Quit, first build | `0.0.158-nightly`, `457edfbf` (the PR head `4b55352e` merged into `dba21a9e`), installed at 14:35 local | Step 11 of the round, as above. | Pass. The joined device left cleanly, the notice showed, and the first device kept streaming. |
-| [#227](https://github.com/NortheBridge/luminalshine/pull/227), shared app Quit, later head | `0.0.167-nightly`, `d30f0841` (the PR head `9ac3c3fa`) | The TV started Desktop, the S22 joined it, and the S22 quit. | Pass. The `/cancel` took 161 ms, the Quit was logged as a leave of a shared app, the notice showed, and the TV kept streaming. |
+| [#227](https://github.com/NortheBridge/luminalshine/pull/227), shared app Quit, later head | `0.0.167-nightly`, `d30f0841` (the PR head `9ac3c3fa`) | The TV started Desktop, the S22 joined it, and the S22 quit. Then the TV started Desktop, the S22 joined it, and the TV quit, on `a59162b5b` and again on `fc815b85a`. | The S22's Quit passed: the `/cancel` took 161 ms, the Quit was logged as a leave of a shared app, the notice showed, and the TV kept streaming. The TV's Quit on `a59162b5b` showed "Desktop stopped" with Error -1 while the S22 kept streaming (finding 9). On `fc815b85a` the TV left cleanly with the notice "Desktop keeps running for another device.", and the S22 kept streaming. The "Quit and relaunch" question is asked on the pull request. |
 | [#237](https://github.com/NortheBridge/luminalshine/pull/237), API level and capabilities (draft) | `0.0.164-nightly`, `e7adc705` | A poll from the S22, the host capabilities line, `/launch` (200), and a Quit. | Smoke pass. Nothing broke. Borealis does not read the new fields yet ([Sprint 20](../roadmap.md#sprint-20-release-preparation)). |
 
 ### Findings
 
 Each finding says where it goes. Findings 1, 3, 4, 5, 6 and 8 go to Sprint 17b, and finding 7 to Sprint 19.
-Finding 2 is fixed in this sprint.
+Findings 2 and 9 are fixed in this sprint.
 
 #### 1. A small burst of audio at the start of a stream on the S22
 
@@ -6210,6 +6211,17 @@ graceful termination (`0x80030023`, code 0). On build `a59162b5b`, the Borealis 
 as the Quit's end only when its code was -1. So a shared Quit showed the 599 toast, instead of the notice that the
 app keeps running for another device. The fix, `4539b943b` (`StreamSession`), takes either end, and the retest
 passed (the table of the pull request builds). Sprint 17a, no later sprint.
+
+#### 9. The Quit of the device that started a shared app (fixed in fc815b85a)
+
+With [#227](https://github.com/NortheBridge/luminalshine/pull/227), the host cancels only the caller's session
+whenever another client is live, whoever started the app. On build `a59162b5b` the shared-Quit inference applied
+only to a session that had joined a running app (`/resume`). So when the TV, which had started Desktop with
+`/launch`, quit while the S22 was joined, its quit check got the 599 and the TV showed "Desktop stopped" with
+Error -1. The fix, `fc815b85a` (`StreamSession`), drops the joined-session condition: any Quit answered with 599
+whose stream ended with the Quit's end is a clean leave with the notice. On 26.10.1 the Quit of the device that
+started the app always quits it, so its check never answers 599 and nothing changes there. The retest on the
+`0.0.167-nightly` build passed. Sprint 17a, no later sprint.
 
 #### 3. The side buttons of the Logi M650 send instant pulses
 
@@ -6257,5 +6269,5 @@ Resume or the first card by position. Roadmap, Sprint 17b, Accessibility and lay
 - The render checks of Sprint 15. Only the times of the menu glass copies were logged.
 - Picture-in-picture (steps 6 and 8): it is off in the S22 settings, and the round did not turn it on. Unit tests
   cover the lost surface in picture-in-picture.
-- Left on the devices: the debug build of `4539b943b` on both, paired, and the settings as before the round. The
+- Left on the devices: the debug build of `fc815b85a` on both, paired, and the settings as before the round. The
   host is back on 26.10.1.

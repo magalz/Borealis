@@ -878,7 +878,10 @@ only live one is logged as `Cancel scope: requester_only (other live sessions or
 the caller's session. So "Quit and relaunch" from a second device does not end the first device's stream on those
 builds. On the `0.0.160-nightly` build of #232, which contains #227, a Quit and relaunch from the S22 with no
 session of its own logged that line, and the TV kept streaming. On 26.10.1 the same Quit and relaunch ended the
-first device's stream with error -1.
+first device's stream with error -1. The scope does not depend on who started the app: on the `0.0.167-nightly`
+build of #227, the Quit of the TV, which had started Desktop, with the S22 joined, ended only the TV's session, and
+its check got the 599. Borealis takes that as a clean leave since `fc815b85a`. Whether an explicit "Quit and
+relaunch" should keep this scope is asked on #227.
 
 **Why `/cancel` takes seconds.** The answer is written only after these steps, in this
 order (`src/nvhttp.cpp` unless a file is named):

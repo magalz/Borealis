@@ -108,7 +108,7 @@ class LaunchRequestTest {
             .isEqualTo(
                 "/launch?appid=12&mode=1920x1080x60&additionalStates=1&sops=1" +
                     "&rikey=00010F107F8081A5ABCDEFFEFF09905A&rikeyid=-5&localAudioPlayMode=0" +
-                    "&surroundAudioInfo=196610&continuousAudio=1&remoteControllersBitmap=0" +
+                    "&surroundAudioInfo=196610&remoteControllersBitmap=0" +
                     "&gcmap=0&gcpersist=0&corever=1"
             )
     }
@@ -146,6 +146,53 @@ class LaunchRequestTest {
     }
 
     @Test
+    fun `continuous audio is off by default, so a LuminalShine launch and resume send none`() {
+        val host = host()
+        answerLaunch(host)
+        answerLaunch(host, verb = "resume", body = "<resume>1</resume>")
+        val http = client(host)
+
+        http.launchApp(context(), "launch", 12, false)
+        http.launchApp(context(), "resume", 12, false)
+
+        assertThat(host.requests.map { it.path }).containsExactly("/launch", "/resume").inOrder()
+        host.requests.forEach { assertThat(it.names).doesNotContain("continuousAudio") }
+    }
+
+    @Test
+    fun `a stream configuration that turns continuous audio on adds it to a LuminalShine host`() {
+        val host = host()
+        answerLaunch(host)
+        answerLaunch(host, verb = "resume", body = "<resume>1</resume>")
+        val http = client(host)
+
+        http.launchApp(context { setContinuousAudio(true) }, "launch", 12, false)
+        http.launchApp(context { setContinuousAudio(true) }, "resume", 12, false)
+
+        val targets = host.requests.map { it.target.substringBefore("&uniqueid=") }
+        val query =
+            "?appid=12&mode=1920x1080x60&additionalStates=1&sops=1" +
+                "&rikey=00010F107F8081A5ABCDEFFEFF09905A&rikeyid=-5&localAudioPlayMode=0" +
+                "&surroundAudioInfo=196610&continuousAudio=1&remoteControllersBitmap=0" +
+                "&gcmap=0&gcpersist=0&corever=1"
+        assertThat(targets).containsExactly("/launch$query", "/resume$query").inOrder()
+    }
+
+    @Test
+    fun `a GFE host is sent no continuous audio even when the configuration turns it on`() {
+        val host = host()
+        answerLaunch(host)
+        answerLaunch(host, verb = "resume", body = "<resume>1</resume>")
+        val http = client(host)
+
+        http.launchApp(context(gfe = true) { setContinuousAudio(true) }, "launch", 12, false)
+        http.launchApp(context(gfe = true) { setContinuousAudio(true) }, "resume", 12, false)
+
+        assertThat(host.requests.map { it.path }).containsExactly("/launch", "/resume").inOrder()
+        host.requests.forEach { assertThat(it.names).doesNotContain("continuousAudio") }
+    }
+
+    @Test
     fun `the key goes out as upper case hex of every byte`() {
         val host = host()
         answerLaunch(host)
@@ -171,7 +218,7 @@ class LaunchRequestTest {
                     "&hdrMode=1&clientHdrCapVersion=0&clientHdrCapSupportedFlagsInUint32=0" +
                     "&clientHdrCapMetaDataId=NV_STATIC_METADATA_TYPE_1" +
                     "&clientHdrCapDisplayData=0x0x0x0x0x0x0x0x0x0x0" +
-                    "&localAudioPlayMode=0&surroundAudioInfo=196610&continuousAudio=1" +
+                    "&localAudioPlayMode=0&surroundAudioInfo=196610" +
                     "&remoteControllersBitmap=0&gcmap=0&gcpersist=0&corever=1"
             )
     }
@@ -198,7 +245,7 @@ class LaunchRequestTest {
             .isEqualTo(
                 "/launch?appid=7&mode=1920x1080x60&additionalStates=1&sops=1" +
                     "&rikey=00010F107F8081A5ABCDEFFEFF09905A&rikeyid=1234567&localAudioPlayMode=1" +
-                    "&surroundAudioInfo=4128774&continuousAudio=1&remoteControllersBitmap=15" +
+                    "&surroundAudioInfo=4128774&remoteControllersBitmap=15" +
                     "&gcmap=15&gcpersist=1&corever=1"
             )
     }
@@ -388,7 +435,7 @@ class LaunchRequestTest {
             .isEqualTo(
                 "/resume?appid=99&mode=1920x1080x60&additionalStates=1&sops=1" +
                     "&rikey=00010F107F8081A5ABCDEFFEFF09905A&rikeyid=-5&localAudioPlayMode=0" +
-                    "&surroundAudioInfo=196610&continuousAudio=1&remoteControllersBitmap=0" +
+                    "&surroundAudioInfo=196610&remoteControllersBitmap=0" +
                     "&gcmap=0&gcpersist=0&corever=1"
             )
         assertThat(context.rtspSessionUrl).isEqualTo("rtsp://192.0.2.10:48010")

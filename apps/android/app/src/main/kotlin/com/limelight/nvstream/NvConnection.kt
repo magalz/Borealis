@@ -658,8 +658,14 @@ open class NvConnection(
         }
     }
 
+    @Suppress("ReturnCount")
     @Throws(IOException::class, XmlPullParserException::class)
     protected open fun quitAndLaunch(h: NvHTTP, context: ConnectionContext): Boolean {
+        // BOREALIS: the user left, possibly with the answer Quit: the host's app, which may belong
+        // to another device, is not ended for a stream that nobody watches (host.launch)
+        if (launchCancelled) {
+            return false
+        }
         startStep = StartSteps.QUIT // BOREALIS: host.failure
         try {
             if (!h.quitApp()) {
@@ -683,6 +689,11 @@ open class NvConnection(
             }
         }
 
+        // BOREALIS: left while the host ended the app: no launch, and no word to the listener
+        // (host.launch)
+        if (launchCancelled) {
+            return false
+        }
         return launchNotRunningApp(h, context)
     }
 

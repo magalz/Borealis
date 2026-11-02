@@ -1201,8 +1201,9 @@ Owner decision of 2026-10-28; see the
 Built in the phase branch `phase/s16-converted-fixes`, from `1220cc365`, in six batches and a wave 2.
 The six batches and wave 2 are merged: the phase gate passed at `5c364487c`, with the six batches,
 and wave 2 was merged on top of it as `4e1985c6f`. The phase pull request is still to come. The
-device round has not run; its checks are
-[device-validation section 3.31](development/device-validation.md#331-sprint-16-checks).
+device round ran on 2026-11-01 ([section 3.31](development/device-validation.md#331-sprint-16-checks),
+results in [section 21](development/device-validation.md#21-results-sprint-16)): no step failed on
+the client side, and none of its findings is a Sprint 16 regression.
 
 - **Scope:** item (b) of the blocks "From the Sprint 12 conversion", "From the Sprint 13
   conversion" and "From the Sprint 14 conversion" of the [backlog](#backlog-not-scheduled): the
@@ -1296,8 +1297,12 @@ device round has not run; its checks are
 - **Order:** the fixes come before the refactor of Sprint 18. The triage removes dead and
   unreachable paths, which shrinks the refactor, and the refactor then does not have to keep known
   defects on purpose.
-- **Ends with a device round.** Not run yet: see
-  [device-validation section 3.31](development/device-validation.md#331-sprint-16-checks).
+- **Ends with a device round.** Run on 2026-11-01 on the Google TV Streamer and the S22, on the
+  debug build of `baf64f5dc`, with LuminalShine 26.10.1: the agent part and the owner's checks.
+  Wake-on-LAN was not run (the PC does not sleep), DeX does not apply (none at hand), and the
+  trigger motors need a GIP pad. Its findings went to Sprint 17 (the stream session and audio) and
+  to the host-side items. See
+  [device-validation section 21](development/device-validation.md#21-results-sprint-16).
 
 ### Sprint 17: general fixes
 
@@ -1324,6 +1329,9 @@ The audio items come from the two audio entries of item (d) of the Sprint 14 blo
 The follow-up ran without code changes, as the owner asked; its method, its table and its findings
 are in
 [device-validation, Audio follow-up, 2026-10-28](development/device-validation.md#audio-follow-up-2026-10-28).
+In the Sprint 16 round (2026-11-01) the owner heard a lot of crackling on the S22 and clean sound on
+the TV: the same audio runs, not a Sprint 16 regression
+([section 21](development/device-validation.md#21-results-sprint-16), finding 4).
 
 - **Audio runs on the S22 and on the TV.** Moved here from item (d) of the Sprint 14 block of the
   backlog. `AndroidAudioRenderer` drops a decoded packet while 40 ms or more of audio are pending
@@ -1684,6 +1692,16 @@ its reviews found and left for this sprint.
 - **`HDR_CODEC_MODES` and the 4:4:4 modes.** `NvConnection`'s `HDR_CODEC_MODES` (`0x20200`) does not
   count the 4:4:4 10-bit modes of the server's codec support.
 - **A second "connection stop done".** A second stop logs `connection stop done` again.
+- **A leave during the start still sends the first launch request.** From the Sprint 16 round
+  (2026-11-01, [section 21](development/device-validation.md#21-results-sprint-16), finding 2). In
+  each of five leaves, `/launch` or `/resume` reached the host 0.5 to 0.8 s after the stream activity
+  started, before any Back, and the host launched or joined the app and rolled it back 10 s later.
+  The cancel check of Sprint 16 sees a leave only if `onStop` runs before the request is sent.
+  Whether a leave before the request keeps the host from launching is not shown; the host's rollback
+  is the case to cover.
+- **Back while the in-game menu is open (S22).** From the same round, an observation: a `KEYCODE_BACK`
+  injected with `adb` reached `Game.onKeyDown` and did not close the menu, while the owner's own Back
+  closed it. The cause is not known and may be the injection. Check with a real keyboard's Back.
 
 #### Accessibility and layout
 
@@ -2803,6 +2821,13 @@ open ones are #198, #201, #212, #214, #216 to #220, the owner's pull requests #2
 still open). The rows add what the Sprint 15 round saw on 2026-10-29 and 2026-10-30
 ([device-validation section 20](development/device-validation.md#20-results-sprint-15)); those
 observations were not read from GitHub.
+
+The Sprint 16 round on 2026-11-01, on LuminalShine 26.10.1
+([device-validation section 21](development/device-validation.md#21-results-sprint-16)), saw two host-side
+things, neither filed: the host no longer knew the TV as a paired client at the start of the round
+(cause not known; the owner paired it again), and after each rollback of an unclaimed launch the host
+ran `Virtual display recovery` 2 to 5 times, each attempt failing to apply the display configuration,
+with no crash (31 error lines in the round).
 
 | Item | Kind | Summary |
 | --- | --- | --- |

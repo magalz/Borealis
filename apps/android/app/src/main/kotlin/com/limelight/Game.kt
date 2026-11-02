@@ -3139,9 +3139,9 @@ class Game :
             // Let the decoder know immediately that the surface is gone
             decoderRenderer.prepareForStop()
 
-            if (connected) {
-                stopConnection()
-            }
+            // BOREALIS: a surface that goes away before the start is a leave too: the start that
+            // reports after it finds the stop done and opens no stream that nobody ends (leave)
+            stopConnection()
         }
     }
 

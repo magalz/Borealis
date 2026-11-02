@@ -64,6 +64,11 @@ class StreamConfiguration private constructor() {
     var resumeChosen = false
         private set
 
+    // BOREALIS: ask a LuminalShine host for silence while the PC is quiet, so a sound after a pause
+    // does not arrive as a burst that the client drops (host.launch)
+    var continuousAudio = true
+        private set
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     @Suppress("TooManyFunctions")
     class Builder {
@@ -135,6 +140,10 @@ class StreamConfiguration private constructor() {
 
         fun setResumeChosen(resumeChosen: Boolean): Builder = apply {
             config.resumeChosen = resumeChosen
+        }
+
+        fun setContinuousAudio(continuousAudio: Boolean): Builder = apply {
+            config.continuousAudio = continuousAudio
         }
 
         fun build(): StreamConfiguration = config

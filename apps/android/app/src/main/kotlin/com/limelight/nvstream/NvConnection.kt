@@ -53,6 +53,7 @@ import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.BooleanSupplier
 import java.util.function.Supplier
 import javax.crypto.KeyGenerator
@@ -136,6 +137,10 @@ open class NvConnection(
     // what a leave before the stream asks to /cancel. Only for a launch (a resume may join the app
     // of another device, and a refused launch started nothing) and not for a GFE host (host.launch)
     @Volatile private var acceptedLaunch: NvHTTP? = null
+
+    // BOREALIS: the launch generation that the accepted /launch took, meaningful while
+    // acceptedLaunch is set (host.launch)
+    @Volatile private var acceptedGeneration = 0L
 
     // BOREALIS: the /cancel of an abandoned launch is sent once per connection (host.launch)
     private val launchCancelSent = AtomicBoolean(false)
@@ -270,9 +275,14 @@ open class NvConnection(
                 checkNotNull(context.serverAddress).address,
             ),
             LaunchAttempt {
+                // BOREALIS: right before the request goes out, so that a cancel that is late can
+                // tell that another connection asked the host for a session after this one
+                // (host.launch)
+                val generation = launchGeneration.incrementAndGet()
                 val accepted = h.launchApp(context, verb, appId, context.negotiatedHdr)
                 // BOREALIS: what a leave before the stream cancels (host.launch)
                 if (accepted && verb == "launch" && !context.isNvidiaServerSoftware) {
+                    acceptedGeneration = generation
                     acceptedLaunch = h
                 }
                 accepted
@@ -767,10 +777,20 @@ open class NvConnection(
     // BOREALIS: the start ended because the user left, after the host accepted its /launch and
     // before a stream came: the host would start the app and roll it back later, so it is asked to
     // cancel it, once, off the main thread (this runs on the thread of the start). A refused
-    // request is only logged: the rollback of the host is what is left (host.launch)
+    // request is only logged: the rollback of the host is what is left. Not when another connection
+    // asked the host for a session since: every connection sends the same unique id and the host's
+    // cancel ends the session of whoever asks, so it would end the stream that the user started
+    // next. The generation is read right before the request. What is left is the time from that
+    // read until the host handles the cancel: a /launch or /resume of another connection that the
+    // host handles in it is ended too, and only a cancel that names its session could close that
+    // (host.launch)
     private fun cancelAbandonedLaunch() {
         val h = acceptedLaunch ?: return
-        if (!launchCancelled || !launchCancelSent.compareAndSet(false, true)) {
+        if (
+            !launchCancelled ||
+                !launchCancelSent.compareAndSet(false, true) ||
+                launchGeneration.get() != acceptedGeneration
+        ) {
             return
         }
         try {
@@ -1181,6 +1201,10 @@ open class NvConnection(
 
     companion object {
         private val connectionAllowed = Semaphore(1)
+
+        // BOREALIS: counts the /launch and /resume requests of every connection of the process, one
+        // more right before each goes out (host.launch)
+        private val launchGeneration = AtomicLong()
 
         private const val AES_KEY_BITS = 128
         private const val CONNECT_TIMEOUT_MS = 1000

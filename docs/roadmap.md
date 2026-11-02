@@ -443,7 +443,8 @@ with any number of sprints. The phase pull requests stay small and easy to test.
 | 14 | Kotlin migration 3: video, audio and the stream activity |
 | 15 | The stream screens and glass |
 | 16 | Fixes of the converted code |
-| 17 | General fixes |
+| 17a | General fixes: audio, video and the stream screens, and the stream session |
+| 17b | General fixes: Library and Settings, input, pads, and accessibility and layout |
 | 18 | Refactor of the converted code |
 | 19 | SecOps |
 | 20 | Release preparation |
@@ -1310,6 +1311,22 @@ the client side, and none of its findings is a Sprint 16 regression.
 
 Planned, not started. Owner decision of 2026-10-28, later the same day; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
+
+On 2026-11-02, after Sprint 16, the owner split the sprint in two, run one after the other, each
+with its own phase pull request and device round. The numbers of the later sprints do not change.
+
+- **Sprint 17a** takes [Audio](#audio), [Video and the stream screens](#video-and-the-stream-screens)
+  and [The stream session](#the-stream-session): the stream activity, the renderer and the audio,
+  and a device round on the picture and the sound.
+- **Sprint 17b** takes [Library and Settings](#library-and-settings), [Input](#input),
+  [Pads](#pads) and [Accessibility and layout](#accessibility-and-layout): the input and pad code and
+  the Compose screens, and a device round on the controls and the screens.
+
+Why: about 57 items, many of them investigations on the devices with the owner, and several in the
+same files (`Game.kt` in the stream session, input and video; `ControllerHandler` in pads and input).
+Two smaller sprints keep the pull requests small and each device round on one subject. Two
+orchestrators in parallel were ruled out: they would share the machine's Memtrace and Gradle, the
+devices and the owner's time, and the same files.
 
 The sprint takes everything that is not a conversion item and does not fit one of the other planned
 sprints squarely (owner: "everything that is not conversion and does not fit perfectly in one of the

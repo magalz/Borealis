@@ -43,9 +43,9 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `39 milliseconds of pending audio still lets the samples through`() {
+    fun `99 milliseconds of pending audio still lets the samples through`() {
         val renderer = ready()
-        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(39)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(99)
 
         renderer.playDecodedAudio(samples)
 
@@ -63,16 +63,17 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `40 milliseconds of pending audio drops the samples and logs the duration it read`() {
+    fun `100 milliseconds of pending audio drops the samples and logs the duration it read`() {
         val renderer = ready()
         // The duration is read once, and the log shows the value that the check saw
-        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(40, 77)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(100, 177)
 
         renderer.playDecodedAudio(samples)
 
         assertThat(writes()).isEmpty()
         assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(1)
-        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 40 ms")
+        assertThat(log.entries.last())
+            .isEqualTo(Level.INFO to "Too much pending audio data: 100 ms")
     }
 
     @Test
@@ -109,11 +110,12 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     @Test
     fun `no samples with much pending audio is only logged`() {
         val renderer = ready()
-        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(60)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(160)
 
         renderer.playDecodedAudio(null)
 
-        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 60 ms")
+        assertThat(log.entries.last())
+            .isEqualTo(Level.INFO to "Too much pending audio data: 160 ms")
     }
 
     @Test
@@ -125,11 +127,12 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
 
     @Test
     fun `samples before setup are only logged when much audio is pending`() {
-        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(50)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(120)
 
         renderer().playDecodedAudio(samples)
 
-        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 50 ms")
+        assertThat(log.entries.last())
+            .isEqualTo(Level.INFO to "Too much pending audio data: 120 ms")
     }
 
     // start and stop

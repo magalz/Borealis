@@ -64,9 +64,10 @@ class StreamConfiguration private constructor() {
     var resumeChosen = false
         private set
 
-    // BOREALIS: ask a LuminalShine host for silence while the PC is quiet, so a sound after a pause
-    // does not arrive as a burst that the client drops (host.launch)
-    var continuousAudio = true
+    // BOREALIS: ask a LuminalShine host for silence while the PC is quiet (host.launch). Off by
+    // default: in a test stream it raised the dropped packets, from 263 to 406 at a 40 ms limit and
+    // from 14 to 37 at 100 ms
+    var continuousAudio = false
         private set
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).

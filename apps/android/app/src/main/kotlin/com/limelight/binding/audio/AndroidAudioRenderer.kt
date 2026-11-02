@@ -21,7 +21,8 @@ private const val CHANNEL_OUT_7POINT1_SURROUND = 0x000018fc
 /** Small and large buffer, each in low latency and in standard mode. */
 private const val ATTEMPTS = 4
 
-private const val PENDING_AUDIO_LIMIT_MS = 40
+// BOREALIS: a test stream dropped 263 packets at 40 ms and 14 at 100 ms (Google TV Streamer)
+private const val PENDING_AUDIO_LIMIT_MS = 100
 
 /** What `setup` answers when no attempt created a track. */
 private const val NO_AUDIO_TRACK = -2
@@ -221,14 +222,14 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
     }
 
     override fun playDecodedAudio(audioData: ShortArray?) {
-        // Only queue up to 40 ms of pending audio data in addition to what AudioTrack is buffering
+        // Only queue up to 100 ms of pending audio data in addition to what AudioTrack is buffering
         // for us.
         // BOREALIS: read once, so the log shows the value that the check saw
         val pendingAudioMs = MoonBridge.getPendingAudioDuration()
         if (pendingAudioMs < PENDING_AUDIO_LIMIT_MS) {
             // This will block until the write is completed. That can cause a backlog
             // of pending audio data, so we do the above check to be able to bound
-            // latency at 40 ms in that situation.
+            // latency at 100 ms in that situation.
             val samples = audioData ?: throw NullPointerException("No audio data to play")
             val current = requireTrack()
             val written = current.write(samples, 0, samples.size)

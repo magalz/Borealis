@@ -40,7 +40,7 @@ Borealis code, so port the fix by hand into the Kotlin file. The converted code 
   `MdnsDiscoveryListener.java`, `NsdManagerDiscoveryAgent.java`
 - `nvstream/wol/WakeOnLanSender.java`
 - `preferences/GlPreferences.java`, `PreferenceConfiguration.java`
-- `ui/GameGestures.java`, `StreamView.java`
+- `ui/GameGestures.java` (deleted in Sprint 17a), `StreamView.java`
 - `utils/CacheHelper.java`, `Dialog.java`, `NetHelper.java`, `ServerHelper.java`,
   `ShortcutHelper.java`, `TvChannelHelper.java`, `UiHelper.java`, `Vector2d.java`
 

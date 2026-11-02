@@ -853,6 +853,11 @@ handles it on its own side:
   `connection stop done ms=N` and `activity finished` (tags `Borealis.APP` and
   `Borealis.HOST`; `NvHTTP.quitApp`, `GameStreamActions`, `Game.stopConnection`). They
   show whether the time of a slow Quit is in `/cancel` or after it.
+- **Leave during the start (Sprint 17a).** Borealis also sends `/cancel` once after it leaves a
+  start whose `/launch` the host accepted and whose session never started (`NvConnection`, the
+  `launch cancel sent` and `launch cancel answered` lines). It never sends it after `/resume`, after
+  a refused or unanswered `/launch`, or on a GFE host. A `/cancel` that fails is logged as
+  `launch cancel failed`.
 
 **Filed upstream (2026-10-29): `NortheBridge/luminalshine#218`, open.** The owner filed
 it from the lines above, and plans to fix it: send `IDX_TERMINATION` with `0x80030023`
@@ -1340,7 +1345,10 @@ host raises these messages:
   request: a `Host` containing `0.0.0.0` means normal quality
   (`src/rtsp.cpp:1597-1607`).
 - `continuousAudio=1` makes the host send audio without silence gaps
-  (`src/nvhttp.cpp:1617`, `src/rtsp.cpp:1631-1634`).
+  (`src/nvhttp.cpp:1617`, `src/rtsp.cpp:1631-1634`). Borealis does not send it: the client field
+  `StreamConfiguration.continuousAudio` is off by default and has no caller. It was measured worse
+  on 2026-11-02 (more dropped audio packets at the same client limit, in Sprint 17a's test
+  streams).
 - `localAudioPlayMode` selects whether the host also plays audio locally
   (`src/nvhttp.cpp:2822`).
 - There is no client-to-host microphone stream: the host has no microphone

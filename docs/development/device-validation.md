@@ -361,8 +361,11 @@ removed in the Web UI.
    - Quit and relaunch: the S22 session ends and the app starts on the Streamer.
    - Cancel: the device returns to Apps with no error dialog.
 8. Expected: the client sends no `/cancel` request during the retries. The retry
-   code never calls it (README, `host.launch`). `TODO(verify)`: the host log line
-   that a `/cancel` request writes, so that the owner can check for it.
+   code never calls it (README, `host.launch`), and a refused launch is not
+   accepted, so nothing follows it. Since Sprint 17a, a leave after a `/launch`
+   that the host accepted, and whose session never started, sends one `/cancel`
+   (3.32, step 5). `TODO(verify)`: the host log line that a `/cancel` request
+   writes, so that the owner can check for it.
 9. Caveat: if the second device asks for a different app while the first one
    streams, Moonlight cancels and then launches (contract 7.6). That is the
    upstream behaviour and not a retry. Record it as a separate observation.
@@ -417,8 +420,9 @@ removed in the Web UI.
    in capitals, "HOST BUSY") with the retry text, and Cancel with the focus.
 2. Press Back while the Starting screen is shown.
 3. Expected: the launch ends without a stream. No further `host asked to retry`
-   line appears in logcat after Back. The client sends no `/cancel`, as in 3.5
-   step 6. `Game` calls `cancelLaunch()` from `onStop` and `onDestroy`
+   line appears in logcat after Back. The client sends no `/cancel` while the
+   launch is refused, as in 3.5 step 8. After a `/launch` that the host accepted,
+   it sends one (3.32, step 5). `Game` calls `cancelLaunch()` from `onStop` and `onDestroy`
    (`Game.kt`, README `host.launch`).
 4. Launch the same app again from Apps when the host is free.
 5. Expected: the second launch proceeds and reaches the first frame (3.9). A
@@ -1654,7 +1658,8 @@ Steps:
    - Stereo (Settings, Audio, Channels, Stereo (2.0)). Expected: the line
      `Received first audio packet`, sound in both channels, no crackle, and no delay that grows
      over a minute. Expected: no run of `Too much pending audio data` lines (the check of
-     `getPendingAudioDuration`, with a limit of 40 ms). Short runs of that line at the first
+     `getPendingAudioDuration`, with a limit of 100 ms, `PENDING_AUDIO_LIMIT_MS`; it was 40 ms
+     before Sprint 17a). Short runs of that line at the first
      packet after silence and while the stream ends are not a `fail`. They show on both devices:
      on the S22 the pending time goes from about 90 ms down to 40 ms, and the `main` build does
      the same; the TV shows them with the continuous audio of a game (45 to 65 ms in the round of
@@ -2604,6 +2609,64 @@ Steps:
 
 At the end, put back the settings that the steps changed, quit the stream, and end with
 `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
+
+### 3.32 Sprint 17a checks
+
+Run these on the Samsung Galaxy S22 and on the Google TV Streamer, with the owner's OK for the TV,
+against LuminalShine on the owner's PC. Sprint 17a fixed the stream session, the renderers and the
+audio ([roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes); issues #116 to #119). The audio
+results are in [Audio measurement, Sprint 17a](#audio-measurement-sprint-17a-2026-11-02).
+
+Record each item as `pass`, `fail`, `owner check` or `not applicable`, with a short note for each
+`fail`. The sound and the picture of steps 2 and 13 are `owner check` items, for the owner's ear and eye.
+Steps 10 to 12 need the owner: a Bluetooth device, the owner's PC with a LuminalShine build, and a real
+keyboard. Do not record a host name, an address, a MAC address
+or a PIN, and take no screenshot of the stream (section 5).
+
+1. Install the phase build on the S22 and on the TV. Expected: `logcat -b crash` is empty at the start
+   and at the end of the round.
+2. Audio by ear on both devices (1080p, Balanced, and Balanced with fps limit). Expected: no run of sound
+   in the middle of play. Note the start burst on the S22, if there is one.
+3. Detailed overlay on both devices. Expected: the "Audio delay" line is the last line and shows a number
+   of tens of ms. A dash is right until the audio track has a timestamp.
+4. Stereo fallback. On the TV, on a 2-channel HDMI output, set 7.1. Expected: the stereo notice shows once,
+   at the first frame, and the log has `audio output has two channels, stereo asked of the host`, with no
+   device name.
+5. Leave during the start, on a host with nothing running.
+   - Back on the Connecting screen after the launch was sent. Expected: the host log shows one `/cancel`,
+     and no rollback 10 s later. The 10 s check applies to `/launch` rows only.
+   - With Desktop already running (a `/resume`). Expected: no `/cancel`, by design.
+   - Leave and start again at once. Expected: the second stream reaches video.
+6. Error popup, then rotate the S22, split the screen and leave picture-in-picture. Expected: the frozen
+   frame follows the video.
+7. Decoder start logs on both devices. Expected: the HEVC decoder is the same as in section 21.
+8. Home, picture-in-picture and Disconnect during a stream. Expected: no error popup for any of them.
+9. The Sprint 15 open checks, as the roadmap lists them:
+   - the start with a clip style on the TV (3.29, step 6, first bullet): three starts with the clip and
+     three with the style Off, and no `Background video failed`;
+   - Disconnect on the S22 (3.29, step 2);
+   - the combos other than Ctrl+Alt+Shift+M (3.29, step 4): Z, Q, a short press of the mouse Back button
+     and a held right click;
+   - the taps on the segments of the menu, with touch and with a pad on the S22 (3.29, step 3);
+   - the second-device question (U6, 3.29, step 5): with a pinned shortcut, and with Start on another app
+     while one runs, the Conflict dialog should ask;
+   - the error popup on a phone in landscape, with large text (a test and a reference cover it);
+   - four render checks that Robolectric cannot make: the offscreen layer of the halo across frames, bitmap
+     reuse against the hardware renderer, the colour of an HDR copy on the S22, and the delay of the first
+     copy after the menu opens;
+   - the new scrim and panel of the popups, and the screens that follow the Library.
+10. Owner: the Bluetooth notice on the TV, with the owner's Bluetooth device. Expected: the notice shows at
+    the start, and once when the output changes to Bluetooth in the middle of a stream.
+11. Owner: the shared-app Quit on a LuminalShine build with NortheBridge/luminalshine#227. The owner installs
+    it and rolls back to 26.10.1 after the test. Two devices: the second joins Desktop and quits. Expected:
+    the Library notice, and the app still runs on the first device. On 26.10.1 the same Quit shows its 599
+    toast about 5 s late (TODO(verify): the 5 s is the design of the held answer, not measured on 26.10.1).
+12. Owner: Back with a real keyboard while the in-game menu is open on the S22. Expected: the menu closes.
+    Record the result as in the roadmap's Sprint 17a item; code is only changed if it reproduces.
+13. Owner's eye on the TV, with the decoder log on: watch for the purple and cyan line at the bottom edge of
+    the video. Record the decoder log of any stream that shows it.
+14. End: put back the settings that the steps changed, quit the stream, and end with
+    `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
 
 ## 4. Results templates
 
@@ -5446,12 +5509,85 @@ Read in the source at `a66472e29`:
 - `AndroidAudioRenderer` tries a low-latency track with a buffer of 2 packets first, then a larger
   low-latency buffer, then the same two buffers in standard mode. It skips the low-latency attempts
   when the hardware sample rate is not the one of the stream, or when audio effects are on. It drops
-  a packet while 40 ms or more are pending (`PENDING_AUDIO_LIMIT_MS`).
+  a packet while 40 ms or more are pending (`PENDING_AUDIO_LIMIT_MS`). Since Sprint 17a the
+  limit is 100 ms (see [Audio measurement, Sprint 17a](#audio-measurement-sprint-17a-2026-11-02)).
 - Borealis does not send `continuousAudio`: the `/launch` request of `NvHTTP.kt` has
-  `localAudioPlayMode` and `surroundAudioInfo`, and not that argument.
+  `localAudioPlayMode` and `surroundAudioInfo`, and not that argument. Since Sprint 17a the field
+  `StreamConfiguration.continuousAudio` exists, off by default with no caller, so the request still
+  does not carry it.
 - Nothing in the client syncs audio and video. A search of `apps/android/app/src/main` and
   `apps/android/borealis` for `getTimestamp`, `getLatency` and `AudioTimestamp` finds nothing, and
   `AndroidAudioRenderer` is the only code that uses `AudioTrack`.
+
+### Audio measurement, Sprint 17a, 2026-11-02
+
+The before and after runs of the audio runs (roadmap, Sprint 17a, Audio). The method is the one of the
+follow-up above, with these details: the streams start from a pinned shortcut to the Library and then
+to Desktop, the PC plays the beeps and the tone from one file, and the second half of the day ran with
+both devices at volume 1, set by the owner.
+
+#### Method
+
+- Stream: stereo, 1080p, Desktop, LuminalShine 26.10.1. One stream for each row, so each figure is from
+  one stream. The PC played eight short beeps (0.2 s, 1 kHz) with 3 s of silence between them, then a
+  60 s tone (440 Hz).
+- The drops are the lines "Too much pending audio data" in logcat. The track figures are Android's
+  dumps (`dumpsys media.audio_flinger` at +55 s into the stream), read on the TV only.
+- Builds: the baseline is the debug build of `812fe6831`, the code of `main` before the phase. The
+  after rows are the spike APKs and the phase build of `b5dce2dcb` (the limit, and `continuousAudio`
+  on or off, as the matrix says), and the final rows are the phase build `8e378ac11` (a 100 ms limit,
+  `continuousAudio` off).
+- Volume: the baseline rows ran with the output not muted. The owner set both devices to volume 1 in
+  the second half of the day, and the after rows ran at volume 1. Muting the output does not change the
+  client's drop rule (the orchestrator's note).
+- The TV was on HDMI. Its Bluetooth state was not recorded in the baseline. The S22 ran on Wi-Fi.
+- No address, host name or serial is recorded here.
+
+#### Baseline (`812fe6831`, 2026-11-02, 04:00 to 04:13 UTC)
+
+| Device | Row | Drops | Clusters (s after the start of play) | Track (TV only) |
+| --- | --- | --- | --- | --- |
+| TV | 1080p, Balanced | 146 | 69 at the first beep (+6 to +7), 73 in the tone (+36 to +40), the rest singles | fast path, 1,024 of 1,024 frames, 242 ms |
+| TV | 1080p, fps limit | 64 | singles across the beeps, 45 at +72 to +74 (tone) | fast path, 1,024 frames, 242 ms |
+| S22 | 1080p, Balanced | 140 | 26 at the first beep, 89 at +16 to +17 (beep), the rest singles | not read from the Samsung dump |
+| S22 | 1080p, fps limit | 33 | 23 at the first beep, the rest singles | not read |
+
+#### TV matrix (1080p, stereo, volume 1, one row each)
+
+| Build | `continuousAudio` | Limit | Balanced | fps limit |
+| --- | --- | --- | --- | --- |
+| spike APK v1 | off | 40 ms | 263 | 154 |
+| phase build `b5dce2dcb` | on | 40 ms | 406 (133 at the start) | 222 (89 at the start) |
+| spike APK v2 | off | 100 ms | 14 | 1 |
+| spike APK v3 | on | 100 ms | 37 (31 at the start) | 0 |
+
+On the TV Balanced row, `continuousAudio=1` raised the drops at both limits (263 to 406 at 40 ms, 14 to
+37 at 100 ms). At 40 ms the two rows also had runs in the tone: a 9 s run in the Balanced row, and 118
+drops in one run in the fps limit row. Owner decision (2026-11-02): the limit at 100 ms, and
+`continuousAudio` off.
+
+#### Final rows (phase build `8e378ac11`: 100 ms, `continuousAudio` off, volume 1)
+
+| Device | Baseline Balanced | Baseline fps limit | Final Balanced | Final fps limit |
+| --- | --- | --- | --- | --- |
+| TV | 146 | 64 | 4 | 1 |
+| S22 | 140 | 33 | 15 (11 at +4 s) | 29 (17 at one second, at the start) |
+
+On the S22 Balanced row the owner heard four crackles when the mouse started to move, and then none.
+Most of the S22 drops come at the start of the stream (11 of 15, and 17 of 29).
+
+#### Repeated rows
+
+- Baseline, S22 Balanced: the first attempt did not start the stream (the tap missed). The rerun is
+  the valid row.
+- After rows, TV (`b5dce2dcb`): both first attempts did not start the stream, because the 8 s wait
+  after a fresh install was too short. The run script then waits 14 s.
+- Final rows, S22 fps limit: the first attempt was invalid, because the owner left the stream by
+  accident with the sound on the PC.
+- Final rows, TV Balanced: the first attempt did not start the stream.
+- The S22 went offline at the end of its last row, before its settings were restored. The owner
+  reconnected it, the settings were restored to 720p with frame pacing "cap FPS", and the test
+  finished.
 
 ### VHF gamepad round, 2026-10-28
 

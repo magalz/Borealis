@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream.game.session
 
 import android.content.SharedPreferences
+import android.view.WindowManager
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.video.CrashListener
 import com.limelight.nvstream.jni.MoonBridge
@@ -44,6 +45,9 @@ internal class GameSurfaceLostTest : GameTestBase() {
         val listener = ReflectionHelpers.getField<CrashListener>(rig.renderer, "crashListener")
         onConnectionThread { listener.surfaceLost() }
     }
+
+    private fun keepsScreenOn() =
+        rig.game.window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON != 0
 
     private fun warnings() = log.records.filter { it.message == LOST_WARNING }
 
@@ -117,6 +121,18 @@ internal class GameSurfaceLostTest : GameTestBase() {
         val end = rig.audit.single()
         assertThat(end.outcome).isEqualTo(AuditOutcome.SUCCESS)
         assertThat(end.detail).startsWith("reason=user")
+    }
+
+    @Test
+    fun `a stream that runs lets the display sleep before it shows the failure`() {
+        rig.streaming()
+        assertThat(keepsScreenOn()).isTrue()
+
+        surfaceLost()
+        ShadowLooper.idleMainLooper()
+
+        assertThat(rig.phase).isInstanceOf(StreamPhase.Failed::class.java)
+        assertThat(keepsScreenOn()).isFalse()
     }
 
     @Test

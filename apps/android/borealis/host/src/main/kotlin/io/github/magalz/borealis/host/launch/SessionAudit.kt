@@ -10,7 +10,8 @@ import java.util.concurrent.atomic.AtomicReference
  * end however many paths report it (a stop by the user and a termination by the connection can both
  * arrive). The first end names the reason: `disconnect` and `quit` when the user chose them in the
  * menu, `user` when the user left the stream screen in another way, `host_ended` and `error` when
- * the connection ended. Nothing about the stream content is recorded.
+ * the connection ended (`error` also when the app ended a stream that could not go on). Nothing
+ * about the stream content is recorded.
  */
 object SessionAudit {
     private class Active(val host: String?, val startedAtMillis: Long)
@@ -103,6 +104,16 @@ object SessionAudit {
         }
     }
 
+    /**
+     * The stream could not go on and the app ends it, with no code from the connection: [cause]
+     * names why, as a token (`video_surface_lost`). The stop of the activity that follows is no
+     * second end.
+     */
+    @JvmStatic
+    fun failed(cause: String) {
+        end(AuditOutcome.FAILURE) { "reason=error cause=$cause duration_s=$it" }
+    }
+
     private fun end(outcome: AuditOutcome, detail: (Long) -> String) {
         val session = active.getAndSet(null) ?: return
         val seconds = (clock() - session.startedAtMillis).coerceAtLeast(0) / MILLIS_PER_SECOND
@@ -123,7 +134,9 @@ object SessionAudit {
     private const val MASK_H264 = 0x000F
     private const val MASK_H265 = 0x0F00
     private const val MASK_AV1 = 0xF000
-    private const val MASK_10BIT = 0xAA00
+
+    /** Public for a test in the app, which ties it to `MoonBridge.VIDEO_FORMAT_MASK_10BIT`. */
+    const val MASK_10BIT = 0xAA00
     private const val GRACEFUL_TERMINATION = 0
     private const val MILLIS_PER_SECOND = 1000L
 }

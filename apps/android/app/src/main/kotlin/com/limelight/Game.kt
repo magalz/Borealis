@@ -20,6 +20,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Rational
 import android.view.Display
 import android.view.InputDevice
@@ -84,8 +85,10 @@ import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamControls
 import io.github.magalz.borealis.stream.StreamFailures
 import io.github.magalz.borealis.stream.StreamKeyboards
+import io.github.magalz.borealis.stream.StreamNotice
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamSessionFactory
+import io.github.magalz.borealis.stream.SurroundLayout
 import io.github.magalz.borealis.stream.TouchContexts
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.host.HeldKeys
@@ -191,6 +194,10 @@ class Game :
     internal var startedOnBluetooth = false
         private set
 
+    // BOREALIS: where the audio goes; while the stream runs it tells when that moves to a Bluetooth
+    // output (audio)
+    private lateinit var audioOutputs: AudioOutputs
+
     private lateinit var inputCaptureProvider: InputCaptureProvider
     private var modifierFlags = 0
     private var grabbedInput = true
@@ -214,6 +221,10 @@ class Game :
     private var requestedNotificationOverlayVisibility = View.GONE
 
     private lateinit var decoderRenderer: MediaCodecDecoderRenderer
+
+    // BOREALIS: made with the decoder renderer, so that the overlay of the decoder can read the
+    // audio delay of it (audio)
+    private lateinit var audioRenderer: AndroidAudioRenderer
 
     // BOREALIS: first-frame watchdog (host.video)
     private val startupGuard =
@@ -489,16 +500,25 @@ class Game :
             MediaCodecDecoderRenderer(
                 this,
                 prefConfig,
-                CrashListener {
-                    // The MediaCodec instance is going down due to a crash
-                    // let's tell the user something when they open the app again
+                object : CrashListener {
+                    override fun notifyCrash(e: Exception) {
+                        // The MediaCodec instance is going down due to a crash
+                        // let's tell the user something when they open the app again
 
-                    // We must use commit because the app will crash when we return from this
-                    // function
-                    tombstonePrefs.edit(commit = true) {
-                        putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        // We must use commit because the app will crash when we return from this
+                        // function
+                        tombstonePrefs.edit(commit = true) {
+                            putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        }
+                        reportedCrash = true
                     }
-                    reportedCrash = true
+
+                    // BOREALIS: the codec refused the surface, which stopped the renderer. The
+                    // renderer calls this on the thread that recovers the codec, while the other
+                    // threads wait for it, so it only posts (stream)
+                    override fun surfaceLost() {
+                        Handler(Looper.getMainLooper()).post { endStreamForLostSurface() }
+                    }
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
                 willStreamHdr,
@@ -597,7 +617,8 @@ class Game :
         streamFrameRate = chosenFrameRate
         // BOREALIS: the output that the audio goes to when the stream starts decides the audio that
         // the host is asked for (audio)
-        val audioOutput = AudioOutputs(applicationContext).current()
+        audioOutputs = AudioOutputs(applicationContext)
+        val audioOutput = audioOutputs.current()
         startedOnBluetooth = audioOutput.bluetooth
         val config =
             StreamConfiguration.Builder()
@@ -718,6 +739,8 @@ class Game :
         controllerHandler.setMenuChordListener(streamSession::openMenu)
         controllerHandler.setChromeKeySink(chromeHost::dispatchUsbPadKey)
         decoderRenderer.setPerfSink(streamSession::onPerf)
+        audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx)
+        decoderRenderer.setAudioDelaySource(audioRenderer::audioDelayMs)
         PerfGate.bind(lifecycleScope, streamSession, decoderRenderer::setPerfEnabled)
         GamepadMouseSync.bind(lifecycleScope, streamSession) {
             controllerHandler.isMouseEmulationOnAnyPad
@@ -1012,6 +1035,32 @@ class Game :
         )
         return stereo
     }
+
+    // BOREALIS: tells the viewer what the audio start decided and, while the stream runs, each
+    // time the sound moves to a Bluetooth output. Called once, on the main thread, when the
+    // connection is up and the stop has not run: the card of a notice waits for the stream on
+    // screen, so nothing is lost by giving the notices before the first frame. The listener reads
+    // the session when it runs, and a stop closes it (audio)
+    private fun announceAudio() {
+        stereoFallback?.let {
+            streamSession.notify(StreamNotice.StereoFallback(surroundLayout(it)))
+        }
+        if (startedOnBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
+        var onBluetooth = startedOnBluetooth
+        audioOutputs.onChange { output ->
+            if (stopRan) return@onChange
+            if (output.bluetooth && !onBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
+            onBluetooth = output.bluetooth
+        }
+    }
+
+    // The configurations that the settings offer above stereo are 5.1 and 7.1
+    private fun surroundLayout(asked: MoonBridge.AudioConfiguration): SurroundLayout =
+        if (asked == MoonBridge.AUDIO_CONFIGURATION_71_SURROUND) {
+            SurroundLayout.SURROUND_7_1
+        } else {
+            SurroundLayout.SURROUND_5_1
+        }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress(
@@ -2757,8 +2806,11 @@ class Game :
     }
 
     // BOREALIS: /launch or /resume is about to be requested: the chrome shows the "starting app"
-    // stage (host.failure)
+    // stage (host.failure), and the session learns whether the stream joins an app that runs
+    // already, which decides what a Quit of it can mean. Told from this thread, not posted: the
+    // session takes it from any thread, and the stream cannot end by a quit before it is known
     override fun launchStarting(resume: Boolean) {
+        streamSession.launchRequested(resume)
         runOnUiThread { streamSession.onStage(StartStage.STARTING_APP) }
     }
 
@@ -2802,6 +2854,8 @@ class Game :
 
     private fun stopConnection(done: Runnable? = null) {
         stopRan = true // BOREALIS: no stream starts after this (leave)
+        // BOREALIS: the audio output tells nobody after the stop; closing twice is no harm (audio)
+        if (::audioOutputs.isInitialized) audioOutputs.close()
         if (!stopClaimed.compareAndSet(false, true)) {
             // BOREALIS: the stop of a Disconnect after another exit still gets its callback (leave)
             done?.let { connectionStopped.thenRun(it) }
@@ -2944,16 +2998,13 @@ class Game :
 
         runOnUiThread {
             startupGuard.cancel() // BOREALIS: first-frame watchdog
-            SessionAudit.terminated(errorCode) // BOREALIS: audit trail
+            // BOREALIS: audit trail. The end that the session took for the quit's is the quit's
+            // here too, whether the host answered the cancel before or after it: the answer of a
+            // shared app (599) clears the quit that the audit waits for, and the end of the stream
+            // that follows is no error
+            if (endedByQuit) SessionAudit.quit() else SessionAudit.terminated(errorCode)
 
-            // Let the display go to sleep now
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-            // Stop processing controller input
-            controllerHandler.stop()
-
-            // Ungrab input
-            setInputGrabState(false)
+            releaseWindowAndInput()
 
             if (!displayedFailureDialog) {
                 displayedFailureDialog = true
@@ -2989,6 +3040,52 @@ class Game :
             }
         }
     }
+
+    // BOREALIS: the stream is over, whatever ended it: the display may sleep, the controller input
+    // stops and the pointer goes free, before the chrome shows what happened (stream)
+    private fun releaseWindowAndInput() {
+        // Let the display go to sleep now
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Stop processing controller input
+        controllerHandler.stop()
+
+        // Ungrab input
+        setInputGrabState(false)
+    }
+
+    // BOREALIS: the video surface was lost: the picture is gone and nothing else says so. On the
+    // main thread, a stream that runs ends as an error termination does: the chrome shows the
+    // failure over the last frame, and the connection stops. A stream that is ending already (the
+    // stop ran, a failure is shown, the activity is finishing or in picture in picture) has said
+    // what there is to say, so this only warns. The checks run here, not where the report was
+    // posted, so a leave that came after the post counts (stream)
+    private fun endStreamForLostSurface() {
+        if (streamEndsAlready()) {
+            BorealisLog.w(LogTag.VIDEO, "video surface lost while the stream is ending")
+            return
+        }
+        displayedFailureDialog = true
+        LimeLog.severe("The video surface was lost")
+        // The last frame is copied before the connection stops and the decoder goes
+        if (firstFrameShown) chromeHost.freezeFrame()
+        // The audit says the error before the stop of the connection says that the user left
+        SessionAudit.failed("video_surface_lost")
+        releaseWindowAndInput()
+        stopConnection()
+        streamSession.onFailed(
+            StreamFailure(
+                if (firstFrameShown) FailureKind.STOPPED else FailureKind.GENERIC,
+                "The video surface was lost",
+                null,
+            )
+        )
+    }
+
+    // BOREALIS: the stop ran, a failure is on the screen, or the activity is going away or in
+    // picture in picture, which counts as a leave too (stream)
+    private fun streamEndsAlready(): Boolean =
+        stopRan || displayedFailureDialog || isFinishing || isDestroyed || isInPictureInPictureMode
 
     override fun connectionStatusUpdate(connectionStatus: Int) {
         runOnUiThread {
@@ -3031,6 +3128,7 @@ class Game :
                 )
             )
             startupGuard.onConnectionStarted() // BOREALIS: first-frame watchdog
+            announceAudio() // BOREALIS: the notices of the sound (audio)
             // BOREALIS: audit trail
             SessionAudit.started(
                 pcName,
@@ -3136,7 +3234,7 @@ class Game :
             UiHelper.notifyStreamConnecting(this)
 
             decoderRenderer.setRenderTarget(holder)
-            conn.start(AndroidAudioRenderer(this, prefConfig.enableAudioFx), decoderRenderer, this)
+            conn.start(audioRenderer, decoderRenderer, this)
         }
     }
 

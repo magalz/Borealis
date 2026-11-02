@@ -2,9 +2,11 @@ package io.github.magalz.borealis.stream
 
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.stream.testing.RecordingActions
+import io.github.magalz.borealis.stream.testing.RecordingLogSink
 import io.github.magalz.borealis.stream.testing.aDefaults
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSessionInfo
+import org.junit.Rule
 import org.junit.Test
 
 /** A quit that did not happen, which records what the session chose to do about it. */
@@ -27,6 +29,8 @@ internal class RecordingQuitFailure(override val notTheStarter: Boolean = false)
  * schedules.
  */
 class StreamSessionSharedQuitTest {
+    @get:Rule val log = RecordingLogSink()
+
     private val actions = RecordingActions()
     private var now = 0L
     private val scheduled = mutableListOf<Pair<Long, () -> Unit>>()
@@ -257,6 +261,79 @@ class StreamSessionSharedQuitTest {
         assertThat(phase).isEqualTo(StreamPhase.Quitting(running, aFailure))
         assertThat(shared.calls).isEmpty()
         assertThat(scheduled).isEmpty()
+    }
+
+    @Test
+    fun `a Disconnect in the window drops the held answer, so it is not shown after the window`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+
+        session.disconnect()
+        now = WINDOW_MS
+        runScheduled()
+
+        assertThat(shared.calls).isEmpty()
+    }
+
+    @Test
+    fun `the end of the stream after a Disconnect in the window is not the quit's, and no line says so`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+        session.disconnect()
+        now = 1_000L
+
+        val byQuit = streamEnds()
+
+        assertThat(byQuit).isFalse()
+        assertThat(log.records.map { it.message }).doesNotContain("quit stream ended")
+        assertThat(log.records.map { it.message }).doesNotContain("quit of a shared app is a leave")
+        assertThat(shared.calls).isEmpty()
+        assertThat(phase).isEqualTo(StreamPhase.Disconnecting)
+    }
+
+    @Test
+    fun `a leave in the window drops the held answer, so it is not shown after the window`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+
+        session.leave()
+        now = WINDOW_MS
+        runScheduled()
+
+        assertThat(shared.calls).isEmpty()
+    }
+
+    @Test
+    fun `the stop of the connection in the window drops the held answer, so no toast follows the activity`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+
+        session.onConnectionStopped()
+        now = WINDOW_MS
+        runScheduled()
+
+        assertThat(shared.calls).isEmpty()
+        assertThat(session.endedByQuit(ENET_DISCONNECT)).isFalse()
+    }
+
+    @Test
+    fun `a Disconnect that is refused keeps the held answer`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+        streamEnds(code = -100)
+        assertThat(phase).isEqualTo(StreamPhase.Failed(aFailure))
+
+        // The session failed, so the Disconnect is refused and the answer is still to be shown.
+        session.disconnect()
+        now = WINDOW_MS
+        runScheduled()
+
+        assertThat(shared.calls).containsExactly("show")
     }
 
     private companion object {

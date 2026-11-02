@@ -10,8 +10,8 @@ abstract class AbstractController(
 
     @JvmField protected var buttonFlags: Int = 0
 
-    // Never assigned, as in the inherited Java: the controller handler reports 0 to the host
-    // (Sprint 13 backlog).
+    // The buttons the pad has, which the controller handler reports to the host in the arrival.
+    // The Xbox drivers set it; the wireless dongle is no pad and leaves it 0.
     var supportedButtonFlags: Int = 0
         protected set
 

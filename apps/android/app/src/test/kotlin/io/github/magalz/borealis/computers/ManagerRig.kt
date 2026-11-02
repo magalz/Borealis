@@ -3,6 +3,7 @@ package io.github.magalz.borealis.computers
 import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
+import android.database.sqlite.SQLiteDatabase
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.IBinder
@@ -15,12 +16,15 @@ import com.limelight.computers.ComputerManagerService.ComputerManagerBinder
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import io.github.magalz.borealis.computerstore.computerDatabase
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.nvhttp.NvFakeHost
 import java.net.InetAddress
 import java.security.cert.X509Certificate
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 import org.junit.rules.ExternalResource
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
@@ -37,6 +41,7 @@ private const val NANOS_PER_MS = 1_000_000L
 internal const val POLLING_THREAD = "Polling thread for "
 internal const val PARALLEL_THREAD = "Parallel Poll - "
 internal const val APP_LIST_THREAD = "App list polling thread for "
+internal const val ADD_THREAD = "mDNS add thread"
 
 /** The service type that the discovery service asks the platform for. */
 private const val SERVICE_TYPE = "_nvstream._tcp"
@@ -114,6 +119,9 @@ internal class Updates : ComputerManagerListener {
     /** The calls that were made on [thread]. */
     fun on(thread: Thread): List<Update> = all.filter { it.thread === thread }
 
+    /** The calls that were made on the threads named [name]. */
+    fun named(name: String): List<Update> = all.filter { it.thread.name == name }
+
     fun awaitState(state: ComputerDetails.State, from: Int = 0) =
         awaitUntil("an update with the state $state") {
             all.drop(from).any { it.state == state }
@@ -183,6 +191,51 @@ class ManagerRule : ExternalResource() {
         }
     }
 
+    /**
+     * Writes a row into the saved list as the file holds it, whatever the row says: the list itself
+     * refuses a host that has no id, and it does not check the addresses that it reads back.
+     */
+    fun seedRow(uuid: String?, name: String, addresses: String) {
+        openFile { database ->
+            database.execSQL(
+                "INSERT INTO Computers(UUID, ComputerName, Addresses) VALUES (?, ?, ?)",
+                arrayOf(uuid, name, addresses),
+            )
+        }
+    }
+
+    /** Makes the saved list refuse to delete a row, so that removing a host throws. */
+    fun refuseDeletes() {
+        openFile { database ->
+            database.execSQL(
+                "CREATE TRIGGER refuse_delete BEFORE DELETE ON Computers " +
+                    "BEGIN SELECT RAISE(ABORT, 'deleting is refused'); END"
+            )
+        }
+    }
+
+    /**
+     * Replaces the table of the saved list with a view of a table that is not there, so that the
+     * database opens and the saved hosts cannot be read.
+     */
+    fun breakSavedList() {
+        openFile { database ->
+            database.execSQL("DROP TABLE Computers")
+            database.execSQL("CREATE VIEW Computers AS SELECT * FROM NoSuchTable")
+        }
+    }
+
+    /** Runs [block] on the database file, which the list creates first when it is not there. */
+    private fun openFile(block: (SQLiteDatabase) -> Unit) {
+        ComputerDatabaseManager(app).close()
+        SQLiteDatabase.openDatabase(
+                app.computerDatabase().path,
+                null,
+                SQLiteDatabase.OPEN_READWRITE,
+            )
+            .use(block)
+    }
+
     /** The hosts that a second connection reads from the database file. */
     fun savedRows(): List<ComputerDetails> {
         val db = ComputerDatabaseManager(app)
@@ -231,11 +284,30 @@ class ManagerRule : ExternalResource() {
         checkNotNull(controller).destroy()
     }
 
+    /**
+     * Whether any thread holds the lock that lets one thread at a time bind the process to a
+     * network. The service keeps it private: this reads the field.
+     */
+    fun defaultNetworkLockIsHeld(): Boolean {
+        val field = ComputerManagerService::class.java.getDeclaredField("defaultNetworkLock")
+        field.isAccessible = true
+        return (field.get(service) as ReentrantLock).isLocked
+    }
+
     /** The discovery listeners that the platform holds for the service type. */
     fun discoveries() =
         shadowOf(app.getSystemService(NsdManager::class.java))
             .getDiscoveryListeners(SERVICE_TYPE)
             .orEmpty()
+
+    /**
+     * Waits until every add that mDNS handed to the service so far has ended. The executor of the
+     * adds runs one task at a time in the order it got them, so a task that it has run is behind
+     * them all. Not after [destroy]: the executor refuses it then.
+     */
+    fun awaitAdds() {
+        service.discoveryAdds.submit(Runnable {}).get(WAIT_MS, TimeUnit.MILLISECONDS)
+    }
 
     /** Has the platform find [name] and resolve it to the IPv4 address [address] and [port]. */
     fun findAndResolve(name: String, address: String, port: Int) {
@@ -265,7 +337,7 @@ class ManagerRule : ExternalResource() {
         if (controller != null && !destroyed) {
             checkNotNull(controller).destroy()
         }
-        for (prefix in listOf(POLLING_THREAD, PARALLEL_THREAD, APP_LIST_THREAD)) {
+        for (prefix in listOf(POLLING_THREAD, PARALLEL_THREAD, APP_LIST_THREAD, ADD_THREAD)) {
             liveThreads(prefix).forEach { it.join(JOIN_MS) }
         }
     }

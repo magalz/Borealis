@@ -82,7 +82,8 @@ class XboxOneControllerTest {
         assertThat(pad.controller.viaGetter("getType")).isEqualTo(1.toByte()) // LI_CTYPE_XBOX
         // LI_CCAP_ANALOG_TRIGGERS | LI_CCAP_RUMBLE | LI_CCAP_TRIGGER_RUMBLE
         assertThat(pad.controller.viaGetter("getCapabilities")).isEqualTo(7.toShort())
-        assertThat(pad.controller.viaGetter("getSupportedButtonFlags")).isEqualTo(0)
+        // The fifteen buttons of the pad are what its arrival tells the host it has.
+        assertThat(pad.controller.viaGetter("getSupportedButtonFlags")).isEqualTo(PAD_BUTTONS)
     }
 
     @Test
@@ -234,8 +235,8 @@ class XboxOneControllerTest {
 
         pad.start()
 
-        // The Guide flag is not in these reports: it stays as the controller started with it.
-        assertThat(pad.listener.states(bits.size).map { it.buttonFlags and GUIDE.inv() })
+        // The Guide flag is not in these reports, and the controller starts with it up.
+        assertThat(pad.listener.states(bits.size).map { it.buttonFlags })
             .containsExactlyElementsIn(bits.map { it.second })
             .inOrder()
     }
@@ -258,7 +259,7 @@ class XboxOneControllerTest {
 
         pad.start()
 
-        assertThat(pad.listener.states(bits.size).map { it.buttonFlags and GUIDE.inv() })
+        assertThat(pad.listener.states(bits.size).map { it.buttonFlags })
             .containsExactlyElementsIn(bits.map { it.second })
             .inOrder()
     }
@@ -274,7 +275,7 @@ class XboxOneControllerTest {
 
         pad.start()
 
-        val flags = pad.listener.states(3).map { it.buttonFlags and GUIDE.inv() }
+        val flags = pad.listener.states(3).map { it.buttonFlags }
         assertThat(flags[0])
             .isEqualTo(
                 ControllerPacket.A_FLAG or
@@ -297,21 +298,21 @@ class XboxOneControllerTest {
     }
 
     @Test
-    fun `the Guide button is down in the first report because the controller starts with it down`() {
-        // The controller starts with every button flag set, and a buttons report does not touch
-        // the Guide flag: only a mode report does. So the first reports of a pad say Guide is down.
+    fun `no button is down in the first report, the Guide included, until the pad reports it`() {
+        // The controller starts with every button flag clear, and a buttons report does not touch
+        // the Guide flag: only a mode report does. So the Guide stays up until the pad says so.
         val pad = pad()
         pad.play(buttonsReport(), buttonsReport(first = 0x10))
 
         pad.start()
 
         val flags = pad.listener.states(2).map { it.buttonFlags }
-        assertThat(flags[0]).isEqualTo(GUIDE)
-        assertThat(flags[1]).isEqualTo(GUIDE or ControllerPacket.A_FLAG)
+        assertThat(flags[0]).isEqualTo(0)
+        assertThat(flags[1]).isEqualTo(ControllerPacket.A_FLAG)
     }
 
     @Test
-    fun `the triggers are signed shorts over 1023 and are not clamped`() {
+    fun `the triggers are signed shorts over 1023 and are clamped to zero and one`() {
         val pad = pad()
         val raws = listOf(0, 1023, 512, 2046, -1, 32767, -32768)
         pad.play(
@@ -324,14 +325,16 @@ class XboxOneControllerTest {
 
         val states = pad.listener.states(raws.size)
         assertThat(states.map { it.leftTrigger })
-            .containsExactlyElementsIn(raws.map { it / 1023.0f })
+            .containsExactlyElementsIn(raws.map { (it / 1023.0f).coerceIn(0.0f, 1.0f) })
             .inOrder()
         assertThat(states.map { it.rightTrigger })
-            .containsExactlyElementsIn(raws.map { (1023 - it).toShort() / 1023.0f })
+            .containsExactlyElementsIn(
+                raws.map { ((1023 - it).toShort() / 1023.0f).coerceIn(0.0f, 1.0f) }
+            )
             .inOrder()
         assertThat(states[1].leftTrigger).isEqualTo(1.0f)
-        assertThat(states[3].leftTrigger).isEqualTo(2.0f)
-        assertThat(states[4].leftTrigger).isLessThan(0.0f)
+        assertThat(states[3].leftTrigger).isEqualTo(1.0f)
+        assertThat(states[4].leftTrigger).isEqualTo(0.0f)
     }
 
     @Test
@@ -399,7 +402,7 @@ class XboxOneControllerTest {
         pad.start()
 
         val state = pad.listener.states(1).single()
-        assertThat(state.buttonFlags and GUIDE.inv()).isEqualTo(ControllerPacket.A_FLAG)
+        assertThat(state.buttonFlags).isEqualTo(ControllerPacket.A_FLAG)
         assertThat(state.leftTrigger).isEqualTo(0.0f)
     }
 
@@ -414,7 +417,7 @@ class XboxOneControllerTest {
         pad.start()
 
         // The 17-byte and the 1-byte reads report nothing; the 18-byte ones do.
-        assertThat(pad.listener.states(2).map { it.buttonFlags and GUIDE.inv() })
+        assertThat(pad.listener.states(2).map { it.buttonFlags })
             .containsExactly(ControllerPacket.X_FLAG, ControllerPacket.Y_FLAG)
             .inOrder()
         assertThat(log.severes())
@@ -444,7 +447,7 @@ class XboxOneControllerTest {
         pad.start()
 
         val flags = pad.listener.states(5).map { it.buttonFlags }
-        assertThat(flags[0]).isEqualTo(GUIDE or ControllerPacket.A_FLAG)
+        assertThat(flags[0]).isEqualTo(ControllerPacket.A_FLAG)
         assertThat(flags[1]).isEqualTo(ControllerPacket.A_FLAG)
         assertThat(flags[2]).isEqualTo(GUIDE or ControllerPacket.A_FLAG)
         // Only bit 0 of the Guide byte counts.
@@ -512,7 +515,7 @@ class XboxOneControllerTest {
 
         val state = pad.listener.states(1).single()
         // Nothing of the short ones reached the listener, and the short 0x30 one was not answered.
-        assertThat(state.buttonFlags).isEqualTo(GUIDE or ControllerPacket.A_FLAG)
+        assertThat(state.buttonFlags).isEqualTo(ControllerPacket.A_FLAG)
         assertThat(pad.writtenBytes()).containsExactly(fw2015(0))
         assertThat(log.severes())
             .containsExactly("XBone mode read too small: 3", "XBone mode read too small: 3")
@@ -549,8 +552,7 @@ class XboxOneControllerTest {
 
         pad.start()
 
-        assertThat(pad.listener.states(1).single().buttonFlags)
-            .isEqualTo(GUIDE or ControllerPacket.A_FLAG)
+        assertThat(pad.listener.states(1).single().buttonFlags).isEqualTo(ControllerPacket.A_FLAG)
     }
 
     @Test
@@ -607,7 +609,7 @@ class XboxOneControllerTest {
     }
 
     @Test
-    fun `stopping the pad cuts the main motors, leaves the trigger motors and closes it`() {
+    fun `stopping the pad cuts every motor, the trigger motors too, and closes it`() {
         val pad = pad()
         pad.start()
         pad.controller.rumbleTriggers(0x7FFF, 0x7FFF)
@@ -616,11 +618,11 @@ class XboxOneControllerTest {
         pad.controller.stop()
         pad.controller.stop()
 
-        // The 2015 init, two rumbles, then the stop's rumble with the main motors at zero: the
-        // trigger motors keep the value they had.
+        // The 2015 init, two rumbles, then the stop's rumble with every motor at zero, so the
+        // trigger motors do not go on vibrating after the stream.
         assertThat(pad.writtenBytes().last())
             .isEqualTo(
-                listOf(0x09, 0x00, 3, 0x09, 0x00, 0x0F, 0x3F, 0x3F, 0x00, 0x00, 0xFF, 0x00, 0xFF)
+                listOf(0x09, 0x00, 3, 0x09, 0x00, 0x0F, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF)
             )
         assertThat(pad.usb.writes).hasSize(4)
         assertThat(pad.usb.closes).isEqualTo(1)
@@ -630,5 +632,22 @@ class XboxOneControllerTest {
 
     private companion object {
         const val GUIDE = ControllerPacket.SPECIAL_BUTTON_FLAG
+
+        const val PAD_BUTTONS =
+            ControllerPacket.A_FLAG or
+                ControllerPacket.B_FLAG or
+                ControllerPacket.X_FLAG or
+                ControllerPacket.Y_FLAG or
+                ControllerPacket.UP_FLAG or
+                ControllerPacket.DOWN_FLAG or
+                ControllerPacket.LEFT_FLAG or
+                ControllerPacket.RIGHT_FLAG or
+                ControllerPacket.LB_FLAG or
+                ControllerPacket.RB_FLAG or
+                ControllerPacket.LS_CLK_FLAG or
+                ControllerPacket.RS_CLK_FLAG or
+                ControllerPacket.BACK_FLAG or
+                ControllerPacket.PLAY_FLAG or
+                GUIDE
     }
 }

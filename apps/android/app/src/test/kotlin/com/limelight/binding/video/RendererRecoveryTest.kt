@@ -5,6 +5,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes how the renderer recovers when the codec fails: which failures it lets go, which
@@ -311,6 +312,96 @@ class RendererRecoveryTest : RendererTestBase() {
         // The baseline SPS went, the replay did not, and the frame did not follow.
         assertThat(events<CodecEvent.Queued>().map { it.flags }).containsExactly(CODEC_CONFIG)
         assertThat(log.lines()).doesNotContain("INFO: SPS replay complete")
+    }
+
+    @Test
+    fun `a replay of the SPS that failed is done again at the next IDR frame`() {
+        install(codec("omx.intel.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        renderer.begin()
+        renderer.sendParameterSets()
+        ShadowRecordingVideoCodec.failAfter(CodecPoint.QUEUE_INPUT, 1, transient)
+        assertThat(renderer.submit(idrSlice())).isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        renderer.sendParameterSets(2)
+        val result = renderer.submit(idrSlice(2))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        // The first IDR frame sent the baseline SPS only. The second says baseline again, then
+        // replays the real profile, and the frame follows.
+        assertThat(events<CodecEvent.Queued>().map { it.flags })
+            .containsExactly(CODEC_CONFIG, CODEC_CONFIG, CODEC_CONFIG, SYNC_FRAME)
+            .inOrder()
+        assertThat(log.lines()).contains("INFO: SPS replay complete")
+    }
+
+    @Test
+    fun `a replay of the SPS that failed is done again at the next IDR frame of a fused decoder`() {
+        // With adaptive playback the Intel decoder is sent the parameter sets in front of every
+        // IDR frame once the first of them has gone alone.
+        install(
+            codec("omx.intel.avc.decoder") {
+                mime = "video/avc"
+                adaptivePlayback = true
+            }
+        )
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        renderer.begin()
+        renderer.sendParameterSets()
+        ShadowRecordingVideoCodec.failAfter(CodecPoint.QUEUE_INPUT, 1, transient)
+        assertThat(renderer.submit(idrSlice())).isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        renderer.sendParameterSets(2)
+        val result = renderer.submit(idrSlice(2))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        // The decoder still has the baseline SPS, so the second IDR frame is not fused: it says
+        // baseline alone, replays the real profile, and the frame follows.
+        assertThat(events<CodecEvent.Queued>().map { it.flags })
+            .containsExactly(CODEC_CONFIG, CODEC_CONFIG, CODEC_CONFIG, SYNC_FRAME)
+            .inOrder()
+        assertThat(log.lines()).contains("INFO: SPS replay complete")
+    }
+
+    @Test
+    fun `the same IDR frame sent again after a failed replay is replayed with the SPS that was kept`() {
+        install(codec("omx.intel.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        renderer.begin()
+        renderer.sendParameterSets()
+        ShadowRecordingVideoCodec.failAfter(CodecPoint.QUEUE_INPUT, 1, transient)
+        assertThat(renderer.submit(idrSlice())).isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        // No new parameter sets: the ones of the frame are still held, and so is its SPS.
+        val outcome = runCatching { renderer.submit(idrSlice()) }
+
+        assertThat(outcome.exceptionOrNull()).isNull()
+        assertThat(outcome.getOrNull()).isEqualTo(MoonBridge.DR_OK)
+        assertThat(log.lines()).contains("INFO: SPS replay complete")
+    }
+
+    /**
+     * The replay is not reached with an input buffer to fetch: `queueNextInputBuffer` fetches the
+     * next one before it answers true, so the fetch in `replaySps` never has to. It is called here
+     * by itself, with no buffer yet, to pin what it does when the fetch fails.
+     */
+    @Test
+    fun `a replay of the SPS that cannot get an input buffer returns false`() {
+        install(codec("omx.intel.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, transient)
+
+        val outcome = runCatching {
+            ReflectionHelpers.callInstanceMethod<Boolean>(renderer, "replaySps")
+        }
+
+        assertThat(outcome.exceptionOrNull()).isNull()
+        assertThat(outcome.getOrNull()).isFalse()
+        assertThat(events<CodecEvent.Queued>()).isEmpty()
     }
 
     @Test

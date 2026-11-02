@@ -165,14 +165,40 @@ class RelativeTouchDragAndScrollTest {
         second.touchMoveEvent(300, 130, T0 + 20)
         first.touchMoveEvent(100, 120, T0 + 30)
         second.touchMoveEvent(300, 120, T0 + 30)
-        first.touchMoveEvent(110, 120, T0 + 40)
 
         assertThat(rig.sent())
-            .containsExactly(
-                "sendMouseHighResScroll(150)",
-                "sendMouseHighResScroll(-50)",
-                "sendMouseHighResScroll(0)",
-            )
+            .containsExactly("sendMouseHighResScroll(150)", "sendMouseHighResScroll(-50)")
+            .inOrder()
+    }
+
+    @Test
+    fun `a move of two fingers along x alone sends no scroll`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        twoFingers(first, second)
+        first.touchMoveEvent(100, 130, T0 + 20) // leaves the tap box: the scroll starts
+
+        first.touchMoveEvent(110, 130, T0 + 30)
+        first.touchMoveEvent(90, 130, T0 + 40)
+
+        assertThat(rig.sent()).containsExactly("sendMouseHighResScroll(150)")
+    }
+
+    @Test
+    fun `a y delta that scales to zero sends no scroll and is kept for the next move`() {
+        val rig = TouchRig(width = 1280, height = 7200)
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        second.touchDownEvent(300, 100, T0 + 10, true)
+
+        first.touchMoveEvent(100, 130, T0 + 20) // 30 * 0.1 = 3
+        first.touchMoveEvent(100, 131, T0 + 30) // 0.1: zero, the last touch stays at 130
+        first.touchMoveEvent(100, 136, T0 + 40) // 6 from 130: 0.6, one
+
+        assertThat(rig.sent())
+            .containsExactly("sendMouseHighResScroll(15)", "sendMouseHighResScroll(5)")
             .inOrder()
     }
 
@@ -196,6 +222,21 @@ class RelativeTouchDragAndScrollTest {
                 "sendMouseHighResScroll(-5)",
             )
             .inOrder()
+    }
+
+    @Test
+    fun `a view that has no size has no scale, so two fingers send no scroll`() {
+        val rig = TouchRig(width = 0, height = 0)
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        second.touchDownEvent(300, 100, T0 + 10, true)
+
+        first.touchMoveEvent(100, 130, T0 + 20)
+        first.touchMoveEvent(100, 100, T0 + 30)
+
+        assertThat(rig.sent()).isEmpty()
     }
 
     @Test

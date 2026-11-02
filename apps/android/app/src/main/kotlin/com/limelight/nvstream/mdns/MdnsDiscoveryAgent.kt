@@ -11,6 +11,9 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
 
     abstract fun stopDiscovery()
 
+    // The end of the agent, when its owner is done with it. The default is to stop discovery.
+    open fun close() = stopDiscovery()
+
     protected fun reportNewComputer(
         name: String?,
         port: Int,
@@ -24,13 +27,7 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
 
         // Add a computer object for each IPv4 address reported by the PC
         for (v4Addr in v4Addrs) {
-            synchronized(computers) {
-                val computer = MdnsComputer(name, v4Addr, v6GlobalAddr, port)
-                if (computers.add(computer)) {
-                    // This was a new entry
-                    listener.notifyComputerAdded(computer)
-                }
-            }
+            addAndNotify(MdnsComputer(name, v4Addr, v6GlobalAddr, port))
         }
 
         // If there were no IPv4 addresses, use IPv6 for registration
@@ -38,12 +35,17 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
             val v6LocalAddr = getLocalAddress(v6Addrs)
 
             if (v6LocalAddr != null || v6GlobalAddr != null) {
-                val computer = MdnsComputer(name, v6LocalAddr, v6GlobalAddr, port)
-                if (computers.add(computer)) {
-                    // This was a new entry
-                    listener.notifyComputerAdded(computer)
-                }
+                addAndNotify(MdnsComputer(name, v6LocalAddr, v6GlobalAddr, port))
             }
+        }
+    }
+
+    // The set is guarded by its own lock, and the listener is told after the lock is released, so
+    // that a listener that reads the set or calls back into the agent never holds it.
+    private fun addAndNotify(computer: MdnsComputer) {
+        val isNew = synchronized(computers) { computers.add(computer) }
+        if (isNew) {
+            listener.notifyComputerAdded(computer)
         }
     }
 

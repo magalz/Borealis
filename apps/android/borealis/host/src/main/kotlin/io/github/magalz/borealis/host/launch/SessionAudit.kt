@@ -117,12 +117,13 @@ object SessionAudit {
             else -> "unknown"
         }
 
-    // The upstream MoonBridge.VIDEO_FORMAT_MASK_* values and ML_ERROR_GRACEFUL_TERMINATION; the
-    // upstream class is not visible from this module.
+    // The VIDEO_FORMAT_MASK_* values of Limelight.h (the same as MoonBridge.VIDEO_FORMAT_MASK_*,
+    // which is not visible from this module) and ML_ERROR_GRACEFUL_TERMINATION. MASK_10BIT also
+    // counts the 4:4:4 10-bit formats (0x0800 and 0x8000).
     private const val MASK_H264 = 0x000F
     private const val MASK_H265 = 0x0F00
     private const val MASK_AV1 = 0xF000
-    private const val MASK_10BIT = 0x2200
+    private const val MASK_10BIT = 0xAA00
     private const val GRACEFUL_TERMINATION = 0
     private const val MILLIS_PER_SECOND = 1000L
 }

@@ -4,6 +4,7 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import org.junit.Test
 
@@ -134,6 +135,32 @@ internal class PenEventsTest : MotionTestBase() {
 
         assertThat(handled).isTrue()
         assertThat(onlyPen().type).isEqualTo(MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL.toInt())
+    }
+
+    @Test
+    fun `a stylus is consumed and sends nothing while the stream view has no size`() {
+        streaming(width = 0)
+
+        val handled = send(stylus(MotionEvent.ACTION_DOWN))
+
+        // Before the first layout there is no place to put the pen, and no NaN goes to the host.
+        assertThat(handled).isTrue()
+        assertThat(pens()).isEmpty()
+    }
+
+    @Test
+    fun `a cancel of a mouse also releases the buttons that are down`() {
+        streaming()
+        send(mouseEvent(MotionEvent.ACTION_DOWN, 10f, 20f, MotionEvent.BUTTON_PRIMARY))
+        forgetSent()
+
+        send(mouseEvent(MotionEvent.ACTION_CANCEL, 10f, 20f))
+
+        assertThat(sentBesidesPens()).containsExactly(release(MouseButtonPacket.BUTTON_LEFT))
+        // The activity forgot the button, so the next press is a press again.
+        forgetSent()
+        send(mouseEvent(MotionEvent.ACTION_DOWN, 10f, 20f, MotionEvent.BUTTON_PRIMARY))
+        assertThat(sentBesidesPens()).contains(press(MouseButtonPacket.BUTTON_LEFT))
     }
 
     @Test

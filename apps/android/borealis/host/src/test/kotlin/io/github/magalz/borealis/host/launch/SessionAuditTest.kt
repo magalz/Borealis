@@ -43,8 +43,10 @@ class SessionAuditTest {
                 0x0001 to "codec=H.264 hdr=false",
                 0x0100 to "codec=HEVC hdr=false",
                 0x0200 to "codec=HEVC hdr=true",
+                0x0800 to "codec=HEVC hdr=true", // HEVC RExt 4:4:4 10-bit
                 0x1000 to "codec=AV1 hdr=false",
                 0x2000 to "codec=AV1 hdr=true",
+                0x8000 to "codec=AV1 hdr=true", // AV1 High 4:4:4 10-bit
                 0x0000 to "codec=unknown hdr=false",
             )) {
             audit.events.clear()

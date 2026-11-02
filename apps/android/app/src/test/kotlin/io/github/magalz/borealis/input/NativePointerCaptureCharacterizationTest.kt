@@ -79,11 +79,25 @@ class NativePointerCaptureCharacterizationTest {
     }
 
     @Test
-    fun `showing a cursor that was never hidden still releases the capture`() {
+    fun `showing a cursor that was never hidden releases nothing`() {
         rig.provider.showCursor()
 
-        assertThat(rig.view.releases).isEqualTo(1)
+        assertThat(rig.view.releases).isEqualTo(0)
         assertThat(rig.view.pointerIcon).isNull()
+    }
+
+    @Test
+    fun `hiding the cursor twice and showing it twice releases once`() {
+        rig.connect(MOUSE, Sources.MOUSE)
+        rig.provider.hideCursor()
+        rig.provider.hideCursor()
+
+        rig.provider.showCursor()
+        // A repeated registration is ignored anyway; the flag makes this second show a no-op.
+        rig.provider.showCursor()
+
+        assertThat(rig.listening()).isFalse()
+        assertThat(rig.view.releases).isEqualTo(1)
     }
 
     @Test
@@ -203,9 +217,7 @@ class NativePointerCaptureCharacterizationTest {
     }
 
     @Test
-    fun `a request that waited is not cancelled when the capture is disabled meanwhile`() {
-        // Pinned as the Java does it, not as a promise: the request looks for a device when its
-        // delay ends, and does not look at whether the capture is still on.
+    fun `a request that waited is dropped when the capture is disabled meanwhile`() {
         rig.connect(MOUSE, Sources.MOUSE)
         rig.provider.enableCapture()
         rig.provider.onWindowFocusChanged(true)
@@ -214,7 +226,36 @@ class NativePointerCaptureCharacterizationTest {
 
         rig.advanceBy(500)
 
-        assertThat(rig.view.requests).isEqualTo(asked + 1)
+        assertThat(rig.view.requests).isEqualTo(asked)
+    }
+
+    @Test
+    fun `a request that waited is dropped when the cursor is shown meanwhile`() {
+        // Capture would hide the cursor again.
+        rig.connect(MOUSE, Sources.MOUSE)
+        rig.provider.enableCapture()
+        rig.provider.onWindowFocusChanged(true)
+        rig.provider.showCursor()
+        val asked = rig.view.requests
+
+        rig.advanceBy(500)
+
+        assertThat(rig.view.requests).isEqualTo(asked)
+    }
+
+    @Test
+    fun `a request that waited is dropped when the cursor is hidden again with the capture off`() {
+        // The capture is off, so the hiding that follows is not the stream's own.
+        rig.connect(MOUSE, Sources.MOUSE)
+        rig.provider.enableCapture()
+        rig.provider.onWindowFocusChanged(true)
+        rig.provider.disableCapture()
+        rig.provider.hideCursor()
+        val asked = rig.view.requests
+
+        rig.advanceBy(500)
+
+        assertThat(rig.view.requests).isEqualTo(asked)
     }
 
     @Test

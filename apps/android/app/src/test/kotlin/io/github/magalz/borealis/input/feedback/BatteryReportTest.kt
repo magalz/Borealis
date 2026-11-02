@@ -11,8 +11,10 @@ import org.robolectric.annotation.Config
 /**
  * The battery of a pad, as the handler's own thread reports it to the host from Android 12: once
  * when the pad arrives, then every 120 seconds, and only when the status or the capacity changed
- * since the last report. The status becomes the host's battery state, and the capacity a signed
- * byte of its percentage, truncated; 255 means unknown.
+ * since the last report. The status becomes the host's battery state, and the capacity its
+ * percentage from 0 to 100, rounded; 255 means unknown. An external pad that has no battery says so
+ * once, unless another external pad shares its number: the host keeps one battery for the number,
+ * and the pad that has one owns it. A pad that is not external claims no battery, and says nothing.
  */
 @RunWith(RobolectricTestRunner::class)
 class BatteryReportTest : FeedbackTestBase() {
@@ -22,8 +24,18 @@ class BatteryReportTest : FeedbackTestBase() {
         present: Boolean = true,
     ) = Hardware.battery(present, status, capacity)
 
-    private fun padWith(rig: FeedbackRig, battery: Any, id: Int = FeedbackRig.PAD_ID): Pad {
-        val pad = rig.connectPad(id = id, features = DeviceFeatures(batteryState = battery))
+    private fun padWith(
+        rig: FeedbackRig,
+        battery: Any,
+        id: Int = FeedbackRig.PAD_ID,
+        external: Boolean = true,
+    ): Pad {
+        val pad =
+            rig.connectPad(
+                id = id,
+                external = external,
+                features = DeviceFeatures(batteryState = battery),
+            )
         rig.wake(pad)
         rig.awaitBackground()
         return pad
@@ -68,7 +80,7 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `the percentage is the capacity times a hundred, truncated`() {
+    fun `the percentage is the capacity times a hundred, rounded`() {
         val capacities = listOf(0f, 1f, 0.555f, 0.995f, 0.5f, 0.07f, 0.9999f, 0.53f, 0.59f)
 
         val percentages = capacities.map { capacity ->
@@ -77,8 +89,8 @@ class BatteryReportTest : FeedbackTestBase() {
             events().single().percentage
         }
 
-        // 0.53f and 0.59f times 100 come out a hair under 53 and 59, and the cast truncates them
-        assertThat(percentages).containsExactly(0, 100, 55, 99, 50, 7, 99, 52, 58).inOrder()
+        // 0.53f and 0.59f times 100 come out a hair under 53 and 59, which a truncation would lose
+        assertThat(percentages).containsExactly(0, 100, 56, 100, 50, 7, 100, 53, 59).inOrder()
     }
 
     @Test
@@ -93,16 +105,16 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a capacity out of range wraps in the byte`() {
+    fun `a capacity out of range is cut to the percentage range`() {
         val high = rig()
         padWith(high, battery(capacity = 1.5f))
-        val high150 = events().single().percentage
+        val tooHigh = events().single().percentage
         val low = rig()
         padWith(low, battery(capacity = -0.5f))
-        val lowMinus50 = events().single().percentage
+        val tooLow = events().single().percentage
 
-        assertThat(high150).isEqualTo(-106)
-        assertThat(lowMinus50).isEqualTo(-50)
+        assertThat(tooHigh).isEqualTo(100)
+        assertThat(tooLow).isEqualTo(0)
     }
 
     @Test
@@ -138,13 +150,126 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a pad without a battery reports nothing`() {
+    fun `a pad without a battery reports that none is present, once`() {
         val rig = rig()
 
         padWith(rig, battery(present = false))
         poll(rig)
+        poll(rig)
+
+        assertThat(events()).containsExactly(BatteryEvent(0, NOT_PRESENT, -1))
+    }
+
+    @Test
+    fun `a pad that is not external claims no battery and reports none`() {
+        val rig = rig()
+
+        padWith(rig, battery(present = false), external = false)
+        poll(rig)
 
         assertThat(events()).isEmpty()
+        val flag = MoonBridge.LI_CCAP_BATTERY_STATE.toInt()
+        assertThat(rig.connection.arrivals.single().capabilities and flag).isEqualTo(0)
+    }
+
+    @Test
+    fun `a pad that is not external does not overwrite the battery of an external pad`() {
+        val rig = rig()
+        padWith(rig, battery(), id = 5)
+
+        // The built-in controls and the external pad are both controller 0
+        padWith(rig, battery(present = false), id = 6, external = false)
+        poll(rig)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
+    }
+
+    @Test
+    fun `the touchpad of a pad does not overwrite the battery of its joystick`() {
+        val rig = rig()
+        val joystick =
+            rig.connectPad(
+                vendorId = FeedbackRig.SONY_VENDOR,
+                features = DeviceFeatures(batteryState = battery()),
+            )
+        val touchpad = rig.connectTouchpad(joystick)
+
+        // The touchpad sends input first, and takes the controller number of its joystick
+        rig.wake(touchpad)
+        rig.awaitBackground()
+        poll(rig)
+
+        // Both devices report an arrival for controller 0, and only the joystick has a battery
+        assertThat(rig.connection.arrivals.map { it.controller }).containsExactly(0, 0)
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
+    }
+
+    @Test
+    fun `a pad without a battery does not overwrite the battery of a pad that shares its number`() {
+        val rig = rig()
+        padWith(rig, battery(), id = 5)
+
+        // Both pads are controller 0, which has one battery on the host
+        padWith(rig, battery(present = false), id = 6)
+        poll(rig)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
+    }
+
+    @Test
+    fun `a pad with a battery reports it after a pad without one that shares its number`() {
+        val rig = rig()
+        padWith(rig, battery(present = false), id = 5)
+
+        padWith(rig, battery(), id = 6)
+
+        assertThat(events().last())
+            .isEqualTo(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
+    }
+
+    @Test
+    fun `a battery that shows up later is reported as the battery it is`() {
+        val rig = rig()
+        val battery = battery(present = false)
+        padWith(rig, battery)
+
+        with(Hardware.batteryState(battery)) {
+            present = true
+            batteryStatus = BatteryState.STATUS_CHARGING
+            batteryCapacity = 0.25f
+        }
+        poll(rig)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, NOT_PRESENT, -1), BatteryEvent(0, 3, 25))
+    }
+
+    @Test
+    fun `a battery that goes away is reported as not present, once`() {
+        val rig = rig()
+        val battery = battery()
+        padWith(rig, battery)
+
+        Hardware.batteryState(battery).present = false
+        poll(rig)
+        poll(rig)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, 2, 50), BatteryEvent(0, NOT_PRESENT, -1))
+    }
+
+    @Test
+    fun `each pad without a battery reports that none is present`() {
+        val rig = rig { multiController = true }
+
+        padWith(rig, battery(present = false), id = 5)
+        padWith(rig, battery(present = false), id = 6)
+
+        assertThat(events())
+            .containsExactly(BatteryEvent(0, NOT_PRESENT, -1), BatteryEvent(1, NOT_PRESENT, -1))
     }
 
     @Test
@@ -285,12 +410,13 @@ class BatteryReportTest : FeedbackTestBase() {
 
     private companion object {
         const val POLL_MS = 120_000L
+        val NOT_PRESENT = MoonBridge.LI_BATTERY_STATE_NOT_PRESENT.toInt()
     }
 }
 
 /**
  * Before Android 12 `InputDevice` has no battery state, so nothing is reported (the SHIELD API is
- * not here).
+ * not here), not even that no battery is present: the pad claims no battery either.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])

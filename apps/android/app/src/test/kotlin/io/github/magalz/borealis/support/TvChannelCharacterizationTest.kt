@@ -5,9 +5,12 @@ import android.app.Application
 import android.content.ActivityNotFoundException
 import android.content.ContentValues
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Resources
 import android.graphics.BitmapFactory
+import android.graphics.drawable.Drawable
 import android.media.tv.TvContract
 import android.media.tv.TvInputManager
 import android.net.Uri
@@ -127,7 +130,7 @@ class TvChannelCharacterizationTest {
     }
 
     @Test
-    fun `a new channel gets the channel icon, as a square of the logo width, in PNG`() {
+    fun `a new channel gets the channel icon, as wide as the logo width and as high as the height, in PNG`() {
         val logo = logoOf(FakeTvProvider.FIRST_ID)
 
         helper.createHostShortcut(computer, false, true)
@@ -136,10 +139,23 @@ class TvChannelCharacterizationTest {
         assertThat(logo.toByteArray().take(PNG_SIGNATURE.size)).isEqualTo(PNG_SIGNATURE)
         val bitmap = BitmapFactory.decodeByteArray(logo.toByteArray(), 0, logo.size())
         val width = app.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_width)
+        val height = app.resources.getDimensionPixelSize(R.dimen.tv_channel_logo_height)
         assertThat(width).isGreaterThan(0)
+        assertThat(height).isGreaterThan(0)
         assertThat(bitmap.width).isEqualTo(width)
-        // BOREALIS: the height is read from the width dimension too (found in the Sprint 12 audit).
-        assertThat(bitmap.height).isEqualTo(width)
+        assertThat(bitmap.height).isEqualTo(height)
+    }
+
+    @Test
+    fun `the height of the channel icon is the logo height, not the logo width`() {
+        val logo = logoOf(FakeTvProvider.FIRST_ID)
+        val sized = LogoSizes(ServicesContext(app, Context.TV_INPUT_SERVICE to tvInput))
+
+        ShortcutHelper(sized).createHostShortcut(computer, false, true)
+
+        val bitmap = BitmapFactory.decodeByteArray(logo.toByteArray(), 0, logo.size())
+        assertThat(bitmap.width).isEqualTo(LOGO_WIDTH)
+        assertThat(bitmap.height).isEqualTo(LOGO_HEIGHT)
     }
 
     @Test
@@ -260,6 +276,20 @@ class TvChannelCharacterizationTest {
         assertThat(request.intent.extras?.keySet()).containsExactly(TvContract.EXTRA_CHANNEL_ID)
         assertThat(request.intent.extras?.get(TvContract.EXTRA_CHANNEL_ID))
             .isEqualTo(FakeTvProvider.FIRST_ID)
+    }
+
+    @Test
+    fun `the request to show the channel looks the channel up once and passes that id`() {
+        val channel = tv.seedChannel("uuid-1")
+        val activity = Robolectric.buildActivity(Activity::class.java).create().get()
+
+        ShortcutHelper(activity).createHostShortcut(computer, false, true)
+
+        // One lookup of the channel to update it, one for the request.
+        assertThat(tv.queries)
+            .containsExactly(TvContract.Channels.CONTENT_URI, TvContract.Channels.CONTENT_URI)
+        val request = shadowOf(activity).nextStartedActivityForResult
+        assertThat(request.intent.getLongExtra(TvContract.EXTRA_CHANNEL_ID, -1L)).isEqualTo(channel)
     }
 
     @Test
@@ -521,6 +551,25 @@ class TvChannelCharacterizationTest {
         }
     }
 
+    /** The app's resources, except that the logo of the channel is wider than it is high. */
+    @Suppress("DEPRECATION")
+    private class LogoSizes(base: Context) : ContextWrapper(base) {
+        private val real = base.resources
+        private val sized =
+            object : Resources(real.assets, real.displayMetrics, real.configuration) {
+                override fun getDimensionPixelSize(id: Int): Int =
+                    when (id) {
+                        R.dimen.tv_channel_logo_width -> LOGO_WIDTH
+                        R.dimen.tv_channel_logo_height -> LOGO_HEIGHT
+                        else -> real.getDimensionPixelSize(id)
+                    }
+
+                override fun getDrawable(id: Int): Drawable = real.getDrawable(id)
+            }
+
+        override fun getResources(): Resources = sized
+    }
+
     /** An activity that cannot start the activity that shows the channel. */
     class FailingActivity : Activity() {
         var failure: RuntimeException = ActivityNotFoundException()
@@ -538,5 +587,8 @@ class TvChannelCharacterizationTest {
 
         /** The instant that the weight of a program counts from: 2017-07-14 (UTC). */
         const val EPOCH_MS = 1_500_000_000_000L
+
+        const val LOGO_WIDTH = 96
+        const val LOGO_HEIGHT = 64
     }
 }

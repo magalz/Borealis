@@ -13,7 +13,8 @@ import org.junit.Test
 /**
  * The chords of Ctrl, Alt and Shift with Z, Q, C and M: the client keeps them for itself (the grab,
  * the disconnect, the cursor and the menu) and eats the key, and while it waits for the modifiers
- * to come up it eats every key down and lets every key up pass.
+ * to come up it eats every key down. A key up passes, except that of a key whose key down it ate:
+ * the host never saw that key go down, so it does not see it come up either.
  */
 internal class GameSpecialKeysTest : GameTestBase() {
     private val down = KeyboardPacket.KEY_DOWN
@@ -342,7 +343,7 @@ internal class GameSpecialKeysTest : GameTestBase() {
     // While the chord waits
 
     @Test
-    fun `while the chord waits for the modifiers, the keys down are eaten and the keys up go through`() {
+    fun `while the chord waits for the modifiers, the keys down are eaten and so are their keys up`() {
         streamingAndCapturing()
         rig.holdCtrlAltShift()
         rig.down(KeyEvent.KEYCODE_Z)
@@ -357,12 +358,68 @@ internal class GameSpecialKeysTest : GameTestBase() {
         assertThat(otherDown).isTrue()
         assertThat(otherUp).isTrue()
         assertThat(specialUp).isTrue()
-        // The host sees the key up of the B whose key down it never saw.
+        // The host never saw the key down of the B, so it does not see its key up either.
+        assertThat(sentKeys()).isEmpty()
+    }
+
+    @Test
+    fun `while the chord waits, the key up of a key that was down before the chord goes through`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_B)
+        rig.down(KeyEvent.KEYCODE_Z)
+        forgetCalls()
+
+        rig.up(KeyEvent.KEYCODE_B)
+
         assertThat(sentKeys()).containsExactly(sent(0x8042, up, ctrl or alt or shift))
     }
 
     @Test
-    fun `a chord that waits is done by the next key when the focus change forgot the modifiers`() {
+    fun `the repeat of a key that was down before the chord is not eaten for it, so its key up goes through`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_B)
+        rig.down(KeyEvent.KEYCODE_Z)
+        forgetCalls()
+
+        // The host saw the first key down of the B; a repeat is not one.
+        val repeated =
+            rig.game.dispatchKeyEvent(
+                keyboardKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_B, repeat = 1)
+            )
+        assertThat(repeated).isTrue()
+        assertThat(sentKeys()).isEmpty()
+        rig.up(KeyEvent.KEYCODE_B)
+
+        assertThat(sentKeys()).containsExactly(sent(0x8042, up, ctrl or alt or shift))
+    }
+
+    @Test
+    fun `a key that goes down again forgets that its earlier key up was lost, so it reaches the host whole`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_C)
+        rig.down(KeyEvent.KEYCODE_B)
+        // The key up of the B never reaches the chord code: a virtual key goes to the system.
+        rig.game.dispatchKeyEvent(
+            keyboardKey(
+                KeyEvent.ACTION_UP,
+                KeyEvent.KEYCODE_B,
+                flags = KeyEvent.FLAG_VIRTUAL_HARD_KEY,
+            )
+        )
+        rig.releaseCtrlAltShift()
+        forgetCalls()
+
+        rig.tap(KeyEvent.KEYCODE_B)
+
+        // The key down of the new press is the host's, so its key up is too.
+        assertThat(sentKeys()).containsExactly(sent(0x8042, down, 0), sent(0x8042, up, 0)).inOrder()
+    }
+
+    @Test
+    fun `a focus change drops the chord that waits, so the next key does not do it`() {
         streamingAndCapturing()
         val actions = rig.recordSession()
         rig.holdCtrlAltShift()
@@ -373,7 +430,9 @@ internal class GameSpecialKeysTest : GameTestBase() {
         // The modifiers came up while the window had no focus, so the activity does not know them.
         rig.game.onWindowFocusChanged(false)
         rig.up(KeyEvent.KEYCODE_SHIFT_LEFT)
+        rig.down(KeyEvent.KEYCODE_B)
+        rig.up(KeyEvent.KEYCODE_B)
 
-        assertThat(actions.calls).containsExactly("disconnect Desktop")
+        assertThat(actions.calls).isEmpty()
     }
 }

@@ -9,7 +9,6 @@ import com.limelight.binding.input.KeyboardTranslator
 import io.github.magalz.borealis.designsystem.testing.connect
 import io.github.magalz.borealis.designsystem.testing.disconnect
 import io.github.magalz.borealis.designsystem.testing.inputDevice
-import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -148,16 +147,33 @@ class KeyboardTranslatorLayoutCharacterizationTest {
     }
 
     @Test
-    fun `a negative key code from a keyboard with a layout is an array index error`() {
-        // A key event never has a negative key code. This pins what the translator does with one.
+    fun `a place that sends a key code outside the platform's range is left out of the layout`() {
+        // A broken device can answer a key code above the highest one, or a negative one.
+        val outside =
+            mapOf(
+                KeyEvent.KEYCODE_A to KeyEvent.getMaxKeyCode() + 1,
+                KeyEvent.KEYCODE_B to -2,
+                KeyEvent.KEYCODE_Q to KeyEvent.KEYCODE_A,
+            )
+        keyboard(KEYBOARD, layout = outside)
+
+        val translator = KeyboardTranslator()
+        translator.onInputDeviceAdded(KEYBOARD)
+        translator.onInputDeviceChanged(KEYBOARD)
+
+        assertThat(translator.translate(KeyEvent.KEYCODE_A, KEYBOARD)).isEqualTo(VK_Q)
+        assertThat(translator.hasNormalizedMapping(KeyEvent.KEYCODE_B, KEYBOARD)).isFalse()
+    }
+
+    @Test
+    fun `a negative key code from a keyboard with a layout is not looked up and has no code`() {
+        // A key event never has a negative key code; one from a broken device is ignored.
         keyboard(KEYBOARD)
         val translator = KeyboardTranslator()
 
-        assertThrows(ArrayIndexOutOfBoundsException::class.java) {
-            translator.translate(-1, KEYBOARD)
-        }
-        assertThrows(ArrayIndexOutOfBoundsException::class.java) {
-            translator.hasNormalizedMapping(-1, KEYBOARD)
+        for (negative in listOf(-1, Int.MIN_VALUE)) {
+            assertThat(translator.hasNormalizedMapping(negative, KEYBOARD)).isFalse()
+            assertThat(translator.translate(negative, KEYBOARD)).isEqualTo(0.toShort())
         }
     }
 

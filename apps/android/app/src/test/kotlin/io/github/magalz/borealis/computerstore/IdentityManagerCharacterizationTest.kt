@@ -20,7 +20,9 @@ import org.robolectric.RobolectricTestRunner
  * (`computerstore/uniqueid`), the id it generates when there is none, and what it logs and does
  * when the file is short, long, odd or cannot be read or written.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests passed on the Java class and on its Kotlin conversion. Sprint 16
+ * changed two things: "UID written to disk" is logged only after the file was flushed and closed,
+ * and an id of 16 characters that are not hex digits is still kept, now with a warning.
  */
 @RunWith(RobolectricTestRunner::class)
 class IdentityManagerCharacterizationTest {
@@ -165,22 +167,60 @@ class IdentityManagerCharacterizationTest {
     }
 
     @Test
-    fun `an id of 16 characters is taken as it is, whatever the characters are`() {
+    fun `a non-hex id of 16 characters is kept with one warning, and the file is not touched`() {
         writeIdFile("ABCDEF 0123 xyz!")
+        val files = IdFileContext(context)
 
-        val identity = IdentityManager(context)
+        val identity = IdentityManager(files)
 
         assertThat(identity.uniqueId).isEqualTo("ABCDEF 0123 xyz!")
         assertThat(idFile.readText()).isEqualTo("ABCDEF 0123 xyz!")
+        // The id is not regenerated, so the file is only read: regenerating it would unpair the
+        // client from every host.
+        assertThat(files.calls).containsExactly("in uniqueid")
+        assertThat(lines())
+            .containsExactly(
+                "INFO: Reading UID from disk",
+                "WARNING: UID file data is not hex digits, the saved id is kept",
+                "INFO: UID is now: ABCDEF 0123 xyz!",
+            )
+            .inOrder()
     }
 
     @Test
-    fun `a line break at the end of a short id counts as a character`() {
+    fun `the warning about an id that is not hex holds no part of the id`() {
+        // Sixteen different characters, none of them in the text of the warning, so that a piece of
+        // the id of any length, one character included, shows in the warning.
+        val id = "Zq#Wj@Yc%Xb!Rm*G"
+        writeIdFile(id)
+
+        val identity = IdentityManager(context)
+
+        assertThat(identity.uniqueId).isEqualTo(id)
+        assertThat(log.warnings()).hasSize(1)
+        // The id is the identity of the client toward every host: not even a piece of it.
+        val warning = log.warnings().single()
+        assertThat(id.filter { it in warning }).isEmpty()
+    }
+
+    @Test
+    fun `an id of 16 upper-case hex digits is hex, so it is kept without a warning`() {
+        writeIdFile("0123456789ABCDEF")
+
+        val identity = IdentityManager(context)
+
+        assertThat(identity.uniqueId).isEqualTo("0123456789ABCDEF")
+        assertThat(log.warnings()).isEmpty()
+    }
+
+    @Test
+    fun `a line break at the end of a short id counts as a character, and it is not hex`() {
         writeIdFile("0123456789abcde\n")
 
         val identity = IdentityManager(context)
 
         assertThat(identity.uniqueId).isEqualTo("0123456789abcde\n")
+        assertThat(log.warnings()).hasSize(1)
     }
 
     /** The id file as the code under test opens it, with the faults that a test asks for. */
@@ -197,8 +237,11 @@ class IdentityManagerCharacterizationTest {
         }
     }
 
-    private class TrackedOutput(file: File, private val fault: IOException?) :
-        FileOutputStream(file) {
+    private class TrackedOutput(
+        file: File,
+        private val fault: IOException?,
+        private val closeFault: IOException?,
+    ) : FileOutputStream(file) {
         var closed = false
 
         override fun write(b: ByteArray, off: Int, len: Int) {
@@ -206,9 +249,11 @@ class IdentityManagerCharacterizationTest {
             super.write(b, off, len)
         }
 
+        /** The file is closed before [closeFault] is thrown, so a fault leaks no descriptor. */
         override fun close() {
             closed = true
             super.close()
+            if (closeFault != null) throw closeFault
         }
     }
 
@@ -217,6 +262,7 @@ class IdentityManagerCharacterizationTest {
         base: Context,
         private val readFault: IOException? = null,
         private val writeFault: IOException? = null,
+        private val closeFault: IOException? = null,
     ) : ContextWrapper(base) {
         val calls = mutableListOf<String>()
         val inputs = mutableListOf<TrackedInput>()
@@ -229,7 +275,9 @@ class IdentityManagerCharacterizationTest {
 
         override fun openFileOutput(name: String, mode: Int): FileOutputStream {
             calls += "out $name $mode"
-            return TrackedOutput(File(filesDir, name), writeFault).also { outputs += it }
+            return TrackedOutput(File(filesDir, name), writeFault, closeFault).also {
+                outputs += it
+            }
         }
     }
 
@@ -298,21 +346,42 @@ class IdentityManagerCharacterizationTest {
     }
 
     @Test
-    fun `a file that cannot be written still gives a generated id, and the log tells it`() {
+    fun `a file that cannot be written gives a generated id, and no log that it was written`() {
         val files = IdFileContext(context, writeFault = IOException("disk full"))
 
         val identity = IdentityManager(files)
 
         assertThat(identity.uniqueId).matches(generated.pattern)
         assertThat(files.outputs.single().closed).isTrue()
-        // The text is only buffered when the log says "written": the failure comes when it is
-        // flushed.
+        // The text is only buffered until the writer is closed: the failure comes when it is
+        // flushed, so the log must not say "written" before that.
         assertThat(lines())
             .containsExactly(
                 "INFO: Reading UID from disk",
                 "INFO: No UID file found",
                 "INFO: Generating new UID",
-                "INFO: UID written to disk",
+                "SEVERE: Error while writing UID file",
+                "INFO: UID is now: ${identity.uniqueId}",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a file whose close fails after the text was flushed does not log that it was written`() {
+        val files = IdFileContext(context, closeFault = IOException("close failed"))
+
+        val identity = IdentityManager(files)
+
+        assertThat(identity.uniqueId).matches(generated.pattern)
+        assertThat(files.outputs.single().closed).isTrue()
+        // The text was flushed before the close failed: the file holds the id, and the log still
+        // does not say so.
+        assertThat(idFile.readText()).isEqualTo(identity.uniqueId)
+        assertThat(lines())
+            .containsExactly(
+                "INFO: Reading UID from disk",
+                "INFO: No UID file found",
+                "INFO: Generating new UID",
                 "SEVERE: Error while writing UID file",
                 "INFO: UID is now: ${identity.uniqueId}",
             )

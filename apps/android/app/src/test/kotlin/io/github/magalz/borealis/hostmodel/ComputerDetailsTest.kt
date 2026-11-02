@@ -11,7 +11,12 @@ import io.github.magalz.borealis.nativecore.HostCaps
 import io.github.magalz.borealis.nativecore.HostFamily
 import org.junit.Test
 
-/** Characterizes the host details of the host model as they were before the Kotlin conversion. */
+/**
+ * Characterizes the host details of the host model as they were before the Kotlin conversion,
+ * except the update tests that pin the fixed behaviour: an update keeps the app list and the name
+ * that the new details lack (S12-01) and replaces the remote tuple instead of writing its port
+ * (S12-02).
+ */
 class ComputerDetailsTest {
     private fun tuple(address: String, port: Int = 47989) = AddressTuple(address, port)
 
@@ -230,18 +235,18 @@ class ComputerDetailsTest {
     }
 
     @Test
-    fun `an update takes the name, the uuid and the state, even when they are missing`() {
+    fun `an update keeps a name that the new details lack, and takes a missing uuid and state`() {
         val details = full()
 
         details.update(ComputerDetails().also { it.state = null })
 
-        assertThat(details.name).isNull()
+        assertThat(details.name).isEqualTo("Den PC")
         assertThat(details.uuid).isNull()
         assertThat(details.state).isNull()
     }
 
     @Test
-    fun `an update takes the plain fields, even when they are empty`() {
+    fun `an update takes the plain fields, even when they are empty, but keeps the app list`() {
         val details = full()
 
         details.update(ComputerDetails())
@@ -252,8 +257,33 @@ class ComputerDetailsTest {
         assertThat(details.runningGameId).isEqualTo(0)
         assertThat(details.nvidiaServer).isFalse()
         assertThat(details.borealis).isNull()
-        assertThat(details.rawAppList).isNull()
+        assertThat(details.rawAppList).isEqualTo("<apps/>")
         assertThat(details.state).isEqualTo(ComputerDetails.State.UNKNOWN)
+    }
+
+    @Test
+    fun `an update takes a new name and a new app list`() {
+        val details = full()
+
+        details.update(
+            ComputerDetails().also {
+                it.name = "Study PC"
+                it.rawAppList = "<apps><App/></apps>"
+            }
+        )
+
+        assertThat(details.name).isEqualTo("Study PC")
+        assertThat(details.rawAppList).isEqualTo("<apps><App/></apps>")
+    }
+
+    @Test
+    fun `an update without a name or an app list leaves details that had none without them`() {
+        val details = ComputerDetails()
+
+        details.update(ComputerDetails())
+
+        assertThat(details.name).isNull()
+        assertThat(details.rawAppList).isNull()
     }
 
     @Test
@@ -345,15 +375,44 @@ class ComputerDetailsTest {
     }
 
     @Test
-    fun `an update without a remote address moves the known remote port to the external port`() {
+    fun `an update without a remote address replaces the known one with the external port`() {
         val details = full()
         val known = details.remoteAddress
 
         details.update(ComputerDetails().also { it.externalPort = 50000 })
 
-        assertThat(details.remoteAddress).isSameInstanceAs(known)
-        assertThat(known!!.port).isEqualTo(50000)
-        assertThat(known.address).isEqualTo("203.0.113.9")
+        assertThat(details.remoteAddress).isNotSameInstanceAs(known)
+        assertThat(details.remoteAddress).isEqualTo(tuple("203.0.113.9", 50000))
+        assertThat(known).isEqualTo(tuple("203.0.113.9", 47990))
+    }
+
+    @Test
+    fun `an update leaves a remote address that a caller holds, in a set or as a key, as it was`() {
+        val details = full()
+        val known = details.remoteAddress!!
+        val inSet = hashSetOf(known)
+        val asKey = hashMapOf(known to "poll")
+
+        details.update(ComputerDetails().also { it.externalPort = 50000 })
+
+        assertThat(known.port).isEqualTo(47990)
+        assertThat(inSet).contains(known)
+        assertThat(asKey).containsKey(known)
+        assertThat(inSet).doesNotContain(details.remoteAddress)
+    }
+
+    @Test
+    fun `an update with an external port that is not positive leaves the known remote address`() {
+        for (port in listOf(-1, Int.MIN_VALUE)) {
+            val details = full()
+            val known = details.remoteAddress
+
+            details.update(ComputerDetails().also { it.externalPort = port })
+
+            assertThat(details.remoteAddress).isSameInstanceAs(known)
+            assertThat(known!!.port).isEqualTo(47990)
+            assertThat(details.externalPort).isEqualTo(port)
+        }
     }
 
     @Test

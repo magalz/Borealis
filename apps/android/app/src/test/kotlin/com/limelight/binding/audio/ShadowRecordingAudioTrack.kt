@@ -109,6 +109,7 @@ internal class ShadowRecordingAudioTrack {
     @Implementation
     fun native_pause() {
         AudioPlatform.record(AudioCall.Pause(track))
+        AudioPlatform.onPause(track)
     }
 
     @Implementation
@@ -191,6 +192,9 @@ internal object AudioPlatform {
     /** What starting the track [track] does; throwing makes `play` fail. */
     @Volatile var onStart: (track: Int) -> Unit = {}
 
+    /** What pausing the track [track] does; throwing makes `pause` fail. */
+    @Volatile var onPause: (track: Int) -> Unit = {}
+
     /** What releasing the track [track] does; throwing makes `release` fail. */
     @Volatile var onRelease: (track: Int) -> Unit = {}
 
@@ -219,6 +223,11 @@ internal object AudioPlatform {
         onStart = { check(it !in tracks) { "cannot start track $it" } }
     }
 
+    /** Makes `pause` throw an [IllegalStateException] for each track in [tracks]. */
+    fun failPauseOf(tracks: Set<Int>) {
+        onPause = { check(it !in tracks) { "cannot pause track $it" } }
+    }
+
     /** Makes `release` throw an [IllegalStateException] for each track in [tracks]. */
     fun failReleaseOf(tracks: Set<Int>) {
         onRelease = { check(it !in tracks) { "cannot release track $it" } }
@@ -231,6 +240,7 @@ internal object AudioPlatform {
         minBufferSize = 1
         onSetup = { 0 }
         onStart = {}
+        onPause = {}
         onRelease = {}
     }
 }

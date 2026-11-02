@@ -235,14 +235,16 @@ class StartLaunchTest {
     }
 
     @Test
-    fun `a native connection that does not start frees the place for the next start`() {
+    fun `a native connection that does not start frees the place for the next start and cleans the bridge up`() {
         ShadowRecordingBridge.onStartConnection = { -1 }
         startAndConnect(rig.connection())
 
         assertThat(rig.permits()).isEqualTo(1)
         assertThat(listener.events.last()).isEqualTo("stageComplete $DESKTOP_NAME")
+        // LiStartConnection undid its own work, so the start gives the bridge back too: no stop
+        // will come for it.
         assertThat(ShadowRecordingBridge.names)
-            .containsExactly("setupBridge", "startConnection")
+            .containsExactly("setupBridge", "startConnection", "cleanupBridge")
             .inOrder()
     }
 
@@ -453,18 +455,18 @@ class StartLaunchTest {
     }
 
     /**
-     * The id that was looked up decides whether the app is running, but a launch still asks for the
-     * id of the configuration: zero, for an app that came without one.
+     * The id that was looked up decides whether the app is running, and a launch asks for it too,
+     * not for the zero of a configuration that came without an id.
      */
     @Test
-    fun `an app that was looked up by name is launched with the id of the configuration`() {
+    fun `an app that was looked up by name is launched with the id that was found`() {
         val config = rig.config {
             setApp(NvApp("Desktop"))
         }
 
         startAndConnect(rig.connection(config))
 
-        assertThat(rig.request("/launch").value("appid")).isEqualTo("0")
+        assertThat(rig.request("/launch").value("appid")).isEqualTo("$DESKTOP_ID")
     }
 
     @Test

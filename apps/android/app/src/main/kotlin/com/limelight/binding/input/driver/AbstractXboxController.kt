@@ -10,6 +10,7 @@ import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.jni.MoonBridge
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.concurrent.atomic.AtomicBoolean
 
 abstract class AbstractXboxController(
     @JvmField protected val device: UsbDevice,
@@ -18,7 +19,8 @@ abstract class AbstractXboxController(
     listener: UsbDriverListener,
 ) : AbstractController(deviceId, listener, device.vendorId, device.productId) {
     private var inputThread: Thread? = null
-    private var stopped = false
+    // Set once by stop(), which the main thread and the reader thread can both call.
+    private val stopped = AtomicBoolean(false)
 
     @JvmField protected var inEndpt: UsbEndpoint? = null
     @JvmField protected var outEndpt: UsbEndpoint? = null
@@ -28,7 +30,9 @@ abstract class AbstractXboxController(
         capabilities =
             (MoonBridge.LI_CCAP_ANALOG_TRIGGERS.toInt() or MoonBridge.LI_CCAP_RUMBLE.toInt())
                 .toShort()
-        buttonFlags =
+        // The buttons the pad has, for the arrival. The live buttonFlags start at 0: a report sets
+        // the buttons that are down.
+        supportedButtonFlags =
             ControllerPacket.A_FLAG or
                 ControllerPacket.B_FLAG or
                 ControllerPacket.X_FLAG or
@@ -65,7 +69,7 @@ abstract class AbstractXboxController(
                 // Report that we're added _before_ reporting input
                 notifyDeviceAdded()
 
-                while (!isInterrupted && !stopped) {
+                while (!isInterrupted && !stopped.get()) {
                     val buffer = ByteArray(READ_BUFFER_SIZE)
 
                     var res: Int
@@ -95,9 +99,9 @@ abstract class AbstractXboxController(
                             this@AbstractXboxController.stop()
                             break
                         }
-                    } while (res == -1 && !isInterrupted && !stopped)
+                    } while (res == -1 && !isInterrupted && !stopped.get())
 
-                    if (res == -1 || stopped) {
+                    if (res == -1 || stopped.get()) {
                         break
                     }
 
@@ -163,11 +167,11 @@ abstract class AbstractXboxController(
     }
 
     override fun stop() {
-        if (stopped) {
+        // Only the caller that flips the flag stops the pad: a second caller, on another thread,
+        // would close the connection and report the removal again.
+        if (!stopped.compareAndSet(false, true)) {
             return
         }
-
-        stopped = true
 
         // Cancel any rumble effects
         rumble(0, 0)

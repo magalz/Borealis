@@ -1,5 +1,8 @@
 package com.limelight.binding.input.virtual_controller
 
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.SharedPreferences
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
@@ -17,6 +20,32 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
+
+/**
+ * A context that counts how often the default preferences are read whole: every full read of the
+ * stream settings starts by asking for the legacy resolution and frame rate setting, and nothing
+ * else does.
+ */
+private class FullReadCountingContext(base: Context) : ContextWrapper(base) {
+    var fullReads = 0
+        private set
+
+    override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
+        val real = super.getSharedPreferences(name, mode)
+        if (name != "${packageName}_preferences") return real
+
+        return object : SharedPreferences by real {
+            override fun getString(key: String?, defValue: String?): String? {
+                if (key == FIRST_KEY_OF_A_FULL_READ) fullReads++
+                return real.getString(key, defValue)
+            }
+        }
+    }
+
+    private companion object {
+        const val FIRST_KEY_OF_A_FULL_READ = "list_resolution_fps"
+    }
+}
 
 /**
  * The on-screen controller as the stream screen uses it: it builds and refreshes the layout, shows
@@ -89,6 +118,19 @@ class VirtualControllerCharacterizationTest {
         controller.elements.forEachIndexed { index, element ->
             assertThat(rig.frame.getChildAt(index + 1)).isSameInstanceAs(element)
         }
+    }
+
+    @Test
+    fun `a layout build reads the settings once, and so does each rebuild`() {
+        val counting = FullReadCountingContext(rig.activity)
+        val counted = VirtualController(rig.handlerRig.handler, rig.frame, counting)
+        rig.settings()
+
+        counted.refreshLayout()
+        assertThat(counting.fullReads).isEqualTo(1)
+
+        counted.refreshLayout()
+        assertThat(counting.fullReads).isEqualTo(2)
     }
 
     @Test
@@ -452,13 +494,23 @@ class VirtualControllerCharacterizationTest {
     }
 
     @Test
-    fun `a button above the sign bit of the short reaches the handler with the sign extended`() {
+    fun `a button above the sign bit of the short reaches the handler as the flag, not extended`() {
         context().inputMap = ControllerPacket.Y_FLAG.toShort()
 
         controller.sendControllerInputContext()
 
-        // 0x8000 as a short is -32768, which the int parameter of the handler takes as 0xFFFF8000
-        assertThat(rig.packets.single().buttons).isEqualTo(-0x8000)
+        // 0x8000 as a short is -32768; the handler takes 0x8000, not 0xFFFF8000
+        assertThat(rig.packets.single().buttons).isEqualTo(ControllerPacket.Y_FLAG)
+    }
+
+    @Test
+    fun `the buttons of the other bits reach the handler unchanged beside the sign bit`() {
+        context().inputMap = (ControllerPacket.Y_FLAG or ControllerPacket.A_FLAG).toShort()
+
+        controller.sendControllerInputContext()
+
+        assertThat(rig.packets.single().buttons)
+            .isEqualTo(ControllerPacket.Y_FLAG or ControllerPacket.A_FLAG)
     }
 
     @Test

@@ -70,7 +70,6 @@ class PreferenceConfiguration {
     @Suppress("TooManyFunctions")
     companion object {
         private const val LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps"
-        private const val LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround"
 
         private const val RESOLUTION_PREF_STRING = "list_resolution"
         private const val FPS_PREF_STRING = "list_fps"
@@ -115,7 +114,9 @@ class PreferenceConfiguration {
         private const val GAMEPAD_MOTION_SENSORS_PREF_STRING = "checkbox_gamepad_motion_sensors"
         private const val GAMEPAD_MOTION_FALLBACK_PREF_STRING = "checkbox_gamepad_motion_fallback"
 
-        private const val DEFAULT_RESOLUTION = "1280x720"
+        private const val DEFAULT_WIDTH = 1280
+        private const val DEFAULT_HEIGHT = 720
+        private const val DEFAULT_RESOLUTION = "${DEFAULT_WIDTH}x$DEFAULT_HEIGHT"
         private const val DEFAULT_FPS = "60"
         private const val DEFAULT_STRETCH = false
         private const val DEFAULT_SOPS = true
@@ -233,6 +234,11 @@ class PreferenceConfiguration {
         // to allow any orientation and vertical+horizontal resolutions.
         @JvmStatic
         fun isSquarishScreen(width: Int, height: Int): Boolean {
+            // A side of 0 or less is not a screen shape: the ratio below would be NaN, infinite or
+            // negative, or at most one for two negative sides, and the answer would depend on how
+            // those compare.
+            if (width <= 0 || height <= 0) return false
+
             val longDim = max(width, height).toFloat()
             val shortDim = min(width, height).toFloat()
 
@@ -248,7 +254,8 @@ class PreferenceConfiguration {
             return isSquarishScreen(width, height)
         }
 
-        private fun convertFromLegacyResolutionString(resString: String): String =
+        // Null for a name that is not a legacy one ("Native", "8K", an empty string).
+        private fun convertFromLegacyResolutionString(resString: String): String? =
             when {
                 resString.equals("360p", ignoreCase = true) -> RES_360P
                 resString.equals("480p", ignoreCase = true) -> RES_480P
@@ -256,8 +263,7 @@ class PreferenceConfiguration {
                 resString.equals("1080p", ignoreCase = true) -> RES_1080P
                 resString.equals("1440p", ignoreCase = true) -> RES_1440P
                 resString.equals("4K", ignoreCase = true) -> RES_4K
-                // Should be unreachable
-                else -> RES_720P
+                else -> null
             }
 
         // Java's String.split drops the trailing empty strings, and Kotlin's does not.
@@ -266,6 +272,15 @@ class PreferenceConfiguration {
 
         private fun getHeightFromResolutionString(resString: String): Int =
             X_SEPARATOR.split(resString)[1].toInt()
+
+        // The width and height of a stored resolution, or null when it is not a size. The parts
+        // are those of Java's split, which drops the trailing empty strings: "1920x" has one.
+        private fun sizeOrNull(resString: String): Pair<Int, Int>? {
+            val parts = X_SEPARATOR.split(resString)
+            val width = parts.getOrNull(0)?.toIntOrNull() ?: return null
+            val height = parts.getOrNull(1)?.toIntOrNull() ?: return null
+            return width to height
+        }
 
         private fun getResolutionString(height: Int): String =
             // An unknown height gives 720p, like the 720p case.
@@ -319,15 +334,6 @@ class PreferenceConfiguration {
             }
 
             return Math.round(resolutionFactor * frameRateFactor).toInt() * KBPS_PER_MBPS
-        }
-
-        @JvmStatic
-        fun getDefaultBitrate(context: Context): Int {
-            val prefs = defaultPreferences(context)
-            return getDefaultBitrate(
-                prefs.getRequiredString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION),
-                prefs.getRequiredString(FPS_PREF_STRING, DEFAULT_FPS),
-            )
         }
 
         private fun getVideoFormatValue(context: Context): FormatOption {
@@ -420,16 +426,8 @@ class PreferenceConfiguration {
             val prefs = defaultPreferences(context)
             val config = PreferenceConfiguration()
 
-            // Migrate legacy preferences to the new locations
-            if (prefs.contains(LEGACY_ENABLE_51_SURROUND_PREF_STRING)) {
-                if (prefs.getBoolean(LEGACY_ENABLE_51_SURROUND_PREF_STRING, false)) {
-                    prefs.edit {
-                        remove(LEGACY_ENABLE_51_SURROUND_PREF_STRING)
-                        putString(AUDIO_CONFIG_PREF_STRING, "51")
-                    }
-                }
-            }
-
+            // Migrate legacy preferences to the new locations. The 5.1 surround switch is not one
+            // of them: LegacyMigrations moves it when the app starts.
             val str = prefs.getString(LEGACY_RES_FPS_PREF_STRING, null)
             if (str != null) {
                 // Should never get an unknown string: it means 720p at 60 FPS
@@ -449,15 +447,23 @@ class PreferenceConfiguration {
                 var resStr: String =
                     prefs.getRequiredString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION)
 
-                // Convert legacy resolution strings to the new style
+                // Convert legacy resolution strings to the new style. Any other name without an
+                // "x" is not converted or written: it counts as the default one just below.
                 if (!resStr.contains("x")) {
-                    resStr = convertFromLegacyResolutionString(resStr)
-                    prefs.edit { putString(RESOLUTION_PREF_STRING, resStr) }
+                    convertFromLegacyResolutionString(resStr)?.let { legacy ->
+                        resStr = legacy
+                        prefs.edit { putString(RESOLUTION_PREF_STRING, legacy) }
+                    }
                 }
 
-                config.width = getWidthFromResolutionString(resStr)
-                config.height = getHeightFromResolutionString(resStr)
-                config.fps = prefs.getRequiredString(FPS_PREF_STRING, DEFAULT_FPS).toInt()
+                // A stored value that is not a size or a number counts as the default one, as the
+                // settings screen reads it. It stays in the file; the stream does not crash on it.
+                val (width, height) = sizeOrNull(resStr) ?: (DEFAULT_WIDTH to DEFAULT_HEIGHT)
+                config.width = width
+                config.height = height
+                config.fps =
+                    prefs.getRequiredString(FPS_PREF_STRING, DEFAULT_FPS).toIntOrNull()
+                        ?: DEFAULT_FPS.toInt()
             }
 
             if (
@@ -481,7 +487,10 @@ class PreferenceConfiguration {
                     prefs.getInt(BITRATE_PREF_OLD_STRING, 0) * KBPS_PER_MBPS,
                 )
             if (config.bitrate == 0) {
-                config.bitrate = getDefaultBitrate(context)
+                // From the resolved size and frame rate: the stored strings are not parsed again,
+                // so one that fell back to the default does not fail here.
+                config.bitrate =
+                    getDefaultBitrate("${config.width}x${config.height}", config.fps.toString())
             }
 
             val audioConfig: String =

@@ -25,6 +25,7 @@ object MediaCodecHelper {
     // OpenGL ES 3.0 is the first version with Tegra K1 class reference frame invalidation.
     private const val GL_ES_VERSION_3_0 = 0x30000
     private const val ADRENO_GLES_31_FIRST_MODEL = 400
+    private const val ADRENO_MODEL_DIGITS = 3
     private const val ADRENO_620_MODEL = 620
     private const val LOW_END_SNAPDRAGON_MAX_RFI_HEIGHT = 720
 
@@ -220,6 +221,12 @@ object MediaCodecHelper {
         amlogicDecoderPrefixes.add("c2.amlogic") // Unconfirmed
     }
 
+    // Every public decision starts with this, directly or through isDecoderInList, so a decision
+    // made before initialize throws whatever it would have answered.
+    private fun requireInitialized() {
+        check(initialized) { NOT_INITIALIZED }
+    }
+
     private fun isPowerVR(glRenderer: String): Boolean {
         return glRenderer.lowercase(Locale.getDefault()).contains("powervr")
     }
@@ -233,14 +240,16 @@ object MediaCodecHelper {
             return null
         }
 
-        val modelNumberPattern = Pattern.compile("(.*)([0-9]{3})(.*)")
+        // The model number is the number that follows "adreno", at least three digits and at most
+        // nine, so that it fits an Int.
+        val modelNumberPattern = Pattern.compile("adreno[^0-9]*([0-9]{3,9})(?![0-9])")
 
         val matcher = modelNumberPattern.matcher(renderer)
-        if (!matcher.matches()) {
+        if (!matcher.find()) {
             return null
         }
 
-        val modelNumber: String? = matcher.group(2)
+        val modelNumber: String? = matcher.group(1)
         LimeLog.info("Found Adreno GPU: $modelNumber")
         return modelNumber
     }
@@ -252,8 +261,9 @@ object MediaCodecHelper {
             return false
         }
 
-        // The current logic is to identify low-end SoCs based on a zero in the x0x place.
-        return modelNumber[1] == '0'
+        // The current logic is to identify low-end SoCs based on a zero in the x0x place of the
+        // three-digit models; a longer model number is a newer generation.
+        return modelNumber.length == ADRENO_MODEL_DIGITS && modelNumber[1] == '0'
     }
 
     private fun getAdrenoRendererModelNumber(glRenderer: String): Int {
@@ -281,14 +291,19 @@ object MediaCodecHelper {
             return
         }
 
+        // What the context says is read before the first list changes: the reads can throw, and a
+        // retry after an exception must not find the entries of the failed run in the lists.
+        val isAmazonDevice =
+            context.packageManager.hasSystemFeature("amazon.hardware.fire_tv") ||
+                Build.MANUFACTURER.equals("Amazon", ignoreCase = true)
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val glEsVersion = activityManager.deviceConfigurationInfo.reqGlEsVersion
+
         // Older Sony ATVs (SVP-DTV15) have broken MediaTek codecs (decoder hangs after rendering
         // the first frame). I know the Fire TV 2 and 3 works, so I'll whitelist Amazon devices
         // which seem to actually be tested. We still have to check Build.MANUFACTURER to catch
         // Amazon Fire tablets.
-        if (
-            context.packageManager.hasSystemFeature("amazon.hardware.fire_tv") ||
-                Build.MANUFACTURER.equals("Amazon", ignoreCase = true)
-        ) {
+        if (isAmazonDevice) {
             // HEVC and RFI have been confirmed working on Fire TV 2, Fire TV Stick 2, Fire TV 4K
             // Max, Fire HD 8 2020, and Fire HD 8 2022 models.
             //
@@ -317,16 +332,14 @@ object MediaCodecHelper {
             refFrameInvalidationHevcPrefixes.add("c2.amlogic")
         }
 
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val configInfo = activityManager.deviceConfigurationInfo
-        if (configInfo.reqGlEsVersion != ConfigurationInfo.GL_ES_VERSION_UNDEFINED) {
-            LimeLog.info("OpenGL ES version: " + configInfo.reqGlEsVersion)
+        if (glEsVersion != ConfigurationInfo.GL_ES_VERSION_UNDEFINED) {
+            LimeLog.info("OpenGL ES version: " + glEsVersion)
 
             isLowEndSnapdragon = isLowEndSnapdragonRenderer(glRenderer)
             isAdreno620 = getAdrenoRendererModelNumber(glRenderer) == ADRENO_620_MODEL
 
             // Tegra K1 and later can do reference frame invalidation properly
-            if (configInfo.reqGlEsVersion >= GL_ES_VERSION_3_0) {
+            if (glEsVersion >= GL_ES_VERSION_3_0) {
                 LimeLog.info(
                     "Added omx.nvidia/c2.nvidia to reference frame invalidation support list"
                 )
@@ -394,7 +407,7 @@ object MediaCodecHelper {
     }
 
     private fun isDecoderInList(decoderList: List<String>, decoderName: String): Boolean {
-        check(initialized) { NOT_INITIALIZED }
+        requireInitialized()
 
         for (badPrefix in decoderList) {
             if (decoderName.length >= badPrefix.length) {
@@ -418,18 +431,26 @@ object MediaCodecHelper {
     ): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
-                if (
-                    decoderInfo
-                        .getCapabilitiesForType(mimeType)
-                        .isFeatureSupported(CodecCapabilities.FEATURE_LowLatency)
-                ) {
-                    LimeLog.info("Low latency decoding mode supported (FEATURE_LowLatency)")
+                val caps = decoderInfo.getCapabilitiesForType(mimeType)
+                if (capabilitiesSupportAndroidRLowLatency(caps)) {
                     return true
                 }
             } catch (e: Exception) {
                 // Tolerate buggy codecs
                 e.printStackTrace()
             }
+        }
+
+        return false
+    }
+
+    private fun capabilitiesSupportAndroidRLowLatency(caps: CodecCapabilities): Boolean {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                caps.isFeatureSupported(CodecCapabilities.FEATURE_LowLatency)
+        ) {
+            LimeLog.info("Low latency decoding mode supported (FEATURE_LowLatency)")
+            return true
         }
 
         return false
@@ -488,6 +509,8 @@ object MediaCodecHelper {
         decoderInfo: MediaCodecInfo,
         tryNumber: Int,
     ): Boolean {
+        requireInitialized()
+
         // Options here should be tried in the order of most to least risky. The decoder will use
         // the first MediaFormat that doesn't fail in configure().
 
@@ -602,6 +625,8 @@ object MediaCodecHelper {
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     @JvmStatic
     fun decoderSupportsFusedIdrFrame(decoderInfo: MediaCodecInfo, mimeType: String): Boolean {
+        requireInitialized()
+
         // If adaptive playback is supported, we can submit new CSD together with a keyframe
         try {
             if (
@@ -675,6 +700,8 @@ object MediaCodecHelper {
 
     @JvmStatic
     fun decoderSupportsRefFrameInvalidationAvc(decoderName: String, videoHeight: Int): Boolean {
+        requireInitialized()
+
         // Reference frame invalidation is broken on low-end Snapdragon SoCs at 1080p.
         if (videoHeight > LOW_END_SNAPDRAGON_MAX_RFI_HEIGHT && isLowEndSnapdragon) {
             return false
@@ -691,6 +718,8 @@ object MediaCodecHelper {
 
     @JvmStatic
     fun decoderSupportsRefFrameInvalidationHevc(decoderInfo: MediaCodecInfo): Boolean {
+        requireInitialized()
+
         // HEVC decoders seem to universally support RFI, but it can have huge latency penalties
         // for some decoders due to the number of references frames being > 1. Old Amlogic
         // decoders are known to have this problem.
@@ -711,6 +740,8 @@ object MediaCodecHelper {
 
     @JvmStatic
     fun decoderSupportsRefFrameInvalidationAv1(decoderInfo: MediaCodecInfo): Boolean {
+        requireInitialized()
+
         // We'll use the same heuristics as HEVC for now
         if (
             decoderSupportsAndroidRLowLatency(decoderInfo, "video/av01") ||
@@ -727,13 +758,15 @@ object MediaCodecHelper {
     @Suppress("ReturnCount")
     @JvmStatic
     fun decoderIsWhitelistedForHevc(decoderInfo: MediaCodecInfo): Boolean {
+        requireInitialized()
+
         //
         // Software decoders are terrible and we never want to use them.
         // We want to catch decoders like:
         // OMX.qcom.video.decoder.hevcswvdec
         // OMX.SEC.hevc.sw.dec
         //
-        if (decoderInfo.name.contains("sw")) {
+        if (decoderInfo.name.contains("sw", ignoreCase = true)) {
             LimeLog.info("Disallowing HEVC on software decoder: " + decoderInfo.name)
             return false
         } else if (
@@ -772,6 +805,8 @@ object MediaCodecHelper {
     @Suppress("ReturnCount")
     @JvmStatic
     fun isDecoderWhitelistedForAv1(decoderInfo: MediaCodecInfo): Boolean {
+        requireInitialized()
+
         // Google didn't have official support for AV1 (or more importantly, a CTS test) until
         // Android 10, so don't use any decoder before then.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -784,7 +819,7 @@ object MediaCodecHelper {
         // OMX.qcom.video.decoder.hevcswvdec
         // OMX.SEC.hevc.sw.dec
         //
-        if (decoderInfo.name.contains("sw")) {
+        if (decoderInfo.name.contains("sw", ignoreCase = true)) {
             LimeLog.info("Disallowing AV1 on software decoder: " + decoderInfo.name)
             return false
         } else if (!decoderInfo.isHardwareAccelerated || decoderInfo.isSoftwareOnly) {
@@ -827,6 +862,8 @@ object MediaCodecHelper {
     @Suppress("LoopWithTooManyJumpStatements")
     @JvmStatic
     fun findFirstDecoder(mimeType: String): MediaCodecInfo? {
+        requireInitialized()
+
         for (codecInfo in getMediaCodecList()) {
             // Skip encoders
             if (codecInfo.isEncoder) {
@@ -857,26 +894,47 @@ object MediaCodecHelper {
         return null
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     @JvmStatic
     fun findProbableSafeDecoder(mimeType: String, requiredProfile: Int): MediaCodecInfo? {
-        check(initialized) { NOT_INITIALIZED }
+        requireInitialized()
 
         // Now look for decoders we know are safe
+        return findKnownSafeDecoder(mimeType, requiredProfile)
+    }
+
+    // Some bad decoders throw IllegalArgumentExceptions from getCapabilitiesForType. The Java gave
+    // up the whole search for one of them and took the first decoder, whatever the required
+    // profile; a decoder that throws is skipped now and the search goes on.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun readCapabilities(codecInfo: MediaCodecInfo, mimeType: String): CodecCapabilities? {
         return try {
-            // If this function completes, it will determine if the decoder is safe
-            findKnownSafeDecoder(mimeType, requiredProfile)
+            codecInfo.getCapabilitiesForType(mimeType)
         } catch (e: Exception) {
-            // Some buggy devices seem to throw exceptions
-            // from getCapabilitiesForType() so we'll just assume
-            // they're okay and go with the first one we find
-            findFirstDecoder(mimeType)
+            LimeLog.info("Skipping decoder that throws for its capabilities: ${codecInfo.name}")
+            null
         }
     }
 
-    // The Java declared this method as explicitly throwing Exception, since some bad decoders can
-    // throw IllegalArgumentExceptions unexpectedly, and its only caller catches it.
+    // The Java's decoderSupportsAndroidRLowLatency swallowed a feature check that threw and
+    // answered false. Reading the capabilities once left the feature check unguarded here, and this
+    // guard restores that: a decoder whose feature check throws counts as one without the feature,
+    // so round 1 skips it and round 2, which does not ask for the feature, may still take it.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun supportsLowLatencyFeature(
+        codecInfo: MediaCodecInfo,
+        caps: CodecCapabilities,
+    ): Boolean {
+        return try {
+            capabilitiesSupportAndroidRLowLatency(caps)
+        } catch (e: Exception) {
+            LimeLog.info(
+                "Treating decoder that throws for its feature check as lacking " +
+                    "FEATURE_LowLatency: ${codecInfo.name}"
+            )
+            false
+        }
+    }
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress("NestedBlockDepth", "LoopWithTooManyJumpStatements", "CyclomaticComplexMethod")
     private fun findKnownSafeDecoder(mimeType: String, requiredProfile: Int): MediaCodecInfo? {
@@ -914,9 +972,9 @@ object MediaCodecHelper {
                             continue
                         }
 
-                        val caps = codecInfo.getCapabilitiesForType(mime)
+                        val caps = readCapabilities(codecInfo, mime) ?: continue
 
-                        if (i == 0 && !decoderSupportsAndroidRLowLatency(codecInfo, mime)) {
+                        if (i == 0 && !supportsLowLatencyFeature(codecInfo, caps)) {
                             LimeLog.info(
                                 "Skipping decoder that lacks FEATURE_LowLatency for round 1"
                             )

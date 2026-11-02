@@ -20,6 +20,7 @@ import com.limelight.R
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.input.NativeGamepadSupport
 import io.github.magalz.borealis.input.UsbPermissionRequests
+import java.util.concurrent.CopyOnWriteArrayList
 
 class UsbDriverService : Service(), UsbDriverListener {
     private var usbManager: UsbManager? = null
@@ -29,7 +30,9 @@ class UsbDriverService : Service(), UsbDriverListener {
     private val receiver = UsbEventReceiver()
     private val binder = UsbDriverBinder()
 
-    private val controllers = ArrayList<AbstractController>()
+    // The input thread of a failing pad removes it (deviceRemoved) while the main thread replays or
+    // stops the list.
+    private val controllers = CopyOnWriteArrayList<AbstractController>()
 
     // BOREALIS: the permission dialog waits for the first frame of the stream (see
     // UsbPermissionRequests)
@@ -88,6 +91,10 @@ class UsbDriverService : Service(), UsbDriverListener {
             // Initial attachment broadcast
             if (action == UsbManager.ACTION_USB_DEVICE_ATTACHED) {
                 val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
+                if (device == null) {
+                    LimeLog.warning("USB attach broadcast without a device")
+                    return
+                }
 
                 // shouldClaimDevice() looks at the kernel's enumerated input
                 // devices to make its decision about whether to prompt to take
@@ -100,15 +107,18 @@ class UsbDriverService : Service(), UsbDriverListener {
                     .postDelayed(
                         {
                             // Continue the state machine
-                            handleUsbDeviceState(checkNotNull(device))
+                            handleUsbDeviceState(device)
                         },
                         ATTACH_DELAY_MS,
                     )
             }
             // Subsequent permission dialog completion intent
             else if (action == ACTION_USB_PERMISSION) {
-                val device =
-                    checkNotNull(intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE))
+                val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
+                if (device == null) {
+                    LimeLog.warning("USB permission answer without a device")
+                    return
+                }
                 permissionRequests.resolved(device.deviceName) // BOREALIS
 
                 // Permission dialog is now closed
@@ -175,11 +185,9 @@ class UsbDriverService : Service(), UsbDriverListener {
                     XboxOneController(device, connection, nextDeviceId++, this)
                 } else if (Xbox360Controller.canClaimDevice(device)) {
                     Xbox360Controller(device, connection, nextDeviceId++, this)
-                } else if (Xbox360WirelessDongle.canClaimDevice(device)) {
-                    Xbox360WirelessDongle(device, connection, nextDeviceId++, this)
                 } else {
-                    // Unreachable
-                    return
+                    // shouldClaimDevice() accepted the device, so this is the wireless dongle
+                    Xbox360WirelessDongle(device, connection, nextDeviceId++, this)
                 }
 
             // Start the controller
@@ -280,19 +288,24 @@ class UsbDriverService : Service(), UsbDriverListener {
         // Stop the attachment receiver
         unregisterReceiver(receiver)
 
-        // Stop all controllers
-        while (controllers.isNotEmpty()) {
+        // Stop all controllers. A pad whose reader fails removes itself from the list on its own
+        // thread, so walk the snapshot of the copy-on-write list instead of testing it for empty
+        // and then removing the first element.
+        for (controller in controllers) {
             // Stop and remove the controller
-            controllers.removeAt(0).stop()
+            controllers.remove(controller)
+            controller.stop()
         }
     }
 
     override fun onCreate() {
+        super.onCreate()
         this.usbManager = getSystemService(Context.USB_SERVICE) as UsbManager?
         this.prefConfig = PreferenceConfiguration.readPreferences(this)
     }
 
     override fun onDestroy() {
+        super.onDestroy()
         stop()
 
         // Remove listeners

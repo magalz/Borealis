@@ -63,28 +63,28 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `40 milliseconds of pending audio drops the samples and logs the duration read again`() {
+    fun `40 milliseconds of pending audio drops the samples and logs the duration it read`() {
         val renderer = ready()
-        // The check reads 40; the log reads the duration a second time and shows what it found
+        // The duration is read once, and the log shows the value that the check saw
         ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(40, 77)
 
         renderer.playDecodedAudio(samples)
 
         assertThat(writes()).isEmpty()
-        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(2)
-        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 77 ms")
+        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(1)
+        assertThat(log.entries.last()).isEqualTo(Level.INFO to "Too much pending audio data: 40 ms")
     }
 
     @Test
     fun `successive packets each ask for the pending duration again`() {
         val renderer = ready()
-        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0, 100, 100, 10)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0, 100, 10)
 
         repeat(3) { renderer.playDecodedAudio(samples) }
 
-        // The second packet is dropped (two reads); the first and the third are written
+        // The second packet is dropped; the first and the third are written; one read each
         assertThat(writes()).hasSize(2)
-        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(4)
+        assertThat(ShadowRecordingBridge.named("getPendingAudioDuration")).hasSize(3)
     }
 
     @Test
@@ -241,6 +241,20 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
+    fun `a pause that fails in cleanup is not hidden, and the track is still released once`() {
+        val renderer = ready()
+        AudioPlatform.failPauseOf(setOf(1))
+
+        assertThrows(IllegalStateException::class.java) { renderer.cleanup() }
+
+        assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>())
+            .containsExactly(AudioCall.Release(1))
+        val callsAfterFirst = AudioPlatform.calls.size
+        renderer.cleanup()
+        assertThat(AudioPlatform.calls).hasSize(callsAfterFirst)
+    }
+
+    @Test
     fun `cleanup sends no broadcast even with audio effects`() {
         val renderer = ready(audioFx = true)
 
@@ -264,11 +278,26 @@ class AudioRendererPlaybackCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `cleanup keeps the released track, so a second cleanup is refused by the platform`() {
+    fun `a second cleanup does nothing, because the first one dropped the track`() {
         val renderer = ready()
         renderer.cleanup()
+        val callsAfterFirst = AudioPlatform.calls.size
 
-        assertThrows(IllegalStateException::class.java) { renderer.cleanup() }
+        renderer.cleanup()
+
+        assertThat(AudioPlatform.calls).hasSize(callsAfterFirst)
         assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>()).hasSize(1)
+    }
+
+    @Test
+    fun `a cleanup whose release fails still drops the track, so a second cleanup does nothing`() {
+        val renderer = ready()
+        AudioPlatform.failReleaseOf(setOf(1))
+        assertThrows(IllegalStateException::class.java) { renderer.cleanup() }
+        val callsAfterFirst = AudioPlatform.calls.size
+
+        renderer.cleanup()
+
+        assertThat(AudioPlatform.calls).hasSize(callsAfterFirst)
     }
 }

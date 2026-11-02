@@ -82,6 +82,9 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
     private val listeners = ArrayList<AnalogStickListener>()
     private var timeLastClick = 0L
 
+    /** Whether the stick was pressed before: the first press has no click to double. */
+    private var hasClicked = false
+
     init {
         // reset stick position
         positionStickX = (width / 2).toFloat()
@@ -196,8 +199,8 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
                 StickState.MOVED_IN_DEAD_ZONE
             }
 
-        //  trigger move event if state active
-        if (stickState == StickState.MOVED_ACTIVE) {
+        // trigger move event if state active; a stick with no way to go has no 100% to divide by
+        if (stickState == StickState.MOVED_ACTIVE && complete > 0) {
             notifyOnMovement(-correlatedX / complete, correlatedY / complete)
         }
     }
@@ -205,6 +208,7 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
     override fun onElementTouchEvent(event: MotionEvent): Boolean {
         // save last click state
         val lastClickState = clickState
+        val wasPressed = isPressed
 
         // get absolute way for each axis
         relativeX = -(width / 2 - event.x)
@@ -232,7 +236,8 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
                 stickState = StickState.MOVED_IN_DEAD_ZONE
                 // check for double click
                 if (
-                    lastClickState == ClickState.SINGLE &&
+                    hasClicked &&
+                        lastClickState == ClickState.SINGLE &&
                         event.eventTime - timeLastClick <= TIMEOUT_DOUBLE_CLICK
                 ) {
                     clickState = ClickState.DOUBLE
@@ -243,6 +248,7 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
                 }
                 // reset last click timestamp
                 timeLastClick = event.eventTime
+                hasClicked = true
                 // set item pressed and update
                 isPressed = true
             }
@@ -258,10 +264,14 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
             updatePosition(event.eventTime)
         } else {
             stickState = StickState.NO_MOVEMENT
-            notifyOnRevoke()
 
-            // not longer pressed reset analog stick
-            notifyOnMovement(0f, 0f)
+            // only a stick that was pressed has something to revoke and to reset
+            if (wasPressed) {
+                notifyOnRevoke()
+
+                // not longer pressed reset analog stick
+                notifyOnMovement(0f, 0f)
+            }
         }
         // refresh view
         invalidate()
@@ -295,7 +305,8 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
         private fun getAngle(wayX: Float, wayY: Float): Double {
             // prevent divisions by zero for corner cases
             if (wayX == 0f) {
-                return if (wayY < 0) Math.PI else 0.0
+                // straight above the centre (and on it) is 0, straight below is half a turn
+                return if (wayY > 0) Math.PI else 0.0
             } else if (wayY == 0f) {
                 if (wayX > 0) {
                     return Math.PI * QUARTER_TURNS_RIGHT / 2

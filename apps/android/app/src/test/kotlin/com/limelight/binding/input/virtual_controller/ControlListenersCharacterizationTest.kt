@@ -65,28 +65,24 @@ class ControlListenersCharacterizationTest {
     }
 
     @Test
-    fun `a button held for three seconds sends its state once more, and again three times after that`() {
+    fun `a held button sends its state with the three retransmits of the press and nothing after`() {
         rig.press(a)
-        rig.advanceBy(2_999)
+        rig.advanceBy(75)
         assertThat(rig.packets).hasSize(4) // the press and its three retransmits
 
-        rig.advanceBy(1)
-        assertThat(rig.packets).hasSize(5) // the long click
-
-        rig.advanceBy(75)
-        assertThat(rig.packets).hasSize(8)
+        rig.advanceBy(10_000)
+        assertThat(rig.packets).hasSize(4)
         assertThat(buttons().distinct()).containsExactly(ControllerPacket.A_FLAG)
     }
 
     @Test
-    fun `a button let go before three seconds has no long click`() {
+    fun `a button let go sends the press and its three, then the release and its three`() {
         rig.press(a)
         rig.advanceBy(100)
         rig.release(a)
 
         rig.advanceBy(10_000)
 
-        // the press and its three, the release and its three
         assertThat(rig.packets).hasSize(8)
         assertThat(inputMap()).isEqualTo(0)
     }
@@ -114,12 +110,12 @@ class ControlListenersCharacterizationTest {
     }
 
     @Test
-    fun `Y presses the sign bit of the short`() {
+    fun `Y presses the sign bit of the short, and the PC gets the flag 0x8000`() {
         val y = rig.element(VirtualControllerElement.EID_Y)
 
         rig.press(y)
         assertThat(controller.controllerInputContext.inputMap).isEqualTo(Short.MIN_VALUE)
-        assertThat(inputMap()).isEqualTo(-0x8000)
+        assertThat(buttons()).containsExactly(ControllerPacket.Y_FLAG)
 
         rig.release(y)
         assertThat(inputMap()).isEqualTo(0)

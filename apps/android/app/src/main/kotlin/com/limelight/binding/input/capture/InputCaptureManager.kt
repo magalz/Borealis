@@ -7,7 +7,7 @@ import com.limelight.R
 object InputCaptureManager {
     @JvmStatic
     fun getInputCaptureProvider(activity: Activity): InputCaptureProvider {
-        LimeLog.info("Using Android O+ native mouse capture")
+        LimeLog.info("Using the native pointer capture")
         return AndroidNativePointerCaptureProvider(
             activity,
             activity.findViewById(R.id.surfaceView),

@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.connection
 
 import com.google.common.truth.Truth.assertThat
+import com.limelight.nvstream.http.NvApp
 import io.github.magalz.borealis.host.failure.CauseKind
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.nvhttp.HostReply
@@ -83,6 +84,71 @@ class StartConflictTest {
 
         assertThat(steps()).containsExactly("/applist", "/resume").inOrder()
         assertThat(rig.request("/resume").value("appid")).isEqualTo("$OTHER_ID")
+    }
+
+    @Test
+    fun `an app that was looked up by name is asked about with the id that was found`() {
+        rig.script.running(OTHER_ID)
+        val config = rig.config {
+            setApp(NvApp(DESKTOP_NAME))
+        }
+
+        rig.start(rig.connection(config))
+        listener.await("launchConflict")
+        listener.awaitEnded()
+
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", conflict)
+            .inOrder()
+    }
+
+    /**
+     * A join of the app that the start asked for, found by its name, is a resume of that app: a
+     * failed handshake right after it is a collision with another device, and restarts the start.
+     */
+    @Test
+    fun `a join of an app that was looked up by name restarts the start after a failed handshake`() {
+        rig.script.running(DESKTOP_ID)
+        listener.conflictChoice = ConflictChoice.JOIN
+        ShadowRecordingBridge.onStartConnection = {
+            if (ShadowRecordingBridge.named("startConnection").size == 1) {
+                checkNotNull(ShadowRecordingBridge.listener)
+                    .stageFailed(
+                        ShadowRecordingBridge.getStageName(ShadowRecordingBridge.RTSP_STAGE),
+                        RTSP_PORTS,
+                        -1,
+                    )
+                -1
+            } else {
+                0
+            }
+        }
+        val config = rig.config {
+            setApp(NvApp(DESKTOP_NAME))
+        }
+
+        rig.start(rig.connection(config))
+        awaitRestartOrFailure()
+
+        assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(2)
+        assertThat(listener.events("stageFailed")).isEmpty()
+    }
+
+    /**
+     * Waits until the start failed, or came through twice (a restart), and its threads ended. The
+     * restart goes on in a new thread, which [RecordingListener.awaitEnded] also waits for.
+     */
+    private fun awaitRestartOrFailure() {
+        val limit = System.currentTimeMillis() + WAIT_MS
+        while (
+            listener.events("stageFailed").isEmpty() && listener.events("stageComplete").size < 2
+        ) {
+            check(System.currentTimeMillis() < limit) {
+                "Timed out waiting for a failure or a restart; events: ${listener.events}"
+            }
+            Thread.sleep(POLL_MS)
+        }
+        listener.awaitEnded()
     }
 
     @Test
@@ -330,5 +396,8 @@ class StartConflictTest {
 
     private companion object {
         val RACE: HostReply = HostReply.failure("400", "An app is already running on this host")
+        const val RTSP_PORTS = 5
+        const val WAIT_MS = 30_000L
+        const val POLL_MS = 10L
     }
 }

@@ -7,9 +7,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Characterizes what `MediaCodecHelper` does before `initialize` has run: every decision that reads
- * a prefix list throws `IllegalStateException`, and the ones that can answer without a list answer
- * first. The rows are the public entry points, one by one.
+ * Pins what `MediaCodecHelper` does before `initialize` has run: every public decision throws
+ * `IllegalStateException` first, also the ones that could answer without a prefix list. The rows
+ * are the public entry points, one by one.
  */
 @RunWith(RobolectricTestRunner::class)
 class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
@@ -38,11 +38,11 @@ class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
     }
 
     @Test
-    fun `AVC reference frame invalidation says no for the b3 and b5 devices before initialize`() {
+    fun `AVC reference frame invalidation throws before initialize for the b3 and b5 devices too`() {
         val rows = Rows()
 
         listOf("b3", "b5").forEach { device ->
-            rows.check("$device", false) {
+            rows.throwsNotInitialized(device) {
                 fresh(DeviceBuild(device = device)).refFrameInvalidationAvc("omx.qcom.video", 1080)
             }
         }
@@ -51,7 +51,7 @@ class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
     }
 
     @Test
-    fun `the decisions on a decoder throw before initialize unless they answer first`() {
+    fun `the decisions on a decoder throw before initialize`() {
         val helper = fresh()
         val rows = Rows()
         val hevc = codec("OMX.vendor.hevc.decoder") { mime = "video/hevc" }
@@ -66,16 +66,16 @@ class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
             helper.refFrameInvalidationHevc(hevc)
         }
         rows.throwsNotInitialized("HEVC whitelist") { helper.whitelistedForHevc(hevc) }
-        rows.check("HEVC whitelist of a software decoder", false) {
+        rows.throwsNotInitialized("HEVC whitelist of a software decoder") {
             helper.whitelistedForHevc(codec("OMX.SEC.hevc.sw.dec") { mime = "video/hevc" })
         }
-        rows.check("AV1 reference frame invalidation needs no list", false) {
+        rows.throwsNotInitialized("AV1 reference frame invalidation") {
             helper.refFrameInvalidationAv1(codec("c2.vendor.av1") { mime = "video/av01" })
         }
-        rows.check("AV1 whitelist needs no list", false) {
+        rows.throwsNotInitialized("AV1 whitelist") {
             helper.whitelistedForAv1(codec("c2.vendor.av1") { mime = "video/av01" })
         }
-        rows.check("fused IDR frames need no list", true) {
+        rows.throwsNotInitialized("fused IDR frames") {
             helper.fusedIdrFrame(codec("c2.vendor.avc") { adaptivePlayback = true }, "video/avc")
         }
 
@@ -83,15 +83,15 @@ class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
     }
 
     @Test
-    fun `a decoder that answers without a list also answers before initialize`() {
+    fun `a decoder that could answer without a list throws before initialize`() {
         val rows = Rows()
         val hevc = "video/hevc"
 
-        rows.check("the HEVC whitelist by the media performance class", true) {
+        rows.throwsNotInitialized("the HEVC whitelist by the media performance class") {
             fresh(DeviceBuild(performanceClass = Build.VERSION_CODES.TIRAMISU))
                 .whitelistedForHevc(codec("OMX.vendor.hevc.decoder") { mime = hevc })
         }
-        rows.check("the HEVC whitelist by FEATURE_LowLatency", true) {
+        rows.throwsNotInitialized("the HEVC whitelist by FEATURE_LowLatency") {
             fresh()
                 .whitelistedForHevc(
                     codec("OMX.vendor.hevc.decoder") {
@@ -100,7 +100,7 @@ class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
                     }
                 )
         }
-        rows.check("HEVC reference frame invalidation by FEATURE_LowLatency", true) {
+        rows.throwsNotInitialized("HEVC reference frame invalidation by FEATURE_LowLatency") {
             fresh()
                 .refFrameInvalidationHevc(
                     codec("OMX.vendor.hevc.decoder") {
@@ -123,12 +123,12 @@ class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
     }
 
     @Test
-    fun `the low latency options throw before initialize unless the first try ends on FEATURE_LowLatency`() {
+    fun `the low latency options throw before initialize, also when the first try ends on FEATURE_LowLatency`() {
         val helper = fresh()
         val rows = Rows()
         val format = { MediaFormat.createVideoFormat("video/avc", 1920, 1080) }
 
-        rows.check("try 0 with the feature", true) {
+        rows.throwsNotInitialized("try 0 with the feature") {
             helper.lowLatencyOptions(format(), codec("c2.vendor.avc") { lowLatency = true }, 0)
         }
         rows.throwsNotInitialized("try 0 without it") {
@@ -145,19 +145,19 @@ class MediaCodecHelperUninitializedTest : MediaCodecHelperTestBase() {
     }
 
     @Test
-    fun `finding the first decoder throws before initialize only when a decoder is up for the blacklist`() {
+    fun `finding the first decoder throws before initialize even with no decoder`() {
         val helper = fresh()
         val rows = Rows()
 
-        rows.check("no decoder", null) {
+        rows.throwsNotInitialized("no decoder") {
             installCodecs()
             helper.findFirstDecoder("video/avc")
         }
-        rows.check("no decoder of the type", null) {
+        rows.throwsNotInitialized("no decoder of the type") {
             installCodecs(codec("c2.vendor.hevc") { mime = "video/hevc" })
             helper.findFirstDecoder("video/avc")
         }
-        rows.check("a software only decoder is blacklisted before the list", null) {
+        rows.throwsNotInitialized("a software only decoder") {
             installCodecs(codec("c2.android.avc.decoder") { softwareOnly = true })
             helper.findFirstDecoder("video/avc")
         }

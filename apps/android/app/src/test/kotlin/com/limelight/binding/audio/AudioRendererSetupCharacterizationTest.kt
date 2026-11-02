@@ -100,13 +100,13 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
             .containsExactly(
                 outputRate(),
                 trackSetup(track = 1, bufferSize = 1_920, lowLatency = true),
-                minBuffer(),
                 outputRate(),
+                minBuffer(),
                 trackSetup(track = 2, bufferSize = 5_760, lowLatency = true),
                 outputRate(),
                 trackSetup(track = 3, bufferSize = 1_920, lowLatency = false),
-                minBuffer(),
                 outputRate(),
+                minBuffer(),
                 trackSetup(track = 4, bufferSize = 5_760, lowLatency = false),
             )
             .inOrder()
@@ -195,11 +195,11 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
 
         val result = renderer().setUpStereo()
 
+        // A skipped attempt does not ask the platform for its minimum buffer.
         assertThat(result).isEqualTo(0)
         assertThat(AudioPlatform.calls)
             .containsExactly(
                 outputRate(),
-                minBuffer(),
                 outputRate(),
                 outputRate(),
                 trackSetup(track = 1, bufferSize = 1_920, lowLatency = false),
@@ -218,7 +218,6 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
         assertThat(AudioPlatform.calls)
             .containsExactly(
                 outputRate(),
-                minBuffer(),
                 outputRate(),
                 outputRate(),
                 trackSetup(track = 1, bufferSize = 1_920, lowLatency = false),
@@ -312,20 +311,20 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `a track that cannot be released stays, and setup answers 0 without a track that played`() {
+    fun `a track that cannot be released is dropped, and setup answers -2 when none played`() {
         AudioPlatform.failStartOf(AudioPlatform.everyTrack)
         AudioPlatform.failReleaseOf(AudioPlatform.everyTrack)
 
         val result = renderer().setUpStereo()
 
-        // Every attempt created a track, none played and none could be released: the last one stays
-        assertThat(result).isEqualTo(0)
+        // Every attempt created a track, none played and none could be released: none is kept
+        assertThat(result).isEqualTo(-2)
         assertThat(AudioPlatform.setups).hasSize(4)
         assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>()).hasSize(4)
     }
 
     @Test
-    fun `a creation that fails releases the track that an earlier attempt could not release`() {
+    fun `a track that could not be released is tried once and not again by the next attempt`() {
         AudioPlatform.failStartOf(setOf(1))
         AudioPlatform.failReleaseOf(setOf(1))
         AudioPlatform.onSetup = { if (it == 2) -1 else 0 }
@@ -334,8 +333,7 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
 
         assertThat(result).isEqualTo(0)
         assertThat(AudioPlatform.calls.filter { it is AudioCall.Release })
-            .containsExactly(AudioCall.Release(1), AudioCall.Release(1))
-            .inOrder()
+            .containsExactly(AudioCall.Release(1))
     }
 
     @Test
@@ -349,22 +347,25 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `a second setup creates another track and leaves the first one alone`() {
+    fun `a second setup releases the first track before it creates another`() {
         val renderer = renderer()
 
         renderer.setUpStereo()
         renderer.setUpStereo()
 
         assertThat(AudioPlatform.setups.map { it.track }).containsExactly(1, 2).inOrder()
-        assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>()).isEmpty()
+        assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>())
+            .containsExactly(AudioCall.Release(1))
     }
 
     @Test
-    fun `a packet of no samples makes the second attempt divide by zero`() {
-        // The first attempt asks for a buffer of 0 bytes and the platform refuses it. The second
-        // rounds to a whole packet of 0 bytes.
-        val failure = runCatching { renderer().setup(config(2), SAMPLE_RATE, 0) }.exceptionOrNull()
+    fun `a packet of no samples fails with -1 and severe log before the platform is asked`() {
+        // Without the check, the first attempt asks for a buffer of 0 bytes and the second
+        // divides by a packet of 0 bytes.
+        val results = listOf(0, -1).map { renderer().setup(config(2), SAMPLE_RATE, it) }
 
-        assertThat(failure).isInstanceOf(ArithmeticException::class.java)
+        assertThat(results).containsExactly(-1, -1)
+        assertThat(AudioPlatform.calls).isEmpty()
+        assertThat(log.entries).contains(Level.SEVERE to "Decoder returned no samples per frame")
     }
 }

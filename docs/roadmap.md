@@ -1196,21 +1196,113 @@ owner decides which to run.
 
 ### Sprint 16: fixes of the converted code
 
-Planned, not started. Owner decision of 2026-10-28; see the
+Owner decision of 2026-10-28; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
+Built in the phase branch `phase/s16-converted-fixes`, from `1220cc365`, in six batches and a wave 2.
+The six batches and wave 2 are merged: the phase gate passed at `5c364487c`, with the six batches,
+and wave 2 was merged on top of it as `4e1985c6f`. The phase pull request is still to come. The
+device round ran on 2026-11-01 ([section 3.31](development/device-validation.md#331-sprint-16-checks),
+results in [section 21](development/device-validation.md#21-results-sprint-16)): no step failed on
+the client side, and none of its findings is a Sprint 16 regression.
 
 - **Scope:** item (b) of the blocks "From the Sprint 12 conversion", "From the Sprint 13
   conversion" and "From the Sprint 14 conversion" of the [backlog](#backlog-not-scheduled): the
-  defects that the conversions found and kept. 34 are open from Sprint 12 (the first, #69, is
-  fixed), 53 from Sprint 13 and 41 from Sprint 14.
-- **Triage first:** the sprint starts with a triage that the owner approves. Each defect is a
-  real defect (fixed), latent, or upstream behaviour (kept, with the reason).
-- **Method:** a fix follows the [TDD rule](development/tdd.md). The test that pins the defect is
-  changed to the fixed behaviour in its own failing commit, then the fix.
+  defects that the conversions found and kept. 34 were open from Sprint 12 (the first, #69, was
+  fixed), 53 from Sprint 13 and 41 from Sprint 14, 128 in all.
+- **Triage first:** six inventories at `b2f311be7` sorted the 128 entries, and the owner approved
+  the triage in two rounds on 2026-10-30. Each entry was a real defect, a latent one, a dead path,
+  upstream behaviour, intended, or gone. The owner asked to fix every latent and every upstream
+  entry too.
+- **Outcome:** 113 entries are fixed, 5 are recorded with no change (C1, C9, C17, O7 and U8), 4 are
+  closed (P4, U10, G-M5 and R2), and 6 are moved: P9 and B3 to [Sprint 19](#sprint-19-secops), C18
+  to the open owner decision of [Sprint 17](#sprint-17-general-fixes), and K6, C4 and A8 to
+  [Sprint 18](#sprint-18-refactor-of-the-converted-code). Of the 113, U2 is fixed by the same change as
+  U1. The owner-approved triage had U2 as intended and U8 as a fix: the owner moved U2 to the fixes
+  on 2026-10-30, and batch D found that U8 is not a defect. Each entry of item (b) of the three
+  blocks now ends with its triage id and what Sprint 16 did, and the triage corrected a few of the
+  descriptions there (S12-09, S12-14, P4, U3, U7a, C3, C17, C19c, C20c, G-M7, R3, R6 and B3).
+- **Batches.** Each batch was an issue and a branch, merged into the phase with a merge commit:
+
+  | Batch | Issue | Entries fixed | Merge |
+  | --- | --- | --- | --- |
+  | E: the stream activity, the audio renderer and `MoonBridge` | #110 | G-K1 to G-K3, G-M1 to G-M4, G-M6, G-S1, A1 to A7, B2 | `87558ae3a` |
+  | C: the keyboard, pointer capture, touch and the on-screen controller | #109 | K1 to K5, T1 to T5, G-M7, O1 to O6, O8 to O11 | `6b341d9f3` |
+  | A: network, discovery, preferences and support | #111 | S12-03 to S12-11, P1 to P3, P5 to P8, P10 | `ca1fec363` |
+  | D: the USB pad drivers and `ControllerHandler` | #108 | U1 to U7, U9, C2, C3, C6 to C8, C10 to C16, C19 to C21 | `0fd6b0dfa` |
+  | F: the video renderer, `MediaCodecHelper` and the JNI callbacks | #113 | R1, R3 to R11, H1 to H6, B4 | `342fde0cb` |
+  | B: the host store | #112 | S12-01, S12-02, S12-12 to S12-20, P11 to P14 | `694102f09` |
+  | Wave 2 | #108, #110 | C5, G-S2, B1 | `4e1985c6f` |
+
+  Wave 2 waited for the batches it couples. G-S2 makes `Game` stop a connection that never
+  connected, which is safe only after the S12-09 fix of batch A. B1 changes a constant that batch A's
+  `NvConnection` and batch F's renderer read, and C5 changes a constructor that batch E's `Game`
+  calls. Before G-S2, wave 2 made two changes to `NvConnection` that the merge review of batch A
+  asked for: the native calls of a stop run only for a bridge that its own connection set up (a
+  failed native start cleans its bridge up itself), and a GFE start cancelled before its first
+  `/launch` sends none. Its gate passed at `84bb6430d`, the head of the wave. The phase also has
+  two test commits that fit one batch's change to another batch's tests
+  (`40caf3011` and `28f474259`), a style commit (`025391275`) and one comment fix (`5c364487c`).
+- **Owner choices.** How each of these entries is fixed is a product choice, approved with the
+  triage on 2026-10-30, unless a date says otherwise:
+  - G-M7: a two-finger trackpad tap is a right click whichever finger lifts first.
+  - O10: the inert long-click path of the on-screen buttons is removed, not wired to a key code.
+  - S12-15: an OFFLINE poll no longer refreshes the TTL, so a host that stayed offline shows UNKNOWN
+    after a re-open, and the Library hears OFFLINE once. ONLINE is still told at every poll, by
+    design.
+  - B1: `VIDEO_FORMAT_MASK_10BIT` is `0xAA00`, as in `Limelight.h`.
+  - P14 (b): a client id file that is not hex is kept, with a warning log. A new id would unpair the
+    client from every host.
+  - U3: the trigger motors are zeroed at stream end too, not only when the USB service stops.
+  - A5: a second `cleanup` of the audio renderer does nothing.
+  - C9: recorded only, beside the intended entries: the defect it describes does not exist.
+  - U2: fixed with U1 (2026-10-30).
+  - B4: the video and audio start log and clear a Java exception, and return no failure, because the
+    vendored typedefs return `void` (2026-10-31). Sprint 19 looks at it again.
+
+  Choices of the batches and their reviews, accepted at the merge: C2, one motion source for each
+  type and controller number; C19 (b), the report rate read as an unsigned 16-bit value and capped
+  at 200; S12-01, `withListFrom` stays; S12-08 (a) and (b), an app id above `Int.MAX_VALUE` and the
+  32-bit `status_code` stay, as intended; G-S2, the audit session is not ended when the user leaves
+  before the connection starts, which the wave 2 brief had asked for (the wave 2 merge review,
+  2026-10-31). No session of the activity can be open there, because `connected` and the start of
+  the audit session happen together, and the audit session is process-wide, so ending it there
+  could only end another activity's session.
+- **Method.** The fixes followed the [TDD rule](development/tdd.md): the test that pinned the defect
+  was changed in a `test:` commit that failed on its assertions, then the `fix:` commit. The merge
+  review of batch F noted two exceptions in follow-ups of its reviews: a test that came after its
+  change (`b87367818`, R5) and a `refactor:` commit that moves a read (`d18cf7545`). A deletion
+  needed no failing test; most deletion commits have the compiler proof and the check for callable
+  references, Compose, JNI, the manifest, reflection and Hilt. A race or memory-visibility fix got a
+  deterministic test where one could be built (a latch, a fake executor or a throwing fake);
+  otherwise the commit names the exemption, for example S12-13, S12-19, U4, A7, R8, the gap
+  between the acquire and the held place of S12-09, and the order check of the G-S2 bridge flag.
+  Other commits name an exemption for a change with nothing to test: B4 (C that no unit test runs),
+  U9 (empty framework bodies), P5 (no change of behaviour) and C16 (a comment). The batches ran as
+  separate sessions, three at a time, each with its own implementer and reviewer, and up to two fix
+  rounds a task. Each batch also got a fresh review, entry by entry against its brief: before the
+  merge for A, D, F, B and wave 2 (on a tree merged with the phase), and after it for E and C,
+  which were merged before the owner asked for that review on 2026-10-31.
+- **Phase gate.** At `5c364487c`, with the six batches merged: `spotlessCheck detekt lint
+  testDebugUnitTest :build-logic:test assembleDebug licensee koverXmlReportBorealis` passed in
+  11 min 29 s, with 4,431 `:app` tests and no failure. The gate of wave 2 passed at `84bb6430d`.
+  The full phase gate passed again at `4e1985c6f`, with all the code (the six batches and wave 2):
+  BUILD SUCCESSFUL, 4,451 `:app` tests and no failure. The Roborazzi verify of
+  `:borealis:designsystem`, `:borealis:library`, `:borealis:stream` and `:borealis:settings` also
+  passed at `4e1985c6f`.
+- **What it found for later.** New items are in [Sprint 17](#sprint-17-general-fixes) (Input, Pads,
+  Video and the stream screens, and the stream session),
+  [Sprint 18](#sprint-18-refactor-of-the-converted-code) (a flaky
+  test), [Sprint 19](#sprint-19-secops) and [Sprint 20](#sprint-20-release-preparation) (the host
+  version line).
 - **Order:** the fixes come before the refactor of Sprint 18. The triage removes dead and
   unreachable paths, which shrinks the refactor, and the refactor then does not have to keep known
   defects on purpose.
-- **Ends with a device round.**
+- **Ends with a device round.** Run on 2026-11-01 on the Google TV Streamer and the S22, on the
+  debug build of `baf64f5dc`, with LuminalShine 26.10.1: the agent part and the owner's checks.
+  Wake-on-LAN was not run (the PC does not sleep), DeX does not apply (none at hand), and the
+  trigger motors need a GIP pad. Its findings went to Sprint 17 (the stream session and audio) and
+  to the host-side items. See
+  [device-validation section 21](development/device-validation.md#21-results-sprint-16).
 
 ### Sprint 17: general fixes
 
@@ -1222,7 +1314,9 @@ sprints squarely (owner: "everything that is not conversion and does not fit per
 sprints already planned"). It comes after the fixes of the converted code, so that every fix comes
 before the refactor. Each item keeps its text, its source and its owner date, and says where it came
 from: Sprint 15, the [backlog](#backlog-not-scheduled), or the backlog by way of Sprint 15 on the
-same day.
+same day. The items marked "From Sprint 16", and the section on the stream session, came from the
+reviews of the fixes of the converted code (2026-10-30 and 2026-10-31). The items marked "From
+Sprint 16" are not Sprint 16 regressions, unless the item says so.
 
 The deferred RTSP parser rework is not here: it stays in the backlog, deferred by the owner. What
 the plan already holds for [SecOps](#sprint-19-secops) and
@@ -1235,6 +1329,9 @@ The audio items come from the two audio entries of item (d) of the Sprint 14 blo
 The follow-up ran without code changes, as the owner asked; its method, its table and its findings
 are in
 [device-validation, Audio follow-up, 2026-10-28](development/device-validation.md#audio-follow-up-2026-10-28).
+In the Sprint 16 round (2026-11-01) the owner heard a lot of crackling on the S22 and clean sound on
+the TV: the same audio runs, not a Sprint 16 regression
+([section 21](development/device-validation.md#21-results-sprint-16), finding 4).
 
 - **Audio runs on the S22 and on the TV.** Moved here from item (d) of the Sprint 14 block of the
   backlog. `AndroidAudioRenderer` drops a decoded packet while 40 ms or more of audio are pending
@@ -1393,6 +1490,24 @@ results are in
   release. A raw capture of the events of that mouse is needed first: the source, the key code and the button
   state of a press of the side button, with the setting on and off. The fix follows, with a test first.
 
+- **The gaps of the two-finger trackpad tap.** From Sprint 16 (G-M7, the reviews of #109). Sprint 16
+  made a two-finger tap a right click whichever finger lifts first (`RelativeTouchContext`), and
+  three gaps remain. Each touch context sees only its own finger, so a slide of the second finger is
+  lost when the first lifts first: the second finger can slide more than 20 px while the first stays
+  still, and both lifts within 250 ms still right-click. The inherited path has the mirror gap: a
+  tap of the second finger while the first scrolls still right-clicks. The two orders also use
+  different time windows: when the first finger lifts first, both lifts must come within 250 ms of
+  its down, so a second finger that lands more than about 150 ms later clicks only in the other
+  order. Closing the first two needs state that the contexts share, in `TouchContexts.kt` or
+  `Game.kt`.
+- **The key that arms a chord sends its up without a down.** From Sprint 16 (G-K3, the merge review
+  of #110). Sprint 16 eats the ups of the keys that a waiting chord ate, but the key that arms the
+  chord (Z, Q, C or M) still sends its up without a down when the modifiers are released first.
+- **The on-screen controller still reads the preferences at each rebuild.** From Sprint 16 (O11, the
+  reviews of #109). `VirtualController.refreshLayout` reads the whole preferences, with their
+  migration writes, at every rebuild (a rotation, picture-in-picture). Dropping that read needs
+  `Game` to pass its `prefConfig` to `VirtualController`.
+
 #### Pads
 
 Moved here from item (d) of the Sprint 14 block of the backlog (owner, 2026-10-28): the first two
@@ -1405,7 +1520,10 @@ facts of both items and added the third item and the open decision. See the
 
 - **Pad battery.** No battery reaches the PC. The client sends the battery state only when Android
   reports one for the pad (`InputDevice.batteryState.isPresent` on Android 12 and later, or the
-  SHIELD API; `ControllerHandler.sendControllerBatteryPacket` returns otherwise; 3.27 step 10). In
+  SHIELD API; `ControllerHandler.sendControllerBatteryPacket` returns otherwise; 3.27 step 10).
+  Sprint 16 changed this (C20, #108): the percentage is rounded and kept in 0 to 100, and from
+  Android 12 an external pad that claimed a battery in its arrival and has none tells the host once
+  that no battery is present. In
   the VHF round of 2026-10-28, Android showed no battery for either pad: the Ultimate 2 (over
   Bluetooth on the S22, and through its receiver in D-input on the TV) and the Pro 3 (on its
   receiver in Switch mode, on the S22). The host side has changed: it no longer makes an Xbox 360
@@ -1447,7 +1565,9 @@ facts of both items and added the third item and the open decision. See the
   is not usable outside Borealis on the TV (the `xpad` device match on that kernel). The kernel
   facts are in [device-validation section 19](development/device-validation.md#vhf-gamepad-round-2026-10-28).
 - **Open owner decision: a Nintendo pad whose sensors Android exposes.** Recorded on 2026-10-28
-  from the VHF gamepad round; the owner has not decided. When Android exposes the sensors of a
+  from the VHF gamepad round; the owner has not decided. Sprint 16 moved here the Sprint 13 entry
+  C18 ("any non-PlayStation pad with a sensor manager is reported as UNKNOWN"), which is the second
+  case below. When Android exposes the sensors of a
   Nintendo pad (the Pro 3 in Switch mode), should the host make it a Switch Pro Controller or a
   DualShock 4? The host's policy
   ([contract, section 13](host-contract/luminalshine.md#13-input)) gives one or the other by what
@@ -1466,6 +1586,28 @@ facts of both items and added the third item and the open decision. See the
   So, with the current client, a Nintendo pad with a sensor becomes a DualShock 4. A Switch Pro
   Controller needs the client to report the Nintendo type, or the host's `gamepad` setting (global
   or per client) set to `switch_pro`.
+
+- **DualSense adaptive triggers.** From Sprint 16 (the owner-approved triage, 2026-10-30). A host
+  of 26.10 sends adaptive triggers (control message `0x5503`) for a DualSense, and Borealis drops
+  them: it has no handler, so moonlight-common-c puts in one that does nothing
+  ([contract, sections 12 and 13](host-contract/luminalshine.md#13-input)). It matters only when the
+  host makes a DualSense, which it does through its `gamepad` setting `dualsense` (see "Pad battery"
+  above).
+- **Battery gaps of pads without a battery.** From Sprint 16 (C20, the merge review of #108); the old
+  code behaves the same. With multi-controller off, a pad without a battery that told the host
+  "not present" before a pad with a battery joined its number does not tell it again after that pad
+  leaves. And two pads without a battery that share a number from before the first poll never send
+  "not present".
+- **The fused trigger of pads that share a number.** From Sprint 16 (C6, the merge review of #108).
+  Sprint 16 compares triggers as unsigned bytes, but when two pads share a controller number the
+  trigger sent is the bitwise OR of their values, not the larger one.
+- **Weak rumble on the USB drivers.** From Sprint 16 (C21, the merge review of #108). Sprint 16 keeps
+  a weak motor above zero in `ControllerHandler`, but the USB drivers still shift the motor values
+  down, by 8 bits in `driver/Xbox360Controller.kt` and by 9 bits in `driver/XboxOneController.kt`,
+  so a motor below 256 (Xbox 360) or 512 (Xbox One) still sends 0 to a USB pad.
+- **The cost of the stop on stuck USB pads.** From Sprint 16 (U3, the merge review of #108). To zero
+  the motors at stream end, `ControllerHandler.stop()` makes up to two bulk writes of 100 ms each for
+  every USB pad that does not answer. This is new with the U3 fix.
 
 #### Video and the stream screens
 
@@ -1515,6 +1657,52 @@ the round are in [device-validation section 20](development/device-validation.md
     the delay of the first copy after the menu opens (129.7 ms on the S22 in the spike);
   - the new scrim and panel of the popups, and the screens that follow the Library.
 
+- **A silent frozen video on an invalid surface.** From Sprint 16 (the merge review of #113); older
+  than Sprint 16. Three branches of `MediaCodecDecoderRenderer` that catch the
+  `IllegalArgumentException` of an invalid `Surface` set `stopping` and report nothing: no crash
+  report and no popup, so the video freezes with no word.
+- **No decoder for a codec whose only decoder throws.** From Sprint 16 (H6, #113); a behaviour change
+  of Sprint 16. The search for a safe decoder now skips a decoder that throws for its capabilities.
+  On a device whose only HEVC or AV1 decoder throws there, that codec gets no decoder, where the old
+  search fell back to the first decoder; AVC still falls back. The device round compares the start
+  logs of both devices (3.31).
+
+#### The stream session
+
+From Sprint 16, wave 2 (C5, G-S2 and B1, the reviews of #108 and #110, 2026-10-31): the gaps that
+its reviews found and left for this sprint.
+
+- **A late stop and the next start.** `NvConnection.stop()` reads its bridge flag and calls
+  `interruptConnection` outside the `MoonBridge` monitor. In a narrow window, a late stop of an old
+  connection can interrupt the start of the next one. The wave 2 sessions judged that closing it
+  needs a token on the native side. The merge review thinks that a Kotlin lock, shared by the
+  start's write of `bridgeSetUp` and the stop's read of it and its `interruptConnection`, could
+  close it. Sprint 17 chooses.
+- **A late GFE quit and relaunch.** On a GFE host, a late quit-and-relaunch still sends `/quit`.
+- **A termination just before a Disconnect.** A termination that was dispatched just before a
+  Disconnect can still reach `onFailed`: `Game.connectionTerminated` has no `stopRan` guard.
+- **A late `connectionStarted` after the surface is gone.** Before the connection starts, a
+  `connectionStarted` that arrives after `surfaceDestroyed` can open an audit session, which the
+  next `onStop` closes.
+- **`GameGestures` has no production consumer left.** C5 removed the `gestures` property of
+  `ControllerHandler`, its only production consumer; `Game` still implements the interface
+  (`ui/GameGestures.kt`).
+- **The 10-bit masks of `SessionAudit` and `MoonBridge`.** `SessionAudit` (`borealis/host`) keeps its
+  own private copy of the 10-bit mask, now `0xAA00` too, and no test ties its masks to `MoonBridge`.
+- **`HDR_CODEC_MODES` and the 4:4:4 modes.** `NvConnection`'s `HDR_CODEC_MODES` (`0x20200`) does not
+  count the 4:4:4 10-bit modes of the server's codec support.
+- **A second "connection stop done".** A second stop logs `connection stop done` again.
+- **A leave during the start still sends the first launch request.** From the Sprint 16 round
+  (2026-11-01, [section 21](development/device-validation.md#21-results-sprint-16), finding 2). In
+  each of five leaves, `/launch` or `/resume` reached the host 0.5 to 0.8 s after the stream activity
+  started, before any Back, and the host launched or joined the app and rolled it back 10 s later.
+  The cancel check of Sprint 16 sees a leave only if `onStop` runs before the request is sent.
+  Whether a leave before the request keeps the host from launching is not shown; the host's rollback
+  is the case to cover.
+- **Back while the in-game menu is open (S22).** From the same round, an observation: a `KEYCODE_BACK`
+  injected with `adb` reached `Game.onKeyDown` and did not close the menu, while the owner's own Back
+  closed it. The cause is not known and may be the injection. Check with a real keyboard's Back.
+
 #### Accessibility and layout
 
 Moved here from Sprint 15 or from the backlog (owner, 2026-10-28), as each item says.
@@ -1555,7 +1743,12 @@ Planned, not started. Owner decision of 2026-10-28.
 
 - **Scope:** item (a) of the same three blocks of the [backlog](#backlog-not-scheduled): the 166
   places marked `(Sprint 12 backlog)` (49), `(Sprint 13 backlog)` (65) and `(Sprint 14 backlog)`
-  (52), with the other notes of item (a) of the Sprint 14 block.
+  (52), with the other notes of item (a) of the Sprint 14 block. The fixes of Sprint 16 left 163
+  at `5c364487c` (49, 63 and 51), and 162 after the merge of wave 2 (`4e1985c6f`), whose C5 removed
+  one more. Each block has the recount by file.
+- **Moved here by Sprint 16:** K6, the Windows `VK_*` codes duplicated in `KeyboardLayout.kt`; C4,
+  the controller-input fusing block of `ControllerHandler` written out three times; and A8, the stale
+  Lollipop comment on the 7.1 mask of `AndroidAudioRenderer`. Each is in item (b) of its block.
 - **Test and tooling items.** Moved here from the [backlog](#backlog-not-scheduled) (owner,
   2026-10-28):
   - item (c) of the block "From the Sprint 14 conversion": the tests that read text, the test code that
@@ -1587,6 +1780,10 @@ Planned, not started. Owner decision of 2026-10-28.
     (two Gradle runs at once on 2026-10-29) their accessibility tests ran out of memory. Only `:app`
     gets the 2 GB heap of `BorealisUnitTestHeap` (`build-logic`); decide whether these two modules
     need it too, or whether one Gradle run at a time stays the rule.
+  - **A flaky renderer test**, from Sprint 16 (the gates of #113): `RendererRecoveryTest`, "three
+    seconds after the first failure that is not recovered …", failed once in a full gate under load,
+    and passed 5 times out of 5 alone at the base and at the head of the batch. Make it
+    deterministic.
 - **Method:** behaviour does not change. The characterization tests guide the refactor. A
   refactored place loses its suppression and its marker.
 - **Ends with a device round.**
@@ -1653,14 +1850,18 @@ release. Sprint 19 is hardening and security testing.
   - A failed HTTPS serverinfo for a pinned host falls back to plain HTTP
     (`com/limelight/nvstream/http/NvHTTP.kt`).
   - The client id is logged at INFO with "UID is now" (`com/limelight/computers/IdentityManager.kt`).
+    Sprint 16 did not change that line, which still holds the whole id; the warning that P14 added
+    does not hold it.
   - `printStackTrace` writes to stderr, and can carry host names or addresses; the
     Wake-on-LAN sender is one case (`com/limelight/nvstream/wol/WakeOnLanSender.kt`).
   - The `FileNotFoundException` message carries the full URL; a debug log can show it
     (`com/limelight/nvstream/http/NvHTTP.kt`).
   - `defaultNetworkLock` has no `try`/`finally`, so an exception under a VPN wedges
-    discovery (`com/limelight/computers/ComputerManagerService.kt`).
+    discovery (`com/limelight/computers/ComputerManagerService.kt`). Fixed in Sprint 16 (S12-14,
+    #112).
   - `waitForPollingStopped` spins and prints stack traces while it is interrupted during
-    a poll (`com/limelight/computers/ComputerManagerService.kt`). Not reachable today.
+    a poll (`com/limelight/computers/ComputerManagerService.kt`). Not reachable today. Fixed in
+    Sprint 16 (S12-12, #112).
   - Not listed: the debug URL logging of the HTTP client. The `JulBridge` and the
     `Redactor` mask `rikey`, the salt and the client certificate.
 - **Addresses in the logs (owner, 2026-10-24).** Local addresses may stay in the logs;
@@ -1688,7 +1889,24 @@ release. Sprint 19 is hardening and security testing.
   Kotlin file (pull request #70). The host id is checked by `PosterRequest.checkedAppId`,
   which CodeQL does not see as a sanitizer. Owner decision of 2026-10-24: the alerts stay
   open until this sprint, which makes the check visible to CodeQL or dismisses them with
-  the reason.
+  the reason. Sprint 16 moved here, to be looked at with the alerts, the Sprint 12 entry P9:
+  `PosterContentProvider.openFile` serves any three-segment path as box art.
+- **From Sprint 16.** Moved here, or found by the reviews of the fixes of the converted code
+  (2026-10-31):
+  - **The video and audio start cannot report a failure.** B4 made the JNI bridges check, log and
+    clear a Java exception, but `DrStart` and `ArStart` return nothing: their typedefs in the
+    vendored `Limelight.h` are `void`, and moonlight-common-c ignores any result. A start that
+    throws is logged and cleared, and the stream goes on. Owner decision of 2026-10-31: keep the
+    log and clear, and look at it again with the audit of the JNI code in this sprint. A real
+    failure needs the vendored typedefs changed.
+  - **`ExceptionDescribe` bypasses the log redactor.** The B4 checks call `ExceptionDescribe`, which
+    writes the Java stack trace to logcat through `System.err`, outside `BorealisLog` and its
+    redactor.
+  - **The dead code of `simplejni.c`.** The Sprint 14 entry B3: the bodies after the early returns of
+    `findExternalAddressIP4` and `testClientConnectivity` are unreachable since
+    [ADR 0050](adr/0050-diagnostics-audit-and-interim-settings.md). The triage found that this is
+    a Borealis change of ADR 0050, not a defect of the conversion. It holds the STUN print named
+    under "Addresses in the logs" above.
 
 ### Sprint 20: release preparation
 
@@ -1697,7 +1915,13 @@ release. Sprint 19 is hardening and security testing.
 - The compatibility note. It cites LuminalShine 26.10.x once that is stable.
 - Show `LuminalShineVersion` from the HTTPS `/serverinfo` in Host details. The
   26.10.0-beta.1 host sends it (#199, release notes), and the client still shows
-  the protocol version `7.1.431.-1`.
+  the protocol version `7.1.431.-1`. Added from Sprint 16 (2026-10-30): the client parses no
+  `LuminalShine*` field yet. Parse `LuminalShineVersion`, and `LuminalShineApiLevel` and
+  `LuminalShineCapabilities` once the host sends them (the owner's draft
+  [NortheBridge/luminalshine#237](https://github.com/NortheBridge/luminalshine/pull/237), from
+  discussion #222), into the host capabilities line. In verbose mode, log `/serverinfo` only when its
+  body changes: today it is never logged, because `NvHTTP.kt` skips it, an inherited control of the
+  noise of the polls.
 - **Host details mapping.** Backlog item from the Sprint 9 quality review. Do it
   with the `LuminalShineVersion` item above, because both change the same mapping.
   `ComputerDetails.toDetailsFacts` in `ComputerHostRepository.kt` (in `:app`) maps
@@ -1849,9 +2073,15 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
   - `utils/ShortcutHelper.kt`: 1
   - `utils/TvChannelHelper.kt`: 6
 
-  That is 49 suppressions in 18 files.
-- **(b) Bugs found during the Sprint 12 conversion.** Only the first is fixed. The conversion keeps
-  behaviour (ADR 0059, rule 10).
+  That is 49 suppressions in 18 files. Sprint 16 recount, at `5c364487c`: still 49 in 18 files.
+  `computers/ComputerDatabaseManager.kt` has 3 (P12 added one), `computers/ComputerManagerService.kt`
+  has 8 (S12-12 removed one), and the marker of `computers/IdentityManager.kt` no longer wraps
+  (P14).
+- **(b) Bugs found during the Sprint 12 conversion.** Only the first was fixed before Sprint 16. The
+  conversion keeps behaviour (ADR 0059, rule 10). [Sprint 16](#sprint-16-fixes-of-the-converted-code)
+  took the other 34. Each entry now ends with its triage id (S12-01 to S12-20, P1 to P14) and what
+  Sprint 16 did: 32 fixed, P4 closed and P9 moved. The batches are #111 (network, discovery,
+  preferences and support) and #112 (the host store).
   - **Priority, fixed by issue #69:** `utils/ShortcutHelper.kt`, `reapShortcutsForDynamicAdd`,
     looped forever when the dynamic shortcut list was full and `forceAdd` was true, because
     it never re-read the list. `library/UpstreamHostShortcuts.kt`, `reportHostOpened`, runs
@@ -1860,76 +2090,130 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
     shrink it.
   - `nvstream/http/ComputerDetails.kt`: `update()` overwrites `state`, `name`, `uuid`,
     `rawAppList` and other fields without a condition. `library/ComputerManagerConnection.kt`
-    works around it with `withListFrom`.
+    works around it with `withListFrom`. **S12-01, Sprint 16:** fixed (#112). An update keeps the
+    app list and the name that the new details do not have. `withListFrom` stays, because the
+    service and `ComputerManagerConnection.addComputer` still publish fresh details with no list
+    for a known host.
   - `nvstream/http/ComputerDetails.kt`: `AddressTuple` is mutable, and its `hashCode`
-    depends on the mutable fields. A latent hazard, not a live bug.
+    depends on the mutable fields. A latent hazard, not a live bug. **S12-02, Sprint 16:** fixed
+    (#112). The port is final, and an update with an external port above 0 replaces the remote
+    tuple instead of changing it in place.
   - `HeldStageFailures.kt` (`io/github/magalz/borealis/`): does not forward
-    `launchRetrying`, `launchStarting` or `launchConflict`. Unreachable today.
+    `launchRetrying`, `launchStarting` or `launchConflict`. Unreachable today. **S12-03,
+    Sprint 16:** fixed (#111). It forwards the three.
   - `preferences/PreferenceConfiguration.kt`: `readPreferences` throws
     `NumberFormatException` on a bad stored `list_fps`, width or height, and no caller
-    catches it.
+    catches it. **P1, Sprint 16:** fixed (#111). A value that cannot be read is the default, and
+    nothing is written back.
   - `preferences/PreferenceConfiguration.kt`: a stored resolution with no "x" that is not a
-    legacy name (for example `"Native"`) is silently rewritten as 1280x720.
+    legacy name (for example `"Native"`) is silently rewritten as 1280x720. **P2, Sprint 16:**
+    fixed (#111). The stream uses the default, and the stored value is not written back.
   - `preferences/PreferenceConfiguration.kt`: `checkbox_51_surround=true` overwrites a
-    user-chosen `list_audio_config`. When it is false, the legacy key stays forever.
+    user-chosen `list_audio_config`. When it is false, the legacy key stays forever. **P3,
+    Sprint 16:** fixed (#111). `LegacyMigrations` migrates the key at app start: true gives 5.1
+    only when no audio choice is stored, and the key is removed either way.
   - `preferences/PreferenceConfiguration.kt`: the legacy `seekbar_bitrate` is read but never
-    migrated; only the streaming-settings reset removes it.
+    migrated; only the streaming-settings reset removes it. **P4, Sprint 16:** closed. The entry
+    was wrong: `LegacyMigrations` migrates `seekbar_bitrate`. Only the name of its test changed.
   - `preferences/PreferenceConfiguration.kt`: `isSquarishScreen(0, y)` gives NaN or
-    Infinity, and so returns false.
+    Infinity, and so returns false. **P5, Sprint 16:** fixed (#111). An explicit guard answers
+    false for a zero or negative side.
   - `utils/TvChannelHelper.kt`: uses the logo width as its height. The logo is always square.
-  - `grid/assets/DiskAssetLoader.kt`: `LoaderTuple` has `equals` without `hashCode`.
+    **P6, Sprint 16:** fixed (#111). The height comes from its own dimension (80 dp, as before).
+  - `grid/assets/DiskAssetLoader.kt`: `LoaderTuple` has `equals` without `hashCode`. **P7,
+    Sprint 16:** fixed (#111).
   - `utils/ShortcutHelper.kt`: `disableComputerShortcut` matches by prefix, so a host `ab`
-    catches the shortcuts of host `abc`.
-  - `PosterContentProvider.kt`: `openFile` serves any three-segment path as box art.
+    catches the shortcuts of host `abc`. **P8, Sprint 16:** fixed (#111). A shortcut matches when
+    its id is the host's id, or the host's id and then the digits of an app id (with one leading
+    minus sign for a negative id).
+  - `PosterContentProvider.kt`: `openFile` serves any three-segment path as box art. **P9,
+    Sprint 16:** moved to [Sprint 19](#sprint-19-secops), with the CodeQL alert on the same
+    provider.
   - `utils/TvChannelHelper.kt`: `setIntentUri` is unused. `requestChannelOnHomeScreen`
-    queries the provider twice.
+    queries the provider twice. **P10, Sprint 16:** fixed (#111). `setIntentUri` is deleted, and
+    the request queries the provider once.
   - `computers/ComputerDatabaseManager.kt`: `updateComputer` throws
-    `SQLiteConstraintException` for a null name.
+    `SQLiteConstraintException` for a null name. **P11, Sprint 16:** fixed (#112). It returns
+    false with a log.
   - `computers/ComputerDatabaseManager.kt`: `getAllComputers` throws on one bad row and hides
-    the whole list. `ComputerManagerService.onCreate` calls it without a guard.
+    the whole list. `ComputerManagerService.onCreate` calls it without a guard. **P12,
+    Sprint 16:** fixed (#112). The list skips a row it cannot read, with a log, and the service
+    starts when the list cannot be read.
   - `computers/ComputerDatabaseManager.kt`: a row with a null uuid is stored and can never be
-    deleted.
+    deleted. **P13, Sprint 16:** fixed (#112). A host without a uuid is not saved, and a delete
+    without a uuid removes the rows that have none.
   - `computers/IdentityManager.kt`: "UID written to disk" is logged before the flush. The
-    client id file has no hex check.
+    client id file has no hex check. **P14, Sprint 16:** fixed (#112). The line is logged after
+    the file is flushed and closed. A client id that is not hex is kept, with a warning that does
+    not hold the id (owner choice: a new id would unpair the client from every host).
   - `nvstream/mdns/NsdManagerDiscoveryAgent.kt`: leaks a `ServiceInfoCallback` when a service
     is found twice. Its executor is never shut down, and `DiscoveryService.kt` has no
-    `onDestroy`.
+    `onDestroy`. **S12-04, Sprint 16:** fixed (#111). A service found again unregisters its old
+    callback. The agent has a `close` that stops discovery and shuts its executor down, and
+    `DiscoveryService.onDestroy` calls it. A callback whose registration failed is forgotten, and
+    the unregister tolerates a callback that the platform already dropped.
   - `nvstream/wol/WakeOnLanSender.kt`: the port maths overflows above an HTTP port of about
-    65514. The `IllegalArgumentException` that follows aborts the whole send.
+    65514. The `IllegalArgumentException` that follows aborts the whole send. **S12-05,
+    Sprint 16:** fixed (#111). A port out of range is skipped with a log, and the other packets
+    are sent.
   - `nvstream/mdns/MdnsDiscoveryAgent.kt`: the IPv6-only add and notify run outside
-    `synchronized(computers)`.
+    `synchronized(computers)`. **S12-06, Sprint 16:** fixed (#111). Both paths add under the lock
+    and notify after it.
   - `nvstream/mdns/JmDNSDiscoveryAgent.kt`: a dead `catch (UnsupportedEncodingException)`.
+    **S12-07, Sprint 16:** deleted (#111).
   - `nvstream/http/NvHTTP.kt`, kept as they are: an app id above `Int.MAX_VALUE` is dropped;
     `status_code` is truncated to 32 bits; text before the first `<App>` throws an unchecked
-    `NoSuchElementException`; the release path uses the platform default charset.
+    `NoSuchElementException`; the release path uses the platform default charset. **S12-08,
+    Sprint 16:** the last two are fixed (#111): text before the first app is ignored, and the app
+    list is read as UTF-8. The first two stay as they are, as intended.
   - `nvstream/NvConnection.kt`: `stop()` releases a semaphore permit even when the connection
     never took one, and a failed `startConnection` releases one too. Permits can exceed 1, so
-    two connections could start together.
+    two connections could start together. **S12-09, Sprint 16:** fixed (#111). The triage found
+    that a failed start is balanced; only `stop()` added a permit. `stop()` now gives back only a
+    place its connection took. It also cancels a start that is still on its way, and the start
+    checks the cancel again under the bridge monitor. A connection is single-use.
   - `nvstream/NvConnection.kt`: a start whose app has no id finds the app by name but launches
-    with `appid=0`. `Game` always passes an id.
+    with `appid=0`. `Game` always passes an id. **S12-10, Sprint 16:** fixed (#111). The launch and
+    the conflict prompt use the app that the lookup found.
   - `nvstream/NvConnection.kt`: the `HostHttpResponseException` catch of the start thread does
     not check `launchCancelled`. The 470 and 525 messages also apply to errors while
-    resolving a conflict (Join).
+    resolving a conflict (Join). **S12-11, Sprint 16:** fixed (#111). The catch checks
+    `launchCancelled`. The 470 and 525 messages stay, the same text as for a resume.
   - `computers/ComputerManagerService.kt`: `waitForPollingStopped` spins and prints stack
-    traces while it is interrupted during a poll. Not reachable today.
+    traces while it is interrupted during a poll. Not reachable today. **S12-12, Sprint 16:**
+    fixed (#112). An interrupted wait ends with the exception, and a cancelled pause interrupts
+    it.
   - `computers/ComputerManagerService.kt`: `getLocalDatabaseReference` is a non-atomic
     check-then-increment. `runPoll` leaks a database reference if the listener or the
-    database throws.
+    database throws. **S12-13, Sprint 16:** fixed (#112). The count is checked and raised in one
+    step, and a poll gives its reference back in a `finally`.
   - `computers/ComputerManagerService.kt`: `populateExternalAddress` leaks `defaultNetworkLock`
-    when STUN throws, and has a redundant condition.
+    when STUN throws, and has a redundant condition. **S12-14, Sprint 16:** fixed (#112). The
+    triage found that STUN does not throw; the calls that can are the network queries and
+    `bindProcessToNetwork`. A `finally` releases the lock and the process binding, and the
+    redundant condition is gone.
   - `computers/ComputerManagerService.kt`: an offline host is re-notified every fourth failed
-    poll, and the OFFLINE write counts as a success for the TTL.
+    poll, and the OFFLINE write counts as a success for the TTL. **S12-15, Sprint 16:** fixed
+    (#112), an owner choice. An OFFLINE poll no longer refreshes the TTL, so a host that stayed
+    offline shows UNKNOWN after a re-open, and the Library hears OFFLINE once. ONLINE is still
+    told at every poll, by design.
   - `computers/ComputerManagerService.kt`: `addComputerBlocking` adds a preset-ONLINE computer
-    without a uuid, so the next `addTuple` hits an NPE.
+    without a uuid, so the next `addTuple` hits an NPE. **S12-16, Sprint 16:** fixed (#112). A host
+    is added when a poll answered, and a host without a uuid is left out of the list.
   - `computers/ComputerManagerService.kt`: `startPolling` without discovery throws after it has
     already changed its state. `invalidateStateForComputer` blocks for the length of an
-    in-flight poll.
+    in-flight poll. **S12-17, Sprint 16:** fixed (#112). `startPolling` reads the discovery binder
+    before it changes anything, and still throws `IllegalStateException` without it. The wait of
+    `invalidateStateForComputer` stays.
   - `computers/ComputerManagerService.kt`: the mDNS `notifyComputerAdded` polls on the agent's
-    single executor.
+    single executor. **S12-18, Sprint 16:** fixed (#112). The add runs on an executor of the
+    service, so the agent's thread never waits for a poll.
   - `computers/ComputerManagerService.kt` (low): calling `ApplistPoller.start()` twice orphans
     the first thread. `lastSuccessfulPollMs` is read under a different lock than the one it is
-    written under.
-  - `computers/ComputerManagerService.kt`: `ReachabilityTuple` is dead code. It is kept.
+    written under. **S12-19, Sprint 16:** fixed (#112). A second `start` does nothing, and the
+    field is `@Volatile`.
+  - `computers/ComputerManagerService.kt`: `ReachabilityTuple` is dead code. The conversion kept
+    it. **S12-20, Sprint 16:** deleted (#112).
 - **(c) For SecOps (Sprint 19).** The security observations of the conversion are listed
   under [Sprint 19](#sprint-19-secops), one line each, with their files.
 - **(d) From the Sprint 12 device round (2026-10-23).**
@@ -1945,8 +2229,9 @@ From the Sprint 13 conversion (2026-10-25). Item (a) is scheduled for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code), item (b) for
 [Sprint 16](#sprint-16-fixes-of-the-converted-code), the open entries of item (c) for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (d) for
-[Sprint 17](#sprint-17-general-fixes) (owner, 2026-10-28). None of the bugs is fixed yet: the
-conversion keeps behaviour (ADR 0059, rule 10). Paths are under
+[Sprint 17](#sprint-17-general-fixes) (owner, 2026-10-28). None of the bugs was fixed by the
+conversion: it keeps behaviour (ADR 0059, rule 10). [Sprint 16](#sprint-16-fixes-of-the-converted-code)
+took item (b), and each of its entries now ends with its triage id and what Sprint 16 did. Paths are under
 `apps/android/app/src/main/kotlin/com/limelight/binding/input/`, unless an item says otherwise.
 
 - **(a) Refactor the converted code.** The 65 places marked `(Sprint 13 backlog)` sit in 22
@@ -1986,112 +2271,192 @@ conversion keeps behaviour (ADR 0059, rule 10). Paths are under
   - `virtual_controller/VirtualControllerConfigurationLoader.kt`: 4
   - `virtual_controller/VirtualControllerElement.kt`: 1
 
-  That is 65 places in 22 files.
-- **(b) Bugs and oddities found during the conversion, by area.** Each one is kept as it was.
+  That is 65 places in 22 files. Sprint 16 recount, at `5c364487c`: 63 places in 21 files. The
+  marker of `driver/AbstractController.kt` went with the U1 fix, and `virtual_controller/DigitalButton.kt`
+  has 1 after the O8 deletion. Wave 2 removed the `UnusedPrivateProperty` place of
+  `ControllerHandler.kt` with C5, which leaves 62 places (27 in `ControllerHandler.kt`) at
+  `4e1985c6f`.
+- **(b) Bugs and oddities found during the conversion, by area.** Each one was kept as it was. In
+  Sprint 16, 44 are fixed, 5 are recorded with no change, U10 is closed, and K6, C4 and C18 are
+  moved. The batches are #109 (keyboard, capture, touch and the on-screen controller) and #108
+  (the USB drivers and `ControllerHandler`).
   - **Keyboard and capture** (`KeyboardTranslator.kt`, `capture/`):
     - A negative key code for a device with a layout throws `ArrayIndexOutOfBoundsException` in
-      `translate` and `hasNormalizedMapping`: only the upper bound is checked.
+      `translate` and `hasNormalizedMapping`: only the upper bound is checked. **K1, Sprint 16:**
+      fixed (#109). A negative key code is ignored.
     - A key code above `KeyEvent.getMaxKeyCode()` from a device crashes the `KeyboardMapping`
-      constructor.
+      constructor. **K2, Sprint 16:** fixed (#109). A layout place outside the key code range is
+      left out of the mapping.
     - The delayed pointer-capture request (500 ms) checks for a capture device when it fires,
       not whether capture is still on. `disableCapture()` within those 500 ms still ends with
-      `requestPointerCapture()`.
+      `requestPointerCapture()`. **K3, Sprint 16:** fixed (#109). The delayed request is dropped
+      when capture ended or the cursor is shown.
     - `hideCursor()` and `showCursor()` register and unregister the device listener
       unconditionally. `showCursor()` releases a capture that was never requested (harmless).
+      **K4, Sprint 16:** fixed (#109). The listener is registered once, and only what was hidden
+      is released.
     - `InputCaptureManager` logs "Android O+ native mouse capture", though there is one provider.
-    - The Windows `VK_*` codes are duplicated in `borealis/stream/.../KeyboardLayout.kt`.
+      **K5, Sprint 16:** fixed (#109). The line reads "Using the native pointer capture".
+    - The Windows `VK_*` codes are duplicated in `borealis/stream/.../KeyboardLayout.kt`. **K6,
+      Sprint 16:** moved to [Sprint 18](#sprint-18-refactor-of-the-converted-code).
   - **Touch** (`touch/`):
     - `RelativeTouchContext`: the release runnables of the middle, X1 and X2 buttons are
-      unreachable, because `getMouseButtonIndex` gives only left or right.
-    - A view of width or height 0 gives an infinite scale factor, so a delta becomes -1.
-    - In a two-finger scroll, an x-only move sends `sendMouseHighResScroll(0)`.
-    - `AbsoluteTouchContext.lastTouchLocationX` is written and never read.
+      unreachable, because `getMouseButtonIndex` gives only left or right. **T1, Sprint 16:**
+      deleted (#109).
+    - A view of width or height 0 gives an infinite scale factor, so a delta becomes -1. **T2,
+      Sprint 16:** fixed (#109). The trackpad sends no move or scroll while the view has no size.
+    - In a two-finger scroll, an x-only move sends `sendMouseHighResScroll(0)`. **T3, Sprint 16:**
+      fixed (#109). A zero scroll is not sent.
+    - `AbsoluteTouchContext.lastTouchLocationX` is written and never read. **T4, Sprint 16:**
+      deleted (#109).
     - A first tap within 250 ms of time 0 near (0,0) skips the reposition (unreachable with uptime).
+      **T5, Sprint 16:** fixed (#109). A first tap has no double-tap window.
   - **USB drivers** (`driver/`):
     - `AbstractController.supportedButtonFlags` is never assigned, so a USB pad's arrival reports
-      0 supported buttons to the host.
-    - An Xbox One pad shows Guide pressed in its first reports, until a 0x07 report.
+      0 supported buttons to the host. **U1, Sprint 16:** fixed (#108). The Xbox drivers set the
+      buttons they support.
+    - An Xbox One pad shows Guide pressed in its first reports, until a 0x07 report. **U2,
+      Sprint 16:** fixed (#108) by the change of U1, with the owner's OK (2026-10-30): the
+      constructor had set the all-buttons mask on the live button flags, so a pad now starts with
+      no button down. The triage had listed U2 as intended.
     - `stop()` sends `rumble(0, 0)`, which keeps the Xbox One trigger motors running. A host of
       LuminalShine 26.10.0 or later can send trigger rumble (control message 0x5500, from the VHF
       backend; [contract, section 12](host-contract/luminalshine.md#12-control-stream)), so
-      this path can run now. The VHF round of 2026-10-28 did not test trigger rumble.
+      this path can run now. The VHF round of 2026-10-28 did not test trigger rumble. **U3,
+      Sprint 16:** fixed (#108), an owner choice. The trigger motors are zeroed when the driver
+      stops and at stream end (`ControllerHandler.stop()`). The triage found that only GIP pads (Xbox
+      One and Series) have trigger motors: the owner's 8BitDo `2DC8:310B` uses the Xbox 360 driver,
+      whose `rumbleTriggers` does nothing.
     - Races: `stopped` is not volatile, and `controllers` is not synchronized while `stop()` on
       the input thread re-enters `deviceRemoved`. A `ConcurrentModificationException` or a
-      skipped entry is possible.
+      skipped entry is possible. **U4, Sprint 16:** fixed (#108). The stop flag is volatile and
+      flips with `compareAndSet`, the controllers are a copy-on-write list, and the stop works on
+      a snapshot.
     - An attach broadcast with no device throws a `NullPointerException` after 1 s on the main
-      looper; a permission broadcast with no device throws at once.
+      looper; a permission broadcast with no device throws at once. **U5, Sprint 16:** fixed
+      (#108). Both are ignored with a log.
     - `Xbox360WirelessDongle.start()` always returns false, so its `stop`, `rumble` and
-      `rumbleTriggers` never run, and the `else` of the claim chain is unreachable.
+      `rumbleTriggers` never run, and the `else` of the claim chain is unreachable. **U6,
+      Sprint 16:** the dead `else` is deleted (#108); the dongle is the last branch, and its
+      `start()` still returns false.
     - Y axes: `~raw / 32767f` gives about -1.00003 at the extreme. The Xbox One triggers are not
-      clamped: values above 1023 or negative pass through.
+      clamped: values above 1023 or negative pass through. **U7, Sprint 16:** the triggers are
+      clamped to 0 and 1 in the driver (#108). The Y axis is recorded with no change: the triage
+      found that it gives no packet out of range.
     - A blocked `bulkTransfer` ignores `interrupt()`, so after `stop()` the input thread lingers
-      up to the 3 s timeout.
-    - `onCreate`, `onDestroy` and `onReceive` of the service do not call `super`.
+      up to the 3 s timeout. **U8, Sprint 16:** recorded, no change (#108). Not a defect: `stop()`
+      never waits for the thread, and a read is bounded by the 3 s timeout.
+    - `onCreate`, `onDestroy` and `onReceive` of the service do not call `super`. **U9,
+      Sprint 16:** fixed (#108). `onCreate` and `onDestroy` call `super`; `onReceive` has none to
+      call.
     - The Kotlin reads `listener` once where the Java read it twice. The review accepted this:
-      a race that threw on the input thread no longer throws.
+      a race that threw on the input thread no longer throws. **U10, Sprint 16:** closed. The
+      Kotlin is the fixed form.
   - **On-screen controller** (`virtual_controller/`):
     - The Y button's flag `0x8000` is sign-extended from a `short` into `reportOscState(int)`,
       so the packet carries `0xFFFF8000`. This is latent: `moonlight-common-c` masks negative
       button flags with `0xFFFF` (`core/third_party/moonlight-common-c/src/InputStream.c`, lines
-      1012 to 1021).
+      1012 to 1021). **O1, Sprint 16:** fixed (#109). Y reaches the handler as `0x8000`.
     - A finger exactly above or below the stick's centre gets the opposite angle. One pixel off
-      is right.
-    - The first stick touch within 350 ms of time 0 is a double click.
-    - A stick whose way is 0 pixels gives NaN (0/0), sent as `(short)NaN = 0`.
-    - MOVE or UP with no DOWN inside the stick's circle sends revoke and a movement of (0,0).
-    - The right-down line of the pad starts 5 px further out than the other lines.
-    - A second finger is answered true even when the element refuses it.
-    - The icon branch of `DigitalButton` is unreachable: `setIcon` is always -1.
-    - A corrupt saved-layout entry applies its earlier numbers before the `JSONException`.
+      is right. **O2, Sprint 16:** fixed (#109).
+    - The first stick touch within 350 ms of time 0 is a double click. **O3, Sprint 16:** fixed
+      (#109). The first press is a click.
+    - A stick whose way is 0 pixels gives NaN (0/0), sent as `(short)NaN = 0`. **O4, Sprint 16:**
+      fixed (#109). It sends no movement.
+    - MOVE or UP with no DOWN inside the stick's circle sends revoke and a movement of (0,0). **O5,
+      Sprint 16:** fixed (#109). A stick that was not pressed says nothing.
+    - The right-down line of the pad starts 5 px further out than the other lines. **O6,
+      Sprint 16:** fixed (#109). It starts at the same margin.
+    - A second finger is answered true even when the element refuses it. **O7, Sprint 16:**
+      recorded, no change: the second finger is consumed on purpose.
+    - The icon branch of `DigitalButton` is unreachable: `setIcon` is always -1. **O8, Sprint 16:**
+      deleted (#109).
+    - A corrupt saved-layout entry applies its earlier numbers before the `JSONException`. **O9,
+      Sprint 16:** fixed (#109). The entry's four numbers are read before the element moves.
     - `keyLong` is always 0 in `createDigitalButton`, so a long click only resends the same state.
-    - `createDefaultLayout` reads and writes the default preferences on every call.
+      **O10, Sprint 16:** the inert long-click path is removed (#109), an owner choice. A held
+      button sends its press and three resends, and nothing at 3 s.
+    - `createDefaultLayout` reads and writes the default preferences on every call. **O11,
+      Sprint 16:** fixed (#109). The layout is built from a configuration that the caller reads
+      once per build. `refreshLayout` still reads the preferences at each rebuild (see
+      [Sprint 17](#sprint-17-general-fixes), Input).
   - **ControllerHandler** (events, devices and feedback):
     - Combining: `x |= maxByMagnitude(x, v)` can send bits of two pads on one controller number.
-      Ties take the later pad.
+      Ties take the later pad. **C1, Sprint 16:** recorded, no change: the combining is intended.
     - `handleSetMotionEventState` stops after the first pad with a matching controller number
       that has a sensor manager (a matching pad without one is skipped with `continue`). So when
-      two pads on one number both have a sensor manager, only the first gets the state.
+      two pads on one number both have a sensor manager, only the first gets the state. **C2,
+      Sprint 16:** fixed (#108). Every pad on the number gets the state, and one pad of a number
+      reports each motion type to the host (a choice of the batch's review).
     - `handleRumbleTriggers` passes a possibly null `vibratorManager` to `rumbleQuadVibrators`.
       A host of LuminalShine 26.10.0 or later (VHF backend) can send trigger rumble now, so
-      this path can run. The VHF round of 2026-10-28 did not test trigger rumble.
+      this path can run. The VHF round of 2026-10-28 did not test trigger rumble. **C3,
+      Sprint 16:** fixed (#108) with `?.let`. The triage found no null path today: a pad is marked
+      quad only with a manager.
     - The controller-input fusing block is written out three times (about lines 1479 to 1514 of
-      the Java).
-    - The `gestures` constructor property is stored and never read.
+      the Java). **C4, Sprint 16:** moved to [Sprint 18](#sprint-18-refactor-of-the-converted-code).
+    - The `gestures` constructor property is stored and never read. **C5, Sprint 16:** deleted in
+      wave 2 (#108), with its argument at the `Game` call site and in the test rigs.
     - `(byte)(lt * 0xFF)` turns negative above 0.5; `(short)(x * 0x7FFE)` wraps past plus or
-      minus 1.
+      minus 1. **C6, Sprint 16:** fixed (#108). Triggers compare as unsigned bytes, and stick and
+      trigger values past 1 are held at the limit.
     - The held-time `(int)` cast: a hold of 2^32 + 10 ms looks like 10 ms. A hold of 2^31 ms or
       more makes the sleep negative, and `handleButtonUp` throws `IllegalArgumentException`.
+      **C7, Sprint 16:** fixed (#108). The wait is worked out in long arithmetic and held to 0 to
+      25 ms.
     - An unknown paddle scan code makes the whole handler return false: no packet, and no
-      emulation checks.
+      emulation checks. **C8, Sprint 16:** fixed (#108). The unknown paddle is ignored and the
+      event goes on.
     - The raw D-pad codes 704 to 707 are tried first, so 0x2c3 is Down on a pad with paddles.
-    - A zero-width touchpad range divides by zero and sends NaN coordinates.
+      **C9, Sprint 16:** recorded, no change. The defect it describes does not exist: 707 is not a
+      paddle code.
+    - A zero-width touchpad range divides by zero and sends NaN coordinates. **C10, Sprint 16:**
+      fixed (#108). The coordinate is 0.
     - A key up for a button that is not down still sends a packet, and key repeats resend.
+      **C11, Sprint 16:** fixed (#108). A key event that changes nothing sends no packet.
     - `onInputDeviceChanged` forgets the held buttons and turns the gamepad mouse off for that
-      device.
-    - Removing a pad that shares controller 0 zeroes it for the pad that is left.
+      device. **C12, Sprint 16:** fixed (#108). A device change keeps the held buttons, the
+      triggers, the gamepad mouse and the button timings of the pad.
+    - Removing a pad that shares controller 0 zeroes it for the pad that is left. **C13,
+      Sprint 16:** fixed (#108). The pad that is left keeps the number, and the host gets what
+      that pad holds.
     - The 17th pad shares controller 0 without reserving it. The mask is `1 << count` and wraps
-      at 16.
+      at 16. **C14, Sprint 16:** fixed (#108). A pad past the sixteenth number gets none and is not
+      reported.
     - `isExternal` matches `gpio`, `joy_key` and `keypad` case-sensitively; the other names are not.
+      **C15, Sprint 16:** fixed (#108). The match ignores the case.
     - A Shield comment says small stick deadzones, but the code only sets `searchIsMode` and
-      `hasMode`.
+      `hasMode`. **C16, Sprint 16:** fixed (#108). The comment says what the code does.
     - ADT-1 and ASUS set the trigger deadzone with no trigger axes. ADT-1 forces `hasSelect` and
       `hasMode`; Thrustmaster Score A forces `hasMode = false`; the Xbox One S firmware check
-      tests only gas.
+      tests only gas. **C17, Sprint 16:** recorded, no change: these device fix-ups are intended.
+      The triage corrected the entry: ADT-1 sets `hasSelect = true` and `hasMode = false`.
     - Any non-PlayStation pad with a sensor manager is reported as UNKNOWN, shows a toast and
-      gets clickpad emulation.
+      gets clickpad emulation. **C18, Sprint 16:** moved to the open owner decision under Pads in
+      [Sprint 17](#sprint-17-general-fixes).
     - Sensors: a first all-zero reading is dropped as a repeat; a negative rate gives a negative
       period; a second pad on the same number gets no sensor registration; `destroy()` leaves the
-      listeners set, so a later `disableSensors()` sends a stationary gyro event.
+      listeners set, so a later `disableSensors()` sends a stationary gyro event. **C19,
+      Sprint 16:** fixed (#108). The first reading is never a repeat; the report rate is read as
+      an unsigned 16-bit value and capped at 200, so it is never negative; `destroy()` clears the
+      listeners. The second pad is C2, fixed there.
     - Battery: the percentage goes through a float and a truncating byte (53 becomes 52, 59
       becomes 58; out of range wraps). A host of LuminalShine 26.10.0 or later accepts a battery
       state for a DualShock 4, a DualSense or a Switch Pro Controller
       ([contract, section 13](host-contract/luminalshine.md#13-input)), so a value can reach a
       game now. Android showed no battery for either pad in the VHF round of 2026-10-28, so
       the path did not run. `LI_BATTERY_STATE_NOT_PRESENT` is never used, and an
-      unknown status is retried at every poll.
+      unknown status is retried at every poll. **C20, Sprint 16:** fixed (#108). The percentage is
+      rounded and kept in 0 to 100. From Android 12, a pad that claimed a battery in its arrival
+      and has none tells the host so once, unless another pad that claims a battery shares its
+      number.
+      The retry of an unknown status was not reproduced: the triage found that it is not retried.
     - Rumble: small motors truncate to an amplitude of 0 and cancel the vibration.
       `sceManager.rumble` gets sign-extended shorts (0xC000 arrives as -16384), which is probably
-      a bug. A USB pad that sent no input answers to controller 0.
+      a bug. A USB pad that sent no input answers to controller 0. **C21, Sprint 16:** fixed (#108).
+      A motor that is not zero keeps an amplitude of at least 1, and only a real zero cancels; the
+      SHIELD service gets the motor values unsigned; rumble reaches only the pads that have a
+      controller number.
 - **(c) Test and tooling items.**
   - **Done in Sprint 14 (`s14-format`, merge `728aae024`).** Spotless (ktfmt) covered
     `borealis/**` and `build-logic/**`, tests included. Of `:app`, only `app/src/main/kotlin`
@@ -2129,9 +2494,13 @@ of item (b) are fixed after Sprint 14. On 2026-10-28 the owner scheduled item (a
 [Sprint 18](#sprint-18-refactor-of-the-converted-code), item (b) for
 [Sprint 16](#sprint-16-fixes-of-the-converted-code), item (c) for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (d) for Sprints 17
-and 19, as item (d) says. None of the defects is fixed yet: the conversion keeps behaviour (ADR
-0059, rule 10), and each one is kept as it was and pinned by a test that passes on the Java and on
-the Kotlin, so a fix changes that test on purpose. Paths are under
+and 19, as item (d) says. None of the defects was fixed by the conversion: it keeps behaviour (ADR
+0059, rule 10), and each one was kept as it was and pinned by a test that passes on the Java and on
+the Kotlin, so a fix changes that test on purpose. [Sprint 16](#sprint-16-fixes-of-the-converted-code)
+took item (b): 37 are fixed, G-M5 and R2 are closed, and A8 and B3 are moved. Each entry now ends
+with its triage id and what Sprint 16 did. The batches are #110 (the stream activity, the audio
+renderer and `MoonBridge`, with G-S2 and B1 in wave 2), #113 (video and the JNI callbacks) and #109
+(G-M7). Paths are under
 `apps/android/app/src/main/kotlin/com/limelight/`, unless an item says otherwise. A pinning test is
 named by its class and its test. The tests are under `apps/android/app/src/test/kotlin/`: in
 `io/github/magalz/borealis/stream/game/` for `Game` (the folders `keys/`, `motion/` and `session/`,
@@ -2159,7 +2528,8 @@ test is named, none pins the item.
   - `binding/audio/AndroidAudioRenderer.kt`: 1
   - `nvstream/av/video/VideoDecoderRenderer.kt`: 1
 
-  That is 52 places in 6 files. Also:
+  That is 52 places in 6 files. Sprint 16 recount, at `5c364487c`: 51 places in 6 files, with 11 in
+  `binding/video/MediaCodecHelper.kt` after the H6 fix. Also:
   - `Game.setMetaKeyCaptureState` has no caller outside `Game` (the tests reach it through the
     grab), so it could be private.
   - The `@SuppressLint("InlinedApi")` on `hideSystemUi` is probably not needed, because `minSdk`
@@ -2189,49 +2559,64 @@ test is named, none pins the item.
       `SupportJavaVisibleApiTest`. A commit that drops an annotation changes or removes the
       matching test in the same commit.
     - Other tests use reflection too (`ControllerHandlerRig` and `OscRig`).
-- **(b) Bugs and oddities found during the conversion, by area.** Each one is kept as it was.
+- **(b) Bugs and oddities found during the conversion, by area.** Each one was kept as it was.
   - **Keys** (`Game.kt`):
     - `onWindowFocusChanged` clears `modifierFlags` but not `specialKeyCode` and
       `waitingForAllModifiersUp`. After a focus change the next key can quit, toggle the grab or
       toggle the cursor. A real defect, low. Fix: reset both. Pinned by `GameSpecialKeysTest`, "a
       chord that waits is done by the next key when the focus change forgot the modifiers".
+      **G-K1, Sprint 16:** fixed (#110). A focus change drops the chord that waits.
     - A code point above U+FFFF from a hardware keyboard is narrowed to 16 bits (U+1F600 arrives
       as U+F600). Latent, very low. Pinned by `GameKeySendTest`, "a character is sent as UTF-8
-      text, and one outside the basic plane loses its high bits".
+      text, and one outside the basic plane loses its high bits". **G-K2, Sprint 16:** fixed
+      (#110). The character is sent whole.
     - The key ups of a chord that waits for the modifiers go through to the host, which sees the
       key up of a key whose key down it never saw. Pinned by `GameSpecialKeysTest`, "while the
-      chord waits for the modifiers, the keys down are eaten and the keys up go through".
+      chord waits for the modifiers, the keys down are eaten and the keys up go through". **G-K3,
+      Sprint 16:** fixed (#110). The ups of the keys that the chord ate are eaten too, and the
+      chord forgets them when the stream menu takes the input. The key that arms the chord is
+      still open (see [Sprint 17](#sprint-17-general-fixes), Input).
   - **Motion** (`Game.kt`):
     - `ACTION_CANCEL` from a mouse or a stylus sends a pen `CANCEL_ALL` and returns before the
       buttons and `lastButtonState`. Pinned by `PenEventsTest`, "a cancel of a mouse is a pen
-      cancel too, whatever the tool".
+      cancel too, whatever the tool". **G-M1, Sprint 16:** fixed (#110). The cancel releases the
+      mouse buttons.
     - Grouped buttons press the shared host button again at every change: releasing one while
       the other is down sends a press. Pinned by `MouseButtonsTest`, "two buttons of a group
-      share the host button, which is pressed again at every change".
+      share the host button, which is pressed again at every change". **G-M2, Sprint 16:** fixed
+      (#110). The host button changes only when the group does.
     - On Samsung DeX, `ACTION_DOWN` adds the primary button, so a right click is left plus
       right. Pinned by `MouseButtonsTest`, "the DeX touchpad right click comes with the left
-      button that it did not send".
+      button that it did not send". **G-M3, Sprint 16:** fixed (#110). The right click no longer
+      adds a left click.
     - A mouse event that reaches the activity itself (`onGenericMotionEvent`) has no view, so
       the position is not sent, and the buttons still are. Pinned by `MouseMovementTest`, "the
       activity itself has no view and does not place the pointer" (the position) and "the
-      activity itself still sends the buttons".
+      activity itself still sends the buttons". **G-M4, Sprint 16:** fixed (#110). The pointer is
+      placed for such an event too.
     - `controllerHandler.handleMotionEvent` always answers true, so the `return false` after it
       in `handleMotionEvent` is dead. Pinned for a known pad by `MotionGateTest`, "a joystick
-      source goes to the controller handler, which sends the stick to the host".
+      source goes to the controller handler, which sends the stick to the host". **G-M5,
+      Sprint 16:** closed. The `return false` is reachable for other sources.
     - `getStreamViewRelativeNormalizedXY` divides by the width and the height of the stream view
-      without a guard. No test pins it.
+      without a guard. No test pins it. **G-M6, Sprint 16:** fixed (#110). No pen or touch event
+      is sent while the stream view has no size (the touch path is parked, so only the pen half
+      acts today).
     - On the trackpad, a tap of two fingers presses the right button only when the second finger
       lifts first, and it does so at that lift. When the first finger lifts first, nothing is
       sent. Pinned by `FingerTouchTest`, "when the second of two fingers lifts, the first goes on
       moving the pointer from where it was" and "when the first of two fingers lifts, the second
-      takes its place as the finger that moves".
+      takes its place as the finger that moves". **G-M7, Sprint 16:** fixed (#109), an owner
+      choice: a two-finger tap is one right click whichever finger lifts first. The triage found
+      that the tap lives in `RelativeTouchContext`, not in `Game`. Its gaps are in
+      [Sprint 17](#sprint-17-general-fixes), Input.
   - **Session** (`Game.kt`):
     - `onUsbPermissionPromptCompleted` can arrive without a matching starting call:
       `UsbDriverService.kt` calls its listener with `?.`, so `Game` can get a completed call for
       a prompt whose starting call reached no listener. `suppressPipRefCount` then goes to -1,
       and the auto-enter of picture-in-picture stays off until a dialog opens. Fix: clamp it at
       0. Pinned by `GameUsbServiceTest`, "a dialog that closes without having opened leaves the
-      count below zero".
+      count below zero". **G-S1, Sprint 16:** fixed (#110). The count stays at 0.
     - Leaving before the connection starts skips the end of the audit session and `conn.stop`,
       and delays the stop of the controller handler, because `stopConnection` acts only when
       `connected` (the `connecting` flag was removed as never true). `onDestroy` still stops the
@@ -2239,97 +2624,156 @@ test is named, none pins the item.
       checked.
       Pinned by `GameStopTest`, "onStop leaves the controller handler of a stream that never
       connected to onDestroy" and "onStop leaves the native library alone when no connection
-      started".
+      started". **G-S2, Sprint 16:** fixed in wave 2 (#110). Leaving before the connection starts
+      stops the controller handler and the connection. A `connectionStarted` that arrives after the
+      stop does nothing, so it opens no audit session. A stage that fails after the stop is not
+      reported: `Game.stageFailed` returns at once, so a Disconnect from the Starting screen no
+      longer waits for the connectivity test. The audit session is not ended on that path, a
+      decision accepted at the merge (2026-10-31): no session of the activity can be open there,
+      because `connected` and the start of the audit session happen together, and the audit session
+      is process-wide. With
+      it, `NvConnection.stop()` makes the native calls (`interruptConnection`, `stopConnection` and
+      `cleanupBridge`) only for a bridge that its own connection set up, and a failed native start
+      runs `cleanupBridge` itself. A GFE start cancelled before its first `/launch` sends none; a
+      LuminalShine host was already covered by the retry runner, which keeps its
+      `launch_attempt` audit line with the result `cancelled`.
   - **Renderer** (`binding/video/`):
     - `stop()` and `cleanup()` throw a `NullPointerException` before `start()` and `setup`
       (`stop()` first tells the decoder to stop). Pinned by `RendererLifecycleTest`, "stop before
       start fails with a null pointer after it has told the decoder to stop" and "cleanup before
-      setup fails with a null pointer".
+      setup fails with a null pointer". **R1, Sprint 16:** fixed (#113). Both do nothing before
+      `start()` and `setup`.
     - `getPreferredColorSpace` is a constant (Rec. 709). Pinned by `RendererCapabilitiesTest`,
-      "the preferred colour space is Rec 709".
+      "the preferred colour space is Rec 709". **R2, Sprint 16:** closed. The Rec. 601 branch
+      needs an SDK below O, under the `minSdk` of 28.
     - The wait of the codec recovery has no check for `stopping`. The comment in the code says
       why: a thread that gives up in a half-quiesced state leaves the others asleep. The wait
       ends when the recovery is done, when `prepareForStop` cancels it or when the thread is
       interrupted, so the risk is a recovery whose other threads never come, with no stop
       (a deadlock). The closest pin is `RendererThreadsTest`, "a thread that is interrupted while
       it waits for the others gives up the recovery", which covers the interrupt path only.
+      **R3, Sprint 16:** fixed (#113). The triage found the trigger of the hang: a recovery step
+      that throws skipped the wake-up, so the other threads waited until a stop. Now the waiting
+      threads wake and the renderer stops (`stopping` stays true, so a woken thread does not touch
+      the released decoder). The crash of an `IllegalStateException` is reported before the throw,
+      as before; another exception that escapes (a null pointer, a `CryptoException` or a wrapped
+      `IOException`) is not reported that way, and stays a loud uncaught failure.
     - `VideoStats.add` takes a minimum host latency of 0 when the newer window has none. Pinned
       by `RendererStatsTest`, "the lowest host latency reads zero when the newer window has none".
+      **R4, Sprint 16:** fixed (#113). A window without host latency does not lower the lowest.
     - `replaySps` always writes profile 100 (High), and `needsBaselineSpsHack` is cleared before
       the replay. Pinned by `RendererSubmitH264Test`, "the replay after the baseline hack says
-      High profile whatever the stream said" and "the baseline hack is used once".
+      High profile whatever the stream said" and "the baseline hack is used once". **R5,
+      Sprint 16:** fixed (#113). The replay says the profile of the stream, and a failed replay is
+      tried again at the next IDR frame.
     - `replaySps` calls `fetchNextInputBuffer()` and ignores its result. The call finds the
       buffer that the queue call before it already fetched, so it does nothing. The owner
-      removed its failure check on 2026-10-27 and kept the call. No test pins it.
+      removed its failure check on 2026-10-27 and kept the call. No test pins it. **R6,
+      Sprint 16:** fixed (#113). The triage found that the call is not a no-op: the removed check
+      is the check of the fetch result that 12.2 had. It is restored, so a failed fetch makes the
+      replay answer false. The failing fetch is not reachable through the public API, as the entry
+      said, so the new test calls `replaySps` by reflection.
     - `numFramesIn` counts a frame before the check for an oversize decode unit, so the crash
       text counts the frame that crashed. Pinned by `RendererCrashTest`, "the text lists the
-      decoders, the formats, the device and the counters" (`Frames in-out: 1, 0`).
+      decoders, the formats, the device and the counters" (`Frames in-out: 1, 0`). **R7,
+      Sprint 16:** fixed (#113). A frame is counted after it was found to fit.
     - `setHdrMode` before `setup` also marks a codec restart, before any codec exists. Only the
       format is pinned: `RendererHdrTest`, "HDR metadata set before setup goes into the format as
-      a static info of 25 bytes".
+      a static info of 25 bytes". **R8, Sprint 16:** fixed (#113). A restart is marked only when a
+      codec exists and the renderer is not stopping, and the HDR metadata and the decoder are
+      `@Volatile`.
     - A frame number of 0 never flips the stats window, because the window start is set again
-      while `lastFrameNumber` is 0. No test pins it (the tests start at 1).
+      while `lastFrameNumber` is 0. No test pins it (the tests start at 1). **R9, Sprint 16:**
+      fixed (#113).
     - `RendererException.getMessage` can be null. Pinned by `RendererCrashTest`, "the exception
-      has no message of its own, only its text".
+      has no message of its own, only its text". **R10, Sprint 16:** fixed (#113). The message is
+      its text.
     - A redundant `else if (!e.isRecoverable)` in `handleDecoderException` follows
-      `if (e.isRecoverable)`. It changes no behaviour, so no test pins it.
+      `if (e.isRecoverable)`. It changes no behaviour, so no test pins it. **R11, Sprint 16:** it is
+      a plain `else` now (#113).
   - **MediaCodecHelper** (`binding/video/`):
     - `initialize` sets `initialized` only at its end, so a retry after an exception adds the
-      Amazon entries again. No test pins it.
+      Amazon entries again. No test pins it. **H1, Sprint 16:** fixed (#113). A retry adds the
+      lists once.
     - The Adreno pattern takes the last three digits of the renderer text, so "6400" gives 400
       (no test pins this), and an "Adreno" with no three-digit model counts as another GPU
       (pinned by `MediaCodecHelperInitializeTest`, "the Adreno model decides the Qualcomm HEVC
-      decoders").
+      decoders"). **H2, Sprint 16:** fixed (#113). The model is the whole number after "Adreno".
     - `findKnownSafeDecoder` asks for `getCapabilitiesForType` twice for a decoder in the first
-      round (its own call, and `decoderSupportsAndroidRLowLatency`). No test pins it.
+      round (its own call, and `decoderSupportsAndroidRLowLatency`). No test pins it. **H3,
+      Sprint 16:** fixed (#113). The capabilities are read once per round.
     - Two checks return before the check for `initialized`, so they answer before `initialize`
       where the others throw. Pinned by `MediaCodecHelperUninitializedTest`, "a decoder that
       answers without a list also answers before initialize" and "the decisions on a decoder
-      throw before initialize unless they answer first".
+      throw before initialize unless they answer first". **H4, Sprint 16:** fixed (#113). Every
+      public decision throws before `initialize`.
     - The "sw" checks are case sensitive. Pinned by `MediaCodecHelperCapabilityDecisionsTest`, "a
       decoder with sw in its name is never whitelisted for HEVC" (its row "the match is case
-      sensitive").
+      sensitive"). **H5, Sprint 16:** fixed (#113). The check ignores the case.
     - The search for the required profile is skipped when `findKnownSafeDecoder` throws for a
       decoder: the search goes to the first decoder. Pinned by `MediaCodecHelperSelectionTest`,
-      "a decoder that throws for its capabilities sends the search to the first decoder".
+      "a decoder that throws for its capabilities sends the search to the first decoder". **H6,
+      Sprint 16:** fixed (#113). The decoder that throws is skipped, and the search goes on with
+      the profile. A device whose only HEVC or AV1 decoder throws now gets none for that codec
+      (see [Sprint 17](#sprint-17-general-fixes), Video and the stream screens).
   - **Audio** (`binding/audio/AndroidAudioRenderer.kt`):
     - A `release()` that throws keeps the track, and setup answers 0 with a track that never
       played. Pinned by `AudioRendererSetupCharacterizationTest`, "a track that cannot be
-      released stays, and setup answers 0 without a track that played".
+      released stays, and setup answers 0 without a track that played". **A1, Sprint 16:** fixed
+      (#110). The failed track is dropped even when its release fails, and setup answers the
+      failure.
     - A second setup leaks the first track. Pinned by `AudioRendererSetupCharacterizationTest`,
-      "a second setup creates another track and leaves the first one alone".
+      "a second setup creates another track and leaves the first one alone". **A2, Sprint 16:**
+      fixed (#110). A second setup releases the first track.
     - `getMinBufferSize` is asked even when both low latency attempts are skipped. Pinned by
       `AudioRendererSetupCharacterizationTest`, "a hardware rate that is not the rate of the
-      stream skips both low latency attempts".
+      stream skips both low latency attempts". **A3, Sprint 16:** fixed (#110). A skipped attempt
+      does not ask.
     - A packet of no samples (`samplesPerFrame` 0) throws `ArithmeticException` in the second
       attempt. Pinned by `AudioRendererSetupCharacterizationTest`, "a packet of no samples makes
-      the second attempt divide by zero".
+      the second attempt divide by zero". **A4, Sprint 16:** fixed (#110). Setup refuses it with an
+      explicit error.
     - `cleanup` does not set the track to null, so a second cleanup is refused by the platform.
       Pinned by `AudioRendererPlaybackCharacterizationTest`, "cleanup keeps the released track,
-      so a second cleanup is refused by the platform".
+      so a second cleanup is refused by the platform". **A5, Sprint 16:** fixed (#110), an owner
+      choice. A second cleanup does nothing, and the release runs in a `finally`.
     - The pending duration is read twice when it is too long: once for the check and once for
       the log. Pinned by `AudioRendererPlaybackCharacterizationTest`, "40 milliseconds of pending
-      audio drops the samples and logs the duration read again".
+      audio drops the samples and logs the duration read again". **A6, Sprint 16:** fixed (#110).
+      It is read once per packet.
     - `track` is not `@Volatile`, though the native threads of the audio stream use it. A
-      memory-model matter, so no test pins it.
+      memory-model matter, so no test pins it. **A7, Sprint 16:** fixed (#110), with the TDD
+      exemption for memory visibility.
     - A comment on the 7.1 mask `0x18FC` still says that the constant is hardcoded for Lollipop.
       Only the value is pinned: `AudioRendererSetupCharacterizationTest`, "8 channels ask for the
-      7 point 1 surround mask".
+      7 point 1 surround mask". **A8, Sprint 16:** moved to
+      [Sprint 18](#sprint-18-refactor-of-the-converted-code).
   - **MoonBridge** (`nvstream/jni/MoonBridge.kt` and `app/src/main/jni/moonlight-core/`):
     - `VIDEO_FORMAT_MASK_10BIT` is `0x2200` in Kotlin and `0xAA00` in `Limelight.h`, which also
       counts the 4:4:4 formats. It has no effect today, because the client never asks for them.
       Pinned by `MoonBridgeJniContractTest`, "the constants that Limelight h defines have the same
       value in MoonBridge" (this is its only difference) and "the 10-bit video mask of MoonBridge
-      keeps the two 10-bit formats the client asks for".
+      keeps the two 10-bit formats the client asks for". **B1, Sprint 16:** fixed in wave 2
+      (#110), an owner choice. The mask is `0xAA00`, as in `Limelight.h`, and so is `MASK_10BIT`
+      of `SessionAudit` (`borealis/host`). Nothing changes while the client never asks for 4:4:4.
     - `AudioConfiguration.equals` compares `toInt()`, so `AudioConfiguration(0x100, 0)` equals
       `AudioConfiguration(0, 1)`. Pinned by `AudioConfigurationTest`, "equality is decided by the
-      packed int, not by the two fields".
+      packed int, not by the two fields". **B2, Sprint 16:** fixed (#110). Two configurations are
+      equal when their channel count and mask are. `hashCode` still uses the packed int, which
+      keeps the contract.
     - `simplejni.c` keeps unreachable code after the early returns of `findExternalAddressIP4` and
       `testClientConnectivity` (ADR 0050). It is C that the unit tests do not run, so no test
-      pins it.
+      pins it. **B3, Sprint 16:** moved to [Sprint 19](#sprint-19-secops). The triage found that it
+      is a Borealis change of ADR 0050, not a defect of the conversion.
     - Ten bridges of `callbacks.c` do not check for a Java exception after the call: the start,
       stop and cleanup of the video and the audio renderer, the three stage ones and
-      `BridgeClConnectionStarted`. This is upstream code, and no test runs it.
+      `BridgeClConnectionStarted`. This is upstream code, and no test runs it. **B4, Sprint 16:**
+      fixed (#113), with the TDD exemption: no unit test runs that C, and the NDK build and the
+      device round check it. The ten bridges check, log and clear a Java exception after the call,
+      and so do `BridgeDrSetup`, `BridgeArInit` and the cleanup call inside `BridgeArInit`. The
+      video and audio start cannot return a failure, because their typedefs in the vendored
+      `Limelight.h` return `void`: the owner decided on 2026-10-31 that they log and clear, and
+      [Sprint 19](#sprint-19-secops) looks at it again with the JNI audit.
 - **(c) Test and tooling items.**
   - `GameWiringTest` (`io/github/magalz/borealis/stream/`) keeps 6 tests that read text: 3 read
     `NvConnection.kt` and 3 read `src/main/res`. Replace them with behaviour tests.
@@ -2364,20 +2808,32 @@ test is named, none pins the item.
 ## Host-side items (LuminalShine)
 
 These are proposals and known issues in the LuminalShine host. The client works
-without them. The states are as of 2026-10-29 (read with `gh` that day). #199, #200 and #203 were merged
+without them. On 2026-10-31 every item of the table was read again with `gh`, and the owner's pull
+request #226 was added: the states are unchanged, #194, #202, #204 and #205 are closed, the other
+issues, the pull requests #213, #215, #226 and #227 and the discussions #221 to #225 are open, and
+the owner's #237 (from #222) is a draft. #199, #200 and #203 were merged
 on 2026-10-20, and 26.10.0-beta.1 (a prerelease of 2026-10-20) ships them
 (release notes). #194 and #202 are fixed on the host (release notes). On 2026-10-29 the owner
 closed #204 (as a duplicate of #212) and #205 (as fixed), and filed five issues, #216 to #220,
 and five discussions in the Ideas category, #221 to #225, from the findings of Borealis. The
-open ones are #198, #201, #212, #214, #216 to #220 and the owner's pull requests #213, #215 and #227
-(#198 and #201 were checked again on 2026-10-29 and are still open). The rows add what the Sprint 15 round saw
-on 2026-10-29 and 2026-10-30 ([device-validation section 20](development/device-validation.md#20-results-sprint-15));
-those observations were not read from GitHub, so the states stay as of 2026-10-29, except #227, read on 2026-10-30 (open).
+open ones are #198, #201, #212, #214, #216 to #220, the owner's pull
+requests #213, #215, #226 and #227, and the owner's draft pull request #237 (#198 and #201 were
+checked again on 2026-10-29 and are
+still open). The rows add what the Sprint 15 round saw on 2026-10-29 and 2026-10-30
+([device-validation section 20](development/device-validation.md#20-results-sprint-15)); those
+observations were not read from GitHub.
+
+The Sprint 16 round on 2026-11-01, on LuminalShine 26.10.1
+([device-validation section 21](development/device-validation.md#21-results-sprint-16)), saw two host-side
+things, neither filed: the host no longer knew the TV as a paired client at the start of the round
+(cause not known; the owner paired it again), and after each rollback of an unclaimed launch the host
+ran `Virtual display recovery` 2 to 5 times, each attempt failing to apply the display configuration,
+with no crash (31 error lines in the round).
 
 | Item | Kind | Summary |
 | --- | --- | --- |
 | [NortheBridge/luminalshine#194](https://github.com/NortheBridge/luminalshine/issues/194) | Issue | Stray bytes after a 404 response. Fixed on the host by #200, in 26.10.0-beta.1 (release notes). See the [host contract](host-contract/README.md). |
-| [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. Open. See the [host contract](host-contract/README.md). |
+| [NortheBridge/luminalshine#198](https://github.com/NortheBridge/luminalshine/issues/198) | Issue | Teardown hang after a disconnect. Open. The owner's fix is #226 (open, read on 2026-10-31). See the [host contract](host-contract/README.md). |
 | [NortheBridge/luminalshine#199](https://github.com/NortheBridge/luminalshine/pull/199) | PR | Reports the LuminalShine release in `/serverinfo`, so the client can show the host version. Shipped in 26.10.0-beta.1 (release notes). The client shows it in Sprint 20. |
 | [NortheBridge/luminalshine#200](https://github.com/NortheBridge/luminalshine/pull/200) | PR | Sends a single response for unknown GameStream paths. Fix for #194. Shipped in 26.10.0-beta.1 (release notes). |
 | [NortheBridge/luminalshine#201](https://github.com/NortheBridge/luminalshine/issues/201) | Issue | A second client leaving a shared app ends the first client's session (per-client virtual display). Open. See [UC-003](use-cases/0003-join-or-replace-a-running-app.md). On 2026-10-29 a run with two clients on a diagnostics build of the host (a nightly, `0.0.5-nightly`, not 26.10.1) saw the first client keep streaming through three Disconnects of the second, and the second client's Quit stop both sessions with `reason=explicit_cancel` (the first client then dropped with -1). It does not say whether the case of the issue is fixed. On 2026-10-30 the owner's fix, [#227](https://github.com/NortheBridge/luminalshine/pull/227) (open; a nightly, `0.0.7-nightly`, `4b55352e`), was run with the same two clients: the second client joined into an isolated capture at once, without the 5 s ring stall, the first kept 56 to 60 fps with a video playing, a Quit from the second stopped only its own session (`Cancel scope: requester_only`), and a Quit from the Apps sheet with no live session was a full teardown. See [Sprint 17](#sprint-17-general-fixes), Video and the stream screens, for what Borealis then shows on the second device. |
@@ -2389,6 +2845,7 @@ those observations were not read from GitHub, so the states stay as of 2026-10-2
 | [NortheBridge/luminalshine#213](https://github.com/NortheBridge/luminalshine/pull/213) | PR | The owner's fix for #212: the watchdog no longer joins itself on teardown. Open. |
 | [NortheBridge/luminalshine#214](https://github.com/NortheBridge/luminalshine/issues/214) | Issue | Hardens the display-helper watchdog start and stop: the thread object is not synchronized, and the watchdog's "never reap" rule has no test. Follow-up to #212. Open. |
 | [NortheBridge/luminalshine#215](https://github.com/NortheBridge/luminalshine/pull/215) | PR | The owner's fix for #214, stacked on #213. Open. |
+| [NortheBridge/luminalshine#226](https://github.com/NortheBridge/luminalshine/pull/226) | PR | The owner's fix for #198, opened on 2026-10-30: "Derive the display-cleanup teardown deadline from the cleanup's bounded waits". The display-cleanup phase of the teardown had a fixed 30 s deadline, the same as the wait for the display helper's revert, so the watchdog restarted the host before the cleanup's recovery could run. The deadline now covers the cleanup's bounded waits (155 s with a display restore, 30 s otherwise). Open (read on 2026-10-31). |
 | [NortheBridge/luminalshine#227](https://github.com/NortheBridge/luminalshine/pull/227) | PR | The owner's fix for #201: a client that joins a shared app no longer ends or slows the first client's stream. Open; validated on two clients on 2026-10-30 (see the #201 row). |
 | [NortheBridge/luminalshine#216](https://github.com/NortheBridge/luminalshine/issues/216) | Issue | Wrong-PIN lockout, filed 2026-10-29 (it was the finding "Wrong-PIN lockout on 26.10.0-beta.1", not filed until then): after a wrong PIN, the host keeps the pairing session, and every retry gets 409 for up to 5 minutes. Restarting LuminalShine clears it. Seen live on 2026-10-21 and 2026-10-24 and checked in source at `dba21a9e` (the lines are the same since 26.10.0-beta.1). The owner plans to fix it: a new phase 1 from the same peer and certificate ends the old exchange (A), and a session stalled after the PIN expires after 30 s (C). Open. See the [host contract](host-contract/luminalshine.md) and [Sprint 19](#sprint-19-secops). |
 | [NortheBridge/luminalshine#217](https://github.com/NortheBridge/luminalshine/issues/217) | Issue | `/cancel` answers 5 to 17 s after a quit, and the client cannot tell a slow quit from a hung one. Filed 2026-10-29 with the list of what `/cancel` waits on. The owner plans to fix it. On 26.10.1 on 2026-10-29, each of three Quits on the TV took 5.6 to 6.0 s in `/cancel`, and about 5 s of it was the display helper's transactional revert (4.83 to 5.35 s) in the join of the last session. Open. See the [host contract](host-contract/luminalshine.md), section 7.6, and [Sprint 15](#sprint-15-the-stream-screens-and-glass). |

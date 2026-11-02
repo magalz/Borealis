@@ -58,13 +58,15 @@ internal class GameStopTest : GameTestBase() {
     }
 
     @Test
-    fun `onStop leaves the controller handler of a stream that never connected to onDestroy`() {
+    fun `onStop stops the controller handler of a stream that never connected`() {
         rig.create()
         val handler = rig.field<ControllerHandler>("controllerHandler")
-
-        rig.stop()
         assertThat(ReflectionHelpers.getField<Boolean>(handler, "stopped")).isFalse()
 
+        rig.stop()
+        assertThat(ReflectionHelpers.getField<Boolean>(handler, "stopped")).isTrue()
+
+        // The destroy that follows is safe after the stop.
         rig.destroyActivity()
         assertThat(ReflectionHelpers.getField<Boolean>(handler, "stopped")).isTrue()
     }
@@ -82,7 +84,21 @@ internal class GameStopTest : GameTestBase() {
     }
 
     @Test
-    fun `onStop leaves the native library alone when no connection started`() {
+    fun `onStop stops the connection whose bridge is set up and that has not connected yet`() {
+        rig.create()
+        // What the start thread does before the native start, which the rig never makes.
+        ReflectionHelpers.setField(rig.connection, "bridgeSetUp", true)
+
+        rig.stop()
+
+        assertThat(rig.game.isFinishing).isTrue()
+        assertThat(ShadowRecordingBridge.names).containsExactlyElementsIn(stopCalls).inOrder()
+        assertThat(ShadowRecordingBridge.named("stopConnection").single().locked).isTrue()
+        assertThat(rig.audit).isEmpty()
+    }
+
+    @Test
+    fun `onStop leaves the native library alone when the connection never set its bridge up`() {
         rig.create()
 
         rig.stop()

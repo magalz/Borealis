@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.wifi.WifiManager
 import com.limelight.LimeLog
 import java.io.IOException
-import java.io.UnsupportedEncodingException
 import java.net.InetAddress
 import java.net.NetworkInterface
 import javax.jmdns.JmmDNS
@@ -51,12 +50,7 @@ class JmDNSDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener) :
     private fun handleResolvedServiceInfo(info: ServiceInfo) {
         synchronized(pendingResolution) { pendingResolution.remove(info.name) }
 
-        try {
-            handleServiceInfo(info)
-        } catch (ignored: UnsupportedEncodingException) {
-            // Invalid DNS response
-            LimeLog.info("mDNS: Invalid response for machine: " + info.name)
-        }
+        handleServiceInfo(info)
     }
 
     private fun handleServiceInfo(info: ServiceInfo) {

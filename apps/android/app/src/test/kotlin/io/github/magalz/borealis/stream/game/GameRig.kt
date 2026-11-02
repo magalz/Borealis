@@ -337,6 +337,7 @@ internal class GameRig {
     fun streaming(intent: GameIntent = GameIntent()): Game {
         val game = create(intent)
         game.connectionStarted()
+        markBridgeSetUp()
         firstFrame()
         ShadowLooper.idleMainLooper(GRAB_DELAY_MS, TimeUnit.MILLISECONDS)
         return game
@@ -354,6 +355,14 @@ internal class GameRig {
      */
     fun markConnectionAttempted() {
         ReflectionHelpers.setField(game, "attemptedConnection", true)
+    }
+
+    /**
+     * The real `NvConnection` never starts here, so it never sets the bridge up: a stream that runs
+     * has, and `stop` makes its native calls only for a bridge that its connection set up.
+     */
+    private fun markBridgeSetUp() {
+        ReflectionHelpers.setField(field<Any>("conn"), "bridgeSetUp", true)
     }
 
     /** The decoder renderer that the activity built. */

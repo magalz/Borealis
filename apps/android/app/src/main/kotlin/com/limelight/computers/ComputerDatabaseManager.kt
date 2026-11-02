@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
+import com.limelight.LimeLog
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvHTTP
 import java.io.ByteArrayInputStream
@@ -65,22 +66,38 @@ class ComputerDatabaseManager(c: Context) {
     }
 
     fun deleteComputer(details: ComputerDetails) {
-        computerDb.delete(
-            COMPUTER_TABLE_NAME,
-            "$COMPUTER_UUID_COLUMN_NAME=?",
-            arrayOf(details.uuid),
-        )
+        val uuid = details.uuid
+        if (uuid == null) {
+            // The rows that an earlier build saved without an id: "uuid = NULL" matches no row.
+            computerDb.delete(COMPUTER_TABLE_NAME, "$COMPUTER_UUID_COLUMN_NAME IS NULL", null)
+        } else {
+            computerDb.delete(COMPUTER_TABLE_NAME, "$COMPUTER_UUID_COLUMN_NAME=?", arrayOf(uuid))
+        }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // A host without a name or without an id is refused, with a log: the name column is NOT NULL,
+    // so the insert would throw, and a row without an id could not be deleted by its id.
+    //
+    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The JSON failure is still rethrown as a RuntimeException, and the stack trace of a
     // certificate that cannot be encoded still goes to the standard error stream. Logging it
     // instead is a behaviour change.
     @Suppress("TooGenericExceptionThrown", "PrintStackTrace")
     fun updateComputer(details: ComputerDetails): Boolean {
+        val uuid = details.uuid
+        val name = details.name
+        if (name == null) {
+            LimeLog.warning("Not saving a host that has no name")
+            return false
+        }
+        if (uuid == null) {
+            LimeLog.warning("Not saving a host that has no id")
+            return false
+        }
+
         val values = ContentValues()
-        values.put(COMPUTER_UUID_COLUMN_NAME, details.uuid)
-        values.put(COMPUTER_NAME_COLUMN_NAME, details.name)
+        values.put(COMPUTER_UUID_COLUMN_NAME, uuid)
+        values.put(COMPUTER_NAME_COLUMN_NAME, name)
 
         try {
             val addresses = JSONObject()
@@ -114,25 +131,35 @@ class ComputerDatabaseManager(c: Context) {
             )
     }
 
+    // The lookups by id and by name still throw a RuntimeException caused by the JSON one for a row
+    // whose addresses are bad, and the IllegalArgumentException of the address tuple itself, not
+    // wrapped, for a port that is not positive (Sprint 12 backlog); the list leaves such a row out
+    // (see getAllComputers).
+    @Suppress("TooGenericExceptionThrown")
+    private fun getComputerFromCursor(c: Cursor): ComputerDetails =
+        try {
+            readComputer(c)
+        } catch (e: JSONException) {
+            throw RuntimeException(e)
+        }
+
+    // Throws the JSONException of addresses that are not what updateComputer writes, and the
+    // IllegalArgumentException of an address tuple that is not valid.
+    //
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    // A row whose JSON is bad still makes the read throw a RuntimeException, and the stack trace
-    // of a bad certificate still goes to the standard error stream (the host is returned without
-    // it).
-    @Suppress("TooGenericExceptionThrown", "PrintStackTrace")
-    private fun getComputerFromCursor(c: Cursor): ComputerDetails {
+    // The stack trace of a bad certificate still goes to the standard error stream (the host is
+    // returned without it).
+    @Suppress("PrintStackTrace")
+    private fun readComputer(c: Cursor): ComputerDetails {
         val details = ComputerDetails()
 
         details.uuid = c.getString(UUID_COLUMN_INDEX)
         details.name = c.getString(NAME_COLUMN_INDEX)
-        try {
-            val addresses = JSONObject(c.getString(ADDRESSES_COLUMN_INDEX))
-            details.localAddress = tupleFromJson(addresses, AddressFields.LOCAL)
-            details.remoteAddress = tupleFromJson(addresses, AddressFields.REMOTE)
-            details.manualAddress = tupleFromJson(addresses, AddressFields.MANUAL)
-            details.ipv6Address = tupleFromJson(addresses, AddressFields.IPv6)
-        } catch (e: JSONException) {
-            throw RuntimeException(e)
-        }
+        val addresses = JSONObject(c.getString(ADDRESSES_COLUMN_INDEX))
+        details.localAddress = tupleFromJson(addresses, AddressFields.LOCAL)
+        details.remoteAddress = tupleFromJson(addresses, AddressFields.REMOTE)
+        details.manualAddress = tupleFromJson(addresses, AddressFields.MANUAL)
+        details.ipv6Address = tupleFromJson(addresses, AddressFields.IPv6)
 
         // External port is persisted in the remote address field
         val remoteAddress = details.remoteAddress
@@ -162,11 +189,21 @@ class ComputerDatabaseManager(c: Context) {
         return details
     }
 
+    /**
+     * The saved computers, in saving order. A row whose addresses cannot be read is left out, with
+     * a log that holds nothing of the row: one bad row must not hide every saved computer.
+     */
     fun getAllComputers(): List<ComputerDetails> =
         computerDb.rawQuery("SELECT * FROM $COMPUTER_TABLE_NAME", null).use { c ->
             val computerList = LinkedList<ComputerDetails>()
             while (c.moveToNext()) {
-                computerList.add(getComputerFromCursor(c))
+                try {
+                    computerList.add(readComputer(c))
+                } catch (ignored: JSONException) {
+                    LimeLog.warning(UNREADABLE_ROW_LOG)
+                } catch (ignored: IllegalArgumentException) {
+                    LimeLog.warning(UNREADABLE_ROW_LOG)
+                }
             }
             computerList
         }
@@ -228,6 +265,9 @@ class ComputerDatabaseManager(c: Context) {
 
         private const val MAC_ADDRESS_COLUMN_NAME = "MacAddress"
         private const val SERVER_CERT_COLUMN_NAME = "ServerCert"
+
+        private const val UNREADABLE_ROW_LOG =
+            "Leaving a saved host out of the list: its addresses cannot be read"
 
         // The positions of the columns in the CREATE TABLE statement above
         private const val UUID_COLUMN_INDEX = 0

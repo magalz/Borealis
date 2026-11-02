@@ -1,9 +1,14 @@
 package io.github.magalz.borealis.input.devices
 
+import android.os.Handler
 import android.os.Vibrator
 import android.view.KeyEvent.KEYCODE_A
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_B
+import android.view.KeyEvent.KEYCODE_BUTTON_L1
+import android.view.KeyEvent.KEYCODE_BUTTON_L2
+import android.view.KeyEvent.KEYCODE_BUTTON_R2
+import android.view.KeyEvent.KEYCODE_BUTTON_START
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
@@ -25,6 +30,7 @@ import org.robolectric.shadow.api.Shadow
 class DeviceLifecycleTest : DevicesTestBase() {
     private val a = ControllerPacket.A_FLAG
     private val b = ControllerPacket.B_FLAG
+    private val select = ControllerPacket.BACK_FLAG
     private val hat = listOf(MotionEvent.AXIS_HAT_X, MotionEvent.AXIS_HAT_Y).map { Axis(it) }
 
     @Test
@@ -350,7 +356,7 @@ class DeviceLifecycleTest : DevicesTestBase() {
     }
 
     @Test
-    fun `a change forgets the buttons that were held`() {
+    fun `a change keeps the buttons that were held`() {
         val before = pad(1)
         val rig = rig(devices = listOf(before))
         rig.press(before, KEYCODE_BUTTON_A)
@@ -361,17 +367,104 @@ class DeviceLifecycleTest : DevicesTestBase() {
         rig.change(after)
         rig.press(after, KEYCODE_BUTTON_B)
 
-        // The A button was still held; the new context never heard of it
+        // The A button is still held, and the host was not told it came up
+        assertThat(rig.connection.packets.last().buttons).isEqualTo(a or b)
+    }
+
+    @Test
+    fun `a change keeps the triggers that were held as keys`() {
+        val before = pad(1)
+        val rig = rig(devices = listOf(before))
+        rig.press(before, KEYCODE_BUTTON_L2)
+        rig.press(before, KEYCODE_BUTTON_R2)
+
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
+        disconnectPad(before)
+        connectPad(after)
+        rig.change(after)
+        rig.press(after, KEYCODE_BUTTON_B)
+
+        // Both triggers are still down (255 is -1 as a byte): the host was not told they came up
+        assertThat(rig.connection.packets.last())
+            .isEqualTo(
+                Sent(
+                    controller = 0,
+                    activeMask = 1,
+                    buttons = b,
+                    leftTrigger = -1,
+                    rightTrigger = -1,
+                )
+            )
+    }
+
+    @Test
+    fun `a change keeps the Select that Start and LB stand in for`() {
+        val before = pad(1)
+        val rig = rig(devices = listOf(before))
+        rig.press(before, KEYCODE_BUTTON_L1)
+        rig.press(before, KEYCODE_BUTTON_START)
+        assertThat(rig.connection.packets.last().buttons).isEqualTo(select)
+
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
+        disconnectPad(before)
+        connectPad(after)
+        rig.change(after)
+        rig.press(after, KEYCODE_BUTTON_B)
+        assertThat(rig.connection.packets.last().buttons).isEqualTo(select or b)
+
+        // The new context knows the Select is not a key of the pad, so LB coming up lets it go
+        rig.release(after, KEYCODE_BUTTON_L1)
         assertThat(rig.connection.packets.last().buttons).isEqualTo(b)
     }
 
     @Test
-    fun `a change turns the gamepad mouse off for the device`() {
+    fun `a change keeps the gamepad mouse on for the device`() {
         val before = pad(1)
         val rig = rig(devices = listOf(before))
         rig.touch(before)
         rig.handler.setMouseEmulation(true)
         assertThat(rig.context(before).bool("mouseEmulationActive")).isTrue()
+
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
+        disconnectPad(before)
+        connectPad(after)
+        rig.change(after)
+
+        val replaced = rig.context(after)
+        assertThat(replaced.bool("mouseEmulationActive")).isTrue()
+        assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
+        // The pointer keeps moving with the sticks, and the buttons stay out of the game
+        val mainHandler = field(rig.handler, "mainThreadHandler") as Handler
+        assertThat(mainHandler.hasCallbacks(replaced["mouseEmulationRunnable"] as Runnable))
+            .isTrue()
+        rig.press(after, KEYCODE_BUTTON_A)
+        assertThat(rig.connection.packets.last().buttons).isEqualTo(0)
+    }
+
+    @Test
+    fun `a change keeps the click the gamepad mouse has down`() {
+        val before = pad(1)
+        val rig = rig(devices = listOf(before))
+        rig.touch(before)
+        rig.handler.setMouseEmulation(true)
+        rig.press(before, KEYCODE_BUTTON_A)
+        assertThat(rig.context(before).int("mouseEmulationLastInputMap")).isEqualTo(a)
+
+        val after = pad(1) { axes = STICKS_AND_Z + hat }
+        disconnectPad(before)
+        connectPad(after)
+        rig.change(after)
+
+        // The next report lifts the click on the PC only if the context remembers it is down
+        assertThat(rig.context(after).int("mouseEmulationLastInputMap")).isEqualTo(a)
+        assertThat(rig.context(after).int("inputMap")).isEqualTo(a)
+    }
+
+    @Test
+    fun `a change leaves the gamepad mouse off for a device that had it off`() {
+        val before = pad(1)
+        val rig = rig(devices = listOf(before))
+        rig.touch(before)
 
         val after = pad(1) { axes = STICKS_AND_Z + hat }
         disconnectPad(before)

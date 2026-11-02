@@ -632,7 +632,7 @@ constructor(
         } else {
             openHttpConnection(httpClientLongConnectTimeout, getHttpsUrl(true), "applist").use {
                 resp ->
-                return getAppListByReader(InputStreamReader(resp.byteStream()))
+                return getAppListByReader(InputStreamReader(resp.byteStream(), Charsets.UTF_8))
             }
         }
     }
@@ -966,6 +966,16 @@ constructor(
             return AddressTuple(address, port)
         }
 
+        private fun readAppText(app: NvApp, tag: String, text: String?) {
+            if (tag == "AppTitle") {
+                app.appName = text
+            } else if (tag == "ID") {
+                app.setAppId(text)
+            } else if (tag == "IsHdrSupported") {
+                app.isHdrSupported = text == "1"
+            }
+        }
+
         @JvmStatic
         @Throws(XmlPullParserException::class, IOException::class)
         fun getAppListByReader(r: Reader): LinkedList<NvApp> {
@@ -996,17 +1006,9 @@ constructor(
                             rootTerminated = true
                         }
                     }
-                    XmlPullParser.TEXT -> {
-                        // The last of an empty list is a NoSuchElementException, as in the Java.
-                        val app = appList.last()
-                        if (currentTag.peek() == "AppTitle") {
-                            app.appName = xpp.text
-                        } else if (currentTag.peek() == "ID") {
-                            app.setAppId(xpp.text)
-                        } else if (currentTag.peek() == "IsHdrSupported") {
-                            app.isHdrSupported = xpp.text == "1"
-                        }
-                    }
+                    // Text before the first app belongs to no app and is ignored.
+                    XmlPullParser.TEXT ->
+                        appList.lastOrNull()?.let { readAppText(it, currentTag.peek(), xpp.text) }
                 }
                 eventType = xpp.next()
             }

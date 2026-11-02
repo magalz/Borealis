@@ -2,7 +2,17 @@ package io.github.magalz.borealis.connection
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.NvConnection
+import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.library.RecordingLog
+import io.github.magalz.borealis.logging.AuditEvent
+import io.github.magalz.borealis.logging.AuditOutcome
+import io.github.magalz.borealis.logging.AuditSink
+import io.github.magalz.borealis.logging.AuditType
+import io.github.magalz.borealis.logging.BorealisAudit
+import io.github.magalz.borealis.logging.Redactor
+import io.github.magalz.borealis.nvhttp.HostReply
+import java.lang.management.ManagementFactory
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Rule
@@ -49,13 +59,57 @@ class StopAndCancelTest {
         }
     }
 
+    /** Waits until [thread] waits to enter the monitor of the bridge, which the test holds. */
+    private fun awaitBlockedOnBridge(thread: Thread) {
+        val bridge = System.identityHashCode(MoonBridge::class.java)
+        val threads = ManagementFactory.getThreadMXBean()
+        val limit = System.currentTimeMillis() + WAIT_MS
+        while (threads.getThreadInfo(thread.id)?.lockInfo?.identityHashCode != bridge) {
+            check(System.currentTimeMillis() < limit) {
+                "The thread did not wait for the bridge; it is ${thread.state}; " +
+                    "calls: ${ShadowRecordingBridge.names}"
+            }
+            Thread.sleep(POLL_MS)
+        }
+    }
+
+    /**
+     * The native calls are process-global: a connection that never set the bridge up must not
+     * interrupt, stop or clean up the stream of another one.
+     */
     @Test
-    fun `stop interrupts the connection first, then stops and cleans up holding the monitor`() {
+    fun `the stop of a connection that never set the bridge up makes no native call`() {
         val connection = rig.connection(config = null)
 
         connection.stop()
 
-        assertThat(ShadowRecordingBridge.calls.map { it.name to it.locked })
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    @Test
+    fun `the stop of a connection that never started leaves the stream that runs alone`() {
+        val first = rig.connection()
+        startAndConnect(first)
+        listener.awaitEnded()
+        val before = ShadowRecordingBridge.calls.size
+
+        rig.connection(config = null).stop()
+
+        assertThat(ShadowRecordingBridge.names.drop(before)).isEmpty()
+        assertThat(ShadowRecordingBridge.listener).isNotNull()
+        assertThat(rig.permits()).isEqualTo(0)
+    }
+
+    @Test
+    fun `the stop of a stream that runs interrupts it first, then stops and cleans up holding the monitor`() {
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        val before = ShadowRecordingBridge.calls.size
+
+        connection.stop()
+
+        assertThat(ShadowRecordingBridge.calls.drop(before).map { it.name to it.locked })
             .containsExactly(
                 "interruptConnection" to false,
                 "stopConnection" to true,
@@ -64,12 +118,79 @@ class StopAndCancelTest {
             .inOrder()
     }
 
-    /** A connection that never took the place still gives one back: the places can pile up. */
+    /** By the second stop another connection may own the bridge: the first one made its calls. */
     @Test
-    fun `stop gives a place back even to a connection that never took one`() {
+    fun `a second stop of a stream that ran makes no native call`() {
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        connection.stop()
+        val before = ShadowRecordingBridge.calls.size
+
+        connection.stop()
+
+        assertThat(ShadowRecordingBridge.names.drop(before)).isEmpty()
+    }
+
+    @Test
+    fun `a late stop of a stopped connection leaves the stream of the next one alone`() {
+        val first = rig.connection()
+        startAndConnect(first)
+        listener.awaitEnded()
+        first.stop()
+        val secondListener = rig.newListener()
+        rig.start(rig.connection(), listener = secondListener)
+        ShadowRecordingBridge.await("startConnection", count = 2)
+        secondListener.awaitEnded()
+        val before = ShadowRecordingBridge.calls.size
+
+        first.stop()
+
+        assertThat(ShadowRecordingBridge.names.drop(before)).isEmpty()
+        assertThat(ShadowRecordingBridge.listener).isNotNull()
+    }
+
+    /**
+     * `LiStartConnection` undoes what it did when it fails (`Connection.c`, `Cleanup:`), so the
+     * start gives the bridge back itself and nobody has to stop it.
+     */
+    @Test
+    fun `a native connection that failed to start cleans the bridge up itself, holding the monitor`() {
+        ShadowRecordingBridge.onStartConnection = { -1 }
+        val connection = rig.connection()
+
+        startAndConnect(connection)
+        listener.awaitEnded()
+
+        assertThat(ShadowRecordingBridge.calls.map { it.name to it.locked })
+            .containsExactly(
+                "setupBridge" to true,
+                "startConnection" to true,
+                "cleanupBridge" to true,
+            )
+            .inOrder()
+        assertThat(ShadowRecordingBridge.listener).isNull()
+    }
+
+    @Test
+    fun `the stop of a start whose native connection failed makes no native call`() {
+        ShadowRecordingBridge.onStartConnection = { -1 }
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        val before = ShadowRecordingBridge.calls.size
+
+        connection.stop()
+
+        assertThat(ShadowRecordingBridge.names.drop(before)).isEmpty()
+    }
+
+    /** A connection that never took the place gives none back: the places must not pile up. */
+    @Test
+    fun `stop gives no place back to a connection that never took one`() {
         rig.connection(config = null).stop()
 
-        assertThat(rig.permits()).isEqualTo(2)
+        assertThat(rig.permits()).isEqualTo(1)
     }
 
     @Test
@@ -80,6 +201,51 @@ class StopAndCancelTest {
         assertThat(rig.permits()).isEqualTo(0)
 
         connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a second stop of a stream that runs gives no second place back`() {
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+
+        connection.stop()
+        connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The start gave its place back when the native connection failed: the stop has none to give.
+     */
+    @Test
+    fun `the stop of a start whose native connection failed gives no place back`() {
+        ShadowRecordingBridge.onStartConnection = { -1 }
+        val connection = rig.connection()
+        startAndConnect(connection)
+        listener.awaitEnded()
+        assertThat(rig.permits()).isEqualTo(1)
+
+        connection.stop()
+
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a stop that comes while the native connection fails to start leaves one place`() {
+        val gate = CountDownLatch(1)
+        ShadowRecordingBridge.onStartConnection = {
+            check(gate.await(WAIT_MS, TimeUnit.MILLISECONDS)) { "never interrupted" }
+            -1
+        }
+        ShadowRecordingBridge.onInterrupt = { gate.countDown() }
+        val connection = rig.connection()
+        startAndConnect(connection)
+
+        connection.stop()
+        listener.awaitEnded()
 
         assertThat(rig.permits()).isEqualTo(1)
     }
@@ -119,12 +285,12 @@ class StopAndCancelTest {
         connection.stop()
         listener.awaitEnded()
 
+        // The start failed, so it cleaned the bridge up itself: the stop has nothing left to stop.
         assertThat(ShadowRecordingBridge.calls.map { it.name to it.locked })
             .containsExactly(
                 "setupBridge" to true,
                 "startConnection" to true,
                 "interruptConnection" to false,
-                "stopConnection" to true,
                 "cleanupBridge" to true,
             )
             .inOrder()
@@ -218,6 +384,219 @@ class StopAndCancelTest {
         assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
         assertThat(secondListener.events("stageFailed")).isEmpty()
         assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The place that lets it through is the one of the stream that runs, not one that a stop adds:
+     * the stop does not free the waiting thread, and the start that gets the place later ends
+     * without a stream and without a failure, with no `cancelLaunch` to tell it. The stop comes
+     * before the thread has the place, as a stop between its `acquire` and its cancel check does.
+     */
+    @Test
+    fun `the stop of a start that waits for the place ends it when it gets the place, without a stream`() {
+        val first = rig.connection()
+        startAndConnect(first)
+        listener.awaitEnded()
+        val secondListener = rig.newListener()
+        val second = rig.connection()
+        rig.start(second, listener = secondListener)
+        secondListener.await("stageComplete")
+        awaitParked(secondListener.threads.single())
+
+        second.stop()
+        first.stop()
+        secondListener.awaitEnded()
+
+        assertThat(ShadowRecordingBridge.named("startConnection")).hasSize(1)
+        assertThat(secondListener.events("stageFailed")).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The test holds the monitor of the bridge, so the start thread passes its last cancel check
+     * and waits to enter it, and a whole stop, which runs under the same monitor by the same
+     * thread, comes first. The stop alone, with no `cancelLaunch`, must keep that start from
+     * beginning a stream whose place the stop already gave back.
+     */
+    @Test
+    fun `a stop that completes before the start enters the native connection leaves no stream`() {
+        val connection = rig.connection()
+
+        synchronized(MoonBridge::class.java) {
+            rig.start(connection)
+            listener.await("stageComplete")
+            awaitBlockedOnBridge(listener.threads.single())
+            connection.stop()
+        }
+        listener.awaitEnded()
+
+        // The stop came before the start set the bridge up: it made no native call, and the start
+        // saw the cancel and never began.
+        assertThat(ShadowRecordingBridge.names).isEmpty()
+        assertThat(listener.events("stageFailed")).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    /**
+     * The same order as above, and then a second stop. The start set the flag that says it set the
+     * bridge up before it saw the cancel, and it must clear it when it returns: nothing was set up,
+     * so a later stop, which may come after another connection took the bridge, must make no native
+     * call.
+     */
+    @Test
+    fun `a stop after a start that saw the cancel under the monitor makes no native call`() {
+        val connection = rig.connection()
+
+        synchronized(MoonBridge::class.java) {
+            rig.start(connection)
+            listener.await("stageComplete")
+            awaitBlockedOnBridge(listener.threads.single())
+            connection.stop()
+        }
+        listener.awaitEnded()
+
+        connection.stop()
+
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    /**
+     * The user left while the host answered `/serverinfo` with an error: nobody is left to tell.
+     */
+    @Test
+    fun `a start that is cancelled while the host answers with an error tells nothing`() {
+        val connection = rig.connection()
+        rig.script.serverInfoReplies += HostReply.failure("500", "boom")
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        listener.await("stageStarting")
+        listener.awaitEnded()
+
+        assertThat(listener.events).containsExactly("stageStarting $DESKTOP_NAME")
+    }
+
+    /**
+     * Waits for the start thread to end, once it reached its first launch request, which a cancel
+     * keeps from being sent.
+     */
+    private fun awaitStartEnded() {
+        listener.await("launchStarting")
+        listener.awaitEnded()
+    }
+
+    /**
+     * A GFE host is never asked again, so its first `/launch` is the only request and nothing
+     * retries it: a cancel that came before it must keep it from being sent, or the host launches
+     * an app that nothing streams. (The runner of the retries checks the cancel for the other
+     * hosts.)
+     */
+    @Test
+    fun `a start that was cancelled before it began sends no launch to a GFE host`() {
+        rig.script.state = HostScript.GFE_FREE
+        val connection = rig.connection()
+        connection.cancelLaunch()
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=false")
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a start that was stopped before it began sends no launch to a GFE host`() {
+        rig.script.state = HostScript.GFE_FREE
+        val connection = rig.connection()
+        connection.stop()
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+        assertThat(rig.permits()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a start that is cancelled while a GFE host answers serverinfo sends no launch`() {
+        rig.script.state = HostScript.GFE_FREE
+        val connection = rig.connection()
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=false")
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    @Test
+    fun `a start that is cancelled while a GFE host answers serverinfo sends no resume`() {
+        rig.script.running(DESKTOP_ID, HostScript.GFE_BUSY)
+        val connection = rig.resumingConnection()
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=true")
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    /** The runner of the retries checks the cancel before the first request of this host. */
+    @Test
+    fun `a start that is cancelled while a LuminalShine host answers serverinfo sends no launch`() {
+        val connection = rig.connection()
+        rig.script.onServerInfo = { connection.cancelLaunch() }
+
+        rig.start(connection)
+        awaitStartEnded()
+
+        assertThat(rig.paths()).containsExactly("/serverinfo")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", "launchStarting resume=false")
+            .inOrder()
+        assertThat(ShadowRecordingBridge.calls).isEmpty()
+    }
+
+    /**
+     * The runner of the retries sees the cancel before its first request and ends the launch as
+     * cancelled, which it records: the audit trail must say that the user left, not leave a start
+     * that asked for an app and shows no answer. (A GFE host never reaches the runner, so it
+     * records nothing: the cancel is checked before it.)
+     */
+    @Test
+    fun `a start that is cancelled while a LuminalShine host answers serverinfo records the cancelled launch`() {
+        val trail = CopyOnWriteArrayList<AuditEvent>()
+        BorealisAudit.install(AuditSink { trail += it }, Redactor(), "test")
+        try {
+            val connection = rig.connection()
+            rig.script.onServerInfo = { connection.cancelLaunch() }
+
+            rig.start(connection)
+            awaitStartEnded()
+
+            assertThat(rig.paths()).containsExactly("/serverinfo")
+            assertThat(
+                    trail
+                        .filter { it.type == AuditType.LAUNCH_ATTEMPT }
+                        .map { it.outcome to it.detail }
+                )
+                .containsExactly(AuditOutcome.CANCELLED to "verb=launch result=cancelled")
+        } finally {
+            BorealisAudit.uninstall()
+        }
     }
 
     @Test

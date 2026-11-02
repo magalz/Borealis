@@ -72,7 +72,7 @@ class ExternalAndBackTest : DevicesTestBase() {
     }
 
     @Test
-    fun `those names are matched with their case`() {
+    fun `those names are matched whatever their case`() {
         assertThat(
                 external(
                     pad(1) {
@@ -81,7 +81,7 @@ class ExternalAndBackTest : DevicesTestBase() {
                     }
                 )
             )
-            .isTrue()
+            .isFalse()
         assertThat(
                 external(
                     pad(2) {
@@ -90,7 +90,7 @@ class ExternalAndBackTest : DevicesTestBase() {
                     }
                 )
             )
-            .isTrue()
+            .isFalse()
         assertThat(
                 external(
                     pad(3) {
@@ -99,7 +99,7 @@ class ExternalAndBackTest : DevicesTestBase() {
                     }
                 )
             )
-            .isTrue()
+            .isFalse()
     }
 
     @Test

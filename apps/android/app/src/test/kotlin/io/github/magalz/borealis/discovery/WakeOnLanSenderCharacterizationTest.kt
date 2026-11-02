@@ -17,6 +17,7 @@ import org.junit.After
 import org.junit.Assert.assertThrows
 import org.junit.Assume.assumeNotNull
 import org.junit.Assume.assumeTrue
+import org.junit.AssumptionViolatedException
 import org.junit.Rule
 import org.junit.Test
 
@@ -28,7 +29,9 @@ import org.junit.Test
  * The sender also broadcasts to `255.255.255.255` for every address. That needs a network that
  * these tests cannot rely on, so what it does is not checked here.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
+ * ones about a port out of range (Sprint 16, S12-05): the Java class and the first conversion threw
+ * an `IllegalArgumentException` from the whole wake, and now the port is skipped.
  */
 class WakeOnLanSenderCharacterizationTest {
     @get:Rule val log = LimeLogCapture()
@@ -71,6 +74,22 @@ class WakeOnLanSenderCharacterizationTest {
             sockets.filterNotNull().forEach { socket -> socket.close() }
         }
         error("no free ports to listen on")
+    }
+
+    /**
+     * An HTTP port whose first four dynamic ports (nine, ten, eleven and thirteen above it) are in
+     * range and whose fifth (twenty-one above it) is not, with a socket on each of the four. Null
+     * when none of the candidate ports is free to listen on.
+     */
+    private fun bindPartlyOutOfRangePorts(): DynamicPorts? {
+        for (httpPort in PARTLY_OUT_OF_RANGE_HTTP_PORTS) {
+            val sockets = IN_RANGE_DYNAMIC_OFFSETS.map { offset -> bind(httpPort + offset) }
+            if (sockets.all { socket -> socket != null }) {
+                return DynamicPorts(httpPort, sockets.filterNotNull())
+            }
+            sockets.filterNotNull().forEach { socket -> socket.close() }
+        }
+        return null
     }
 
     /**
@@ -332,12 +351,48 @@ class WakeOnLanSenderCharacterizationTest {
     }
 
     @Test
-    fun `an HTTP port too high for the dynamic ports makes the sender throw`() {
-        // Inherited quirk: the dynamic ports are the HTTP port plus 9 to 21, and a port above 65535
-        // is an IllegalArgumentException, not an IOException, so nothing catches it.
-        assertThrows(IllegalArgumentException::class.java) {
-            WakeOnLanSender.sendWolPacket(host(ownMacText, MAX_PORT))
+    fun `an HTTP port too high for the dynamic ports sends the static ports and does not throw`() {
+        // The dynamic ports are the HTTP port plus 9 to 21, so all of them are above 65535 here.
+        val port = bind(STATIC_TOOL_PORT)
+        assumeNotNull(port)
+
+        val failure = runCatching { WakeOnLanSender.sendWolPacket(host(ownMacText, MAX_PORT)) }
+
+        assertThat(failure.exceptionOrNull()).isNull()
+        assertThat(port!!.take(ownPacket)).isEqualTo(ownPacket)
+    }
+
+    @Test
+    fun `a dynamic port above 65535 is skipped and the ones in range still get the packet`() {
+        val ports =
+            bindPartlyOutOfRangePorts()
+                ?: throw AssumptionViolatedException("no free ports near 65535 to listen on")
+        val skipped = ports.httpPort + LAST_DYNAMIC_OFFSET
+
+        val failure = runCatching {
+            WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
         }
+
+        assertThat(failure.exceptionOrNull()).isNull()
+        ports.sockets.forEach { assertThat(it.take(ownPacket)).isEqualTo(ownPacket) }
+        assertThat(log.messages(Level.WARNING))
+            .contains("Wake-on-LAN: skipping port $skipped, it is outside 1..65535")
+    }
+
+    @Test
+    fun `an address with a port out of range does not stop the other addresses`() {
+        val ports = bindDynamicPorts()
+        val details =
+            ComputerDetails().apply {
+                macAddress = ownMacText
+                localAddress = AddressTuple("127.0.0.1", MAX_PORT)
+                remoteAddress = AddressTuple("127.0.0.1", ports.httpPort)
+            }
+
+        val failure = runCatching { WakeOnLanSender.sendWolPacket(details) }
+
+        assertThat(failure.exceptionOrNull()).isNull()
+        ports.sockets.forEach { assertThat(it.take(ownPacket)).isEqualTo(ownPacket) }
     }
 
     private companion object {
@@ -346,6 +401,12 @@ class WakeOnLanSenderCharacterizationTest {
         const val FIRST_PORT_MAX = 60_000
         const val DYNAMIC_FIRST_OFFSET = 9
         val DYNAMIC_OFFSETS = listOf(0, 1, 2, 4, 12)
+
+        // The dynamic ports are the HTTP port plus 9, 10, 11, 13 and 21. With an HTTP port from
+        // 65515 to 65522 the first four are in range and the last is not.
+        val IN_RANGE_DYNAMIC_OFFSETS = listOf(9, 10, 11, 13)
+        const val LAST_DYNAMIC_OFFSET = 21
+        val PARTLY_OUT_OF_RANGE_HTTP_PORTS = 65_515..65_522
         const val STATIC_TOOL_PORT = 47_009
         const val STANDARD_WOL_PORT = 9
         const val MAX_PORT = 65_535

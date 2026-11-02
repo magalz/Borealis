@@ -266,7 +266,13 @@ class StartResumeTest {
             .containsExactly("/serverinfo", "/resume", "/serverinfo", "/resume")
             .inOrder()
         assertThat(ShadowRecordingBridge.names)
-            .containsExactly("setupBridge", "startConnection", "setupBridge", "startConnection")
+            .containsExactly(
+                "setupBridge",
+                "startConnection",
+                "cleanupBridge",
+                "setupBridge",
+                "startConnection",
+            )
             .inOrder()
         assertThat(connection.endedByResumeCollision()).isFalse()
     }

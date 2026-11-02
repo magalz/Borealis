@@ -166,7 +166,7 @@ class EventsRig(
             this.multiController = multiController
             configure()
         }
-    val handler = ControllerHandler(activity, connection, {}, prefs)
+    val handler = ControllerHandler(activity, connection, prefs)
 
     /** How many times the menu chord was reported. */
     var chords = 0

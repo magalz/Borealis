@@ -27,7 +27,11 @@ import org.robolectric.shadows.ShadowNetwork
  * bound, unbound and destroyed, and what its network callback does. The platform is Robolectric; no
  * test starts a request to a host that is not a fake on the loopback interface.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
+ * four that pin the fixed behaviour: the service lists the saved hosts that it can read, leaves out
+ * a row that it cannot and starts with no hosts when the list cannot be read (P12); a saved host
+ * without an id is left out of the list and every other saved host stays (S12-16); and starting
+ * polling without the discovery service fails before it changes anything (S12-17).
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerLifecycleCharacterizationTest {
@@ -83,6 +87,32 @@ class ManagerLifecycleCharacterizationTest {
         }
         assertThat(rig.binder.getComputer("not-a-saved-host")).isNull()
         assertThat(liveThreads(POLLING_THREAD)).isEmpty()
+    }
+
+    @Test
+    fun `creating the service lists the saved hosts that it can read and skips a row that it cannot`() {
+        rig.seedRow(BAD_UUID, "BAD-PC", "not json")
+        rig.seed(saved(GOOD_UUID, "GOOD-PC"))
+
+        val started = runCatching { rig.start() }
+
+        assertThat(started.exceptionOrNull()).isNull()
+        assertThat(rig.binder.getComputer(GOOD_UUID)?.name).isEqualTo("GOOD-PC")
+        assertThat(rig.binder.getComputer(BAD_UUID)).isNull()
+        assertThat(connectivity.networkCallbacks).hasSize(1)
+        assertThat(log.warnings())
+            .containsExactly("Leaving a saved host out of the list: its addresses cannot be read")
+    }
+
+    @Test
+    fun `creating the service when the saved list cannot be read starts with no hosts`() {
+        rig.breakSavedList()
+
+        val started = runCatching { rig.start() }
+
+        assertThat(started.exceptionOrNull()).isNull()
+        assertThat(connectivity.networkCallbacks).hasSize(1)
+        assertThat(log.severes().single()).startsWith("Could not read the saved hosts")
     }
 
     @Test
@@ -235,10 +265,42 @@ class ManagerLifecycleCharacterizationTest {
         assertThat(computer.state).isEqualTo(UNKNOWN)
     }
 
+    @Test
+    fun `creating the service leaves out a saved host that has no id and lists the others`() {
+        rig.seedRow(null, "NO-ID-PC", "{}")
+        rig.seed(saved(GOOD_UUID, "GOOD-PC"))
+
+        val started = runCatching { rig.start() }
+
+        assertThat(started.exceptionOrNull()).isNull()
+        assertThat(rig.binder.getComputer(GOOD_UUID)?.name).isEqualTo("GOOD-PC")
+        assertThat(log.warnings()).contains("Leaving a host out of the list: it has no id")
+    }
+
+    @Test
+    fun `starting polling without the discovery service fails and changes nothing`() {
+        val host = rig.reachable(GOOD_UUID)
+        rig.start()
+        rig.disconnectDiscovery()
+        val updates = Updates()
+
+        val failure = runCatching { rig.binder.startPolling(updates) }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(IllegalStateException::class.java)
+        // The service is not polling and has no listener: a host that is added is neither polled
+        // from then on nor told to the listener.
+        val details = ComputerDetails().also { it.manualAddress = host.address }
+        assertThat(rig.binder.addComputerBlocking(details)).isTrue()
+        assertThat(updates.events).isEmpty()
+        assertThat(liveThreads(POLLING_THREAD)).isEmpty()
+    }
+
     private companion object {
         val UNKNOWN = ComputerDetails.State.UNKNOWN
         val OFFLINE = ComputerDetails.State.OFFLINE
         const val SETTLE_MS = 100L
         const val PROMPT_MS = 300L
+        const val GOOD_UUID = "00000000-0000-0000-0000-0000000000f1"
+        const val BAD_UUID = "00000000-0000-0000-0000-0000000000f2"
     }
 }

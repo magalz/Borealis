@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.game.session
 
+import android.util.SparseArray
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.jni.MoonBridge
@@ -17,8 +18,15 @@ internal class GameControllerCallbacksTest : GameTestBase() {
     private val handler: ControllerHandler
         get() = rig.field("controllerHandler")
 
+    // A pad gets its controller number on its first input, and the host's feedback reaches only a
+    // pad that has one. Before a stream the chrome holds the input, so the pad is given number 0
+    // the way its first input would.
     private fun usbPad(id: Int = 1): RecordingPad =
-        RecordingPad(id, handler).also { handler.deviceAdded(it) }
+        RecordingPad(id, handler).also {
+            handler.deviceAdded(it)
+            val contexts: SparseArray<*> = ReflectionHelpers.getField(handler, "usbDeviceContexts")
+            ReflectionHelpers.setField(contexts.get(id), "assignedControllerNumber", true)
+        }
 
     private fun hdrMetadata(): ByteArray? =
         ReflectionHelpers.getField(rig.renderer, "currentHdrMetadata")

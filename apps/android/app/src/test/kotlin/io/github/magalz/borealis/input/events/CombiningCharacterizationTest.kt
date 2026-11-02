@@ -312,7 +312,7 @@ class CombiningCharacterizationTest {
 
         // 1 then 2: 1 OR 2.
         assertThat(sent.leftTrigger).isEqualTo(3)
-        // -1 is 255 as an unsigned byte but the weakest magnitude of the two; the OR is -1 anyway.
+        // -1 is 255 as an unsigned byte, the strongest of the two; the OR is -1 as well.
         assertThat(sent.rightTrigger).isEqualTo(-1)
     }
 
@@ -325,17 +325,20 @@ class CombiningCharacterizationTest {
     }
 
     @Test
-    fun `two triggers of equal strength take the later pad's, ORed with the earlier one`() {
+    fun `triggers are compared as unsigned bytes, so one past half beats one below it`() {
+        // Left: 153 (0.6 of the travel) first, 114 (0.45) second. Right: 65 first, 193 second. As
+        // signed bytes the pad with the lower magnitude won, and the packet held the other one
+        // ORed with it: -5 on the left and 65 on the right.
         val (first, _) =
             twoPads(
-                mapOf("leftTrigger" to 5.toByte(), "rightTrigger" to (-100).toByte()),
-                mapOf("leftTrigger" to (-5).toByte(), "rightTrigger" to 100.toByte()),
+                mapOf("leftTrigger" to 153.toByte(), "rightTrigger" to 65.toByte()),
+                mapOf("leftTrigger" to 114.toByte(), "rightTrigger" to 193.toByte()),
             )
 
         val sent = first.send()
 
-        assertThat(sent.leftTrigger).isEqualTo(-1)
-        assertThat(sent.rightTrigger).isEqualTo(-100 or 100)
+        assertThat(sent.leftTrigger).isEqualTo(153.toByte().toInt())
+        assertThat(sent.rightTrigger).isEqualTo(193.toByte().toInt())
     }
 
     @Test

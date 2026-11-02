@@ -160,22 +160,20 @@ class RelativeTouchContextTest {
     }
 
     @Test
-    fun `a view of no width makes the x factor infinite and the x delta the int cast of the largest long`() {
+    fun `a view of no width has no scale, so a move sends nothing`() {
         val rig = TouchRig(width = 0, height = 720)
         val context = rig.relative()
         context.start(100, 100)
 
-        context.moveTo(103, 100) // Infinity, which Math.round makes Long.MAX_VALUE: the int is -1
-        context.moveTo(100, 100) // the same magnitude, and the sign is flipped for a move left
-        context.moveTo(100, 105) // no x delta: 0 times Infinity is NaN, which Math.round makes 0
+        context.moveTo(103, 100)
+        context.moveTo(100, 100)
+        context.moveTo(100, 105)
 
-        assertThat(rig.sent())
-            .containsExactly("sendMouseMove(-1, 0)", "sendMouseMove(1, 0)", "sendMouseMove(0, 5)")
-            .inOrder()
+        assertThat(rig.sent()).isEmpty()
     }
 
     @Test
-    fun `a view of no height makes the y factor infinite and the y delta the int cast of the largest long`() {
+    fun `a view of no height has no scale, so a move sends nothing`() {
         val rig = TouchRig(width = 1280, height = 0)
         val context = rig.relative()
         context.start(100, 100)
@@ -184,9 +182,27 @@ class RelativeTouchContextTest {
         context.moveTo(100, 100)
         context.moveTo(105, 100)
 
-        assertThat(rig.sent())
-            .containsExactly("sendMouseMove(0, -1)", "sendMouseMove(0, 1)", "sendMouseMove(5, 0)")
-            .inOrder()
+        assertThat(rig.sent()).isEmpty()
+    }
+
+    @Test
+    fun `a view that has no size sends no move until a touch down finds its size`() {
+        val rig = TouchRig(width = 0, height = 0)
+        val context = rig.relative()
+        context.start(100, 100)
+
+        context.moveTo(110, 110)
+        assertThat(rig.sent()).isEmpty()
+
+        // The factors stay those of the touch down, so the layout alone changes nothing yet
+        rig.resize(1280, 720)
+        context.moveTo(120, 120)
+        assertThat(rig.sent()).isEmpty()
+
+        context.touchDownEvent(120, 120, T0, false)
+        context.moveTo(130, 130)
+
+        assertThat(rig.sent()).containsExactly("sendMouseMove(10, 10)")
     }
 
     @Test

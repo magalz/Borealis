@@ -9,12 +9,22 @@ import org.robolectric.RobolectricTestRunner
 /**
  * The rumble of a pad the app's USB driver holds: the values reach the driver untouched, as the
  * signed shorts they are, for every pad that has the controller number. A pad that has not sent
- * input yet has no number assigned and answers to 0.
+ * input yet has no number assigned and answers to none: the host does not know it either.
  */
 @RunWith(RobolectricTestRunner::class)
 class UsbRumbleTest : FeedbackTestBase() {
-    private fun usbPad(rig: FeedbackRig, id: Int = 1): RecordingUsbController =
-        RecordingUsbController(id, rig.handler).also { rig.handler.deviceAdded(it) }
+    /** A pad the driver holds. It has sent its first input, which gives it a controller number. */
+    private fun usbPad(
+        rig: FeedbackRig,
+        id: Int = 1,
+        sentInput: Boolean = true,
+    ): RecordingUsbController =
+        RecordingUsbController(id, rig.handler).also {
+            rig.handler.deviceAdded(it)
+            if (sentInput) {
+                it.report(ControllerPacket.A_FLAG)
+            }
+        }
 
     @Test
     fun `a rumble reaches the driver with the values as they came`() {
@@ -38,14 +48,59 @@ class UsbRumbleTest : FeedbackTestBase() {
     }
 
     @Test
-    fun `a pad that sent no input yet answers to controller 0`() {
+    fun `a pad that sent no input yet answers to no controller number`() {
         val rig = rig { multiController = true }
-        val usb = usbPad(rig)
+        val usb = usbPad(rig, sentInput = false)
 
         rig.rumble(0x4000, 0x4000, controller = 0)
         rig.rumble(0x2000, 0x2000, controller = 1)
+        rig.rumbleTriggers(0x4000, 0x4000, controller = 0)
+
+        assertThat(usb.rumbles).isEmpty()
+        assertThat(usb.triggerRumbles).isEmpty()
+    }
+
+    @Test
+    fun `a pad rumbles once it has sent input`() {
+        val rig = rig()
+        val usb = usbPad(rig, sentInput = false)
+
+        usb.report(ControllerPacket.A_FLAG)
+        rig.rumble(0x4000, 0x4000)
+        rig.rumbleTriggers(0x2000, 0x2000)
 
         assertThat(usb.rumbles).containsExactly(0x4000 to 0x4000)
+        assertThat(usb.triggerRumbles).containsExactly(0x2000 to 0x2000)
+    }
+
+    @Test
+    fun `a pad that sent no input yet does not rumble with the pad that has controller 0`() {
+        val rig = rig()
+        val first = usbPad(rig, id = 1)
+        val second = usbPad(rig, id = 2, sentInput = false)
+
+        rig.rumble(0x4000, 0x4000)
+        rig.rumbleTriggers(0x2000, 0x2000)
+
+        assertThat(first.rumbles).containsExactly(0x4000 to 0x4000)
+        assertThat(first.triggerRumbles).containsExactly(0x2000 to 0x2000)
+        assertThat(second.rumbles).isEmpty()
+        assertThat(second.triggerRumbles).isEmpty()
+    }
+
+    @Test
+    fun `the phone vibrates for the on-screen controller while the only pad sent no input yet`() {
+        val phone = Hardware.vibrator()
+        val rig =
+            rig(phoneVibrator = phone) {
+                onscreenController = true
+                vibrateOsc = true
+            }
+        usbPad(rig, sentInput = false)
+
+        rig.rumble(0x6400, 0x6400)
+
+        assertThat(Hardware.calls(phone)).hasSize(1)
     }
 
     @Test
@@ -53,8 +108,6 @@ class UsbRumbleTest : FeedbackTestBase() {
         val rig = rig { multiController = true }
         val first = usbPad(rig, id = 1)
         val second = usbPad(rig, id = 2)
-        first.report(ControllerPacket.A_FLAG)
-        second.report(ControllerPacket.A_FLAG)
 
         rig.rumble(0x4000, 0x4000, controller = 1)
 
@@ -115,6 +168,30 @@ class UsbRumbleTest : FeedbackTestBase() {
     }
 
     @Test
+    fun `the end of the stream stops every motor of a pad the driver holds`() {
+        val rig = rig()
+        val usb = usbPad(rig)
+        rig.rumble(0x4000, 0x4000)
+        rig.rumbleTriggers(0x7FFF, 0x7FFF)
+
+        rig.handler.stop()
+
+        assertThat(usb.rumbles.last()).isEqualTo(0 to 0)
+        assertThat(usb.triggerRumbles.last()).isEqualTo(0 to 0)
+    }
+
+    @Test
+    fun `the end of the stream stops a pad that sent no input too`() {
+        val rig = rig()
+        val usb = usbPad(rig, sentInput = false)
+
+        rig.handler.stop()
+
+        assertThat(usb.rumbles).containsExactly(0 to 0)
+        assertThat(usb.triggerRumbles).containsExactly(0 to 0)
+    }
+
+    @Test
     fun `a trigger rumble reaches the driver with the values as they came`() {
         val rig = rig()
         val usb = usbPad(rig)
@@ -129,8 +206,6 @@ class UsbRumbleTest : FeedbackTestBase() {
         val rig = rig { multiController = true }
         val first = usbPad(rig, id = 1)
         val second = usbPad(rig, id = 2)
-        first.report(ControllerPacket.A_FLAG)
-        second.report(ControllerPacket.A_FLAG)
 
         rig.rumbleTriggers(0x4000, 0x2000, controller = 1)
 
@@ -147,8 +222,9 @@ class UsbRumbleTest : FeedbackTestBase() {
         rig.rumble(0x4000, 0x4000)
         rig.rumbleTriggers(0x4000, 0x4000)
 
-        assertThat(usb.rumbles).isEmpty()
-        assertThat(usb.triggerRumbles).isEmpty()
+        // Only the zeros of the stop itself
+        assertThat(usb.rumbles).containsExactly(0 to 0)
+        assertThat(usb.triggerRumbles).containsExactly(0 to 0)
     }
 
     @Test

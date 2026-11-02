@@ -22,7 +22,9 @@ import org.robolectric.RobolectricTestRunner
  * with its pinned certificate. A test wakes the poller with `pollNow` when it is idle, so that it
  * never waits for the two seconds of the retry period.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
+ * about a second start of a poller that runs (S12-19), which pins the fixed behaviour: it starts no
+ * second thread, so one stop ends the poller.
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerAppListCharacterizationTest {
@@ -141,6 +143,38 @@ class ManagerAppListCharacterizationTest {
         // The thread is woken from its wait of two seconds.
         thread.join(PROMPT_MS)
         assertThat(thread.isAlive).isFalse()
+    }
+
+    @Test
+    fun `a second start of a poller that runs starts no second thread, so one stop ends it all`() {
+        val host = host(apps("Desktop"))
+        val computer = paired(host).also { it.state = ComputerDetails.State.OFFLINE }
+        rig.start()
+        rig.binder.startPolling(Updates())
+        val poller = rig.appListPoller(computer)
+
+        poller.start()
+        poller.start()
+
+        assertThat(liveThreads(APP_LIST_THREAD)).hasSize(1)
+        poller.stop()
+        awaitUntil("the app list thread to end") { liveThreads(APP_LIST_THREAD).isEmpty() }
+    }
+
+    @Test
+    fun `a poller that was stopped starts a thread again when it is started`() {
+        val host = host(apps("Desktop"))
+        val computer = paired(host).also { it.state = ComputerDetails.State.OFFLINE }
+        rig.start()
+        rig.binder.startPolling(Updates())
+        val poller = rig.appListPoller(computer)
+        poller.start()
+        poller.stop()
+        awaitUntil("the app list thread to end") { liveThreads(APP_LIST_THREAD).isEmpty() }
+
+        poller.start()
+
+        assertThat(liveThreads(APP_LIST_THREAD)).hasSize(1)
     }
 
     @Test

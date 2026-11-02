@@ -21,6 +21,10 @@ object WakeOnLanSender {
     // These ports will be offset by the base port number (47989) to support alternate ports.
     private const val BASE_PORT = 47989
 
+    // The destination ports of a UDP packet (port 0 is reserved)
+    private const val MIN_PORT = 1
+    private const val MAX_PORT = 65_535
+
     // Ports opened by GFE
     private const val GFE_PORT_47998 = 47998
     private const val GFE_PORT_47999 = 47999
@@ -63,10 +67,19 @@ object WakeOnLanSender {
 
         // Try the dynamic ports
         for (port in DYNAMIC_PORTS_TO_TRY) {
+            val dynamicPort = (port - BASE_PORT) + httpPort
+            if (dynamicPort !in MIN_PORT..MAX_PORT) {
+                // An HTTP port near the top of the range puts this port past it, and setPort throws
+                // an IllegalArgumentException, not an IOException. Skip it and keep waking the
+                // host.
+                LimeLog.warning("Wake-on-LAN: skipping port $dynamicPort, it is outside 1..65535")
+                continue
+            }
+
             try {
                 val dp = DatagramPacket(payload, payload.size)
                 dp.address = address
-                dp.port = (port - BASE_PORT) + httpPort
+                dp.port = dynamicPort
                 sock.send(dp)
                 sentWolPacket = true
             } catch (e: IOException) {

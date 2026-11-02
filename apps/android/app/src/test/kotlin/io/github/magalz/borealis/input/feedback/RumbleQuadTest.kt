@@ -1,15 +1,17 @@
 package io.github.magalz.borealis.input.feedback
 
+import android.util.SparseArray
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * A pad whose vibrator manager has four vibrators: the high motor, the low motor, the left trigger
  * and the right trigger, in that order. The trigger values are kept by the handler, so a rumble and
- * a trigger rumble each send all four.
+ * a trigger rumble each send all four. A value that is not zero is at least 1.
  */
 @RunWith(RobolectricTestRunner::class)
 class RumbleQuadTest : FeedbackTestBase() {
@@ -25,6 +27,16 @@ class RumbleQuadTest : FeedbackTestBase() {
     }
 
     private fun combos() = recorded.vibrations.map { it.combined }
+
+    /**
+     * The handler marks a context quad only together with its manager, so no pad reaches this state
+     * by itself: take the manager of the woken pad's context away.
+     */
+    private fun dropManagerOfPad(rig: FeedbackRig, id: Int) {
+        val contexts =
+            ReflectionHelpers.getField<SparseArray<Any>>(rig.handler, "inputDeviceContexts")
+        ReflectionHelpers.setField(checkNotNull(contexts.get(id)), "vibratorManager", null)
+    }
 
     @Test
     fun `a rumble drives the first two vibrators and the triggers stay at their last value`() {
@@ -103,6 +115,33 @@ class RumbleQuadTest : FeedbackTestBase() {
     }
 
     @Test
+    fun `a value that is not zero never gets less than the weakest amplitude`() {
+        val rig = quadPad()
+
+        rig.handler.handleRumbleTriggers(0, 0x0001, 0x00FF)
+        rig.handler.handleRumble(0, 0x0001, 0x4000)
+
+        assertThat(combos())
+            .containsExactly(
+                VibrationExpectations.combo(12 to 1, 13 to 1),
+                VibrationExpectations.combo(10 to 64, 11 to 1, 12 to 1, 13 to 1),
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `four values that are not zero do not cancel the manager, however weak they are`() {
+        val rig = quadPad()
+        rig.handler.handleRumbleTriggers(0, 0x00FF, 0x00FF)
+
+        rig.handler.handleRumble(0, 0x00FF, 0x00FF)
+
+        assertThat(recorded.cancels).isEqualTo(0)
+        assertThat(combos().last())
+            .isEqualTo(VibrationExpectations.combo(10 to 1, 11 to 1, 12 to 1, 13 to 1))
+    }
+
+    @Test
     fun `a rumble at zero keeps the triggers going`() {
         val rig = quadPad()
         rig.handler.handleRumbleTriggers(0, 0x4000, 0x4000)
@@ -134,6 +173,17 @@ class RumbleQuadTest : FeedbackTestBase() {
 
         rig.handler.handleRumbleTriggers(1, 0x4000, 0x4000)
 
+        assertThat(combos()).isEmpty()
+    }
+
+    @Test
+    fun `a trigger rumble for a pad marked quad that has no manager does not throw`() {
+        val rig = quadPad()
+        dropManagerOfPad(rig, FeedbackRig.PAD_ID)
+
+        val result = runCatching { rig.handler.handleRumbleTriggers(0, 0x4000, 0x4000) }
+
+        assertThat(result.exceptionOrNull()).isNull()
         assertThat(combos()).isEmpty()
     }
 

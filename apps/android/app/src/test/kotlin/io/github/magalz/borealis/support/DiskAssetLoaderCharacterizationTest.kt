@@ -125,16 +125,28 @@ class DiskAssetLoaderCharacterizationTest {
     }
 
     @Test
-    fun `a tuple does not override hashCode, so equal tuples have different hash codes`() {
+    fun `equal tuples have equal hash codes, so a hash set finds a tuple by an equal one`() {
         val a = tuple("host-1", 7)
-        val b = tuple("host-1", 7)
+        val b =
+            LoaderTuple(ComputerDetails().also { it.uuid = "host-1" }, NvApp("Other name", 7, true))
 
         assertThat(a).isEqualTo(b)
-        assertThat(a.hashCode()).isEqualTo(System.identityHashCode(a))
-        assertThat(a.hashCode()).isNotEqualTo(b.hashCode())
-        assertThrows(NoSuchMethodException::class.java) {
-            LoaderTuple::class.java.getDeclaredMethod("hashCode")
-        }
+        assertThat(a.hashCode()).isEqualTo(b.hashCode())
+        assertThat(hashSetOf(a).contains(b)).isTrue()
+        assertThat(hashMapOf(a to "art")[b]).isEqualTo("art")
+    }
+
+    @Test
+    fun `a hash set keeps one tuple of equal ids and tells the others apart`() {
+        val tuples = hashSetOf(tuple("host-1", 7), tuple("host-1", 7), tuple("host-1", 8))
+        tuples += tuple("host-2", 7)
+
+        assertThat(tuples).hasSize(3)
+    }
+
+    @Test
+    fun `a tuple whose host has no id has no hash code, as it cannot be compared`() {
+        assertThrows(RuntimeException::class.java) { tuple(null, 7).hashCode() }
     }
 
     @Test

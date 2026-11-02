@@ -327,24 +327,34 @@ internal class MouseMovementTest : MotionTestBase() {
     }
 
     @Test
-    fun `the activity itself has no view and does not place the pointer`() {
+    fun `an event that reaches the activity itself places the pointer on the stream view`() {
         streaming()
+        // The activity gets window coordinates.
+        val origin = IntArray(2).also { streamView.getLocationInWindow(it) }
 
-        val handled = rig.game.onGenericMotionEvent(hover(10f, 20f))
+        val handled = rig.game.onGenericMotionEvent(hover(origin[0] + 10f, origin[1] + 20f))
 
         assertThat(handled).isTrue()
-        assertThat(sent()).isEmpty()
+        assertThat(sent()).containsExactly(position(10, 20))
     }
 
     @Test
-    fun `the activity itself still sends the buttons`() {
+    fun `an event that reaches the activity itself places the pointer before its buttons`() {
         streaming()
+        val origin = IntArray(2).also { streamView.getLocationInWindow(it) }
 
         rig.game.onGenericMotionEvent(
-            mouseEvent(MotionEvent.ACTION_DOWN, 10f, 20f, MotionEvent.BUTTON_PRIMARY)
+            mouseEvent(
+                MotionEvent.ACTION_DOWN,
+                origin[0] + 10f,
+                origin[1] + 20f,
+                MotionEvent.BUTTON_PRIMARY,
+            )
         )
 
-        assertThat(sent()).containsExactly(press(MouseButtonPacket.BUTTON_LEFT))
+        assertThat(sent())
+            .containsExactly(position(10, 20), press(MouseButtonPacket.BUTTON_LEFT))
+            .inOrder()
     }
 
     // ----- The scroll wheel -----

@@ -123,14 +123,14 @@ abstract class ShieldContract : FeedbackTestBase() {
     }
 
     @Test
-    fun `a percentage goes through a float, which loses one at 53 and at 59`() {
+    fun `a percentage goes through a float and comes back the same`() {
         val results =
             listOf(1, 29, 53, 57, 59, 99).map {
                 reported(Reading(it, SceConnectionType.WIRELESS, SceChargingState.CHARGING))
                     .percentage
             }
 
-        assertThat(results).containsExactly(1, 29, 52, 57, 58, 99).inOrder()
+        assertThat(results).containsExactly(1, 29, 53, 57, 59, 99).inOrder()
     }
 
     @Test
@@ -150,15 +150,6 @@ abstract class ShieldContract : FeedbackTestBase() {
     }
 
     @Test
-    fun `a pad the service does not know reports no battery`() {
-        val rig = rig()
-        ShadowSceManager.batteryPercentage = 80
-        rig.wake(rig.connectPad())
-
-        assertThat(batteryEvents).isEmpty()
-    }
-
-    @Test
     fun `a pad the service knows reports a rumble and a battery on arrival, whatever its vibrators`() {
         val rig = rig()
         ShadowSceManager.recognized = true
@@ -171,7 +162,7 @@ abstract class ShieldContract : FeedbackTestBase() {
     }
 
     @Test
-    fun `a rumble goes to the service as signed ints and nothing else vibrates`() {
+    fun `a rumble goes to the service as unsigned values and nothing else vibrates`() {
         val own = Hardware.vibrator()
         val phone = Hardware.vibrator()
         val rig =
@@ -185,13 +176,13 @@ abstract class ShieldContract : FeedbackTestBase() {
 
         rig.rumble(0x4000, 0xC000)
 
-        assertThat(ShadowSceManager.rumbles).containsExactly(0x4000 to -0x4000)
+        assertThat(ShadowSceManager.rumbles).containsExactly(0x4000 to 0xC000)
         assertThat(Hardware.calls(own)).isEmpty()
         assertThat(Hardware.calls(phone)).isEmpty()
     }
 
     @Test
-    fun `the low motor goes to the service as a signed int too`() {
+    fun `the low motor goes to the service as an unsigned value too`() {
         val rig = rig()
         ShadowSceManager.recognized = true
         ShadowSceManager.rumbleAccepted = true
@@ -199,7 +190,7 @@ abstract class ShieldContract : FeedbackTestBase() {
 
         rig.rumble(0xC000, 0x4000)
 
-        assertThat(ShadowSceManager.rumbles).containsExactly(-0x4000 to 0x4000)
+        assertThat(ShadowSceManager.rumbles).containsExactly(0xC000 to 0x4000)
     }
 
     @Test
@@ -269,6 +260,16 @@ class ShieldControllerTest : ShieldContract() {
     }
 
     @Test
+    fun `a pad the service does not know reports that it has no battery`() {
+        val rig = rig()
+        ShadowSceManager.batteryPercentage = 80
+        rig.wake(rig.connectPad())
+
+        assertThat(batteryEvents)
+            .containsExactly(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_NOT_PRESENT.toInt(), -1))
+    }
+
+    @Test
     fun `the vibrators of Android win over the service for a pad that has a manager`() {
         val manager = Hardware.vibratorManager(List(2) { Hardware.vibrator() })
         val rig = rig()
@@ -286,4 +287,13 @@ class ShieldControllerTest : ShieldContract() {
 /** Android 11, which has no battery state on input devices: the service is the only source. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [30])
-class ShieldControllerAndroid11Test : ShieldContract()
+class ShieldControllerAndroid11Test : ShieldContract() {
+    @Test
+    fun `a pad the service does not know reports no battery`() {
+        val rig = rig()
+        ShadowSceManager.batteryPercentage = 80
+        rig.wake(rig.connectPad())
+
+        assertThat(batteryEvents).isEmpty()
+    }
+}

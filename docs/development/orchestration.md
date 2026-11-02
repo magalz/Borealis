@@ -91,6 +91,36 @@ Tasks without shared files and with satisfied dependencies run in parallel in on
 - **Security findings in LuminalShine.** A finding with a security side (pairing, authentication, client input, memory contents) goes only to the host's private vulnerability report, prepared with the owner, never to a public issue, comment or discussion. Crash dumps are not posted either (owner, 2026-10-30), which replaces "with the crash bundle" in the Sprint 15 bullet on filing.
 - **Long-path folders.** A worktree folder whose `build/` holds paths over 260 characters can stay behind after `git worktree remove`. The hook now blocks deleting it with a `\\?\` path, so the orchestrator names the folder for the owner to delete.
 
+## Lessons from Sprint 17a
+
+- **One orchestrator, `/phase-loop`, two implementers.** Sprint 17a had about 17 code items in four batches, so it
+  ran in the main session with `/phase-loop` (two tasks at once on disjoint files) and no extra sessions (owner,
+  2026-11-02: "only use extra sessions when it pays off"). Each batch was one task; follow-ups that a review or the
+  round found became small tasks of their own on the same worktree or a fresh one.
+- **Measure before you fix by assumption.** The plan asked the host for continuous audio. The before-and-after
+  measurement showed it made the drops worse, and a four-build matrix on the TV (with and without it, at the old and
+  a larger drop limit) showed the limit was the cause. Keep a quick spike build (a detached worktree, no commits)
+  for such a matrix, and bring the table to the owner before the code changes.
+- **Test the client against the host's open pull requests.** The portable "Nightly (Windows)" artifact of a
+  LuminalShine pull request installs over the release with an elevated script that keeps `<name>.26.10.1.bak` copies
+  and a rollback script. Two client defects showed only on those builds: the graceful quit end of #232 and the Quit
+  of the device that started a shared app under #227. Ask before each download, let the owner accept each UAC prompt,
+  and roll back at the end of the round.
+- **Name every role in a shared flow.** The shared-Quit inference was first limited to the device that joined the
+  app, on an assumption about the host's rule. The advisor's check before the pull request asked about the device
+  that started it, and the host build showed the same case there. When a host rule decides by "another client is
+  live", test the client as each of the clients.
+- **A pairing test can unpair other devices.** The Web UI unpair of the pairing-retry test removed the TV too; pair
+  it again before the next two-device step.
+- **Drive the devices with small helpers, and check the screen first.** A shell file of helpers (open the Library
+  from a shortcut intent, tap a text or the first card, read the foreground activity, open the menu and quit)
+  replaced ad hoc taps. The host's app cards have no text in the accessibility tree, so the helper taps the first
+  large clickable node; check that a stream really started before the PC plays a test sound, or the sound plays on
+  the PC.
+- **Keep the S22 awake only during a round.** `svc power stayon` with the power source the phone is on (`ac`, `usb`
+  or `true`) kept it from locking; restore it to its earlier value (`false`) at the end. A secure lock still needs
+  the owner.
+
 ## Reporting to the owner
 
 The orchestrator reports, per phase and honestly: behaviour changed, commits and their test-first order, checks run and the exact revision tested, remaining limitations and open decisions, and any blocked publication. It asks before any push to `main`, any repository setting change and any message to other people.

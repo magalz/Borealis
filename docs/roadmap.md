@@ -1309,7 +1309,8 @@ the client side, and none of its findings is a Sprint 16 regression.
 
 ### Sprint 17: general fixes
 
-Sprint 17a: done, in review (phase pull request open). Sprint 17b planned. Owner decision of 2026-10-28, later the same day; see the
+Sprint 17a: done, merged as [#122](https://github.com/magalz/Borealis/pull/122) on 2026-11-02 (`e538ed99c`). Sprint 17b
+planned. Owner decision of 2026-10-28, later the same day; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
 
 On 2026-11-02, after Sprint 16, the owner split the sprint in two, run one after the other, each
@@ -1322,9 +1323,12 @@ with its own phase pull request and device round. The numbers of the later sprin
   [Pads](#pads) and [Accessibility and layout](#accessibility-and-layout): the input and pad code and
   the Compose screens, and a device round on the controls and the screens.
 
-Status: Sprint 17a is on `phase/s17a-stream-fixes` (issues #116 to #119). Its device round of 2026-11-02
-passed; the results, the findings and the items not run are in
-[device-validation section 22](development/device-validation.md#22-results-sprint-17a).
+Status: Sprint 17a was built in the phase branch `phase/s17a-stream-fixes`, from `812fe6831`
+([#116](https://github.com/magalz/Borealis/issues/116) to
+[#119](https://github.com/magalz/Borealis/issues/119)). The last code gate passed at `fc815b85a`. The owner
+merged the phase pull request [#122](https://github.com/magalz/Borealis/pull/122) on 2026-11-02 (`e538ed99c`), and
+the issues are closed. Its device round of 2026-11-02 passed; the results, the findings and the items not run are
+in [device-validation section 22](development/device-validation.md#22-results-sprint-17a).
 
 Why: about 57 items, many of them investigations on the devices with the owner, and several in the
 same files (`Game.kt` in the stream session, input and video; `ControllerHandler` in pads and input).

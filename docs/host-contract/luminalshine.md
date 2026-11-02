@@ -867,6 +867,19 @@ inferred from the source and was not run. Until a host sends the message, Boreal
 the rule above. A host that sends it ends the stream through the graceful path, which
 finishes the activity with no error and needs no rule.
 
+**Tested upstream (2026-11-02): `NortheBridge/luminalshine#232`.** With #232 the host sends the graceful
+termination (`0x80030023`, code 0) before it disconnects a cancelled session, as #218 asks. Borealis takes either
+end as the end of the user's own Quit since `4539b943b`: a code 0 during a Quit is a clean leave, as a -1 is.
+A `0.0.160-nightly` build with #232 ran a simple Quit and a shared Quit, and both left cleanly with no error
+toast. The 26.10.1 host still sends no message, so the rule above still holds for it.
+
+**Scope of a `/cancel` from a second device (2026-11-02).** With #227, a `/cancel` from a client that is not the
+only live one is logged as `Cancel scope: requester_only (other live sessions or launches: 1)`, and it stops only
+the caller's session. So "Quit and relaunch" from a second device does not end the first device's stream on those
+builds. On the `0.0.160-nightly` build of #232, which contains #227, a Quit and relaunch from the S22 with no
+session of its own logged that line, and the TV kept streaming. On 26.10.1 the same Quit and relaunch ended the
+first device's stream with error -1.
+
 **Why `/cancel` takes seconds.** The answer is written only after these steps, in this
 order (`src/nvhttp.cpp` unless a file is named):
 

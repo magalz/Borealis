@@ -62,6 +62,39 @@ class FrozenFrameTest {
     }
 
     @Test
+    fun `the frame follows the video when it moves or is resized after the copy`() {
+        frozen.request()
+        source.finish()
+
+        // A rotation, a split-screen resize or the end of picture-in-picture.
+        source.bounds = VideoBounds(left = 300, top = 50, width = 640, height = 360)
+        origin = IntOffset(40, 10)
+
+        val frame = frozen.frame!!
+        assertThat(frame.left).isEqualTo(260f)
+        assertThat(frame.top).isEqualTo(40f)
+        assertThat(frame.scaleX).isEqualTo(2f)
+        assertThat(frame.scaleY).isEqualTo(2f)
+    }
+
+    @Test
+    fun `the frame keeps its last place while the video has no bounds`() {
+        source.bounds = VideoBounds(left = 100, top = 30, width = 1280, height = 720)
+        frozen.request()
+        source.finish()
+
+        // The surface is gone for a moment, as when picture-in-picture ends.
+        source.bounds = null
+        origin = IntOffset(40, 10)
+
+        val frame = frozen.frame!!
+        assertThat(frame.left).isEqualTo(60f)
+        assertThat(frame.top).isEqualTo(20f)
+        assertThat(frame.scaleX).isEqualTo(4f)
+        assertThat(frozen.coversBackground).isTrue()
+    }
+
+    @Test
     fun `a request is made once, whoever asks and however often`() {
         frozen.request()
         frozen.request()

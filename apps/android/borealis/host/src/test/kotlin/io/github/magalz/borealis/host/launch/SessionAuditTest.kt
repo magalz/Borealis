@@ -199,6 +199,36 @@ class SessionAuditTest {
     }
 
     @Test
+    fun `an end that failed records the duration and the cause as an error`() {
+        start()
+        nowMillis = 9_000L
+
+        SessionAudit.failed("video_surface_lost")
+
+        val end = audit.events.last()
+        assertThat(end.type).isEqualTo(AuditType.SESSION_END)
+        assertThat(end.outcome).isEqualTo(AuditOutcome.FAILURE)
+        assertThat(end.detail).isEqualTo("reason=error cause=video_surface_lost duration_s=9")
+    }
+
+    @Test
+    fun `the stop of the activity after an end that failed records nothing more`() {
+        start()
+
+        SessionAudit.failed("video_surface_lost")
+        SessionAudit.stopped()
+
+        assertThat(audit.types().count { it == AuditType.SESSION_END }).isEqualTo(1)
+    }
+
+    @Test
+    fun `an end that failed without a start records nothing`() {
+        SessionAudit.failed("video_surface_lost")
+
+        assertThat(audit.events).isEmpty()
+    }
+
+    @Test
     fun `a quit that failed leaves the host ending the stream as host_ended`() {
         start()
         SessionAudit.quitRequested()

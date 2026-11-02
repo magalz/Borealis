@@ -103,6 +103,11 @@ object SessionAudit {
         }
     }
 
+    @JvmStatic
+    fun failed(cause: String) {
+        // Unwired stub of the test commit.
+    }
+
     private fun end(outcome: AuditOutcome, detail: (Long) -> String) {
         val session = active.getAndSet(null) ?: return
         val seconds = (clock() - session.startedAtMillis).coerceAtLeast(0) / MILLIS_PER_SECOND

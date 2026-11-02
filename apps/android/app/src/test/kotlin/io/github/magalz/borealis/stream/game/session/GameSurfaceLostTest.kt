@@ -8,6 +8,8 @@ import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.library.RecordingLog
+import io.github.magalz.borealis.logging.AuditOutcome
+import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.game.GameTestBase
@@ -85,6 +87,36 @@ internal class GameSurfaceLostTest : GameTestBase() {
 
         assertThat(ShadowRecordingBridge.named("stopConnection")).hasSize(1)
         assertThat(rig.field<Boolean>("stopRan")).isTrue()
+    }
+
+    @Test
+    fun `a stream that runs is audited as an error end, not as a stop by the user`() {
+        rig.streaming()
+        rig.audit.clear()
+
+        surfaceLost()
+        ShadowLooper.idleMainLooper()
+        rig.awaitStop()
+
+        // The stop of the connection that follows does not end the session a second time.
+        val end = rig.audit.single()
+        assertThat(end.type).isEqualTo(AuditType.SESSION_END)
+        assertThat(end.outcome).isEqualTo(AuditOutcome.FAILURE)
+        assertThat(end.detail).startsWith("reason=error")
+    }
+
+    @Test
+    fun `a stream that the user left first keeps its audit as a stop by the user`() {
+        rig.streaming()
+        rig.audit.clear()
+        rig.stop()
+
+        surfaceLost()
+        ShadowLooper.idleMainLooper()
+
+        val end = rig.audit.single()
+        assertThat(end.outcome).isEqualTo(AuditOutcome.SUCCESS)
+        assertThat(end.detail).startsWith("reason=user")
     }
 
     @Test

@@ -47,7 +47,8 @@ class StreamSessionSharedQuitTest {
         return byQuit
     }
 
-    private fun runScheduled() = scheduled.toList().also { scheduled.clear() }.forEach { it.second() }
+    private fun runScheduled() =
+        scheduled.toList().also { scheduled.clear() }.forEach { it.second() }
 
     @Test
     fun `a stream that ended before the answer of 599 is a clean leave of the app that keeps running`() {

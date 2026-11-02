@@ -132,9 +132,7 @@ class LibraryQuitNoticeTest {
         quitNotice.post(LeaveNotice.KeepsRunning(""))
         composeRule.waitForIdle()
 
-        composeRule
-            .onNodeWithText("The app keeps running for another device.")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("The app keeps running for another device.").assertIsDisplayed()
     }
 
     @Test

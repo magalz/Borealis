@@ -307,7 +307,9 @@ class StreamSession(
             }
         }
         if (held != null && stillRuns) {
-            schedule(SHARED_QUIT_WINDOW_MS) { if (heldQuit.compareAndSet(held, null)) failure.show() }
+            schedule(SHARED_QUIT_WINDOW_MS) {
+                if (heldQuit.compareAndSet(held, null)) failure.show()
+            }
         } else {
             if (held != null) heldQuit.compareAndSet(held, null)
             failure.show()
@@ -521,8 +523,8 @@ private fun postToMainThread(delayMs: Long, action: () -> Unit) {
 }
 
 /**
- * How long after a 599 answer to a quit of a joined app the end of the stream is still taken for the
- * quit's ([StreamSession.endedByQuit]), and how long that answer is held before it is shown.
+ * How long after a 599 answer to a quit of a joined app the end of the stream is still taken for
+ * the quit's ([StreamSession.endedByQuit]), and how long that answer is held before it is shown.
  */
 private const val SHARED_QUIT_WINDOW_MS = 5_000L
 

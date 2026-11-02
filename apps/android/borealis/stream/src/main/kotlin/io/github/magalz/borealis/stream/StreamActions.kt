@@ -68,9 +68,9 @@ interface StreamActions {
  */
 interface QuitFailure {
     /**
-     * True when the host answered that another device started the session of the app (the
-     * synthetic 599 of `NvHTTP.quitApp`). A host that keeps the app for that device answers it to
-     * the Quit of a device that joined, and ends the stream of the one that asked.
+     * True when the host answered that another device started the session of the app (the synthetic
+     * 599 of `NvHTTP.quitApp`). A host that keeps the app for that device answers it to the Quit of
+     * a device that joined, and ends the stream of the one that asked.
      */
     val notTheStarter: Boolean
 

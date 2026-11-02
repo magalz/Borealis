@@ -71,10 +71,10 @@ class PerfFormatTest {
     }
 
     @Test
-    fun `the detailed overlay shows n-a for the audio delay until the audio track has a timestamp`() {
+    fun `the detailed overlay shows a dash for the audio delay until the audio track has a timestamp`() {
         val lines = format.detailed(aPerf().copy(audioDelayMs = null), info)
 
-        assertThat(lines.last()).isEqualTo("Audio delay n/a")
+        assertThat(lines.last()).isEqualTo("Audio delay —")
     }
 
     @Test
@@ -122,7 +122,7 @@ class PerfFormatTest {
                 "Host processing — ms (min/avg/max)",
                 "Network — ms",
                 "Decode — ms",
-                "Audio delay n/a",
+                "Audio delay —",
             )
             .inOrder()
     }

@@ -37,11 +37,19 @@ internal class GameAudioNoticesTest : GameTestBase() {
         }
     }
 
-    /** A device that comes: the output of the stream is [type] from now on. */
-    private fun connect(type: Int) {
-        val device = audioOutput(type, 2)
+    /** A device of [type] comes: the output of the stream is it from now on. */
+    private fun connect(type: Int) = plug(audioOutput(type, 2))
+
+    private fun plug(device: AudioDeviceInfo) {
         rig.application.routeStreamAudioTo(device)
         audio.addOutputDevice(device, true)
+        ShadowLooper.idleMainLooper()
+    }
+
+    /** [device] goes, and the stream goes to the output [goesTo]. */
+    private fun unplug(device: AudioDeviceInfo, goesTo: AudioDeviceInfo) {
+        rig.application.routeStreamAudioTo(goesTo)
+        audio.removeOutputDevice(device, true)
         ShadowLooper.idleMainLooper()
     }
 
@@ -56,7 +64,8 @@ internal class GameAudioNoticesTest : GameTestBase() {
 
         connected()
 
-        assertThat(notices()).containsExactly(StreamNotice.StereoFallback(SurroundLayout.SURROUND_7_1))
+        assertThat(notices())
+            .containsExactly(StreamNotice.StereoFallback(SurroundLayout.SURROUND_7_1))
     }
 
     @Test
@@ -67,7 +76,8 @@ internal class GameAudioNoticesTest : GameTestBase() {
 
         connected()
 
-        assertThat(notices()).containsExactly(StreamNotice.StereoFallback(SurroundLayout.SURROUND_5_1))
+        assertThat(notices())
+            .containsExactly(StreamNotice.StereoFallback(SurroundLayout.SURROUND_5_1))
     }
 
     @Test
@@ -138,16 +148,18 @@ internal class GameAudioNoticesTest : GameTestBase() {
 
     @Test
     fun `an output that comes back to Bluetooth after another one tells the viewer again`() {
-        output(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, 2)
+        val speaker = audioOutput(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER, 2)
+        val bluetooth = audioOutput(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 2)
+        rig.application.routeStreamAudioTo(speaker)
         rig.create()
         connected()
         ShadowLooper.idleMainLooper()
-        connect(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
+        plug(bluetooth)
         assertThat(notices()).containsExactly(StreamNotice.BluetoothOutput)
 
-        connect(AudioDeviceInfo.TYPE_HDMI)
+        unplug(bluetooth, goesTo = speaker)
         assertThat(notices()).isEmpty()
-        connect(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
+        plug(bluetooth)
 
         assertThat(notices()).containsExactly(StreamNotice.BluetoothOutput)
     }

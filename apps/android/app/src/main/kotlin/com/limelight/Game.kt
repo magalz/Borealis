@@ -175,6 +175,14 @@ class Game :
     private var appName: String? = null
     private lateinit var app: NvApp
     private var desiredRefreshRate = 0f
+    // BOREALIS: the configuration that the settings asked for, when the stream asked the host for
+    // stereo because the output has two channels; null when it asked for what the settings say.
+    // Decided at the start; the notices of the stream read it (audio)
+    internal var stereoFallback: MoonBridge.AudioConfiguration? = null
+        private set
+    // BOREALIS: the audio went to a Bluetooth output when the stream started (audio)
+    internal var startedOnBluetooth = false
+        private set
 
     private lateinit var inputCaptureProvider: InputCaptureProvider
     private var modifierFlags = 0

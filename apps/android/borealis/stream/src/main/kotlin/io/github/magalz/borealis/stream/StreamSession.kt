@@ -50,7 +50,9 @@ data class StreamDefaults(
  * With the 599 answered first the stream still runs, and the answer is held for
  * [SHARED_QUIT_WINDOW_MS] before it is shown, which gives the end of the stream the time to come.
  * Anything else, a session that launched the app, another error of the quit or another end of the
- * stream, goes the way it always went.
+ * stream, goes the way it always went. A held answer is dropped when the user leaves, with a
+ * disconnect or a leave, and when the connection stops: nothing is left to wait for, no end of the
+ * stream is the quit's any more, and no toast may follow the activity.
  *
  * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
  * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
@@ -360,7 +362,10 @@ class StreamSession(
      * clip of the background plays again. The activity calls it on the main thread: posted from the
      * thread that stopped the connection once the stop ends, or at once when none ran.
      */
-    fun onConnectionStopped() = mutableState.update { it.copy(decoderHeld = false) }
+    fun onConnectionStopped() {
+        heldQuit.set(null)
+        mutableState.update { it.copy(decoderHeld = false) }
+    }
 
     // The stream is up, so its decoder is: whatever stage events came before.
     private fun holdDecoder() = mutableState.update { it.copy(decoderHeld = true) }
@@ -460,6 +465,7 @@ class StreamSession(
 
     override fun disconnect() {
         if (!startLeaving { StreamPhase.Disconnecting }) return
+        heldQuit.set(null)
         BorealisLog.i(LogTag.APP, "disconnect accepted")
         actions.disconnect(mutableState.value.appName)
     }
@@ -488,7 +494,10 @@ class StreamSession(
         return started
     }
 
-    override fun leave() = actions.leave()
+    override fun leave() {
+        heldQuit.set(null)
+        actions.leave()
+    }
 
     override fun retry() = actions.retry()
 

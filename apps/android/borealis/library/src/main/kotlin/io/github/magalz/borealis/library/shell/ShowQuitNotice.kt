@@ -44,4 +44,5 @@ private fun Resources.text(notice: LeaveNotice): String =
             } else {
                 getString(R.string.apps_message_disconnected, notice.appName)
             }
+        is LeaveNotice.KeepsRunning -> getString(R.string.apps_message_quit_done)
     }

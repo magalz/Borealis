@@ -13,6 +13,12 @@ sealed interface LeaveNotice {
 
     /** The user disconnected and the app keeps running on the PC; [appName] is blank if unknown. */
     data class Disconnected(val appName: String) : LeaveNotice
+
+    /**
+     * The user quit an app that another device started: the host ended this device's stream and
+     * keeps the app for that device. [appName] is blank if unknown.
+     */
+    data class KeepsRunning(val appName: String) : LeaveNotice
 }
 
 /**

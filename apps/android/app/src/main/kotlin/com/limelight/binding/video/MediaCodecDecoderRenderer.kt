@@ -832,8 +832,7 @@ class MediaCodecDecoderRenderer(
                             e.printStackTrace()
 
                             // Our Surface is probably invalid, so just stop
-                            stopping = true
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                            stopForInvalidSurface()
                         } catch (e: IllegalStateException) {
                             e.printStackTrace()
 
@@ -857,8 +856,7 @@ class MediaCodecDecoderRenderer(
                             e.printStackTrace()
 
                             // Our Surface is probably invalid, so just stop
-                            stopping = true
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                            stopForInvalidSurface()
                         } catch (e: IllegalStateException) {
                             e.printStackTrace()
 
@@ -880,8 +878,7 @@ class MediaCodecDecoderRenderer(
                             e.printStackTrace()
 
                             // Our Surface is probably invalid, so just stop
-                            stopping = true
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                            stopForInvalidSurface()
                         } catch (e: IllegalStateException) {
                             // If we failed to recover after all of these attempts, just crash
                             if (!reportedCrash) {
@@ -930,6 +927,22 @@ class MediaCodecDecoderRenderer(
         }
 
         return true
+    }
+
+    // BOREALIS: the codec refused our Surface, so the renderer stops. A stop that nothing else
+    // began
+    // is the stream's problem, so the listener hears of it (it was a silent frozen video before);
+    // while a stop is on its way the Surface goes with the rest and a warning is enough. Only the
+    // thread that does the recovery gets here, so the listener is told at most once.
+    private fun stopForInvalidSurface() {
+        val wasStopping = stopping
+        stopping = true
+        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+        if (wasStopping) {
+            LimeLog.warning("The surface is invalid and the renderer is already stopping")
+        } else {
+            crashListener.surfaceLost()
+        }
     }
 
     // Returns true if the exception is transient

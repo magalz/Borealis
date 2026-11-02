@@ -96,7 +96,9 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Locale
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
@@ -161,6 +163,10 @@ class Game :
     // caused. Written on the main thread only; volatile because stageFailed reads it on the native
     // start thread (leave)
     @Volatile private var stopRan = false
+    // BOREALIS: the connection stops once: a surface that goes away, the end of the stream and
+    // onStop each ask for a stop, and a second one only waits for the first (leave)
+    private val stopClaimed = AtomicBoolean(false)
+    private val connectionStopped = CompletableFuture<Unit>()
     // BOREALIS: the first frame was on screen, so an ending stream "stopped" and did not fail to
     // start (stream)
     @Volatile private var firstFrameShown = false
@@ -2756,11 +2762,18 @@ class Game :
     }
 
     // BOREALIS: stops the connection and runs [done] once it has stopped, from the thread that
-    // stopped it; a connection that never connected is stopped too (leave)
+    // stopped it; a connection that never connected is stopped too. When another exit stopped it
+    // first, [done] runs when that stop ends, or at once, on the caller's thread if it ended
+    // (leave)
     internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
 
     private fun stopConnection(done: Runnable? = null) {
         stopRan = true // BOREALIS: no stream starts after this (leave)
+        if (!stopClaimed.compareAndSet(false, true)) {
+            // BOREALIS: the stop of a Disconnect after another exit still gets its callback (leave)
+            done?.let { connectionStopped.thenRun(it) }
+            return
+        }
         startupGuard.cancel() // BOREALIS: first-frame watchdog
         if (connected) {
             connected = false
@@ -2784,17 +2797,22 @@ class Game :
         // during the process of stopping this one.
         object : Thread() {
                 override fun run() {
-                    val stopStarted = System.nanoTime() // BOREALIS: leave log
-                    conn.stop()
-                    BorealisLog.i(
-                        LogTag.APP,
-                        "connection stop done",
-                        "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
-                    )
-                    // BOREALIS: a start that failed after the decoder stage holds a decoder and no
-                    // connection (stream)
-                    tellConnectionStopped()
-                    done?.run()
+                    try {
+                        val stopStarted = System.nanoTime() // BOREALIS: leave log
+                        conn.stop()
+                        BorealisLog.i(
+                            LogTag.APP,
+                            "connection stop done",
+                            "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
+                        )
+                        // BOREALIS: a start that failed after the decoder stage holds a decoder
+                        // and no connection (stream)
+                        tellConnectionStopped()
+                        done?.run()
+                    } finally {
+                        // BOREALIS: a second stop gets its callback from here (leave)
+                        connectionStopped.complete(Unit)
+                    }
                 }
             }
             .start()

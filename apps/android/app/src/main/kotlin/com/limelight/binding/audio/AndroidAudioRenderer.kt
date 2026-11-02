@@ -21,8 +21,7 @@ private const val CHANNEL_OUT_7POINT1_SURROUND = 0x000018fc
 /** Small and large buffer, each in low latency and in standard mode. */
 private const val ATTEMPTS = 4
 
-// BOREALIS: 100 ms and not 40: on a Google TV Streamer, a test stream dropped 263 packets at 40 ms
-// and 14 at 100 ms
+// BOREALIS: a test stream dropped 263 packets at 40 ms and 14 at 100 ms (Google TV Streamer)
 private const val PENDING_AUDIO_LIMIT_MS = 100
 
 /** What `setup` answers when no attempt created a track. */

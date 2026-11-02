@@ -62,9 +62,9 @@ internal class PerfFormat(private val resources: Resources) {
         add(resources.getString(R.string.stream_overlay_audio_delay, audioDelay(perf)))
     }
 
-    /** The audio delay, for example "42 ms", or "n/a" until the audio track has a timestamp. */
+    /** The audio delay, for example "42 ms", or a dash until the audio track has a timestamp. */
     private fun audioDelay(perf: PerfSnapshot?): String {
-        val delayMs = perf?.audioDelayMs ?: return resources.getString(R.string.stream_overlay_na)
+        val delayMs = perf?.audioDelayMs ?: return NONE
         return resources.getString(R.string.stream_overlay_audio_delay_value, delayMs.toString())
     }
 

@@ -7,6 +7,7 @@ import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.nvhttp.SeenRequest
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,8 +18,10 @@ import org.robolectric.annotation.Config
  * The user leaves while a start is under way. A `/launch` that the host accepted has started an app
  * that nobody streams, so the connection asks the host to `/cancel` it, once, when the start ends
  * without a stream. It never does after a `/resume` (the app may belong to another device), after a
- * launch that the host refused (an app runs, or the launch of another client is pending), or on a
- * GFE host. Each test holds a request with a latch, so the order never depends on a pause.
+ * launch that the host refused (an app runs, or the launch of another client is pending), on a GFE
+ * host, or once another connection of the process began its own `/launch` or `/resume`: every
+ * connection sends the same unique id, and the host ends the session of whoever asks. Each test
+ * holds a request with a latch, so the order never depends on a pause.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(
@@ -52,6 +55,12 @@ class LeaveCancelsLaunchTest {
         rig.script.onLaunch = ::hold
     }
 
+    /** The host keeps the first `/launch` until the test releases it; the later ones go through. */
+    private fun holdFirstLaunch() {
+        val launches = AtomicInteger()
+        rig.script.onLaunch = { if (launches.incrementAndGet() == 1) hold() }
+    }
+
     /** The host keeps the `/resume` until the test releases it. */
     private fun holdResume() {
         val answer = rig.host.handler
@@ -71,6 +80,40 @@ class LeaveCancelsLaunchTest {
 
     private fun awaitHeld() {
         check(held.await(WAIT_MS, TimeUnit.MILLISECONDS)) { "the host never saw the request" }
+    }
+
+    /** Waits until the host has seen [count] requests to [path]. */
+    private fun awaitRequests(path: String, count: Int) {
+        val limit = System.currentTimeMillis() + WAIT_MS
+        while (rig.paths().count { it == path } < count) {
+            check(System.currentTimeMillis() < limit) { "the host never saw $count of $path" }
+            Thread.sleep(POLL_MS)
+        }
+    }
+
+    /**
+     * The user leaves while the host holds the `/launch` of [first], and starts [second] at once.
+     * The host answers the held launch only after it has seen the [secondPath] request of [second],
+     * so the start of [first] ends with the next stream already on its way. [hostChanges] runs
+     * between the leave and the second start.
+     */
+    private fun leaveAndStartAgain(
+        first: NvConnection,
+        second: NvConnection,
+        secondPath: String,
+        hostChanges: () -> Unit = {},
+    ) {
+        rig.start(first)
+        awaitHeld()
+        first.cancelLaunch()
+        hostChanges()
+        val secondListener = rig.newListener()
+        rig.start(second, listener = secondListener)
+        awaitRequests(secondPath, if (secondPath == "/launch") 2 else 1)
+        release.countDown()
+        listener.awaitEnded()
+        secondListener.awaitEnded()
+        second.stop()
     }
 
     /** Leaves while the host holds a request, then lets the host answer it. */
@@ -211,8 +254,35 @@ class LeaveCancelsLaunchTest {
         assertThat(steps()).containsExactly("/launch")
     }
 
+    /**
+     * The late cancel would end the session that the second connection is starting: the host cannot
+     * tell the two apart.
+     */
+    @Test
+    fun `a leave sends no cancel once the next connection began its own launch`() {
+        val first = rig.connection()
+        val second = rig.connection()
+        holdFirstLaunch()
+
+        leaveAndStartAgain(first, second, "/launch")
+
+        assertThat(steps()).containsExactly("/launch", "/launch").inOrder()
+    }
+
+    @Test
+    fun `a leave sends no cancel once the next connection began its own resume`() {
+        val first = rig.connection()
+        val second = rig.resumingConnection()
+        holdFirstLaunch()
+
+        leaveAndStartAgain(first, second, "/resume") { rig.script.running(DESKTOP_ID) }
+
+        assertThat(steps()).containsExactly("/launch", "/resume").inOrder()
+    }
+
     private companion object {
         val REFUSED: HostReply = HostReply.failure("400", "An app is already running on this host")
         const val WAIT_MS = 30_000L
+        const val POLL_MS = 10L
     }
 }

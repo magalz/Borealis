@@ -809,10 +809,14 @@ constructor(
             ""
         }
 
+    // BOREALIS: asks the host to cancel the app that this client launched, without the check of
+    // quitApp for the app of another client: the leave of a start that never streamed (host.launch)
     @Throws(IOException::class, XmlPullParserException::class)
-    fun quitApp(): Boolean {
-        // BOREALIS: where the time of a Quit goes (leave)
-        BorealisLog.i(LogTag.HOST, "quit cancel sent")
+    fun cancelApp(): Boolean = sendCancel("launch")
+
+    // BOREALIS: where the time of a Quit goes (leave); [what] says which caller asked
+    private fun sendCancel(what: String): Boolean {
+        BorealisLog.i(LogTag.HOST, "$what cancel sent")
         val cancelSent = System.nanoTime()
         val xmlStr =
             openHttpConnectionToString(
@@ -820,8 +824,13 @@ constructor(
                 getHttpsUrl(true),
                 "cancel",
             )
-        BorealisLog.i(LogTag.HOST, "quit cancel answered", "ms" to elapsedMs(cancelSent))
-        if (requireXmlString(xmlStr, "cancel") == "0") {
+        BorealisLog.i(LogTag.HOST, "$what cancel answered", "ms" to elapsedMs(cancelSent))
+        return requireXmlString(xmlStr, "cancel") != "0"
+    }
+
+    @Throws(IOException::class, XmlPullParserException::class)
+    fun quitApp(): Boolean {
+        if (!sendCancel("quit")) {
             return false
         }
 

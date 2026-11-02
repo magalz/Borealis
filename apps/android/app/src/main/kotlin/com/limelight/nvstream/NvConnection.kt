@@ -39,6 +39,8 @@ import io.github.magalz.borealis.host.launch.RetryProgress
 import io.github.magalz.borealis.host.launch.RunningAppReader
 import io.github.magalz.borealis.host.launch.ServerInfoReader
 import io.github.magalz.borealis.host.pairing.CertificateMismatchException
+import io.github.magalz.borealis.logging.BorealisLog
+import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.StartFailureLog
 import io.github.magalz.borealis.stream.Utf8Text
 import java.io.IOException
@@ -120,6 +122,14 @@ open class NvConnection(
     // BOREALIS: true while this connection holds the place of connectionAllowed, from the acquire
     // of its start until stop(), or a start that ends without a stream, gives it back (host.launch)
     private val holdsPlace = AtomicBoolean(false)
+
+    // BOREALIS: the client of the /launch that the host accepted, until the native stream started:
+    // what a leave before the stream asks to /cancel. Only for a launch (a resume may join the app
+    // of another device, and a refused launch started nothing) and not for a GFE host (host.launch)
+    @Volatile private var acceptedLaunch: NvHTTP? = null
+
+    // BOREALIS: the /cancel of an abandoned launch is sent once per connection (host.launch)
+    private val launchCancelSent = AtomicBoolean(false)
 
     // BOREALIS: the app that this start asks for: the configured one, or the one that the lookup by
     // name found when the configuration came without an id; set by startApp, on the start thread
@@ -246,7 +256,14 @@ open class NvConnection(
                 verb,
                 checkNotNull(context.serverAddress).address,
             ),
-            LaunchAttempt { h.launchApp(context, verb, appId, context.negotiatedHdr) },
+            LaunchAttempt {
+                val accepted = h.launchApp(context, verb, appId, context.negotiatedHdr)
+                // BOREALIS: what a leave before the stream cancels (host.launch)
+                if (accepted && verb == "launch" && !context.isNvidiaServerSoftware) {
+                    acceptedLaunch = h
+                }
+                accepted
+            },
             LaunchHooks(
                 HostErrorExtractor { e ->
                     if (e is HostHttpResponseException) HostError(e.errorCode, e.errorMessage)
@@ -727,7 +744,29 @@ open class NvConnection(
         videoDecoderRenderer: VideoDecoderRenderer?,
         connectionListener: NvConnectionListener?,
     ) {
-        Thread { runStart(audioRenderer, videoDecoderRenderer, connectionListener) }.start()
+        Thread {
+            runStart(audioRenderer, videoDecoderRenderer, connectionListener)
+            cancelAbandonedLaunch() // BOREALIS: host.launch
+        }
+            .start()
+    }
+
+    // BOREALIS: the start ended because the user left, after the host accepted its /launch and
+    // before a stream came: the host would start the app and roll it back later, so it is asked to
+    // cancel it, once, off the main thread (this runs on the thread of the start). A refused
+    // request is only logged: the rollback of the host is what is left (host.launch)
+    private fun cancelAbandonedLaunch() {
+        val h = acceptedLaunch ?: return
+        if (!launchCancelled || !launchCancelSent.compareAndSet(false, true)) {
+            return
+        }
+        try {
+            h.cancelApp()
+        } catch (e: IOException) {
+            BorealisLog.w(LogTag.LAUNCH, "launch cancel failed", "error" to e.javaClass.simpleName)
+        } catch (e: XmlPullParserException) {
+            BorealisLog.w(LogTag.LAUNCH, "launch cancel failed", "error" to e.javaClass.simpleName)
+        }
     }
 
     /** What the thread of [start] does. */
@@ -747,6 +786,7 @@ open class NvConnection(
         lastFailureCause = CauseKind.NONE // BOREALIS: host.failure
         lastHttpCode = 0 // BOREALIS
         launchRetried = false // BOREALIS
+        acceptedLaunch = null // BOREALIS: host.launch
         startStep = StartSteps.SERVER_INFO // BOREALIS
 
         context.listener.stageStarting(appName)
@@ -855,6 +895,9 @@ open class NvConnection(
                     streamConfig.colorRange,
                 )
             connected = ret == 0 // BOREALIS: stream.keyframe
+            if (ret == 0) {
+                acceptedLaunch = null // BOREALIS: the stream started, nothing is left to cancel
+            }
             if (ret != 0) {
                 // LiStartConnection() failed, so the caller is not expected
                 // to stop the connection themselves. We need to release their

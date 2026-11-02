@@ -130,10 +130,14 @@ internal class FrozenFrame(
         BorealisLog.w(LogTag.VIDEO, "Frozen frame failed", "reason" to "timeout")
     }
 
+    // The copy ended; one that the cap gave up, or that came after release, is dropped.
     private fun finish(ok: Boolean, bitmap: Bitmap, startedAt: Long) {
         if (!settled.compareAndSet(false, true)) return
         pending = false
-        if (released) return
+        if (!released) keep(ok, bitmap, startedAt)
+    }
+
+    private fun keep(ok: Boolean, bitmap: Bitmap, startedAt: Long) {
         if (!ok) {
             BorealisLog.w(LogTag.VIDEO, "Frozen frame failed", "reason" to "copy")
             return

@@ -221,6 +221,10 @@ class Game :
 
     private lateinit var decoderRenderer: MediaCodecDecoderRenderer
 
+    // BOREALIS: made with the decoder renderer, so that the overlay of the decoder can read the
+    // audio delay of it (audio)
+    private lateinit var audioRenderer: AndroidAudioRenderer
+
     // BOREALIS: first-frame watchdog (host.video)
     private val startupGuard =
         StreamStartupGuard({ connectionTerminated(MoonBridge.ML_ERROR_NO_VIDEO_FRAME) })
@@ -725,6 +729,7 @@ class Game :
         controllerHandler.setMenuChordListener(streamSession::openMenu)
         controllerHandler.setChromeKeySink(chromeHost::dispatchUsbPadKey)
         decoderRenderer.setPerfSink(streamSession::onPerf)
+        audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx)
         PerfGate.bind(lifecycleScope, streamSession, decoderRenderer::setPerfEnabled)
         GamepadMouseSync.bind(lifecycleScope, streamSession) {
             controllerHandler.isMouseEmulationOnAnyPad
@@ -3179,7 +3184,7 @@ class Game :
             UiHelper.notifyStreamConnecting(this)
 
             decoderRenderer.setRenderTarget(holder)
-            conn.start(AndroidAudioRenderer(this, prefConfig.enableAudioFx), decoderRenderer, this)
+            conn.start(audioRenderer, decoderRenderer, this)
         }
     }
 

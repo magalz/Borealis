@@ -31,8 +31,9 @@ private const val LOST_WARNING = "video surface lost while the stream is ending"
  * and nothing else tells the stream (it was a frozen video before). The renderer tells its listener
  * from the thread that recovers the codec, while it holds the lock of the recovery, so the activity
  * only posts the report and acts on the main thread. A stream that runs ends with the connection
- * error screen and stops its connection. A stream that is ending already, because the user left
- * (the surface went away, the activity stopped, a Disconnect, a finish) or because it failed, has
+ * error screen and stops its connection, in picture in picture too: the stream keeps running there,
+ * and the failure shows when it ends. A stream that is ending already, because the user left (the
+ * surface went away, the activity stopped, a Disconnect, a finish) or because it failed, has
  * nothing more to say: a warning is all, in either order with the report.
  */
 internal class GameSurfaceLostTest : GameTestBase() {
@@ -245,28 +246,33 @@ internal class GameSurfaceLostTest : GameTestBase() {
     }
 
     @Test
-    fun `picture in picture is a leave, so the report shows nothing`() {
+    fun `picture in picture keeps the stream, so the report ends it with the failure`() {
         rig.streaming()
         rig.game.enterPictureInPictureMode()
 
         surfaceLost()
         ShadowLooper.idleMainLooper()
+        rig.awaitStop()
 
-        assertNoFailure()
-        assertWarned()
-        assertThat(ShadowRecordingBridge.named("stopConnection")).isEmpty()
+        assertThat(rig.phase)
+            .isEqualTo(StreamPhase.Failed(StreamFailure(FailureKind.STOPPED, LOST_TEXT, null)))
+        assertThat(warnings()).isEmpty()
+        assertThat(ShadowRecordingBridge.named("stopConnection")).hasSize(1)
     }
 
     @Test
-    fun `the report that comes first and then picture in picture shows nothing`() {
+    fun `the report that comes first and then picture in picture still ends the stream`() {
         rig.streaming()
         surfaceLost()
 
         rig.game.enterPictureInPictureMode()
         ShadowLooper.idleMainLooper()
+        rig.awaitStop()
 
-        assertNoFailure()
-        assertWarned()
+        assertThat(rig.phase)
+            .isEqualTo(StreamPhase.Failed(StreamFailure(FailureKind.STOPPED, LOST_TEXT, null)))
+        assertThat(warnings()).isEmpty()
+        assertThat(ShadowRecordingBridge.named("stopConnection")).hasSize(1)
     }
 
     @Test

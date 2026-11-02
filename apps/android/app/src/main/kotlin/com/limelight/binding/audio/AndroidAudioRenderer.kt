@@ -228,6 +228,8 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
 
     fun audioDelayMs(): Int? = audioDelayMs(System.nanoTime())
 
+    // Synthetic for Java, so that the public shape of the class stays the contract and this method.
+    @JvmSynthetic
     @Suppress("UNUSED_PARAMETER", "FunctionOnlyReturningConstant")
     internal fun audioDelayMs(nowNanos: Long): Int? = null
 

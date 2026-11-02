@@ -146,6 +146,9 @@ class MediaCodecDecoderRenderer(
     // says (stream.perf)
     @Volatile private var perfEnabled = false
     @Volatile private var perfSink: PerfSnapshotSink? = null
+    // BOREALIS: the audio delay for the overlay, asked when a snapshot is built; the stream
+    // activity sets the source of its audio renderer (stream.perf)
+    @Volatile private var audioDelaySource: () -> Int? = { null }
 
     private val codecRecoveryType = AtomicInteger(CR_RECOVERY_TYPE_NONE)
     private val codecRecoveryMonitor = Any()
@@ -511,8 +514,11 @@ class MediaCodecDecoderRenderer(
         perfSink = sink
     }
 
-    @Suppress("UNUSED_PARAMETER", "EmptyFunctionBlock")
-    fun setAudioDelaySource(source: () -> Int?) {}
+    // BOREALIS: where a snapshot reads the audio delay in ms, null while it is not known
+    // (stream.perf)
+    fun setAudioDelaySource(source: () -> Int?) {
+        audioDelaySource = source
+    }
 
     // BOREALIS: the name of the decoder of the active video format, for Session info (stream.perf)
     fun getDecoderName(): String? {
@@ -551,6 +557,7 @@ class MediaCodecDecoderRenderer(
                     elapsedMs,
                 ),
                 MoonBridge.getEstimatedRttInfo(),
+                audioDelaySource(),
             )
         )
     }

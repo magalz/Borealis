@@ -5,12 +5,14 @@ import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
+import android.media.AudioTimestamp
 import android.media.AudioTrack
 import android.media.audiofx.AudioEffect
 import com.limelight.LimeLog
 import com.limelight.nvstream.av.audio.AudioRenderer
 import com.limelight.nvstream.jni.MoonBridge
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max
 
 /** `AudioFormat.CHANNEL_OUT_7POINT1_SURROUND`, spelled out as in the inherited Java. */
@@ -24,6 +26,9 @@ private const val PENDING_AUDIO_LIMIT_MS = 40
 /** What `setup` answers when no attempt created a track. */
 private const val NO_AUDIO_TRACK = -2
 
+private const val NANOS_PER_SECOND = 1_000_000_000L
+private const val NANOS_PER_MS = 1_000_000L
+
 class AndroidAudioRenderer(private val context: Context, private val enableAudioFx: Boolean) :
     AudioRenderer {
 
@@ -33,6 +38,10 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
     // Set by cleanup, cleared when setup keeps a track: a repeated cleanup must not fail, while a
     // cleanup without any track still does.
     @Volatile private var cleanedUp = false
+
+    // BOREALIS: the frames handed to the current track, to tell the audio delay (stream.perf). The
+    // native audio thread adds to it and the thread that builds the overlay snapshot reads it.
+    private val framesWritten = AtomicLong()
 
     // The inherited Java used the track without a check, so a call before a successful setup failed
     // with a NullPointerException at that point. Keep the exception.
@@ -114,6 +123,7 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
         // BOREALIS: a second setup releases the track of the first, which nothing would release
         val previous = track
         track = null
+        framesWritten.set(0)
         try {
             previous?.release()
         } catch (ignored: Exception) {}
@@ -220,18 +230,40 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
             // of pending audio data, so we do the above check to be able to bound
             // latency at 40 ms in that situation.
             val samples = audioData ?: throw NullPointerException("No audio data to play")
-            requireTrack().write(samples, 0, samples.size)
+            val current = requireTrack()
+            val written = current.write(samples, 0, samples.size)
+            // BOREALIS: a negative count is an error, and nothing was written (stream.perf)
+            if (written > 0) {
+                framesWritten.addAndGet((written / current.channelCount).toLong())
+            }
         } else {
             LimeLog.info("Too much pending audio data: $pendingAudioMs ms")
         }
     }
 
+    /**
+     * The audio delay in milliseconds, for the performance overlay: how long a frame handed to the
+     * track waits before the track presents it. Null until the track has a timestamp, and when
+     * there is no track. It asks the platform for the timestamp, so the overlay calls it once for
+     * each snapshot and not for each packet.
+     */
     fun audioDelayMs(): Int? = audioDelayMs(System.nanoTime())
 
-    // Synthetic for Java, so that the public shape of the class stays the contract and this method.
+    // Synthetic for Java, so that the public shape of the class stays the contract and the above.
     @JvmSynthetic
-    @Suppress("UNUSED_PARAMETER", "FunctionOnlyReturningConstant")
-    internal fun audioDelayMs(nowNanos: Long): Int? = null
+    internal fun audioDelayMs(nowNanos: Long): Int? {
+        val current = track ?: return null
+        val timestamp = AudioTimestamp()
+        if (!current.getTimestamp(timestamp)) return null
+
+        // The timestamp says that the track presented frame `framePosition` at `nanoTime`. The
+        // frames written after it still wait, less the time since the timestamp was taken, which
+        // the track has played on. Never below zero.
+        val waitingFrames = framesWritten.get() - timestamp.framePosition
+        val delayNanos =
+            waitingFrames * NANOS_PER_SECOND / current.sampleRate - (nowNanos - timestamp.nanoTime)
+        return (delayNanos / NANOS_PER_MS).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
+    }
 
     override fun start() {
         if (enableAudioFx) {

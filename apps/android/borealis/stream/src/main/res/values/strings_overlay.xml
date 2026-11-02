@@ -21,6 +21,10 @@
     <!-- %1$s round trip ms, %2$s variance ms, %3$s loss percent. -->
     <string name="stream_overlay_network_value">%1$s ms ± %2$s ms · loss %3$s %%</string>
     <string name="stream_overlay_decode">Decode %1$s ms</string>
+    <!-- %1$s is the audio delay in ms, or a dash until the audio track has a timestamp. -->
+    <string name="stream_overlay_audio_delay">Audio delay %1$s</string>
+    <!-- %1$s is the audio delay, a whole number. -->
+    <string name="stream_overlay_audio_delay_value">%1$s ms</string>
     <!-- %1$s the bitrate in use, %2$s the limit, both in Mbps. -->
     <string name="stream_overlay_bitrate">%1$s of %2$s Mbps</string>
 </resources>

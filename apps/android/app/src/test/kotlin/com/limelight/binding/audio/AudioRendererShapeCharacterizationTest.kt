@@ -34,7 +34,7 @@ class AudioRendererShapeCharacterizationTest {
     }
 
     @Test
-    fun `its public methods are the five of the contract`() {
+    fun `its public methods are the five of the contract and the audio delay`() {
         val methods =
             type.declaredMethods
                 .filter { Modifier.isPublic(it.modifiers) && !it.isSynthetic }
@@ -51,6 +51,7 @@ class AudioRendererShapeCharacterizationTest {
                 "stop()V",
                 "playDecodedAudio([S)V",
                 "cleanup()V",
+                "audioDelayMs()Ljava/lang/Integer;",
             )
     }
 

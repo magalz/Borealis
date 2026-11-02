@@ -1322,6 +1322,9 @@ with its own phase pull request and device round. The numbers of the later sprin
   [Pads](#pads) and [Accessibility and layout](#accessibility-and-layout): the input and pad code and
   the Compose screens, and a device round on the controls and the screens.
 
+Status: Sprint 17a is in progress on `phase/s17a-stream-fixes` (issues #116 to #119), device round
+pending.
+
 Why: about 57 items, many of them investigations on the devices with the owner, and several in the
 same files (`Game.kt` in the stream session, input and video; `ControllerHandler` in pads and input).
 Two smaller sprints keep the pull requests small and each device round on one subject. Two
@@ -1374,7 +1377,13 @@ the TV: the same audio runs, not a Sprint 16 regression
   and they come when sound starts again after silence, and once as a 13 s run in the middle of a
   sound. Decision (owner, 2026-10-28): fix them in this sprint, measured before and after with the
   same method as the follow-up (eight short beeps with 3 s of silence between them, then a 60 s
-  tone, one stream for each row).
+  tone, one stream for each row). Sprint 17a measured it before and after, on the TV and the S22,
+  with that method. `continuousAudio=1` made the runs worse (TV Balanced 406 drops and fps limit 222,
+  against 263 and 154 without it), so the drop limit was the cause. Owner decision (2026-11-02):
+  `PENDING_AUDIO_LIMIT_MS` at 100 ms, and continuous audio off (the `StreamConfiguration.continuousAudio`
+  field stays, off by default, with no caller). Result: TV 146 and 64 drops become 4 and 1; S22 140
+  and 33 become 15 and 29, and on the S22 most drops come at the start of the stream (11 of 15 and 17
+  of 29). See [device-validation, Audio measurement, Sprint 17a](development/device-validation.md#audio-measurement-sprint-17a-2026-11-02).
 - **Audio behind the picture on the TV: the Bluetooth notice.** The entry "Audio behind the picture
   on the TV" of item (d) of the Sprint 14 block of the backlog becomes this work, because the cause
   is known now. The owner heard the audio after the picture (lip sync) in every channel layout,
@@ -1385,19 +1394,26 @@ the TV: the same audio runs, not a Sprint 16 regression
   Bluetooth A2DP, whose output thread reported 270 to 281 ms of latency, against 141 ms for HDMI,
   and with Bluetooth off the owner judged the sync good. Other apps hold their video to match the
   audio; a game stream does not. Decision (owner, 2026-10-28): when the audio goes to a Bluetooth
-  output, show a one-line notice for a few seconds, and then let it go away.
+  output, show a one-line notice for a few seconds, and then let it go away. Sprint 17a: done. The
+  notice is one line on a light glass card at the top of the screen, for about 4 s, with no scrim
+  and no focus or input (owner decision, 2026-11-02). It shows at the start, and once each time the
+  sound moves to a Bluetooth output during the stream.
 - **The audio delay in the performance overlay.** Decision (owner, 2026-10-28): if possible, add a
   line to the performance overlay with the audio delay. Android can estimate it from the
-  `AudioTrack` timestamps; the client reads none today.
+  `AudioTrack` timestamps; the client reads none today. Sprint 17a: done, as one line in the Detailed
+  overlay from `AudioTrack.getTimestamp`, with a dash until a timestamp exists. Not in Compact.
 - **A 2-channel output, with 5.1 or 7.1 asked for.** On the Streamer, a track for 7.1 on a
   2-channel output leaves the fast path (5.1 was not measured): it goes to the normal mixer, with a buffer 11 to 16 times
   larger, which adds about 250 to 320 ms (Android's figures in the follow-up: 405 ms against 151 to
   163 ms on HDMI, 615 ms against 291 ms on Bluetooth). Decision (owner, 2026-10-28): when the
   current output of the device has only 2 channels and the setting asks for 5.1 or 7.1, ask the host
   for stereo, log it, and say so with a one-line notice for a few seconds at the start of the
-  stream.
+  stream. Sprint 17a: done. When the routed output reports 2 channels or fewer and 5.1 or 7.1 is
+  set, the stream asks the host for stereo and logs it. Only at the start, since the channel count
+  goes in `/launch`; the notice says so once.
 - **One notice modal.** The Bluetooth notice and the channel notice share one small notice modal,
-  since there are two now (owner, 2026-10-28).
+  since there are two now (owner, 2026-10-28). Sprint 17a: done as one card for both notices (see
+  the Bluetooth item).
 
 #### Library and Settings
 
@@ -1641,6 +1657,7 @@ the round are in [device-validation section 20](development/device-validation.md
   start, and the four streams of the TV part of 3.29 start with the same input crop, so the crop change is no sign
   by itself. The cause is not known. First capture the decoder log of a stream that shows it, and run the same app
   on the build before Sprint 14, as the audio follow-up did, to tell a conversion defect from an older one.
+  Sprint 17a: no code; the device round watches for it with the decoder log on (runbook 3.32, step 13).
 - **A second device's Quit of a shared app, once the host keeps the app.** Found on 2026-10-30, validating the
   fix of LuminalShine #201 ([NortheBridge/luminalshine#227](https://github.com/NortheBridge/luminalshine/pull/227),
   on a nightly of the host). With that fix, a Quit from the second device stops only its own session
@@ -1650,12 +1667,21 @@ the round are in [device-validation section 20](development/device-validation.md
   turns the end of the stream it recorded during Quitting into a failure. Once the host ships the fix, treat "my session
   ended, the app still runs for another device" as a clean leave (the Library notice of a Disconnect, or a new
   one), with a test first. Until then the host stops every session on a Quit, so nothing changes for users.
+  Sprint 17a: done by inference (owner, 2026-11-02). A resumed session whose Quit is answered with 599,
+  and whose stream ends with the quit's -1, leaves cleanly with the Library notice "`<App>` keeps running
+  for another device." (without the name after a resume). The 5 s window of the answer covers the order
+  with the 599 first; for the order with the end first, the code takes the end while the Quit is pending,
+  with no time limit (TODO(verify)). The round checks it on a LuminalShine build with
+  NortheBridge/luminalshine#227 (runbook 3.32, step 11).
 - **The frozen frame after a rotation.** From Sprint 15 (the known limits). The frame is placed and scaled when
   the copy ends, so a rotation, a split-screen resize or leaving picture-in-picture after the failure leaves it
-  at the old offset. It is rare, and nothing crashes.
+  at the old offset. It is rare, and nothing crashes. Sprint 17a: done. The frame is placed when it
+  is drawn, so a rotation, a split-screen resize or picture-in-picture moves it with the video.
 - **A time cap for the pending copy.** From Sprint 15 (the known limits). The error popup waits on black for the
   copy with no time limit, and relies on `PixelCopy` answering every request it accepts. Add a cap, and show the
   background when it runs out. The copy takes about 0.1 to 0.3 s (76 ms on the S22, 314 ms on the TV).
+  Sprint 17a: done. The cap is 1 s: a copy that runs past it is given up, the background shows, and
+  the log says `Frozen frame failed` with `reason=timeout`.
 - **Device checks left open by Sprint 15.** No round has reported these. They are the owner's next device
   check (device-validation section 20, "Not run and owner items"):
   - the start with a clip style on the TV (3.29, step 6, first bullet): three starts with the clip and three
@@ -1676,15 +1702,21 @@ the round are in [device-validation section 20](development/device-validation.md
     the delay of the first copy after the menu opens (129.7 ms on the S22 in the spike);
   - the new scrim and panel of the popups, and the screens that follow the Library.
 
+  Sprint 17a: device round only (runbook 3.32, step 9); no code.
+
 - **A silent frozen video on an invalid surface.** From Sprint 16 (the merge review of #113); older
   than Sprint 16. Three branches of `MediaCodecDecoderRenderer` that catch the
   `IllegalArgumentException` of an invalid `Surface` set `stopping` and report nothing: no crash
-  report and no popup, so the video freezes with no word.
+  report and no popup, so the video freezes with no word. Sprint 17a: done. The renderer reports the
+  lost surface (`surfaceLost()`): a running stream ends with the error popup, and a leave (stop,
+  surface destroyed, Disconnect, finish, picture-in-picture) only logs.
 - **No decoder for a codec whose only decoder throws.** From Sprint 16 (H6, #113); a behaviour change
   of Sprint 16. The search for a safe decoder now skips a decoder that throws for its capabilities.
   On a device whose only HEVC or AV1 decoder throws there, that codec gets no decoder, where the old
   search fell back to the first decoder; AVC still falls back. The device round compares the start
-  logs of both devices (3.31).
+  logs of both devices (3.31). Sprint 17a: done for HEVC and AV1: the first decoder is used only when
+  every candidate throws for its capabilities. Open: `MediaCodecDecoderProbe` (settings) still skips
+  such a decoder. The start logs are compared in the round (runbook 3.32, step 7).
 
 #### The stream session
 
@@ -1696,31 +1728,47 @@ its reviews found and left for this sprint.
   connection can interrupt the start of the next one. The wave 2 sessions judged that closing it
   needs a token on the native side. The merge review thinks that a Kotlin lock, shared by the
   start's write of `bridgeSetUp` and the stop's read of it and its `interruptConnection`, could
-  close it. Sprint 17 chooses.
+  close it. Sprint 17 chooses. Sprint 17a: done. A test shows the window (`StaleInterruptTest`), and
+  a Kotlin lock around the flag and the interrupt closes it. No native change.
 - **A late GFE quit and relaunch.** On a GFE host, a late quit-and-relaunch still sends `/quit`.
+  Sprint 17a: done. The cancel is checked before the quit and before the launch.
 - **A termination just before a Disconnect.** A termination that was dispatched just before a
   Disconnect can still reach `onFailed`: `Game.connectionTerminated` has no `stopRan` guard.
+  Sprint 17a: done. The termination reads `stopRan`, so the end of a stream that the user left is no
+  failure.
 - **A late `connectionStarted` after the surface is gone.** Before the connection starts, a
   `connectionStarted` that arrives after `surfaceDestroyed` can open an audit session, which the
-  next `onStop` closes.
+  next `onStop` closes. Sprint 17a: done. A surface lost before the start is a leave, and the late
+  `connectionStarted` stops the connection and opens no audit session.
 - **`GameGestures` has no production consumer left.** C5 removed the `gestures` property of
   `ControllerHandler`, its only production consumer; `Game` still implements the interface
-  (`ui/GameGestures.kt`).
+  (`ui/GameGestures.kt`). Sprint 17a: done. The file and its `SupportJavaVisibleApiTest` assertion are
+  deleted.
 - **The 10-bit masks of `SessionAudit` and `MoonBridge`.** `SessionAudit` (`borealis/host`) keeps its
   own private copy of the 10-bit mask, now `0xAA00` too, and no test ties its masks to `MoonBridge`.
+  Sprint 17a: done. `SessionAuditMaskTest` ties the mask to `MoonBridge.VIDEO_FORMAT_MASK_10BIT`.
 - **`HDR_CODEC_MODES` and the 4:4:4 modes.** `NvConnection`'s `HDR_CODEC_MODES` (`0x20200`) does not
-  count the 4:4:4 10-bit modes of the server's codec support.
+  count the 4:4:4 10-bit modes of the server's codec support. Sprint 17a: no change. The client
+  never offers a 4:4:4 format, so adding those bits would turn HDR on for a server that supports
+  only 4:4:4, with no format to match. `HdrCodecModesTest` pins the mask, and the value is correct
+  while 4:4:4 is not offered.
 - **A second "connection stop done".** A second stop logs `connection stop done` again.
+  Sprint 17a: done. The line is written once; a second stop returns early, and a Disconnect after
+  another exit still gets its done callback.
 - **A leave during the start still sends the first launch request.** From the Sprint 16 round
   (2026-11-01, [section 21](development/device-validation.md#21-results-sprint-16), finding 2). In
   each of five leaves, `/launch` or `/resume` reached the host 0.5 to 0.8 s after the stream activity
   started, before any Back, and the host launched or joined the app and rolled it back 10 s later.
   The cancel check of Sprint 16 sees a leave only if `onStop` runs before the request is sent.
   Whether a leave before the request keeps the host from launching is not shown; the host's rollback
-  is the case to cover.
+  is the case to cover. Sprint 17a: done for the rollback. Borealis sends one `/cancel` after a
+  `/launch` that the host accepted and whose session never started. It never sends it after
+  `/resume`, after a refused or unanswered `/launch`, or on GFE, and it skips the cancel when a newer
+  launch began. The round checks it (runbook 3.32, step 5).
 - **Back while the in-game menu is open (S22).** From the same round, an observation: a `KEYCODE_BACK`
   injected with `adb` reached `Game.onKeyDown` and did not close the menu, while the owner's own Back
   closed it. The cause is not known and may be the injection. Check with a real keyboard's Back.
+  Sprint 17a: device round (runbook 3.32, step 12); code only if it reproduces.
 
 #### Accessibility and layout
 
@@ -1803,6 +1851,16 @@ Planned, not started. Owner decision of 2026-10-28.
     seconds after the first failure that is not recovered …", failed once in a full gate under load,
     and passed 5 times out of 5 alone at the base and at the head of the batch. Make it
     deterministic.
+  - **A flaky controller test**, from Sprint 17a (seen in three gates of the phase, as the brief
+    counts them; the phase log records two: TODO(verify)). `ControllerNumberLimitTest`, "a number
+    that frees up goes to the pad that was left out", fails with an NPE at `ControllerHandler.kt:244`
+    and depends on the order of the tests. Make it deterministic.
+  - **The `menu_glass_*` Roborazzi references**, from Sprint 17a. Eight are tracked under
+    `apps/android/borealis/stream/src/test/screenshots/` (the brief says four: TODO(verify) which
+    ones). They change on every Windows re-record (TODO(verify)).
+- **A code item, from Sprint 17a.** `StreamConfiguration.continuousAudio` has no caller (Sprint 17a
+  turned continuous audio off after measuring it). Delete the field and its query in `NvHTTP`, or give
+  it a setting with a consumer.
 - **Method:** behaviour does not change. The characterization tests guide the refactor. A
   refactored place loses its suppression and its marker.
 - **Ends with a device round.**
@@ -2243,6 +2301,8 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
     [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
   - Optional feature: send `continuousAudio=1` in `/launch`. Merged into the "Audio runs" entry
     of item (d) of the Sprint 14 block, which moved to [Sprint 17](#sprint-17-general-fixes) (owner, 2026-10-28).
+    Sprint 17a measured it on 2026-11-02 and turned it off: it made the audio runs worse, so Borealis
+    does not send it.
 
 From the Sprint 13 conversion (2026-10-25). Item (a) is scheduled for
 [Sprint 18](#sprint-18-refactor-of-the-converted-code), item (b) for

@@ -87,6 +87,34 @@ counts, sizes, times, a code, a choice and a fixed reason word.
   written to a file, logged, put in the audit trail or put in the diagnostic bundle, and the
   lines above hold only the size of a copy and the time it took.
 
+### Log lines of the stream (Sprint 17a)
+
+Sprint 17a added these lines. Each goes through `BorealisLog` and so through the redaction layer,
+except the `UPSTREAM` lines, which come from `LimeLog` and are not masked for free text (see the
+rules above). None of them carries an IP address, a host name or the name of an app: their fields
+are a choice, a time, a code, a reason word or an exception class. A decoder name, such as
+`c2.qti.hevc.decoder.low_latency`, is not an app name.
+
+| Tag | Line | Fields | Level |
+| --- | --- | --- | --- |
+| `APP` | `audio output has two channels, stereo asked of the host` | `asked`: `5.1` or `7.1`; `used`: `stereo` | info |
+| `APP` | `quit of a shared app is a leave`: a resumed session that left with the Library notice | `since_quit_ms` | info |
+| `APP` | `quit stream ended`: the end of the user's Quit, which also fires within 5 s after a 599 answer on a joined app | `code`, `since_quit_ms` | info |
+| `HOST` | `launch cancel sent`, `launch cancel answered` | `ms` on the answer | info |
+| `LAUNCH` | `launch cancel failed`: the cancel after a leave did not go through | `error`: the exception class | warn |
+| `VIDEO` | `video surface lost while the stream is ending`: a surface lost during a stop, a failure or a leave | none | warn |
+| `UPSTREAM` | `The video surface was lost`: a running stream ends with the error popup | none | error |
+| `UPSTREAM` | `The surface is invalid and the renderer is already stopping` | none | warn |
+| `UPSTREAM` | `Every decoder for <type> throws, the first is <name>`: the first decoder is used for a codec | `<type>`: the MIME type; `<name>`: the decoder name | info |
+| `UPSTREAM` | `The audio delay source failed, the overlay has no audio delay: <error>` | `<error>`: the exception text | warn |
+
+- The `HOST` cancel lines now say `quit` or `launch` before `cancel`: the Sprint 15 lines
+  `quit cancel sent` and `quit cancel answered` keep their names, and the start adds the `launch` pair.
+- `Frozen frame failed` (the table above) has a new reason: `timeout`, for a copy that the time cap
+  gave up. The other reasons are `no_surface` and `copy`.
+- The audio delay line adds the text of an exception from `AudioTrack.getTimestamp`. The code path
+  holds no address, but no device run has checked that text (TODO(verify)).
+
 ## Settings storage
 
 - The "Verbose logging" and "Mask addresses in logs and diagnostics" switches

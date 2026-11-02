@@ -775,6 +775,11 @@ constructor(
                     (if (streamConfig.playLocalAudio) 1 else 0) +
                     "&surroundAudioInfo=" +
                     checkNotNull(streamConfig.audioConfiguration).surroundAudioInfo +
+                    // BOREALIS: only LuminalShine reads it: the host then sends silence while the
+                    // PC is quiet (host.launch)
+                    (if (streamConfig.continuousAudio && !context.isNvidiaServerSoftware)
+                        CONTINUOUS_AUDIO_QUERY
+                    else "") +
                     "&remoteControllersBitmap=" +
                     streamConfig.attachedGamepadMask +
                     "&gcmap=" +
@@ -847,6 +852,8 @@ constructor(
         private const val NIBBLE_BITS = 4
         private const val BYTE_MASK = 0xFF
         private const val NIBBLE_MASK = 0x0F
+
+        private const val CONTINUOUS_AUDIO_QUERY = "&continuousAudio=1"
 
         private const val HDR_QUERY =
             "&hdrMode=1&clientHdrCapVersion=0&clientHdrCapSupportedFlagsInUint32=0" +

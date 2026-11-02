@@ -226,6 +226,11 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
         }
     }
 
+    fun audioDelayMs(): Int? = audioDelayMs(System.nanoTime())
+
+    @Suppress("UNUSED_PARAMETER", "FunctionOnlyReturningConstant")
+    internal fun audioDelayMs(nowNanos: Long): Int? = null
+
     override fun start() {
         if (enableAudioFx) {
             // Open an audio effect control session to allow equalizers to apply audio effects

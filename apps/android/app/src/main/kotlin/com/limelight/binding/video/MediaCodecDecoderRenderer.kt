@@ -511,6 +511,9 @@ class MediaCodecDecoderRenderer(
         perfSink = sink
     }
 
+    @Suppress("UNUSED_PARAMETER", "EmptyFunctionBlock")
+    fun setAudioDelaySource(source: () -> Int?) {}
+
     // BOREALIS: the name of the decoder of the active video format, for Session info (stream.perf)
     fun getDecoderName(): String? {
         var decoder: MediaCodecInfo? = null

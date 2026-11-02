@@ -414,7 +414,9 @@ class StreamSession(
     override fun openDiagnostics() = actions.openDiagnostics()
 }
 
-/** What the stream tells the viewer once, in a card that goes by itself ([StreamSession.notify]). */
+/**
+ * What the stream tells the viewer once, in a card that goes by itself ([StreamSession.notify]).
+ */
 sealed interface StreamNotice {
     /** The sound goes out over Bluetooth, which can make it lag behind the picture. */
     data object BluetoothOutput : StreamNotice

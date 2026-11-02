@@ -114,9 +114,11 @@ class StreamSessionNoticeTest {
     fun `notices given from several threads are all kept, each once`() {
         val given = listOf(BluetoothOutput, stereo71, stereo51)
 
-        given.map { notice -> Thread { session.notify(notice) }.apply { start() } }.forEach {
-            it.join()
-        }
+        given
+            .map { notice -> Thread { session.notify(notice) }.apply { start() } }
+            .forEach {
+                it.join()
+            }
 
         val shown = mutableListOf<StreamNotice>()
         while (session.notice.value != null) {

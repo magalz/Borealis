@@ -26,7 +26,12 @@ class FrozenFrameTest {
     /** What the frame asked the main thread to run later, with the delay in milliseconds. */
     private val scheduled = mutableListOf<Pair<Long, () -> Unit>>()
     private val frozen =
-        FrozenFrame(source, { origin }, { nanos }, { delay, action -> scheduled += delay to action })
+        FrozenFrame(
+            source,
+            { origin },
+            { nanos },
+            { delay, action -> scheduled += delay to action },
+        )
 
     private fun lines() = log.records.filter { it.tag == LogTag.VIDEO }
 

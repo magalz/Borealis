@@ -46,11 +46,10 @@ private val PADDING_VERTICAL = 8.dp
  * goes through to what is under it, so a notice never changes who has the input. Screen readers
  * hear it as a polite announcement. There is no animation, so Reduce motion has nothing to remove
  * here; where the glass of the stream would be solid (the transparency Off, high contrast, Reduce
- * motion: the rules of [videoGlassSpec]) the card is the solid surface, and else the surface at
- * the firm tint of a popup over the game ([POPUP_TINT_PERCENT]), with no blur and no live copy of
- * the video, which a card of four seconds is too light for. The text is ink, which that tint keeps
- * at 4.5:1 over the lightest frame, with no halo (`PopupGlassContrastTest` in
- * `design/accessibility`).
+ * motion: the rules of [videoGlassSpec]) the card is the solid surface, and else the surface at the
+ * firm tint of a popup over the game ([POPUP_TINT_PERCENT]), with no blur and no live copy of the
+ * video, which a card of four seconds is too light for. The text is ink, which that tint keeps at
+ * 4.5:1 over the lightest frame, with no halo (`PopupGlassContrastTest` in `design/accessibility`).
  */
 @Composable
 internal fun StreamNoticeCard(

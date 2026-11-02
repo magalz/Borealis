@@ -72,8 +72,8 @@ private fun rememberFrozenGlass(frozen: FrozenFrame, spec: VideoGlassSpec): Vide
 /**
  * Draws the frame of [frozen] behind what is inside: the blurred copy of [glass], which records it
  * first, or the sharp frame where there is no glass; the black alone while the copy is pending;
- * nothing else. The frame is read as it is drawn, so it is where the video is now: a window that
- * is laid out again draws it again, and a rotation moves it.
+ * nothing else. The frame is read as it is drawn, so it is where the video is now: a window that is
+ * laid out again draws it again, and a rotation moves it.
  */
 private fun Modifier.frozenFrameBackdrop(frozen: FrozenFrame, glass: VideoGlass?): Modifier =
     drawBehind {

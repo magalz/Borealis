@@ -197,6 +197,31 @@ internal class GameSurfaceLostTest : GameTestBase() {
     }
 
     @Test
+    fun `picture in picture is a leave, so the report shows nothing`() {
+        rig.streaming()
+        rig.game.enterPictureInPictureMode()
+
+        surfaceLost()
+        ShadowLooper.idleMainLooper()
+
+        assertNoFailure()
+        assertWarned()
+        assertThat(ShadowRecordingBridge.named("stopConnection")).isEmpty()
+    }
+
+    @Test
+    fun `the report that comes first and then picture in picture shows nothing`() {
+        rig.streaming()
+        surfaceLost()
+
+        rig.game.enterPictureInPictureMode()
+        ShadowLooper.idleMainLooper()
+
+        assertNoFailure()
+        assertWarned()
+    }
+
+    @Test
     fun `a stream that failed already keeps its failure, and the report only warns`() {
         rig.streaming()
         rig.game.connectionTerminated(MoonBridge.ML_ERROR_NO_VIDEO_TRAFFIC)

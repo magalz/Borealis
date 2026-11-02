@@ -3004,14 +3004,7 @@ class Game :
             // that follows is no error
             if (endedByQuit) SessionAudit.quit() else SessionAudit.terminated(errorCode)
 
-            // Let the display go to sleep now
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-            // Stop processing controller input
-            controllerHandler.stop()
-
-            // Ungrab input
-            setInputGrabState(false)
+            releaseWindowAndInput()
 
             if (!displayedFailureDialog) {
                 displayedFailureDialog = true
@@ -3048,6 +3041,19 @@ class Game :
         }
     }
 
+    // BOREALIS: the stream is over, whatever ended it: the display may sleep, the controller input
+    // stops and the pointer goes free, before the chrome shows what happened (stream)
+    private fun releaseWindowAndInput() {
+        // Let the display go to sleep now
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Stop processing controller input
+        controllerHandler.stop()
+
+        // Ungrab input
+        setInputGrabState(false)
+    }
+
     // BOREALIS: the video surface was lost: the picture is gone and nothing else says so. On the
     // main thread, a stream that runs ends as an error termination does: the chrome shows the
     // failure over the last frame, and the connection stops. A stream that is ending already (the
@@ -3065,6 +3071,7 @@ class Game :
         if (firstFrameShown) chromeHost.freezeFrame()
         // The audit says the error before the stop of the connection says that the user left
         SessionAudit.failed("video_surface_lost")
+        releaseWindowAndInput()
         stopConnection()
         streamSession.onFailed(
             StreamFailure(

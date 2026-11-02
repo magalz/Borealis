@@ -16,19 +16,6 @@ import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo
 import org.junit.Test
 
-/** A quit that did not happen, which records what the session chose to do about it. */
-internal class RecordingQuitFailure(override val notTheStarter: Boolean = false) : QuitFailure {
-    val calls = mutableListOf<String>()
-
-    override fun show() {
-        calls += "show"
-    }
-
-    override fun leaveKeepingApp(appName: String) {
-        calls += "leave $appName"
-    }
-}
-
 class StreamSessionTest {
     private val actions = RecordingActions()
     private val session = aSession(actions)

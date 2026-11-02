@@ -7,6 +7,19 @@ import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSessionInfo
 import org.junit.Test
 
+/** A quit that did not happen, which records what the session chose to do about it. */
+internal class RecordingQuitFailure(override val notTheStarter: Boolean = false) : QuitFailure {
+    val calls = mutableListOf<String>()
+
+    override fun show() {
+        calls += "show"
+    }
+
+    override fun leaveKeepingApp(appName: String) {
+        calls += "leave $appName"
+    }
+}
+
 /**
  * A Quit of an app that the stream joined, once the host keeps the app for the device that started
  * it: the host answers the cancel with 599 and ends only this stream, with the quit's ENet

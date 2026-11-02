@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.ui.glass
 
+import android.os.Looper
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.IntOffset
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -7,9 +8,11 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.testing.RecordingLogSink
+import java.time.Duration
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 
 /**
  * The one copy of the stream view that is taken when the stream fails (the owner's decision of
@@ -254,6 +257,20 @@ class FrozenFrameTest {
         assertThat(frozen.frame).isNull()
         assertThat(frozen.pending).isFalse()
         assertThat(lines().filter { it.message == "Frozen frame failed" }).isEmpty()
+    }
+
+    @Test
+    fun `by default the cap runs on the main thread a second after the request`() {
+        val real = FrozenFrame(source, { origin }, { nanos })
+        // The activity asks from the connection thread.
+        Thread { real.request() }.apply { start() }.join()
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(999))
+        assertThat(real.pending).isTrue()
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2))
+        assertThat(real.pending).isFalse()
+        assertThat(real.frame).isNull()
     }
 
     @Test

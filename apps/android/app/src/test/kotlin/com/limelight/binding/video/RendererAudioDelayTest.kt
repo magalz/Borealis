@@ -3,6 +3,7 @@ package com.limelight.binding.video
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.stream.PerfSnapshot
+import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Test
@@ -10,7 +11,7 @@ import org.junit.Test
 /**
  * Characterizes where the audio delay of the overlay comes from: the stream activity gives the
  * renderer a source for it, and the renderer asks it when it builds a snapshot, once a second at
- * most, never for each frame. Without a source there is no delay to show.
+ * most, never for each frame. Without a source, or when it throws, there is no delay to show.
  */
 class RendererAudioDelayTest : RendererTestBase() {
     private val snapshots = CopyOnWriteArrayList<PerfSnapshot>()
@@ -82,6 +83,24 @@ class RendererAudioDelayTest : RendererTestBase() {
         renderer.closeWindow(5)
 
         assertThat(snapshots.map { it.audioDelayMs }).containsExactly(1, 2).inOrder()
+    }
+
+    @Test
+    fun `a source that throws gives no audio delay, logs once and never throws into the submit`() {
+        val renderer = counting()
+        renderer.setAudioDelaySource { error("the audio track is gone") }
+        val thrown = mutableListOf<Throwable>()
+
+        val warnings =
+            LimeLogCapture().start().use { log ->
+                thrown += listOfNotNull(runCatching { renderer.closeWindow(1) }.exceptionOrNull())
+                thrown += listOfNotNull(runCatching { renderer.closeWindow(3) }.exceptionOrNull())
+                log.warnings()
+            }
+
+        assertThat(thrown).isEmpty()
+        assertThat(snapshots.map { it.audioDelayMs }).containsExactly(null, null)
+        assertThat(warnings.filter { it.contains("audio delay", ignoreCase = true) }).hasSize(1)
     }
 
     @Test

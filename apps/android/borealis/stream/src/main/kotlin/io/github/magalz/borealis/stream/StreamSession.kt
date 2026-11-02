@@ -43,18 +43,19 @@ data class StreamDefaults(
  * ends the stream, until the quit answers. A disconnect puts it at [StreamPhase.Disconnecting] at
  * once, and nothing that happens later changes it: the activity finishes itself.
  *
- * A quit of an app that the stream joined ([launchRequested]) can be answered with 599 by a host
- * that keeps the app for the device that started it, and ends only this stream, with the quit's
- * ENet disconnect or the graceful termination ([endedByQuit]). That pair, in either order, is a
- * clean leave and no failure: the session asks the [QuitFailure] to leave, and the activity
- * finishes with a notice for the Library. The graceful termination reports no failure, so the
- * activity says that it ended the stream with [onGracefulEnd] instead of [onFailed]. With the 599
- * answered first the stream still runs, and the answer is held for [SHARED_QUIT_WINDOW_MS] before
- * it is shown, which gives the end of the stream the time to come. Anything else, a session that
- * launched the app, another error of the quit or another end of the stream, goes the way it always
- * went. A held answer is dropped when the user leaves, with a disconnect or a leave, and when the
- * connection stops: nothing is left to wait for, no end of the stream is the quit's any more, and
- * no toast may follow the activity.
+ * A host that keeps the app for another device cancels only the session of the one that asks, so
+ * its answer to a quit can be 599 ([QuitFailure.notTheStarter]) and it ends only this stream, with
+ * the quit's ENet disconnect or the graceful termination ([endedByQuit]). It does that whoever
+ * started the app, so the session does not tell a stream that launched the app from one that joined
+ * it. That pair, in either order, is a clean leave and no failure: the session asks the
+ * [QuitFailure] to leave, and the activity finishes with a notice for the Library. The graceful
+ * termination reports no failure, so the activity says that it ended the stream with
+ * [onGracefulEnd] instead of [onFailed]. With the 599 answered first the stream still runs, and the
+ * answer is held for [SHARED_QUIT_WINDOW_MS] before it is shown, which gives the end of the stream
+ * the time to come. Anything else, another error of the quit or another end of the stream, goes the
+ * way it always went. A held answer is dropped when the user leaves, with a disconnect or a leave,
+ * and when the connection stops: nothing is left to wait for, no end of the stream is the quit's
+ * any more, and no toast may follow the activity.
  *
  * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
  * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
@@ -104,8 +105,8 @@ class StreamSession(
     // True once endedByQuit took the end of the stream for the quit's, from the connection thread.
     @Volatile private var endedByTheQuit = false
 
-    // The 599 answer to a quit of a joined app while the stream still runs: held until the window
-    // ends, so the end of the stream that follows is still seen as the quit's.
+    // The 599 answer to a quit while the stream still runs: held until the window ends, so the end
+    // of the stream that follows is still seen as the quit's.
     private val heldQuit = AtomicReference<HeldQuit?>(null)
 
     private class HeldQuit(val failure: QuitFailure, val answeredAtMs: Long)
@@ -288,7 +289,7 @@ class StreamSession(
     // still runs goes on as it was. Unless the host keeps the app for another device (see the
     // class), which is a clean leave when the stream ended with the quit.
     private fun onQuitFailed(failure: QuitFailure) {
-        val sharedApp = joinedRunningApp && failure.notTheStarter
+        val sharedApp = failure.notTheStarter
         if (sharedApp && endedByTheQuit) {
             leaveKeepingApp(failure)
             return
@@ -340,10 +341,10 @@ class StreamSession(
      * when the host sends that before it closes a cancelled session. Any other code while a quit is
      * pending is a network drop and goes the way of a failure.
      *
-     * A quit whose 599 answer came first, on a joined app, is still waiting for this end: it counts
-     * for [SHARED_QUIT_WINDOW_MS] from the answer. The host closes the stream when it gets the
-     * cancel, before it answers, but a stream that goes on after the answer can end at any later
-     * time, by the network or by the host: only an end within the window is taken for the quit's.
+     * A quit whose 599 answer came first is still waiting for this end: it counts for
+     * [SHARED_QUIT_WINDOW_MS] from the answer. The host closes the stream when it gets the cancel,
+     * before it answers, but a stream that goes on after the answer can end at any later time, by
+     * the network or by the host: only an end within the window is taken for the quit's.
      */
     fun endedByQuit(code: Int): Boolean {
         val quitting = mutableState.value.phase is StreamPhase.Quitting
@@ -549,8 +550,8 @@ private fun postToMainThread(delayMs: Long, action: () -> Unit) {
 }
 
 /**
- * How long after a 599 answer to a quit of a joined app the end of the stream is still taken for
- * the quit's ([StreamSession.endedByQuit]), and how long that answer is held before it is shown.
+ * How long after a 599 answer to a quit the end of the stream is still taken for the quit's
+ * ([StreamSession.endedByQuit]), and how long that answer is held before it is shown.
  */
 private const val SHARED_QUIT_WINDOW_MS = 5_000L
 

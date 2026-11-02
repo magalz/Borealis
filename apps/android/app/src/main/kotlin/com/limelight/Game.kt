@@ -730,6 +730,7 @@ class Game :
         controllerHandler.setChromeKeySink(chromeHost::dispatchUsbPadKey)
         decoderRenderer.setPerfSink(streamSession::onPerf)
         audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx)
+        decoderRenderer.setAudioDelaySource(audioRenderer::audioDelayMs)
         PerfGate.bind(lifecycleScope, streamSession, decoderRenderer::setPerfEnabled)
         GamepadMouseSync.bind(lifecycleScope, streamSession) {
             controllerHandler.isMouseEmulationOnAnyPad

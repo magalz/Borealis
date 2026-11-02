@@ -2633,8 +2633,9 @@ or a PIN, and take no screenshot of the stream (section 5).
    at the first frame, and the log has `audio output has two channels, stereo asked of the host`, with no
    device name.
 5. Leave during the start, on a host with nothing running.
-   - Back on the Connecting screen after the launch was sent. Expected: the host log shows one `/cancel`,
-     and no rollback 10 s later. The 10 s check applies to `/launch` rows only.
+   - Back on the Connecting screen after the host accepted the launch. Expected: the host log shows one
+     `/cancel` (the client logs `launch cancel sent`), and no rollback 10 s later. The 10 s check applies to
+     `/launch` rows only. A `/launch` that never gets an answer is not cancelled, by design.
    - With Desktop already running (a `/resume`). Expected: no `/cancel`, by design.
    - Leave and start again at once. Expected: the second stream reaches video.
 6. Error popup, then rotate the S22, split the screen and leave picture-in-picture. Expected: the frozen

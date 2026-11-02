@@ -241,7 +241,7 @@ class StreamSession(
 
     // The quit did not happen: a stream that already ended with it ended by failing, and one that
     // still runs goes on as it was.
-    private fun onQuitFailed() {
+    private fun onQuitFailed(failure: QuitFailure) {
         mutableState.update {
             val phase = it.phase
             if (phase is StreamPhase.Quitting) {
@@ -250,6 +250,7 @@ class StreamSession(
                 it
             }
         }
+        failure.show()
     }
 
     /**

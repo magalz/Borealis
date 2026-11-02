@@ -186,7 +186,7 @@ internal constructor(
         }
     }
 
-    override fun quitApp(onFailed: () -> Unit) {
+    override fun quitApp(onFailed: (QuitFailure) -> Unit) {
         if (quitting) return
         quitting = true
         // The host ends the stream with the app, possibly before the answer arrives.
@@ -206,15 +206,25 @@ internal constructor(
                     // The stream goes on, so the user can try again.
                     quitting = false
                     SessionAudit.quitFailed()
-                    onFailed()
-                    toast(
-                        result.message
-                            ?: activity.getString(LibraryR.string.apps_message_quit_failed)
-                    )
+                    onFailed(failureOf(result))
                 }
             }
         }
     }
+
+    // What the session can do about a quit that did not happen: it chooses, so nothing is shown
+    // before it says so.
+    private fun failureOf(result: QuitResult.Failed) =
+        object : QuitFailure {
+            override val notTheStarter = false
+
+            override fun show() =
+                toast(
+                    result.message ?: activity.getString(LibraryR.string.apps_message_quit_failed)
+                )
+
+            override fun leaveKeepingApp(appName: String) = Unit
+        }
 
     override fun leave() = finishActivity()
 

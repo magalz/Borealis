@@ -266,7 +266,7 @@ class GameStreamActionsTest {
     fun `a failed quit shows the failure and keeps streaming`() {
         entryPoint.apps.result = QuitResult.Failed("The host said no")
 
-        actions.quitApp {}
+        actions.quitApp { it.show() }
 
         assertThat(activity.isFinishing).isFalse()
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("The host said no")
@@ -295,7 +295,7 @@ class GameStreamActionsTest {
     fun `a failed quit without a text shows the generic one`() {
         entryPoint.apps.result = QuitResult.Failed(null)
 
-        actions.quitApp {}
+        actions.quitApp { it.show() }
 
         assertThat(activity.isFinishing).isFalse()
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Failed to quit.")

@@ -37,9 +37,10 @@ interface StreamActions {
 
     /**
      * Ends the app on the PC and the connection. [onFailed] runs on the main thread when the quit
-     * did not happen.
+     * did not happen, with the [QuitFailure] that says why and lets the session choose what the
+     * activity does about it: nothing is shown or left until the session says so.
      */
-    fun quitApp(onFailed: () -> Unit)
+    fun quitApp(onFailed: (QuitFailure) -> Unit)
 
     /** Leaves the stream screen without ending anything. */
     fun leave()
@@ -58,4 +59,28 @@ interface StreamActions {
 
     /** Applies the user's choice for the app that is already running on the host. */
     fun answerConflict(choice: ConflictChoice)
+}
+
+/**
+ * A quit that did not happen, as [StreamActions.quitApp] reports it, with the two things the
+ * activity can do about it. The session calls one of them, on the main thread, when it has judged
+ * the failure ([StreamSession]): the activity does neither on its own.
+ */
+interface QuitFailure {
+    /**
+     * True when the host answered that another device started the session of the app (the
+     * synthetic 599 of `NvHTTP.quitApp`). A host that keeps the app for that device answers it to
+     * the Quit of a device that joined, and ends the stream of the one that asked.
+     */
+    val notTheStarter: Boolean
+
+    /** Tells the viewer why the quit did not happen; the activity stays where it is. */
+    fun show()
+
+    /**
+     * The Quit of a joined app only ended this stream, and [appName] (blank when not known) keeps
+     * running for the device that started it: leaves the Library the notice that says so, and
+     * finishes the activity.
+     */
+    fun leaveKeepingApp(appName: String)
 }

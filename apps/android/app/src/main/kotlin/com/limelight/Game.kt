@@ -73,6 +73,8 @@ import io.github.magalz.borealis.host.launch.SessionAudit
 import io.github.magalz.borealis.host.video.StreamStartupGuard
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
+import io.github.magalz.borealis.stream.AudioOutput
+import io.github.magalz.borealis.stream.AudioOutputs
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.GameStreamActions
 import io.github.magalz.borealis.stream.GamepadMouseSync
@@ -184,6 +186,7 @@ class Game :
     // Decided at the start; the notices of the stream read it (audio)
     internal var stereoFallback: MoonBridge.AudioConfiguration? = null
         private set
+
     // BOREALIS: the audio went to a Bluetooth output when the stream started (audio)
     internal var startedOnBluetooth = false
         private set
@@ -592,6 +595,10 @@ class Game :
 
         // BOREALIS: audited as negotiated, not as requested (host.launch)
         streamFrameRate = chosenFrameRate
+        // BOREALIS: the output that the audio goes to when the stream starts decides the audio that
+        // the host is asked for (audio)
+        val audioOutput = AudioOutputs(applicationContext).current()
+        startedOnBluetooth = audioOutput.bluetooth
         val config =
             StreamConfiguration.Builder()
                 .setResolution(prefConfig.width, prefConfig.height)
@@ -607,7 +614,7 @@ class Game :
                 .setSupportedVideoFormats(supportedVideoFormats)
                 .setAttachedGamepadMask(gamepadMask)
                 .setClientRefreshRateX100((displayRefreshRate * X100).toInt())
-                .setAudioConfiguration(prefConfig.audioConfiguration)
+                .setAudioConfiguration(audioConfigurationFor(audioOutput))
                 .setColorSpace(decoderRenderer.getPreferredColorSpace())
                 .setColorRange(decoderRenderer.getPreferredColorRange())
                 .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
@@ -976,6 +983,34 @@ class Game :
             prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
             (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED &&
                 prefConfig.reduceRefreshRate)
+    }
+
+    // BOREALIS: a 2-channel output gets stereo from the host when the settings ask for 5.1 or
+    // 7.1: a track for more channels on it leaves the fast path of the audio mixer and adds
+    // latency. The setting is kept when the output has more channels or does not say (audio)
+    private fun audioConfigurationFor(output: AudioOutput): MoonBridge.AudioConfiguration? {
+        val asked = prefConfig.audioConfiguration
+        val stereo = MoonBridge.AUDIO_CONFIGURATION_STEREO
+        val channels = output.channelCount
+        val stereoOutput = channels != null && channels <= stereo.channelCount
+        if (asked == null || !stereoOutput || asked.channelCount <= stereo.channelCount) {
+            return asked
+        }
+
+        stereoFallback = asked
+        val label =
+            when (asked) {
+                MoonBridge.AUDIO_CONFIGURATION_51_SURROUND -> "5.1"
+                MoonBridge.AUDIO_CONFIGURATION_71_SURROUND -> "7.1"
+                else -> "${asked.channelCount} channels"
+            }
+        BorealisLog.i(
+            LogTag.APP,
+            "audio output has two channels, stereo asked of the host",
+            "asked" to label,
+            "used" to "stereo",
+        )
+        return stereo
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).

@@ -902,9 +902,46 @@ object MediaCodecHelper {
         return findKnownSafeDecoder(mimeType, requiredProfile)
     }
 
+    // BOREALIS: findProbableSafeDecoder skips a decoder that throws for its capabilities, so it
+    // finds nothing for a type whose only decoders throw, and a caller cannot tell that from a
+    // device without a decoder. This answers the first decoder of the type, with the candidates of
+    // that search (no encoder, alias or blacklisted decoder), when every one of them throws; it
+    // answers null when there is none, or when one can be read, which the search would have found.
+    @Suppress("LoopWithTooManyJumpStatements")
     @JvmStatic
-    @Suppress("FunctionOnlyReturningConstant", "UNUSED_PARAMETER")
-    fun findDecoderWhenAllThrow(mimeType: String): MediaCodecInfo? = null
+    fun findDecoderWhenAllThrow(mimeType: String): MediaCodecInfo? {
+        requireInitialized()
+
+        var first: MediaCodecInfo? = null
+        for (codecInfo in getMediaCodecList()) {
+            if (codecInfo.isEncoder) {
+                continue
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && codecInfo.isAlias) {
+                continue
+            }
+
+            val mime =
+                codecInfo.supportedTypes.firstOrNull { it.equals(mimeType, ignoreCase = true) }
+                    ?: continue
+
+            if (isCodecBlacklisted(codecInfo)) {
+                continue
+            }
+
+            if (readCapabilities(codecInfo, mime) != null) {
+                return null
+            }
+
+            if (first == null) {
+                first = codecInfo
+            }
+        }
+
+        first?.let { LimeLog.info("Every decoder for $mimeType throws, the first is ${it.name}") }
+        return first
+    }
 
     // Some bad decoders throw IllegalArgumentExceptions from getCapabilitiesForType. The Java gave
     // up the whole search for one of them and took the first decoder, whatever the required

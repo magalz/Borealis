@@ -15,9 +15,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 
 /**
- * What the device says about the output that the audio of a stream goes to: the platform routes
- * the audio of a stream on Android 13 and later, and below it the order of the types of output
- * decides.
+ * What the device says about the output that the audio of a stream goes to: the platform routes the
+ * audio of a stream on Android 13 and later, and below it the order of the types of output decides.
  */
 @RunWith(RobolectricTestRunner::class)
 class AudioOutputsTest {
@@ -159,7 +158,7 @@ class AudioOutputsTest {
         audio.addOutputDevice(bluetooth, true)
         ShadowLooper.idleMainLooper()
 
-        assertThat(seen.last()).isEqualTo(AudioOutput(channelCount = 2, bluetooth = true))
+        assertThat(seen.lastOrNull()).isEqualTo(AudioOutput(channelCount = 2, bluetooth = true))
     }
 
     @Test

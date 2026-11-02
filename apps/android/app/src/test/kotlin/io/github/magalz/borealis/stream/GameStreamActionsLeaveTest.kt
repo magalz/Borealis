@@ -47,7 +47,8 @@ private object NoGamepad : GamepadChrome {
 /**
  * Leaving the stream through the actions: a Disconnect keeps its screen for a second, waits for the
  * connection to stop for at most five, leaves the Library its notice and finishes the activity
- * once; a Quit finishes it once too. Time is the test dispatcher's, so nothing here sleeps.
+ * once; a Quit finishes it once too, and so does the leave that the session chooses for a Quit of a
+ * shared app. Time is the test dispatcher's, so nothing here sleeps.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)

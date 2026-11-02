@@ -216,14 +216,19 @@ internal constructor(
     // before it says so.
     private fun failureOf(result: QuitResult.Failed) =
         object : QuitFailure {
-            override val notTheStarter = false
+            override val notTheStarter = result.notTheStarter
 
             override fun show() =
                 toast(
                     result.message ?: activity.getString(LibraryR.string.apps_message_quit_failed)
                 )
 
-            override fun leaveKeepingApp(appName: String) = Unit
+            // The Library behind the stream shows that the app keeps running for the device that
+            // started it, as a Disconnect shows that it keeps running on the PC.
+            override fun leaveKeepingApp(appName: String) {
+                entryPoint().quitNotice().post(LeaveNotice.KeepsRunning(appName))
+                finishActivity()
+            }
         }
 
     override fun leave() = finishActivity()

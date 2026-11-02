@@ -251,12 +251,34 @@ class ComputerAppRepositoryTest {
     }
 
     @Test
+    fun `an app started by another device is said to be so, for the stream to judge`() = runTest {
+        binder.computers["host-1"] = details(runningGameId = 7)
+        clients.client.quit = { throw HostHttpResponseException(599, "") }
+
+        val result = repository().quit("host-1") as QuitResult.Failed
+
+        assertThat(result.notTheStarter).isTrue()
+    }
+
+    @Test
     fun `other errors of the host show their message`() = runTest {
         binder.computers["host-1"] = details(runningGameId = 7)
         clients.client.quit = { throw HostHttpResponseException(503, "busy") }
 
         assertThat(repository().quit("host-1"))
             .isEqualTo(QuitResult.Failed("Host PC returned error: busy (Error code: 503)"))
+    }
+
+    @Test
+    fun `an error that is not the 599 does not say another device started the app`() = runTest {
+        binder.computers["host-1"] = details(runningGameId = 7)
+        val repository = repository()
+
+        clients.client.quit = { throw HostHttpResponseException(503, "busy") }
+        assertThat((repository.quit("host-1") as QuitResult.Failed).notTheStarter).isFalse()
+
+        clients.client.quit = { throw IOException("reset") }
+        assertThat((repository.quit("host-1") as QuitResult.Failed).notTheStarter).isFalse()
     }
 
     @Test

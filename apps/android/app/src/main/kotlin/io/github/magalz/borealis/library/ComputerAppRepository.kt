@@ -113,15 +113,17 @@ constructor(
     }
 
     private fun failure(error: Exception): QuitResult.Failed =
-        QuitResult.Failed(
-            when {
-                error is HostHttpResponseException && error.errorCode == NOT_THE_STARTER ->
-                    NOT_THE_STARTER_TEXT
-                error is UnknownHostException -> texts.unknownHost()
-                error is FileNotFoundException -> texts.notFound()
-                else -> error.message
-            }
-        )
+        if (error is HostHttpResponseException && error.errorCode == NOT_THE_STARTER) {
+            QuitResult.Failed(NOT_THE_STARTER_TEXT, notTheStarter = true)
+        } else {
+            QuitResult.Failed(
+                when (error) {
+                    is UnknownHostException -> texts.unknownHost()
+                    is FileNotFoundException -> texts.notFound()
+                    else -> error.message
+                }
+            )
+        }
 
     private companion object {
         /** The synthetic status that `NvHTTP.quitApp` reports for a session of another client. */

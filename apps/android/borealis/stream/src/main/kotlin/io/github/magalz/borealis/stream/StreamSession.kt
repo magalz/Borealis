@@ -1,5 +1,7 @@
 package io.github.magalz.borealis.stream
 
+import android.os.Handler
+import android.os.Looper
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ConflictChoice
@@ -41,6 +43,15 @@ data class StreamDefaults(
  * ends the stream, until the quit answers. A disconnect puts it at [StreamPhase.Disconnecting] at
  * once, and nothing that happens later changes it: the activity finishes itself.
  *
+ * A quit of an app that the stream joined ([launchRequested]) can be answered with 599 by a host
+ * that keeps the app for the device that started it, and ends only this stream, with the quit's
+ * ENet disconnect ([endedByQuit]). That pair, in either order, is a clean leave and no failure: the
+ * session asks the [QuitFailure] to leave, and the activity finishes with a notice for the Library.
+ * With the 599 answered first the stream still runs, and the answer is held for
+ * [SHARED_QUIT_WINDOW_MS] before it is shown, which gives the end of the stream the time to come.
+ * Anything else, a session that launched the app, another error of the quit or another end of the
+ * stream, goes the way it always went.
+ *
  * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
  * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
  * disconnects while it is open does not change it.
@@ -49,7 +60,10 @@ data class StreamDefaults(
  * shows it takes no touch and no key. The notices wait in a queue of their own, one [notice] at a
  * time.
  */
-@Suppress("TooManyFunctions") // One method per stream event and per StreamIntents call.
+@Suppress(
+    "TooManyFunctions", // One method per stream event and per StreamIntents call.
+    "LongParameterList", // The clock and the scheduler are the seams of the tests.
+)
 class StreamSession(
     appName: String,
     hostName: String,
@@ -57,6 +71,7 @@ class StreamSession(
     private val dockKeyboard: () -> Boolean,
     private val actions: StreamActions,
     private val clockMs: () -> Long = { System.nanoTime() / NANOS_PER_MS },
+    private val schedule: (Long, () -> Unit) -> Unit = ::postToMainThread,
 ) : StreamIntents {
     private val mutableState =
         MutableStateFlow(
@@ -77,6 +92,19 @@ class StreamSession(
 
     // When the quit was accepted, for the time that the end of the stream is logged with.
     @Volatile private var quitAcceptedAtMs = 0L
+
+    // Whether the stream joined an app that ran already (see launchRequested), which decides what
+    // the 599 answer to a quit means.
+    @Volatile private var joinedRunningApp = false
+
+    // True once endedByQuit took the end of the stream for the quit's, from the connection thread.
+    @Volatile private var endedByTheQuit = false
+
+    // The 599 answer to a quit of a joined app while the stream still runs: held until the window
+    // ends, so the end of the stream that follows is still seen as the quit's.
+    private val heldQuit = AtomicReference<HeldQuit?>(null)
+
+    private class HeldQuit(val failure: QuitFailure, val answeredAtMs: Long)
 
     val state: StateFlow<StreamUiState> = mutableState
 
@@ -121,6 +149,15 @@ class StreamSession(
                 mutableNotice.value = waitingNotices.removeFirstOrNull()
             }
         }
+    }
+
+    /**
+     * The activity asks the host for the app, to [resume] it when it runs already: a stream that
+     * joins an app that another device started can find that a Quit only ends its own stream. The
+     * last request counts. Safe to call from any thread.
+     */
+    fun launchRequested(resume: Boolean) {
+        joinedRunningApp = resume
     }
 
     /** Who gets the input and what the chrome covers; one read of [state], from any thread. */
@@ -227,29 +264,65 @@ class StreamSession(
     /**
      * The start failed or the stream ended with an error. The first failure stays. While the phase
      * is [StreamPhase.Quitting] the end is the quit, not a failure: the host ends the stream before
-     * it answers the cancel, so the phase stays and keeps how the stream ended.
+     * it answers the cancel, so the phase stays and keeps how the stream ended. The end that a held
+     * 599 waits for (see [endedByQuit]) is the quit's and no failure either: the session leaves.
      */
-    fun onFailed(failure: StreamFailure) = mutableState.update {
-        val phase = it.phase
-        when {
-            phase is StreamPhase.Failed || phase is StreamPhase.Disconnecting -> it
-            phase is StreamPhase.Quitting ->
-                if (phase.ended == null) it.copy(phase = phase.copy(ended = failure)) else it
-            else -> it.copy(phase = StreamPhase.Failed(failure))
+    fun onFailed(failure: StreamFailure) {
+        // The 599 answer came first, and this is the end that it holds for.
+        val held = heldQuit.get()
+        if (held != null && endedByTheQuit && heldQuit.compareAndSet(held, null)) {
+            leaveKeepingApp(held.failure)
+            return
+        }
+        mutableState.update {
+            val phase = it.phase
+            when {
+                phase is StreamPhase.Failed || phase is StreamPhase.Disconnecting -> it
+                phase is StreamPhase.Quitting ->
+                    if (phase.ended == null) it.copy(phase = phase.copy(ended = failure)) else it
+                else -> it.copy(phase = StreamPhase.Failed(failure))
+            }
         }
     }
 
     // The quit did not happen: a stream that already ended with it ended by failing, and one that
-    // still runs goes on as it was.
-    private fun onQuitFailed() {
+    // still runs goes on as it was. Unless the host keeps the app for another device (see the
+    // class), which is a clean leave when the stream ended with the quit.
+    private fun onQuitFailed(failure: QuitFailure) {
+        val sharedApp = joinedRunningApp && failure.notTheStarter
+        if (sharedApp && endedByTheQuit) {
+            leaveKeepingApp(failure)
+            return
+        }
+        // Held before the phase leaves Quitting, so an end that comes between is still the quit's.
+        val held = if (sharedApp) HeldQuit(failure, clockMs()).also(heldQuit::set) else null
+        var stillRuns = false
         mutableState.update {
             val phase = it.phase
+            stillRuns = phase is StreamPhase.Quitting && phase.ended == null
             if (phase is StreamPhase.Quitting) {
                 it.copy(phase = phase.ended?.let(StreamPhase::Failed) ?: phase.resumeTo)
             } else {
                 it
             }
         }
+        if (held != null && stillRuns) {
+            schedule(SHARED_QUIT_WINDOW_MS) {
+                if (heldQuit.compareAndSet(held, null)) failure.show()
+            }
+        } else {
+            if (held != null) heldQuit.compareAndSet(held, null)
+            failure.show()
+        }
+    }
+
+    private fun leaveKeepingApp(failure: QuitFailure) {
+        BorealisLog.i(
+            LogTag.APP,
+            "quit of a shared app is a leave",
+            "since_quit_ms" to clockMs() - quitAcceptedAtMs,
+        )
+        failure.leaveKeepingApp(mutableState.value.appName)
     }
 
     /**
@@ -258,11 +331,16 @@ class StreamSession(
      * host closes the stream when it gets the cancel, and the control stream reports that as the
      * ENet disconnect, [ENET_DISCONNECT]. Any other code while a quit is pending is a network drop
      * and goes the way of a failure.
+     *
+     * A quit whose 599 answer came first, on a joined app, is still waiting for this end: it counts
+     * for [SHARED_QUIT_WINDOW_MS] from the answer. The host closes the stream when it gets the
+     * cancel, before it answers, but a stream that goes on after the answer can end at any later
+     * time, by the network or by the host: only an end within the window is taken for the quit's.
      */
     fun endedByQuit(code: Int): Boolean {
-        if (code != ENET_DISCONNECT || mutableState.value.phase !is StreamPhase.Quitting) {
-            return false
-        }
+        val quitting = mutableState.value.phase is StreamPhase.Quitting
+        if (code != ENET_DISCONNECT || !(quitting || heldQuitOpen())) return false
+        endedByTheQuit = true
         BorealisLog.i(
             LogTag.APP,
             "quit stream ended",
@@ -270,6 +348,11 @@ class StreamSession(
             "since_quit_ms" to clockMs() - quitAcceptedAtMs,
         )
         return true
+    }
+
+    private fun heldQuitOpen(): Boolean {
+        val held = heldQuit.get() ?: return false
+        return clockMs() - held.answeredAtMs <= SHARED_QUIT_WINDOW_MS
     }
 
     /**
@@ -383,6 +466,8 @@ class StreamSession(
 
     override fun quitApp() {
         if (!startLeaving(StreamPhase::Quitting)) return
+        // A new quit takes the answer of an older one with it: this one has its own to give.
+        heldQuit.set(null)
         quitAcceptedAtMs = clockMs()
         BorealisLog.i(LogTag.APP, "quit accepted")
         actions.quitApp(::onQuitFailed)
@@ -432,6 +517,16 @@ enum class SurroundLayout {
 }
 
 private const val NANOS_PER_MS = 1_000_000L
+
+private fun postToMainThread(delayMs: Long, action: () -> Unit) {
+    Handler(Looper.getMainLooper()).postDelayed({ action() }, delayMs)
+}
+
+/**
+ * How long after a 599 answer to a quit of a joined app the end of the stream is still taken for
+ * the quit's ([StreamSession.endedByQuit]), and how long that answer is held before it is shown.
+ */
+private const val SHARED_QUIT_WINDOW_MS = 5_000L
 
 /**
  * The code that the control stream of moonlight-common-c reports when its ENet peer disconnects

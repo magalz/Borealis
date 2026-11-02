@@ -94,7 +94,7 @@ class StreamSessionLeaveLogTest {
     fun `a quit that failed leaves the next end of the stream to the failure path`() {
         val session = streaming()
         session.quitApp()
-        actions.quitFailed()
+        actions.quitFailed(RecordingQuitFailure())
 
         val byQuit = session.endedByQuit(-1)
 

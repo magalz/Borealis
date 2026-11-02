@@ -64,6 +64,14 @@ class StreamSessionSharedQuitTest {
         return byQuit
     }
 
+    // The graceful termination, as the activity handles it: it finishes with no failure to report,
+    // so onFailed is never called, and it tells the session when the end was the quit's.
+    private fun streamEndsGracefully(): Boolean {
+        val byQuit = session.endedByQuit(GRACEFUL_TERMINATION)
+        if (byQuit) session.onGracefulEnd()
+        return byQuit
+    }
+
     private fun runScheduled() =
         scheduled.toList().also { scheduled.clear() }.forEach { it.second() }
 
@@ -336,8 +344,109 @@ class StreamSessionSharedQuitTest {
         assertThat(shared.calls).containsExactly("show")
     }
 
+    // A host that sends the graceful termination before it ends a cancelled session
+    // (NortheBridge/luminalshine#232) ends the stream with code 0, not with the ENet disconnect.
+
+    @Test
+    fun `a graceful end before the answer of 599 is a clean leave of the app that keeps running`() {
+        val running = streaming(resume = true)
+        session.quitApp()
+        assertThat(streamEndsGracefully()).isTrue()
+
+        actions.quitFailed(shared)
+
+        assertThat(shared.calls).containsExactly("leave Desktop")
+        assertThat(phase).isEqualTo(StreamPhase.Quitting(running))
+        runScheduled()
+        assertThat(shared.calls).containsExactly("leave Desktop")
+    }
+
+    @Test
+    fun `a graceful end after the answer of 599 is a clean leave, not a failure`() {
+        val running = streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+        now = 1_000L
+
+        val byQuit = streamEndsGracefully()
+
+        assertThat(byQuit).isTrue()
+        assertThat(shared.calls).containsExactly("leave Desktop")
+        assertThat(log.records.map { it.message }).contains("quit of a shared app is a leave")
+        assertThat(phase).isEqualTo(running)
+        runScheduled()
+        assertThat(shared.calls).containsExactly("leave Desktop")
+    }
+
+    @Test
+    fun `a graceful end exactly at the end of the window is still the quit's`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+        now = WINDOW_MS
+
+        assertThat(streamEndsGracefully()).isTrue()
+
+        assertThat(shared.calls).containsExactly("leave Desktop")
+    }
+
+    @Test
+    fun `a graceful end after the window is not the quit's, the answer is shown as it was`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+        now = WINDOW_MS + 1
+
+        assertThat(streamEndsGracefully()).isFalse()
+
+        runScheduled()
+        assertThat(shared.calls).containsExactly("show")
+    }
+
+    @Test
+    fun `a graceful end after a Disconnect in the window is not the quit's, and no line says so`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+        session.disconnect()
+        now = 1_000L
+
+        assertThat(streamEndsGracefully()).isFalse()
+
+        assertThat(log.records.map { it.message }).doesNotContain("quit stream ended")
+        assertThat(log.records.map { it.message }).doesNotContain("quit of a shared app is a leave")
+        assertThat(shared.calls).isEmpty()
+    }
+
+    @Test
+    fun `a graceful end that was not the quit's leaves the held answer to its window`() {
+        streaming(resume = true)
+        session.quitApp()
+        actions.quitFailed(shared)
+
+        session.onGracefulEnd()
+
+        assertThat(shared.calls).isEmpty()
+        now = WINDOW_MS
+        runScheduled()
+        assertThat(shared.calls).containsExactly("show")
+    }
+
+    @Test
+    fun `a graceful end that ends a simple quit leaves nothing for the session to do`() {
+        val running = streaming(resume = true)
+        session.quitApp()
+
+        assertThat(streamEndsGracefully()).isTrue()
+
+        assertThat(phase).isEqualTo(StreamPhase.Quitting(running))
+        assertThat(shared.calls).isEmpty()
+        assertThat(scheduled).isEmpty()
+    }
+
     private companion object {
         const val ENET_DISCONNECT = -1
+        const val GRACEFUL_TERMINATION = 0
         const val WINDOW_MS = 5_000L
     }
 }

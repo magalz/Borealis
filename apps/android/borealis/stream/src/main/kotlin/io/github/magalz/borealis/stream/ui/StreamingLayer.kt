@@ -16,6 +16,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.StreamIntents
+import io.github.magalz.borealis.stream.StreamNotice
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.ui.hint.MenuHint
 import io.github.magalz.borealis.stream.ui.menu.InGameMenu
@@ -46,6 +47,8 @@ fun StreamingLayer(
     perf: PerfSnapshot?,
     intents: StreamIntents,
     videoGlass: Boolean = true,
+    notice: StreamNotice? = null,
+    onNoticeShown: (StreamNotice) -> Unit = {},
 ) {
     val formFactor = LocalFormFactor.current
     BoxWithConstraints(Modifier.fillMaxSize()) {

@@ -84,8 +84,10 @@ import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamControls
 import io.github.magalz.borealis.stream.StreamFailures
 import io.github.magalz.borealis.stream.StreamKeyboards
+import io.github.magalz.borealis.stream.StreamNotice
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamSessionFactory
+import io.github.magalz.borealis.stream.SurroundLayout
 import io.github.magalz.borealis.stream.TouchContexts
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.host.HeldKeys
@@ -190,6 +192,10 @@ class Game :
     // BOREALIS: the audio went to a Bluetooth output when the stream started (audio)
     internal var startedOnBluetooth = false
         private set
+
+    // BOREALIS: where the audio goes; while the stream runs it tells when that moves to a Bluetooth
+    // output (audio)
+    private lateinit var audioOutputs: AudioOutputs
 
     private lateinit var inputCaptureProvider: InputCaptureProvider
     private var modifierFlags = 0
@@ -597,7 +603,8 @@ class Game :
         streamFrameRate = chosenFrameRate
         // BOREALIS: the output that the audio goes to when the stream starts decides the audio that
         // the host is asked for (audio)
-        val audioOutput = AudioOutputs(applicationContext).current()
+        audioOutputs = AudioOutputs(applicationContext)
+        val audioOutput = audioOutputs.current()
         startedOnBluetooth = audioOutput.bluetooth
         val config =
             StreamConfiguration.Builder()
@@ -1012,6 +1019,32 @@ class Game :
         )
         return stereo
     }
+
+    // BOREALIS: tells the viewer what the audio start decided, and then, while the stream runs, each
+    // time the sound moves to a Bluetooth output. Called once, on the main thread, when the
+    // connection is up and the stop has not run: the card of a notice waits for the stream on
+    // screen, so nothing is lost by giving the notices before the first frame. The listener reads
+    // the session when it runs, and a stop closes it (audio)
+    private fun announceAudio() {
+        stereoFallback?.let {
+            streamSession.notify(StreamNotice.StereoFallback(surroundLayout(it)))
+        }
+        if (startedOnBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
+        var onBluetooth = startedOnBluetooth
+        audioOutputs.onChange { output ->
+            if (stopRan) return@onChange
+            if (output.bluetooth && !onBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
+            onBluetooth = output.bluetooth
+        }
+    }
+
+    // The configurations that the settings offer above stereo are 5.1 and 7.1
+    private fun surroundLayout(asked: MoonBridge.AudioConfiguration): SurroundLayout =
+        if (asked == MoonBridge.AUDIO_CONFIGURATION_71_SURROUND) {
+            SurroundLayout.SURROUND_7_1
+        } else {
+            SurroundLayout.SURROUND_5_1
+        }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress(
@@ -2805,6 +2838,8 @@ class Game :
 
     private fun stopConnection(done: Runnable? = null) {
         stopRan = true // BOREALIS: no stream starts after this (leave)
+        // BOREALIS: the audio output tells nobody after the stop; closing twice is no harm (audio)
+        if (::audioOutputs.isInitialized) audioOutputs.close()
         if (!stopClaimed.compareAndSet(false, true)) {
             // BOREALIS: the stop of a Disconnect after another exit still gets its callback (leave)
             done?.let { connectionStopped.thenRun(it) }
@@ -3038,6 +3073,7 @@ class Game :
                 )
             )
             startupGuard.onConnectionStarted() // BOREALIS: first-frame watchdog
+            announceAudio() // BOREALIS: the notices of the sound (audio)
             // BOREALIS: audit trail
             SessionAudit.started(
                 pcName,

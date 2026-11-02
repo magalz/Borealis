@@ -10,10 +10,10 @@ import org.junit.Test
 
 /**
  * How the stream is audited when the user's Quit of an app that another device started ends it: the
- * host keeps the app and answers 599, and closes the stream with the quit's ENet disconnect. The two
- * can come in either order, and the session takes both for a clean leave. The audit says the same:
- * the stream ended with a quit. Any other quit that failed, and any other end, is audited as it
- * always was.
+ * host keeps the app and answers 599, and closes the stream with the quit's ENet disconnect. The
+ * two can come in either order, and the session takes both for a clean leave. The audit says the
+ * same: the stream ended with a quit. Any other quit that failed, and any other end, is audited as
+ * it always was.
  */
 internal class GameSharedQuitAuditTest : GameTestBase() {
     private val shared = QuitResult.Failed("No", notTheStarter = true)

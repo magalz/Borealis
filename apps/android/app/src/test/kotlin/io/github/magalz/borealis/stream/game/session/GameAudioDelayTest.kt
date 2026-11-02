@@ -19,8 +19,8 @@ private const val FRAME = 240
 
 /**
  * The audio delay of the performance overlay: the video renderer builds the snapshot, and the audio
- * renderer knows the delay. Both are made by the activity, which links them: a snapshot of a running
- * stream carries what the audio renderer of that stream says.
+ * renderer knows the delay. Both are made by the activity, which links them: a snapshot of a
+ * running stream carries what the audio renderer of that stream says.
  */
 @Config(shadows = [ShadowRecordingBridge::class, ShadowRecordingAudioTrack::class])
 internal class GameAudioDelayTest : GameTestBase() {
@@ -31,7 +31,9 @@ internal class GameAudioDelayTest : GameTestBase() {
     private val audioRenderer: AndroidAudioRenderer
         get() = rig.field("audioRenderer")
 
-    /** The video renderer builds the snapshot of the window that ended, as it does once a second. */
+    /**
+     * The video renderer builds the snapshot of the window that ended, as it does once a second.
+     */
     private fun pushSnapshot() {
         ReflectionHelpers.callInstanceMethod<Any?>(rig.renderer, "pushPerfSnapshot")
     }

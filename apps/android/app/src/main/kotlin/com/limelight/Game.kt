@@ -1036,7 +1036,7 @@ class Game :
         return stereo
     }
 
-    // BOREALIS: tells the viewer what the audio start decided, and then, while the stream runs, each
+    // BOREALIS: tells the viewer what the audio start decided and, while the stream runs, each
     // time the sound moves to a Bluetooth output. Called once, on the main thread, when the
     // connection is up and the stop has not run: the card of a notice waits for the stream on
     // screen, so nothing is lost by giving the notices before the first frame. The listener reads
@@ -3052,7 +3052,7 @@ class Game :
     // main thread, a stream that runs ends as an error termination does: the chrome shows the
     // failure over the last frame, and the connection stops. A stream that is ending already (the
     // stop ran, a failure is shown, the activity is finishing) has said what there is to say, so
-    // this only warns. The checks run here and not where the report was posted, so a leave that came
+    // this only warns. The checks run here, not where the report was posted, so a leave that came
     // after the post counts (stream)
     private fun endStreamForLostSurface() {
         if (stopRan || displayedFailureDialog || isFinishing || isDestroyed) {

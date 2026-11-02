@@ -6138,19 +6138,19 @@ and the retest passed. The other findings are for Sprint 17b and Sprint 19.
 | Step | Device | Result | Evidence and notes |
 | --- | --- | --- | --- |
 | 1 Install and crash buffer | TV, S22 | pass | Installed on both. The crash buffer was cleared at the install. The S22 showed no lines at the end, and the round's last note reads 0 for both crash buffers. |
-| 2 Audio by ear | TV, S22 | repeat measurement on the S22; the owner's ear result is not recorded | Three runs per row on the S22, at 1080p with Balanced and with the fps limit: see finding 1. |
+| 2 Audio by ear | TV, S22 | pass, with the S22 start burst | On the S22 the owner heard four crackles when the mouse started to move at the start of a stream, and none after. Three runs per row on the S22, at 1080p with Balanced and with the fps limit: see finding 1. The owner reported nothing for the TV. |
 | 3 Detailed overlay | TV, S22 | pass | S22: "Audio delay" showed 0 ms with the PC silent and 33 ms during the tone. TV, after the power cut and on a Bluetooth output: a dash before the first data, 0 ms while silent and 235 ms during the tone. The TV was paused by the owner before its first run. |
 | 4 Stereo fallback | TV, S22 | pass | The log has `audio output has two channels, stereo asked of the host asked=7.1 used=stereo` on both devices. The S22 showed the notice "This output has 2 channels: streaming stereo instead of 7.1." The TV showed the same notice after the power cut. |
 | 5 Leave during the start | TV, S22 | pass | TV: a Back 3 s after the start, with nothing running. The `/launch` answered 11 s later, `launch cancel sent` followed, and `/cancel` answered after 6.7 s. The host log has `Virtual display cleanup ... reason=cancel`, and no rollback followed. S22: a Back before the request sent nothing. A Back after `/resume` sent no `/cancel`, as designed. A restart at once reached video. |
-| 6 Error popup, rotation, split screen, picture-in-picture | S22 | pass for rotation and split screen; picture-in-picture not recorded | The owner cut the host's network, and the error popup showed over the frozen frame. The owner tested a rotation through 180 degrees and split screen, and both passed. The stream activity is locked to landscape on a phone (`Game.kt`, inherited), so a rotation goes from landscape to reverse landscape. Not run on the TV. Closing LuminalShine on the PC ended the stream with `Connection terminated: 0`, and the client went back to Hosts with no popup, as intended. |
+| 6 Error popup, rotation, split screen, picture-in-picture | S22 | pass for rotation and split screen; picture-in-picture not run (off in the S22 settings) | The owner cut the host's network, and the error popup showed over the frozen frame. The owner tested a rotation through 180 degrees and split screen, and both passed. The stream activity is locked to landscape on a phone (`Game.kt`, inherited), so a rotation goes from landscape to reverse landscape. Not run on the TV. Closing LuminalShine on the PC ended the stream with `Connection terminated: 0`, and the client went back to Hosts with no popup, as intended. |
 | 7 Decoder start logs | TV, S22 | pass | The HEVC decoders are the ones of section 21: TV `c2.mtk.hevc.decoder.lowlatency`, S22 `c2.qti.hevc.decoder.low_latency`. The AVC decoders are TV `c2.mtk.avc.decoder.lowlatency` and S22 `c2.qti.avc.decoder.low_latency`. Neither device has an AV1 decoder. |
-| 8 Home, picture-in-picture and Disconnect | S22 | pass for Home and Disconnect; picture-in-picture not recorded | Home: `connection stop done`, with no failure. Disconnect: the notice "Disconnected. Desktop is still running on the PC.", with no failure. The app page header read "Nothing running" right after the Disconnect (finding 6). |
+| 8 Home, picture-in-picture and Disconnect | S22 | pass for Home and Disconnect; picture-in-picture not run (off in the S22 settings) | Home: `connection stop done`, with no failure. Disconnect: the notice "Disconnected. Desktop is still running on the PC.", with no failure. The app page header read "Nothing running" right after the Disconnect (finding 6). |
 | 9 Sprint 15 open checks | TV, S22 | see the table below | |
 | 10 Bluetooth notice (owner) | S22 | pass (owner) | With a Bluetooth device, the owner changed the output to Bluetooth in the middle of a stream, and the notice showed. The round ran this step on the S22, and the runbook names the TV. On the TV after the power cut, the notice showed at the start of the stream. |
 | 11 Shared Quit on the #227 build (owner) | TV, S22 | pass | On `0.0.158-nightly` (see the pull request builds), a Quit of the S22 alone ended the stream with -1 and left cleanly. In a shared Quit, the S22 joined the TV's Desktop and quit. The stream ended with -1, the Library showed "Desktop keeps running for another device.", and the TV kept streaming. The end came before the 599 answer. |
 | 12 Back with a real keyboard (owner) | S22 | pass, no change | Esc closes the in-game menu. Backspace does not, and Backspace is not Back. The owner kept the behaviour as it is, so no code changed. |
-| 13 Purple and cyan line (owner's eye) | TV | not recorded | The round's notes do not record a result for this step. |
-| 14 End | TV, S22 | done | The S22 settings were put back: 720p, cap FPS, stereo, overlay off, and stay awake off. The TV's `list_audio_config` was put back to 2, its original value. Both crash buffers were empty at the end. |
+| 13 Purple and cyan line (owner's eye) | TV | not seen | The owner reported no line in the round, and none of the TV captures shows it. The cause stays unknown. |
+| 14 End | TV, S22 | done | The S22 settings were put back: 720p, cap FPS, stereo, overlay off, and stay awake off. The TV's `list_audio_config` was put back to 2, its original value. Both crash buffers were empty at the end. The host went back to 26.10.1 (its log reads `LuminalShine version: 26.10.1`), and the TV was put to sleep with `KEYCODE_SLEEP`. |
 
 ### Open checks of earlier rounds
 
@@ -6168,7 +6168,7 @@ The checks of Sprint 15 and Sprint 16 that the round ran, and the owner items of
 | Menu segments by touch (3.29, step 3) | S22 | pass | Direct touch and Overlay Compact were selected and applied, and then Trackpad and Off were restored. The segments report no selected state (finding 4). |
 | Menu segments with a pad (3.29, step 3) | S22 | pass (owner) | Listed in the owner's checks below. The agent did not check it. |
 | Second device, pinned shortcut (3.29, step 5, U6) | TV | pass | With Desktop running for the TV, the pinned shortcut to Steam Big Picture opened the Library sheet "Quit Desktop and start Steam Big Picture", which asks before it quits. The sheet was not tapped, so the TV's Desktop kept running. |
-| Second device, start on another app while one runs (3.29, step 5, U6) | TV, S22 | not recorded | The round's notes do not record this path. |
+| Second device, start on another app while one runs (3.29, step 5, U6) | S22 | pass | The same Library sheet as the row above: with Desktop running, starting Steam Big Picture offers "Quit Desktop and start Steam Big Picture" first. |
 | Second device, order 1: S22 first, TV 2 s later | TV | pass | The TV showed "An app is already running" after the host's 400, with Join, Quit and relaunch, and Cancel. Join sent `/resume`, and both devices streamed. |
 | Second device, order 2: TV first, S22 2 s later | S22 | pass | The same dialog. Quit and relaunch sent `/cancel` (6134 ms) and then `/launch`, which answered 200, and the S22 streamed. The TV showed "Desktop stopped" with Error -1, as the dialog warned. |
 | Try again after that | TV | pass, with a product question | Try again joined the S22's running Desktop at once, with no question (finding 5). |
@@ -6255,8 +6255,7 @@ Resume or the first card by position. Roadmap, Sprint 17b, Accessibility and lay
 - A leave during a 409 or 503 retry. The host answers 400, as in [section 21](#21-results-sprint-16).
 - The shared Quit with the 599 answer before the end. Only the unit tests cover it.
 - The render checks of Sprint 15. Only the times of the menu glass copies were logged.
-- Picture-in-picture (steps 6 and 8). The round's notes do not record it.
-- The owner's result for step 2 by ear and for step 13 (the purple and cyan line). The round's notes do not record them.
-- Starting another app while one runs, which should show the Conflict dialog. The round's notes do not record it.
+- Picture-in-picture (steps 6 and 8): it is off in the S22 settings, and the round did not turn it on. Unit tests
+  cover the lost surface in picture-in-picture.
 - Left on the devices: the debug build of `4539b943b` on both, paired, and the settings as before the round. The
-  host was last set to the `#232` build for the retest. Its return to 26.10.1 is not recorded here.
+  host is back on 26.10.1.

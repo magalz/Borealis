@@ -61,7 +61,6 @@ import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
-import com.limelight.ui.GameGestures
 import com.limelight.ui.StreamView
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.ShortcutHelper
@@ -116,7 +115,6 @@ class Game :
     View.OnTouchListener,
     NvConnectionListener,
     View.OnSystemUiVisibilityChangeListener,
-    GameGestures,
     StreamView.InputCallbacks,
     UsbDriverService.UsbDriverStateListener,
     View.OnKeyListener {
@@ -1782,7 +1780,7 @@ class Game :
         }
     }
 
-    override fun toggleKeyboard() {
+    fun toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay")
         // BOREALIS: hides the Android keyboard when it shows, else toggles the Borealis keyboard;
         // the Android one opens from it

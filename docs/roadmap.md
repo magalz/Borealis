@@ -1309,7 +1309,7 @@ the client side, and none of its findings is a Sprint 16 regression.
 
 ### Sprint 17: general fixes
 
-Sprint 17a in progress, Sprint 17b planned. Owner decision of 2026-10-28, later the same day; see the
+Sprint 17a: done, in review (phase pull request open). Sprint 17b planned. Owner decision of 2026-10-28, later the same day; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
 
 On 2026-11-02, after Sprint 16, the owner split the sprint in two, run one after the other, each
@@ -1322,8 +1322,9 @@ with its own phase pull request and device round. The numbers of the later sprin
   [Pads](#pads) and [Accessibility and layout](#accessibility-and-layout): the input and pad code and
   the Compose screens, and a device round on the controls and the screens.
 
-Status: Sprint 17a is in progress on `phase/s17a-stream-fixes` (issues #116 to #119), device round
-pending.
+Status: Sprint 17a is on `phase/s17a-stream-fixes` (issues #116 to #119). Its device round of 2026-11-02
+passed; the results, the findings and the items not run are in
+[device-validation section 22](development/device-validation.md#22-results-sprint-17a).
 
 Why: about 57 items, many of them investigations on the devices with the owner, and several in the
 same files (`Game.kt` in the stream session, input and video; `ControllerHandler` in pads and input).
@@ -1397,11 +1398,13 @@ the TV: the same audio runs, not a Sprint 16 regression
   output, show a one-line notice for a few seconds, and then let it go away. Sprint 17a: done. The
   notice is one line on a light glass card at the top of the screen, for about 4 s, with no scrim
   and no focus or input (owner decision, 2026-11-02). It shows at the start, and once each time the
-  sound moves to a Bluetooth output during the stream.
+  sound moves to a Bluetooth output during the stream. The device round of 2026-11-02 passed it
+  ([section 22](development/device-validation.md#22-results-sprint-17a), step 10).
 - **The audio delay in the performance overlay.** Decision (owner, 2026-10-28): if possible, add a
   line to the performance overlay with the audio delay. Android can estimate it from the
   `AudioTrack` timestamps; the client reads none today. Sprint 17a: done, as one line in the Detailed
-  overlay from `AudioTrack.getTimestamp`, with a dash until a timestamp exists. Not in Compact.
+  overlay from `AudioTrack.getTimestamp`, with a dash until a timestamp exists. Not in Compact. The device round of 2026-11-02 passed it on both
+  devices ([section 22](development/device-validation.md#22-results-sprint-17a), step 3).
 - **A 2-channel output, with 5.1 or 7.1 asked for.** On the Streamer, a track for 7.1 on a
   2-channel output leaves the fast path (5.1 was not measured): it goes to the normal mixer, with a buffer 11 to 16 times
   larger, which adds about 250 to 320 ms (Android's figures in the follow-up: 405 ms against 151 to
@@ -1410,10 +1413,16 @@ the TV: the same audio runs, not a Sprint 16 regression
   for stereo, log it, and say so with a one-line notice for a few seconds at the start of the
   stream. Sprint 17a: done. When the routed output reports 2 channels or fewer and 5.1 or 7.1 is
   set, the stream asks the host for stereo and logs it. Only at the start, since the channel count
-  goes in `/launch`; the notice says so once.
+  goes in `/launch`; the notice says so once. The device round of 2026-11-02 passed it on both devices
+  ([section 22](development/device-validation.md#22-results-sprint-17a), step 4).
 - **One notice modal.** The Bluetooth notice and the channel notice share one small notice modal,
   since there are two now (owner, 2026-10-28). Sprint 17a: done as one card for both notices (see
   the Bluetooth item).
+- **The start burst of the S22 audio.** From the Sprint 17a round (2026-11-02): at the start of a stream the
+  S22 drops about ten packets of 5 ms, with a pending peak of 105 to 135 ms
+  ([section 22](development/device-validation.md#22-results-sprint-17a), finding 1). It is not a regression.
+- **"(Bluetooth)" on the Audio delay line.** From the Sprint 17a round (2026-11-02): the owner asked for
+  "(Bluetooth)" next to the Audio delay line when the output is Bluetooth.
 
 #### Library and Settings
 
@@ -1490,6 +1499,13 @@ Moved here from Sprint 15 (owner, 2026-10-28), unless an item says otherwise.
   [privacy policy](policies/privacy-and-logging.md) says it stays until the app data is cleared. No release
   has had the option, so only debug builds of Sprint 15 hold one. Decide in the triage: keep it, since it is a
   stable id with nothing personal, or remove it with one DataStore edit.
+- **The "Nothing running" header after a Disconnect.** From the Sprint 17a round (2026-11-02): the app page
+  header said "Nothing running" right after a Disconnect, while the Library notice said that the app was still
+  running on the PC ([section 22](development/device-validation.md#22-results-sprint-17a), finding 6).
+- **Try again joins an app that another device started, without asking.** From the Sprint 17a round
+  (2026-11-02): after "Desktop stopped", Try again joined the Desktop that another device had started. Product
+  question: should Try again ask first? ([section 22](development/device-validation.md#22-results-sprint-17a),
+  finding 5).
 
 #### Input
 
@@ -1542,6 +1558,9 @@ results are in
   reviews of #109). `VirtualController.refreshLayout` reads the whole preferences, with their
   migration writes, at every rebuild (a rotation, picture-in-picture). Dropping that read needs
   `Game` to pass its `prefConfig` to `VirtualController`.
+- **The Back hold of a mouse with instant side buttons.** From the Sprint 17a round (2026-11-02): the side
+  buttons of the owner's Logi M650 send pulses of 6.6 and 8 ms, so a hold cannot be seen. The Back hold needs
+  another trigger for such mice ([section 22](development/device-validation.md#22-results-sprint-17a), finding 3).
 
 #### Pads
 
@@ -1672,11 +1691,15 @@ the round are in [device-validation section 20](development/device-validation.md
   for another device." (without the name after a resume). The 5 s window of the answer covers the order
   with the 599 first; for the order with the end first, the session keeps the end while the Quit is
   pending, until the answer comes. The round checks it on a LuminalShine build with
-  NortheBridge/luminalshine#227 (runbook 3.32, step 11).
+  NortheBridge/luminalshine#227 (runbook 3.32, step 11), and it passed. The shared Quit also takes the graceful
+  end (code 0) of LuminalShine #232 (fix `4539b943b`), which the round found
+  ([section 22](development/device-validation.md#22-results-sprint-17a), finding 2).
 - **The frozen frame after a rotation.** From Sprint 15 (the known limits). The frame is placed and scaled when
   the copy ends, so a rotation, a split-screen resize or leaving picture-in-picture after the failure leaves it
   at the old offset. It is rare, and nothing crashes. Sprint 17a: done. The frame is placed when it
-  is drawn, so a rotation, a split-screen resize or picture-in-picture moves it with the video.
+  is drawn, so a rotation, a split-screen resize or picture-in-picture moves it with the video. In the
+  device round the owner's rotation through 180 degrees and split screen passed
+  ([section 22](development/device-validation.md#22-results-sprint-17a), step 6).
 - **A time cap for the pending copy.** From Sprint 15 (the known limits). The error popup waits on black for the
   copy with no time limit, and relies on `PixelCopy` answering every request it accepts. Add a cap, and show the
   background when it runs out. The copy takes about 0.1 to 0.3 s (76 ms on the S22, 314 ms on the TV).
@@ -1716,7 +1739,8 @@ the round are in [device-validation section 20](development/device-validation.md
   search fell back to the first decoder; AVC still falls back. The device round compares the start
   logs of both devices (3.31). Sprint 17a: done for HEVC and AV1: the first decoder is used only when
   every candidate throws for its capabilities. Open: `MediaCodecDecoderProbe` (settings) still skips
-  such a decoder. The start logs are compared in the round (runbook 3.32, step 7).
+  such a decoder. The start logs were compared in the round, and they show the decoders of section 21
+  ([section 22](development/device-validation.md#22-results-sprint-17a), step 7).
 
 #### The stream session
 
@@ -1764,7 +1788,7 @@ its reviews found and left for this sprint.
   is the case to cover. Sprint 17a: done for the rollback. Borealis sends one `/cancel` after a
   `/launch` that the host accepted and whose session never started. It never sends it after
   `/resume`, after a refused or unanswered `/launch`, or on GFE, and it skips the cancel when a newer
-  launch began. The round checks it (runbook 3.32, step 5).
+  launch began. The round passed it on both devices ([section 22](development/device-validation.md#22-results-sprint-17a), step 5).
 - **Back while the in-game menu is open (S22).** From the same round, an observation: a `KEYCODE_BACK`
   injected with `adb` reached `Game.onKeyDown` and did not close the menu, while the owner's own Back
   closed it. The cause is not known and may be the injection. Check with a real keyboard's Back.
@@ -1803,6 +1827,12 @@ Moved here from Sprint 15 or from the backlog (owner, 2026-10-28), as each item 
   at its edges (the ring and 1 dp of casing stay whole, and 3:1 holds), and the faint tail of the 3 dp halo is
   cut at the 2 dp bleed of the content layer on the title and body of the popups. A design-system layout change
   would remove both. The second is cosmetic.
+- **The segments report no selected state.** From the Sprint 17a round (2026-11-02): every segment of the
+  in-game menu reports `selected=false`, so TalkBack probably cannot tell the active one
+  ([section 22](development/device-validation.md#22-results-sprint-17a), finding 4).
+- **The app cards have no text in the accessibility tree.** From the Sprint 17a round (2026-11-02): the cards of
+  the host's app page have no text in the accessibility tree, which the automation of the round found
+  ([section 22](development/device-validation.md#22-results-sprint-17a), finding 8).
 
 ### Sprint 18: refactor of the converted code
 
@@ -1954,7 +1984,9 @@ release. Sprint 19 is hardening and security testing.
   covered too. The STUN print in `simplejni.c` is dead code since ADR 0050. Host names
   stay visible, and the "Mask addresses" switch still masks every address and the host
   names it recognises. See
-  [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2.
+  [device-validation section 17](development/device-validation.md#17-results-sprint-12), P2. From the
+  Sprint 17a round (2026-11-02): the S22 log prints a public IPv6 address in the mDNS line "Ignoring
+  non-matching global address" ([section 22](development/device-validation.md#22-results-sprint-17a), finding 7).
 - **`findExternalAddressIP4` with a VPN.** Moved here from item (d) of the Sprint 14 block of
   the backlog (owner, 2026-10-28), because this sprint already masks the Tailscale addresses.
   The native is not reached on the LAN: `ComputerManagerService.populateExternalAddress` calls
@@ -2927,7 +2959,10 @@ with no crash (31 error lines in the round).
 | [NortheBridge/luminalshine#214](https://github.com/NortheBridge/luminalshine/issues/214) | Issue | Hardens the display-helper watchdog start and stop: the thread object is not synchronized, and the watchdog's "never reap" rule has no test. Follow-up to #212. Open. |
 | [NortheBridge/luminalshine#215](https://github.com/NortheBridge/luminalshine/pull/215) | PR | The owner's fix for #214, stacked on #213. Open. |
 | [NortheBridge/luminalshine#226](https://github.com/NortheBridge/luminalshine/pull/226) | PR | The owner's fix for #198, opened on 2026-10-30: "Derive the display-cleanup teardown deadline from the cleanup's bounded waits". The display-cleanup phase of the teardown had a fixed 30 s deadline, the same as the wait for the display helper's revert, so the watchdog restarted the host before the cleanup's recovery could run. The deadline now covers the cleanup's bounded waits (155 s with a display restore, 30 s otherwise). Open (read on 2026-10-31). |
-| [NortheBridge/luminalshine#227](https://github.com/NortheBridge/luminalshine/pull/227) | PR | The owner's fix for #201: a client that joins a shared app no longer ends or slows the first client's stream. Open; validated on two clients on 2026-10-30 (see the #201 row). |
+| [NortheBridge/luminalshine#227](https://github.com/NortheBridge/luminalshine/pull/227) | PR | The owner's fix for #201: a client that joins a shared app no longer ends or slows the first client's stream. Open; validated on two clients on 2026-10-30 (see the #201 row). On 2026-11-02 two builds passed the shared Quit of the device round, `0.0.158-nightly` and `0.0.167-nightly` (with a Borealis result [comment](https://github.com/NortheBridge/luminalshine/issues/227#issuecomment-6585863114)). |
+| [NortheBridge/luminalshine#231](https://github.com/NortheBridge/luminalshine/pull/231) | PR | The owner's pull request for the pairing retry after a wrong PIN (the case of #216). Tested on `0.0.159-nightly` on 2026-11-02: the retry with the right PIN paired ([comment](https://github.com/NortheBridge/luminalshine/issues/231#issuecomment-6585862199)). |
+| [NortheBridge/luminalshine#232](https://github.com/NortheBridge/luminalshine/pull/232) | PR | Sends the graceful termination (`0x80030023`, code 0) before it disconnects a cancelled session, as #218 asks. Stacked on #227. Tested on `0.0.160-nightly` on 2026-11-02, with the Borealis fix `4539b943b` ([section 22](development/device-validation.md#22-results-sprint-17a)). The comment is pending: the owner holds it until the round ends. |
+| [NortheBridge/luminalshine#237](https://github.com/NortheBridge/luminalshine/pull/237) | PR | The owner's draft: the API level and the capabilities in `/serverinfo`, from #222. Smoke-tested as `0.0.164-nightly` on 2026-11-02, nothing broke; Borealis does not read the fields yet ([Sprint 20](#sprint-20-release-preparation)) ([comment](https://github.com/NortheBridge/luminalshine/issues/237#issuecomment-6585863796)). |
 | [NortheBridge/luminalshine#216](https://github.com/NortheBridge/luminalshine/issues/216) | Issue | Wrong-PIN lockout, filed 2026-10-29 (it was the finding "Wrong-PIN lockout on 26.10.0-beta.1", not filed until then): after a wrong PIN, the host keeps the pairing session, and every retry gets 409 for up to 5 minutes. Restarting LuminalShine clears it. Seen live on 2026-10-21 and 2026-10-24 and checked in source at `dba21a9e` (the lines are the same since 26.10.0-beta.1). The owner plans to fix it: a new phase 1 from the same peer and certificate ends the old exchange (A), and a session stalled after the PIN expires after 30 s (C). Open. See the [host contract](host-contract/luminalshine.md) and [Sprint 19](#sprint-19-secops). |
 | [NortheBridge/luminalshine#217](https://github.com/NortheBridge/luminalshine/issues/217) | Issue | `/cancel` answers 5 to 17 s after a quit, and the client cannot tell a slow quit from a hung one. Filed 2026-10-29 with the list of what `/cancel` waits on. The owner plans to fix it. On 26.10.1 on 2026-10-29, each of three Quits on the TV took 5.6 to 6.0 s in `/cancel`, and about 5 s of it was the display helper's transactional revert (4.83 to 5.35 s) in the join of the last session. Open. See the [host contract](host-contract/luminalshine.md), section 7.6, and [Sprint 15](#sprint-15-the-stream-screens-and-glass). |
 | [NortheBridge/luminalshine#218](https://github.com/NortheBridge/luminalshine/issues/218) | Issue | `/cancel` drops the control stream without the termination message, so clients report error -1 for the user's own Quit. Filed 2026-10-29. The owner plans to fix it. Open. Borealis handles the user's own Quit on its side (Sprint 15). See the [host contract](host-contract/luminalshine.md), section 7.6. |

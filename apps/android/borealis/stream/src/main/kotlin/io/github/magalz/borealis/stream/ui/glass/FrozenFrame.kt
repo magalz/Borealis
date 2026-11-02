@@ -6,9 +6,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.core.graphics.createBitmap
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
@@ -27,7 +27,13 @@ private const val NANOS_PER_MILLI = 1_000_000L
  * thread that reports the end, which is not the main thread. So [request] may be called from any
  * thread. It reads how big the video is, which asks nothing about the place of a view; the copy
  * ends on the main thread ([VideoSource.copy] says so, also for a copy that cannot be made), and
- * there the place of the video and the place of the chrome ([origin]) are read and [frame] is set.
+ * there the place of the video is read and the copy becomes the [frame].
+ *
+ * The place of the frame is not fixed at the copy: [frame] reads where the video and the chrome
+ * ([origin]) are now, whenever it is read, and the popup reads it as it draws. A rotation, a
+ * split-screen resize or the end of picture-in-picture moves the video after the failure, and the
+ * frame goes with it. A video that has no bounds for a moment (its surface is being made again)
+ * leaves the frame at the last place that it had.
  *
  * Between the request and the end of the copy it is [pending], and the popup keeps the background
  * off the screen meanwhile. That relies on the source ending every copy that [request] asked for,
@@ -43,9 +49,21 @@ internal class FrozenFrame(
     private val origin: () -> IntOffset,
     private val clock: () -> Long = SystemClock::elapsedRealtimeNanos,
 ) {
-    /** The copy, or null until one has worked, and after [release]. */
-    var frame: VideoFrame? by mutableStateOf(null)
-        private set
+    /** A copy that worked: the picture, and where the video was when it was last seen. */
+    private class Copy(val image: ImageBitmap, var bounds: VideoBounds)
+
+    private var copy: Copy? by mutableStateOf(null)
+
+    /**
+     * The copy, placed where the video is now, or null until one has worked, and after [release].
+     * Read it where it is drawn: each read asks [source] and [origin] again, on the main thread.
+     */
+    val frame: VideoFrame?
+        get() = copy?.let(::placed)
+
+    /** Whether there is a [frame], which asks nothing of the views. */
+    val hasFrame: Boolean
+        get() = copy != null
 
     /** Whether the copy was asked for and has neither ended with a frame nor failed yet. */
     var pending: Boolean by mutableStateOf(false)
@@ -57,7 +75,7 @@ internal class FrozenFrame(
      * Then the popup is over the game. A failed copy, or none asked for, leaves the background.
      */
     val coversBackground: Boolean
-        get() = frame != null || pending
+        get() = hasFrame || pending
 
     private val asked = AtomicBoolean(false)
     @Volatile private var released = false
@@ -87,10 +105,10 @@ internal class FrozenFrame(
         )
         val startedAt = clock()
         pending = true
-        source.copy(bitmap) { ok -> finish(ok, bitmap, size, startedAt) }
+        source.copy(bitmap) { ok -> finish(ok, bitmap, startedAt) }
     }
 
-    private fun finish(ok: Boolean, bitmap: Bitmap, size: IntSize, startedAt: Long) {
+    private fun finish(ok: Boolean, bitmap: Bitmap, startedAt: Long) {
         pending = false
         if (released) return
         if (!ok) {
@@ -108,22 +126,29 @@ internal class FrozenFrame(
             "Frozen frame copied",
             "ms" to (clock() - startedAt) / NANOS_PER_MILLI,
         )
+        copy = Copy(bitmap.asImageBitmap(), bounds)
+    }
+
+    // The copy where the video and the chrome are now; the video's last bounds stand in for a
+    // surface that has none.
+    private fun placed(copy: Copy): VideoFrame {
+        source.bounds()?.let { copy.bounds = it }
+        val bounds = copy.bounds
         val chrome = origin()
-        frame =
-            VideoFrame(
-                bitmap.asImageBitmap(),
-                left = (bounds.left - chrome.x).toFloat(),
-                top = (bounds.top - chrome.y).toFloat(),
-                scaleX = size.width.toFloat() / bitmap.width,
-                scaleY = size.height.toFloat() / bitmap.height,
-            )
+        return VideoFrame(
+            copy.image,
+            left = (bounds.left - chrome.x).toFloat(),
+            top = (bounds.top - chrome.y).toFloat(),
+            scaleX = bounds.width.toFloat() / copy.image.width,
+            scaleY = bounds.height.toFloat() / copy.image.height,
+        )
     }
 
     /** Lets go of the frame: the activity is ending, and nothing draws it any more. */
     fun release() {
         released = true
         pending = false
-        frame = null
+        copy = null
     }
 }
 

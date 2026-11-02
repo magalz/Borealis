@@ -3056,10 +3056,11 @@ class Game :
 
     // BOREALIS: the video surface was lost: the picture is gone and nothing else says so. On the
     // main thread, a stream that runs ends as an error termination does: the chrome shows the
-    // failure over the last frame, and the connection stops. A stream that is ending already (the
-    // stop ran, a failure is shown, the activity is finishing or in picture in picture) has said
-    // what there is to say, so this only warns. The checks run here, not where the report was
-    // posted, so a leave that came after the post counts (stream)
+    // failure over the last frame, and the connection stops. Picture in picture keeps the stream
+    // running, so it ends too, and the chrome shows the failure when the window grows back. A
+    // stream that is ending already (the stop ran, a failure is shown, the activity is finishing)
+    // has said what there is to say, so this only warns. The checks run here, not where the report
+    // was posted, so a leave that came after the post counts (stream)
     private fun endStreamForLostSurface() {
         if (streamEndsAlready()) {
             BorealisLog.w(LogTag.VIDEO, "video surface lost while the stream is ending")
@@ -3082,10 +3083,9 @@ class Game :
         )
     }
 
-    // BOREALIS: the stop ran, a failure is on the screen, or the activity is going away or in
-    // picture in picture, which counts as a leave too (stream)
+    // BOREALIS: the stop ran, a failure is on the screen, or the activity is going away (stream)
     private fun streamEndsAlready(): Boolean =
-        stopRan || displayedFailureDialog || isFinishing || isDestroyed || isInPictureInPictureMode
+        stopRan || displayedFailureDialog || isFinishing || isDestroyed
 
     override fun connectionStatusUpdate(connectionStatus: Int) {
         runOnUiThread {

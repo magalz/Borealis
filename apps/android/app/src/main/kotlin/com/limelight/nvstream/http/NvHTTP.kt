@@ -3,6 +3,7 @@ package com.limelight.nvstream.http
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.nvstream.ConnectionContext
+import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager.PairState
 import com.limelight.nvstream.jni.MoonBridge
@@ -775,11 +776,7 @@ constructor(
                     (if (streamConfig.playLocalAudio) 1 else 0) +
                     "&surroundAudioInfo=" +
                     checkNotNull(streamConfig.audioConfiguration).surroundAudioInfo +
-                    // BOREALIS: only LuminalShine reads it: the host then sends silence while the
-                    // PC is quiet (host.launch)
-                    (if (streamConfig.continuousAudio && !context.isNvidiaServerSoftware)
-                        CONTINUOUS_AUDIO_QUERY
-                    else "") +
+                    continuousAudioQuery(context, streamConfig) +
                     "&remoteControllersBitmap=" +
                     streamConfig.attachedGamepadMask +
                     "&gcmap=" +
@@ -799,6 +796,18 @@ constructor(
             return false
         }
     }
+
+    // BOREALIS: only LuminalShine reads it: the host then sends silence while the PC is quiet
+    // (host.launch)
+    private fun continuousAudioQuery(
+        context: ConnectionContext,
+        streamConfig: StreamConfiguration,
+    ): String =
+        if (streamConfig.continuousAudio && !context.isNvidiaServerSoftware) {
+            CONTINUOUS_AUDIO_QUERY
+        } else {
+            ""
+        }
 
     @Throws(IOException::class, XmlPullParserException::class)
     fun quitApp(): Boolean {

@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.ui.glass
 
+import android.os.Looper
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.IntOffset
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -7,9 +8,11 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogTag
 import io.github.magalz.borealis.stream.testing.RecordingLogSink
+import java.time.Duration
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 
 /**
  * The one copy of the stream view that is taken when the stream fails (the owner's decision of
@@ -22,9 +25,24 @@ class FrozenFrameTest {
     private val source = FakeVideoSource()
     private var origin = IntOffset.Zero
     private var nanos = 0L
-    private val frozen = FrozenFrame(source, { origin }, { nanos })
+
+    /** What the frame asked the main thread to run later, with the delay in milliseconds. */
+    private val scheduled = mutableListOf<Pair<Long, () -> Unit>>()
+    private val frozen =
+        FrozenFrame(
+            source,
+            { origin },
+            { nanos },
+            { delay, action -> scheduled += delay to action },
+        )
 
     private fun lines() = log.records.filter { it.tag == LogTag.VIDEO }
+
+    /** The time cap of the copy runs out, as the main thread would run it a second later. */
+    private fun capRunsOut() {
+        assertThat(scheduled).hasSize(1)
+        scheduled.single().second()
+    }
 
     // What a request is
 
@@ -59,6 +77,39 @@ class FrozenFrameTest {
         assertThat(frame.top).isEqualTo(20f)
         assertThat(frame.scaleX).isEqualTo(4f)
         assertThat(frame.scaleY).isEqualTo(4f)
+    }
+
+    @Test
+    fun `the frame follows the video when it moves or is resized after the copy`() {
+        frozen.request()
+        source.finish()
+
+        // A rotation, a split-screen resize or the end of picture-in-picture.
+        source.bounds = VideoBounds(left = 300, top = 50, width = 640, height = 360)
+        origin = IntOffset(40, 10)
+
+        val frame = frozen.frame!!
+        assertThat(frame.left).isEqualTo(260f)
+        assertThat(frame.top).isEqualTo(40f)
+        assertThat(frame.scaleX).isEqualTo(2f)
+        assertThat(frame.scaleY).isEqualTo(2f)
+    }
+
+    @Test
+    fun `the frame keeps its last place while the video has no bounds`() {
+        source.bounds = VideoBounds(left = 100, top = 30, width = 1280, height = 720)
+        frozen.request()
+        source.finish()
+
+        // The surface is gone for a moment, as when picture-in-picture ends.
+        source.bounds = null
+        origin = IntOffset(40, 10)
+
+        val frame = frozen.frame!!
+        assertThat(frame.left).isEqualTo(60f)
+        assertThat(frame.top).isEqualTo(20f)
+        assertThat(frame.scaleX).isEqualTo(4f)
+        assertThat(frozen.coversBackground).isTrue()
     }
 
     @Test
@@ -140,6 +191,106 @@ class FrozenFrameTest {
 
         assertThat(frozen.pending).isFalse()
         assertThat(frozen.frame).isNull()
+    }
+
+    // The time cap of the copy
+
+    @Test
+    fun `a request gives the copy a second to end`() {
+        frozen.request()
+
+        assertThat(scheduled.map { it.first }).containsExactly(1_000L)
+    }
+
+    @Test
+    fun `a copy that does not end in time is no longer pending, and there is no frame`() {
+        frozen.request()
+
+        capRunsOut()
+
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.frame).isNull()
+        assertThat(frozen.coversBackground).isFalse()
+    }
+
+    @Test
+    fun `a copy that ends after the cap is ignored`() {
+        frozen.request()
+        capRunsOut()
+
+        source.finish()
+
+        assertThat(frozen.frame).isNull()
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.coversBackground).isFalse()
+    }
+
+    @Test
+    fun `a copy that ends before the cap works as before, and the cap then changes nothing`() {
+        frozen.request()
+        source.finish()
+
+        capRunsOut()
+
+        assertThat(frozen.frame).isNotNull()
+        assertThat(frozen.pending).isFalse()
+        assertThat(frozen.coversBackground).isTrue()
+    }
+
+    @Test
+    fun `a copy that failed before the cap is not reported again by the cap`() {
+        frozen.request()
+        source.finish(ok = false)
+
+        capRunsOut()
+
+        assertThat(lines().filter { it.message == "Frozen frame failed" }).hasSize(1)
+    }
+
+    @Test
+    fun `a cap that runs out after release changes nothing`() {
+        frozen.request()
+        frozen.release()
+
+        capRunsOut()
+
+        assertThat(frozen.frame).isNull()
+        assertThat(frozen.pending).isFalse()
+        assertThat(lines().filter { it.message == "Frozen frame failed" }).isEmpty()
+    }
+
+    @Test
+    fun `by default the cap runs on the main thread a second after the request`() {
+        val real = FrozenFrame(source, { origin }, { nanos })
+        // The activity asks from the connection thread.
+        Thread { real.request() }.apply { start() }.join()
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(999))
+        assertThat(real.pending).isTrue()
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2))
+        assertThat(real.pending).isFalse()
+        assertThat(real.frame).isNull()
+    }
+
+    @Test
+    fun `a video with nothing to copy has no cap to wait for`() {
+        source.bounds = null
+
+        frozen.request()
+
+        assertThat(scheduled).isEmpty()
+    }
+
+    @Test
+    fun `a copy that did not end in time says so`() {
+        frozen.request()
+
+        capRunsOut()
+
+        val line = lines().single { it.message == "Frozen frame failed" }
+        assertThat(line.level).isEqualTo(LogLevel.WARN)
+        assertThat(line.fields).containsExactly("reason" to "timeout")
     }
 
     // What covers the background

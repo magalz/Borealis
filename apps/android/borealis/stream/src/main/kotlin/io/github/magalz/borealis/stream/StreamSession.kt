@@ -44,6 +44,10 @@ data class StreamDefaults(
  * The keyboard is docked or covering as [dockKeyboard] says at the moment it opens, and keeps that
  * type until it closes (see [StreamPhase.Streaming.dockedKeyboard]): a pad that connects or
  * disconnects while it is open does not change it.
+ *
+ * A notice ([notify]) is no part of the phase and changes neither it nor the input: the card that
+ * shows it takes no touch and no key. The notices wait in a queue of their own, one [notice] at a
+ * time.
  */
 @Suppress("TooManyFunctions") // One method per stream event and per StreamIntents call.
 class StreamSession(
@@ -77,6 +81,47 @@ class StreamSession(
     val state: StateFlow<StreamUiState> = mutableState
 
     val perf: StateFlow<PerfSnapshot?> = mutablePerf
+
+    // The notice on show, and the ones that wait behind it, which the lock on the queue guards for
+    // both: the audio and the connection give notices from threads of their own.
+    private val mutableNotice = MutableStateFlow<StreamNotice?>(null)
+    private val waitingNotices = ArrayDeque<StreamNotice>()
+
+    /**
+     * The notice that the card shows now, or null. Notices come one at a time, in the order they
+     * were given: when the card has shown this one, it calls [noticeShown] and the next one, if
+     * any, is here.
+     */
+    val notice: StateFlow<StreamNotice?> = mutableNotice
+
+    /**
+     * Tells the viewer something once, in the card that goes by itself, which shows [notice] when
+     * it is its turn. Safe to call from any thread. A notice that is the one on show, or the last
+     * one in line, is dropped: it says nothing new, and two equal notices in a row would leave the
+     * card on the second with nothing to tell it that its time starts again.
+     */
+    fun notify(notice: StreamNotice) {
+        synchronized(waitingNotices) {
+            val showing = mutableNotice.value
+            if (showing == null) {
+                mutableNotice.value = notice
+            } else if (notice != showing && notice != waitingNotices.lastOrNull()) {
+                waitingNotices.addLast(notice)
+            }
+        }
+    }
+
+    /**
+     * The card has shown [notice] for its time, so the next notice takes its place. Only the notice
+     * on show ends: a late call for another one changes nothing.
+     */
+    fun noticeShown(notice: StreamNotice) {
+        synchronized(waitingNotices) {
+            if (mutableNotice.value == notice) {
+                mutableNotice.value = waitingNotices.removeFirstOrNull()
+            }
+        }
+    }
 
     /** Who gets the input and what the chrome covers; one read of [state], from any thread. */
     val chromeMode: ChromeMode
@@ -367,6 +412,23 @@ class StreamSession(
     override fun pairAgain() = actions.pairAgain()
 
     override fun openDiagnostics() = actions.openDiagnostics()
+}
+
+/**
+ * What the stream tells the viewer once, in a card that goes by itself ([StreamSession.notify]).
+ */
+sealed interface StreamNotice {
+    /** The sound goes out over Bluetooth, which can make it lag behind the picture. */
+    data object BluetoothOutput : StreamNotice
+
+    /** The sound output has two channels, so the stream is stereo where [asked] was requested. */
+    data class StereoFallback(val asked: SurroundLayout) : StreamNotice
+}
+
+/** The surround layouts that a stream can ask for, which a stereo output cannot play. */
+enum class SurroundLayout {
+    SURROUND_5_1,
+    SURROUND_7_1,
 }
 
 private const val NANOS_PER_MS = 1_000_000L

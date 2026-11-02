@@ -1,6 +1,8 @@
 package io.github.magalz.borealis.stream.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,11 +18,13 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.StreamIntents
+import io.github.magalz.borealis.stream.StreamNotice
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.ui.hint.MenuHint
 import io.github.magalz.borealis.stream.ui.menu.InGameMenu
 import io.github.magalz.borealis.stream.ui.menu.MENU_HANDLE_TOP_OFFSET_DP
 import io.github.magalz.borealis.stream.ui.menu.MenuHandle
+import io.github.magalz.borealis.stream.ui.notice.StreamNoticeCard
 import io.github.magalz.borealis.stream.ui.overlay.PerfOverlay
 
 private val OVERLAY_MARGIN = 10.dp
@@ -28,15 +32,20 @@ private val OVERLAY_MARGIN = 10.dp
 // The handle is 88dp wide with the area that takes the touch, centred: 44dp each side, and 4dp.
 private val OVERLAY_HANDLE_GAP = 48.dp
 private val HINT_TOP_OFFSET = 44.dp
+private val NOTICE_GAP = 8.dp
 
 /**
  * What the chrome draws over the stream: the performance overlay, the pull handle on a device with
- * a touchscreen, the first-run hint, and the panel that is open (the in-game menu or the keyboard).
- * With nothing open and the overlay off it draws nothing but the handle.
+ * a touchscreen, the first-run hint, the card of a notice, and the panel that is open (the in-game
+ * menu or the keyboard). With nothing open and the overlay off it draws nothing but the handle.
  *
  * [videoGlass] is the menu glass option of the viewer (ADR 0061): true draws the in-game menu and
  * its Quit popup over a live blurred copy of the video where the device and the accessibility
  * settings allow it, false draws them solid.
+ *
+ * [notice] is the notice on show ([StreamSession.notice]), or null. Its card is under the hint at
+ * the top of the screen, and calls [onNoticeShown] when its four seconds are up; it stays out while
+ * a panel is open, and its time starts when the panel is closed.
  */
 @Composable
 fun StreamingLayer(
@@ -46,6 +55,8 @@ fun StreamingLayer(
     perf: PerfSnapshot?,
     intents: StreamIntents,
     videoGlass: Boolean = true,
+    notice: StreamNotice? = null,
+    onNoticeShown: (StreamNotice) -> Unit = {},
 ) {
     val formFactor = LocalFormFactor.current
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -72,14 +83,22 @@ fun StreamingLayer(
             Panel.MENU -> InGameMenu(appName, hostName, phase, perf, intents, videoGlass)
             Panel.KEYBOARD -> StreamKeyboard(docked = phase.dockedKeyboard, intents)
         }
-        MenuHint(
-            phase.showMenuHint,
-            phase.panel != Panel.NONE,
-            intents::dismissMenuHint,
+        // The first-run hint, and under it the card of a notice, which takes no input as the hint
+        // takes none. Neither stands while a panel is open: the card waits for it to close.
+        Column(
             Modifier.align(Alignment.TopCenter)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(top = HINT_TOP_OFFSET),
-            mouseNavButtons = phase.mouseNavButtons,
-        )
+            verticalArrangement = Arrangement.spacedBy(NOTICE_GAP),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            MenuHint(
+                phase.showMenuHint,
+                phase.panel != Panel.NONE,
+                intents::dismissMenuHint,
+                mouseNavButtons = phase.mouseNavButtons,
+            )
+            if (phase.panel == Panel.NONE) StreamNoticeCard(notice, onNoticeShown)
+        }
     }
 }

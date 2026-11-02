@@ -247,6 +247,48 @@ class FrozenFrameScreenTest {
         assertNear(margin(), scrimOver(Color.Black))
     }
 
+    // The video moves after the copy: a rotation, a split-screen resize, the end of
+    // picture-in-picture
+
+    /**
+     * The video is now [MOVED] pixels to the right of where it was copied, and the chrome draws
+     * again, as it does when the window is laid out again. The look changes in a way that shows
+     * nowhere, to make it draw.
+     */
+    private fun moveTheVideo() {
+        composeRule.runOnIdle {
+            source.bounds = VideoBounds(left = MOVED, top = 0, width = 1280 - MOVED, height = 720)
+        }
+        look = look.copy(thickFocus = true)
+        composeRule.waitForIdle()
+    }
+
+    @Test
+    fun `a sharp frame is drawn where the video is now, not where it was copied`() {
+        greyFrame()
+        look = BorealisLook(transparency = Transparency.Off)
+        show()
+        assertNear(margin(), scrimOver(Color(LIGHT_GREY)))
+
+        moveTheVideo()
+
+        // The place that the video left shows the black under it.
+        assertNear(margin(), scrimOver(Color.Black))
+        assertNear(picture()[MOVED + MARGIN_X, 2], scrimOver(Color(LIGHT_GREY)))
+    }
+
+    @Test
+    fun `a blurred frame is drawn where the video is now, not where it was copied`() {
+        greyFrame()
+        show()
+        assertNear(margin(), scrimOver(Color(LIGHT_GREY)))
+
+        moveTheVideo()
+
+        assertNear(margin(), scrimOver(Color.Black))
+        assertNear(picture()[MOVED + MARGIN_X, 2], scrimOver(Color(LIGHT_GREY)))
+    }
+
     // Not over the game: no frame, so the popup is over the background
 
     /**
@@ -458,6 +500,7 @@ class FrozenFrameScreenTest {
         const val STRIP_PERCENT = 3
         const val PERCENT = 100
         const val MARGIN_X = 60
+        const val MOVED = 300
         const val EDGE_REACH = 70
         const val FRAME_SHOWS = 0.035f
         const val SHARP_EDGE = 0.01f

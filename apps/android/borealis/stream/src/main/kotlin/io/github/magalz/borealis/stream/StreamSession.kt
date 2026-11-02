@@ -78,6 +78,24 @@ class StreamSession(
 
     val perf: StateFlow<PerfSnapshot?> = mutablePerf
 
+    private val mutableNotice = MutableStateFlow<StreamNotice?>(null)
+
+    /**
+     * The notice that the card shows now, or null. Notices come one at a time, in the order they
+     * were given: when the card has shown this one, it calls [noticeShown] and the next one, if
+     * any, is here.
+     */
+    val notice: StateFlow<StreamNotice?> = mutableNotice
+
+    /**
+     * Tells the viewer something once, in the card that goes by itself, which shows [notice] when
+     * it is its turn. Safe to call from any thread.
+     */
+    fun notify(notice: StreamNotice) = Unit
+
+    /** The card has shown [notice] for its time, so the next notice takes its place. */
+    fun noticeShown(notice: StreamNotice) = Unit
+
     /** Who gets the input and what the chrome covers; one read of [state], from any thread. */
     val chromeMode: ChromeMode
         get() {
@@ -367,6 +385,21 @@ class StreamSession(
     override fun pairAgain() = actions.pairAgain()
 
     override fun openDiagnostics() = actions.openDiagnostics()
+}
+
+/** What the stream tells the viewer once, in a card that goes by itself ([StreamSession.notify]). */
+sealed interface StreamNotice {
+    /** The sound goes out over Bluetooth, which can make it lag behind the picture. */
+    data object BluetoothOutput : StreamNotice
+
+    /** The sound output has two channels, so the stream is stereo where [asked] was requested. */
+    data class StereoFallback(val asked: SurroundLayout) : StreamNotice
+}
+
+/** The surround layouts that a stream can ask for, which a stereo output cannot play. */
+enum class SurroundLayout {
+    SURROUND_5_1,
+    SURROUND_7_1,
 }
 
 private const val NANOS_PER_MS = 1_000_000L

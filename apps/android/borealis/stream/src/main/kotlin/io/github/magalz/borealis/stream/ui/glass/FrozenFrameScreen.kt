@@ -50,9 +50,8 @@ internal fun OverFrozenFrame(
         remember(look, colors, menuGlass) {
             frozenFrameLook(look, colors, Build.VERSION.SDK_INT, menuGlass)
         }
-    val frame = frozen.frame
-    val glass = if (frame != null) rules.blur?.let { rememberFrozenGlass(frozen, it) } else null
-    Box(Modifier.fillMaxSize().frozenFrameBackdrop(frame, frozen.pending, glass)) {
+    val glass = if (frozen.hasFrame) rules.blur?.let { rememberFrozenGlass(frozen, it) } else null
+    Box(Modifier.fillMaxSize().frozenFrameBackdrop(frozen, glass)) {
         CompositionLocalProvider(
             LocalVideoGlass provides glass.takeIf { rules.panelIsGlass },
             LocalPopupOverGame provides frozen.coversBackground,
@@ -71,23 +70,23 @@ private fun rememberFrozenGlass(frozen: FrozenFrame, spec: VideoGlassSpec): Vide
 }
 
 /**
- * Draws [frame] behind what is inside: the blurred copy of [glass], which records it first, or the
- * sharp frame where there is no glass; the black alone while the copy is [pending]; nothing else.
+ * Draws the frame of [frozen] behind what is inside: the blurred copy of [glass], which records it
+ * first, or the sharp frame where there is no glass; the black alone while the copy is pending;
+ * nothing else. The frame is read as it is drawn, so it is where the video is now: a window that is
+ * laid out again draws it again, and a rotation moves it.
  */
-private fun Modifier.frozenFrameBackdrop(
-    frame: VideoFrame?,
-    pending: Boolean,
-    glass: VideoGlass?,
-): Modifier = drawBehind {
-    when {
-        frame != null && glass != null -> {
-            glass.recordBackdrop(this)
-            glass.drawBlurred(this)
+private fun Modifier.frozenFrameBackdrop(frozen: FrozenFrame, glass: VideoGlass?): Modifier =
+    drawBehind {
+        val frame = frozen.frame
+        when {
+            frame != null && glass != null -> {
+                glass.recordBackdrop(this)
+                glass.drawBlurred(this)
+            }
+            frame != null -> drawSharp(frame)
+            frozen.pending -> drawRect(Color.Black)
         }
-        frame != null -> drawSharp(frame)
-        pending -> drawRect(Color.Black)
     }
-}
 
 /** The frame as it is, over black where the video is not, at the place and scale of the video. */
 private fun DrawScope.drawSharp(frame: VideoFrame) {

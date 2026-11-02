@@ -138,7 +138,7 @@ class RecordingStreamActions : StreamActions {
         calls += "disconnect $appName"
     }
 
-    override fun quitApp(onFailed: () -> Unit) {
+    override fun quitApp(onFailed: (QuitFailure) -> Unit) {
         calls += "quit"
     }
 

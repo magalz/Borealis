@@ -46,11 +46,15 @@ internal fun StreamChromeTheme(look: BorealisLook, content: @Composable () -> Un
  * failure of a stream that ran, when the activity asked for a copy of its last frame
  * ([LocalFrozenFrame]): the popup of the error stands on that frame, frozen, in place of the
  * background, and on black while the copy is not there yet.
+ *
+ * The card of a notice ([StreamSession.notice]) is part of the streaming layer: a notice that comes
+ * while the stream starts, or in picture-in-picture, waits for the stream on screen.
  */
 @Composable
 internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, look: BorealisLook) {
     val state by session.state.collectAsStateWithLifecycle()
     val perf by session.perf.collectAsStateWithLifecycle()
+    val notice by session.notice.collectAsStateWithLifecycle()
     if (state.inPip) return
     StreamChromeTheme(look) {
         CompositionLocalProvider(LocalMenuHandleBounds provides report) {
@@ -63,6 +67,8 @@ internal fun StreamChromeRoot(session: StreamSession, report: (Rect?) -> Unit, l
                     perf,
                     session,
                     videoGlass = state.visuals.menuGlass == MenuGlass.BLUR,
+                    notice = notice,
+                    onNoticeShown = session::noticeShown,
                 )
             } else {
                 // The failure of a stream that ran stands on its last frame once the copy of it is

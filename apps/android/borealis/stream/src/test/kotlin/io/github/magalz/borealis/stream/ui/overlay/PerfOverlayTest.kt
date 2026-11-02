@@ -63,6 +63,7 @@ class PerfOverlayTest {
 
         composeRule.onNodeWithText(compact).assertIsDisplayed()
         composeRule.onNodeWithText("Decode 4.0 ms").assertDoesNotExist()
+        composeRule.onNodeWithText("Audio delay —").assertDoesNotExist()
     }
 
     @Test
@@ -79,6 +80,7 @@ class PerfOverlayTest {
             .onNodeWithText("Network 12 ms ± 3 ms · loss 0.5 % · 18.5 Mbps")
             .assertIsDisplayed()
         composeRule.onNodeWithText("Decode 4.0 ms").assertIsDisplayed()
+        composeRule.onNodeWithText("Audio delay —").assertIsDisplayed()
         composeRule.onNodeWithText(compact).assertDoesNotExist()
     }
 

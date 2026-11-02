@@ -52,6 +52,10 @@
     <string name="apps_message_disconnected">Disconnected. %1$s is still running on the PC.</string>
     <!-- The same when the stream does not know the name of the app, for example after a resume. -->
     <string name="apps_message_disconnected_unknown">Disconnected. The app is still running on the PC.</string>
+    <!-- Shown on the Library when the Quit of an app that another device started only ended this stream; %1$s is the app. -->
+    <string name="apps_message_keeps_running">%1$s keeps running for another device.</string>
+    <!-- The same when the stream does not know the name of the app, for example after a resume. -->
+    <string name="apps_message_keeps_running_unknown">The app keeps running for another device.</string>
     <string name="apps_message_quit_failed">Failed to quit.</string>
     <string name="apps_message_pin_failed">Your launcher did not add the shortcut.</string>
 </resources>

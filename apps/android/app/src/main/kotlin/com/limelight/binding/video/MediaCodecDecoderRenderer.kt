@@ -146,6 +146,10 @@ class MediaCodecDecoderRenderer(
     // says (stream.perf)
     @Volatile private var perfEnabled = false
     @Volatile private var perfSink: PerfSnapshotSink? = null
+    // BOREALIS: the audio delay for the overlay, asked when a snapshot is built; the stream
+    // activity sets the source of its audio renderer (stream.perf)
+    @Volatile private var audioDelaySource: () -> Int? = { null }
+    private var audioDelayFailureLogged = false
 
     private val codecRecoveryType = AtomicInteger(CR_RECOVERY_TYPE_NONE)
     private val codecRecoveryMonitor = Any()
@@ -341,13 +345,34 @@ class MediaCodecDecoderRenderer(
         return caps.areSizeAndRateSupported(prefs.width, prefs.height, prefs.fps.toDouble())
     }
 
+    // BOREALIS: HEVC and AV1 may use a decoder that throws for its capabilities, as AVC may, and
+    // that decoder has no capabilities to ask about (what the Main10 answers and the crash text
+    // do), so a read that throws gives null.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun capabilitiesOrNull(
+        decoder: MediaCodecInfo,
+        mimeType: String,
+    ): MediaCodecInfo.CodecCapabilities? =
+        try {
+            decoder.getCapabilitiesForType(mimeType)
+        } catch (e: Exception) {
+            null
+        }
+
     private fun decoderCanMeetPerformancePointWithHevcAndNotAvc(
         hevcDecoderInfo: MediaCodecInfo,
         avcDecoderInfo: MediaCodecInfo,
         prefs: PreferenceConfiguration,
     ): Boolean {
-        val avcCaps = avcDecoderInfo.getCapabilitiesForType("video/avc").videoCapabilities
-        val hevcCaps = hevcDecoderInfo.getCapabilitiesForType("video/hevc").videoCapabilities
+        // BOREALIS: a decoder taken because it throws for its capabilities has none to read, so it
+        // cannot be shown to meet the point
+        val avcCapabilities = capabilitiesOrNull(avcDecoderInfo, "video/avc")
+        val hevcCapabilities = capabilitiesOrNull(hevcDecoderInfo, "video/hevc")
+        if (avcCapabilities == null || hevcCapabilities == null) {
+            return false
+        }
+        val avcCaps = avcCapabilities.videoCapabilities
+        val hevcCaps = hevcCapabilities.videoCapabilities
 
         // The Java passed the capabilities on and failed with a NullPointerException where it
         // used them, so the HEVC ones are checked only when the AVC decoder cannot meet the point.
@@ -369,10 +394,15 @@ class MediaCodecDecoderRenderer(
         // We don't try the first HEVC decoder. We'd rather fall back to hardware accelerated AVC
         // instead
         //
+        // BOREALIS: except when every HEVC decoder throws for its capabilities, so that the search
+        // skipped them all: AVC has taken the first decoder in that case, and so does HEVC now.
+        //
         // We need HEVC Main profile, so we could pass that constant to findProbableSafeDecoder,
         // however some decoders (at least Qualcomm's Snapdragon 805) don't properly report support
         // for even required levels of HEVC.
-        val hevcDecoderInfo = MediaCodecHelper.findProbableSafeDecoder("video/hevc", -1)
+        val hevcDecoderInfo =
+            MediaCodecHelper.findProbableSafeDecoder("video/hevc", -1)
+                ?: MediaCodecHelper.findDecoderWhenAllThrow("video/hevc")
         if (hevcDecoderInfo != null) {
             if (!MediaCodecHelper.decoderIsWhitelistedForHevc(hevcDecoderInfo)) {
                 LimeLog.info(
@@ -410,7 +440,10 @@ class MediaCodecDecoderRenderer(
             return null
         }
 
-        val decoderInfo = MediaCodecHelper.findProbableSafeDecoder("video/av01", -1)
+        // BOREALIS: or the first AV1 decoder when every one of them throws for its capabilities
+        val decoderInfo =
+            MediaCodecHelper.findProbableSafeDecoder("video/av01", -1)
+                ?: MediaCodecHelper.findDecoderWhenAllThrow("video/av01")
         if (decoderInfo != null) {
             if (!MediaCodecHelper.isDecoderWhitelistedForAv1(decoderInfo)) {
                 LimeLog.info("Found AV1 decoder, but it's not whitelisted - " + decoderInfo.name)
@@ -431,10 +464,12 @@ class MediaCodecDecoderRenderer(
 
     fun isAvcSupported(): Boolean = avcDecoder != null
 
+    @Suppress("ReturnCount")
     fun isHevcMain10Hdr10Supported(): Boolean {
         val decoder = hevcDecoder ?: return false
+        val capabilities = capabilitiesOrNull(decoder, "video/hevc") ?: return false
 
-        for (profileLevel in decoder.getCapabilitiesForType("video/hevc").profileLevels) {
+        for (profileLevel in capabilities.profileLevels) {
             if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10) {
                 LimeLog.info("HEVC decoder " + decoder.name + " supports HEVC Main10 HDR10")
                 return true
@@ -446,10 +481,12 @@ class MediaCodecDecoderRenderer(
 
     fun isAv1Supported(): Boolean = av1Decoder != null
 
+    @Suppress("ReturnCount")
     fun isAv1Main10Supported(): Boolean {
         val decoder = av1Decoder ?: return false
+        val capabilities = capabilitiesOrNull(decoder, "video/av01") ?: return false
 
-        for (profileLevel in decoder.getCapabilitiesForType("video/av01").profileLevels) {
+        for (profileLevel in capabilities.profileLevels) {
             if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.AV1ProfileMain10HDR10) {
                 LimeLog.info("AV1 decoder " + decoder.name + " supports AV1 Main 10 HDR10")
                 return true
@@ -483,6 +520,12 @@ class MediaCodecDecoderRenderer(
         perfSink = sink
     }
 
+    // BOREALIS: where a snapshot reads the audio delay in ms, null while it is not known
+    // (stream.perf)
+    fun setAudioDelaySource(source: () -> Int?) {
+        audioDelaySource = source
+    }
+
     // BOREALIS: the name of the decoder of the active video format, for Session info (stream.perf)
     fun getDecoderName(): String? {
         var decoder: MediaCodecInfo? = null
@@ -495,6 +538,21 @@ class MediaCodecDecoderRenderer(
         }
         return decoder?.name
     }
+
+    // BOREALIS: the source belongs to the stream activity and runs on the native video submit
+    // thread: one that throws has no delay to show, and its failure is logged once, not thrown into
+    // the JNI callback (stream.perf)
+    @Suppress("TooGenericExceptionCaught")
+    private fun audioDelayOrNull(): Int? =
+        try {
+            audioDelaySource()
+        } catch (e: Exception) {
+            if (!audioDelayFailureLogged) {
+                audioDelayFailureLogged = true
+                LimeLog.warning("The audio delay source failed, the overlay has no audio delay: $e")
+            }
+            null
+        }
 
     // BOREALIS: builds the snapshot of the last two windows, the same numbers the text overlay
     // shows (stream.perf)
@@ -520,6 +578,7 @@ class MediaCodecDecoderRenderer(
                     elapsedMs,
                 ),
                 MoonBridge.getEstimatedRttInfo(),
+                audioDelayOrNull(),
             )
         )
     }
@@ -832,8 +891,7 @@ class MediaCodecDecoderRenderer(
                             e.printStackTrace()
 
                             // Our Surface is probably invalid, so just stop
-                            stopping = true
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                            stopForInvalidSurface()
                         } catch (e: IllegalStateException) {
                             e.printStackTrace()
 
@@ -857,8 +915,7 @@ class MediaCodecDecoderRenderer(
                             e.printStackTrace()
 
                             // Our Surface is probably invalid, so just stop
-                            stopping = true
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                            stopForInvalidSurface()
                         } catch (e: IllegalStateException) {
                             e.printStackTrace()
 
@@ -880,8 +937,7 @@ class MediaCodecDecoderRenderer(
                             e.printStackTrace()
 
                             // Our Surface is probably invalid, so just stop
-                            stopping = true
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+                            stopForInvalidSurface()
                         } catch (e: IllegalStateException) {
                             // If we failed to recover after all of these attempts, just crash
                             if (!reportedCrash) {
@@ -930,6 +986,21 @@ class MediaCodecDecoderRenderer(
         }
 
         return true
+    }
+
+    // BOREALIS: the codec refused our Surface, so the renderer stops. A stop that nothing else
+    // began is the stream's problem, so the listener hears of it (it was a silent frozen video
+    // before); while a stop is on its way the Surface goes with the rest and a warning is enough.
+    // Only the thread that does the recovery gets here, so the listener is told at most once.
+    private fun stopForInvalidSurface() {
+        val wasStopping = stopping
+        stopping = true
+        codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+        if (wasStopping) {
+            LimeLog.warning("The surface is invalid and the renderer is already stopping")
+        } else {
+            crashListener.surfaceLost()
+        }
     }
 
     // Returns true if the exception is transient
@@ -2013,12 +2084,16 @@ class MediaCodecDecoderRenderer(
                     str += "AVC achievable FPS range: UNSUPPORTED!$DELIMITER"
                 }
             }
-            if (hevcDecoder != null) {
+            // BOREALIS: an HEVC or AV1 decoder may be one that throws for its capabilities, which
+            // has none to report
+            val hevcCapabilities = hevcDecoder?.let {
+                renderer.capabilitiesOrNull(it, "video/hevc")
+            }
+            if (hevcDecoder != null && hevcCapabilities == null) {
+                str += "HEVC capabilities: UNREADABLE!$DELIMITER"
+            } else if (hevcCapabilities != null) {
                 val hevcCaps =
-                    hevcDecoder
-                        .getCapabilitiesForType("video/hevc")
-                        .videoCapabilities
-                        .orNpe("The HEVC video capabilities")
+                    hevcCapabilities.videoCapabilities.orNpe("The HEVC video capabilities")
                 val hevcWidthRange: Range<Int> = hevcCaps.supportedWidths
                 str += "HEVC supported width range: $hevcWidthRange$DELIMITER"
                 try {
@@ -2032,12 +2107,11 @@ class MediaCodecDecoderRenderer(
                     str += "HEVC achievable FPS range: UNSUPPORTED!$DELIMITER"
                 }
             }
-            if (av1Decoder != null) {
-                val av1Caps =
-                    av1Decoder
-                        .getCapabilitiesForType("video/av01")
-                        .videoCapabilities
-                        .orNpe("The AV1 video capabilities")
+            val av1Capabilities = av1Decoder?.let { renderer.capabilitiesOrNull(it, "video/av01") }
+            if (av1Decoder != null && av1Capabilities == null) {
+                str += "AV1 capabilities: UNREADABLE!$DELIMITER"
+            } else if (av1Capabilities != null) {
+                val av1Caps = av1Capabilities.videoCapabilities.orNpe("The AV1 video capabilities")
                 val av1WidthRange: Range<Int> = av1Caps.supportedWidths
                 str += "AV1 supported width range: $av1WidthRange$DELIMITER"
                 try {

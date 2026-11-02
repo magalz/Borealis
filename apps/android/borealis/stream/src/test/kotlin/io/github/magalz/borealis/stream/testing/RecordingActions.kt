@@ -3,6 +3,7 @@ package io.github.magalz.borealis.stream.testing
 import io.github.magalz.borealis.host.launch.ConflictChoice
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.PointerSpeed
+import io.github.magalz.borealis.stream.QuitFailure
 import io.github.magalz.borealis.stream.StreamActions
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.KeyChord
@@ -54,10 +55,10 @@ class RecordingActions : StreamActions {
         calls += "disconnect $appName"
     }
 
-    /** Called by a test to say the quit did not happen, as the activity does. */
-    var quitFailed: () -> Unit = {}
+    /** Called by a test to say the quit did not happen, with the [QuitFailure] it chose. */
+    var quitFailed: (QuitFailure) -> Unit = {}
 
-    override fun quitApp(onFailed: () -> Unit) {
+    override fun quitApp(onFailed: (QuitFailure) -> Unit) {
         calls += "quitApp"
         quitFailed = onFailed
     }

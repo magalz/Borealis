@@ -186,7 +186,7 @@ internal constructor(
         }
     }
 
-    override fun quitApp(onFailed: () -> Unit) {
+    override fun quitApp(onFailed: (QuitFailure) -> Unit) {
         if (quitting) return
         quitting = true
         // The host ends the stream with the app, possibly before the answer arrives.
@@ -203,18 +203,34 @@ internal constructor(
                     finishActivity()
                 }
                 is QuitResult.Failed -> {
-                    // The stream goes on, so the user can try again.
+                    // A stream that still runs goes on, so the user can try again; the session says
+                    // what follows for one that the host ended with the quit already.
                     quitting = false
                     SessionAudit.quitFailed()
-                    onFailed()
-                    toast(
-                        result.message
-                            ?: activity.getString(LibraryR.string.apps_message_quit_failed)
-                    )
+                    onFailed(failureOf(result))
                 }
             }
         }
     }
+
+    // What the session can do about a quit that did not happen: it chooses, so nothing is shown
+    // before it says so.
+    private fun failureOf(result: QuitResult.Failed) =
+        object : QuitFailure {
+            override val notTheStarter = result.notTheStarter
+
+            override fun show() =
+                toast(
+                    result.message ?: activity.getString(LibraryR.string.apps_message_quit_failed)
+                )
+
+            // The Library behind the stream shows that the app keeps running for the device that
+            // started it, as a Disconnect shows that it keeps running on the PC.
+            override fun leaveKeepingApp(appName: String) {
+                entryPoint().quitNotice().post(LeaveNotice.KeepsRunning(appName))
+                finishActivity()
+            }
+        }
 
     override fun leave() = finishActivity()
 

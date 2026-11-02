@@ -20,6 +20,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Rational
 import android.view.Display
 import android.view.InputDevice
@@ -61,7 +62,6 @@ import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
-import com.limelight.ui.GameGestures
 import com.limelight.ui.StreamView
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.ShortcutHelper
@@ -74,6 +74,8 @@ import io.github.magalz.borealis.host.launch.SessionAudit
 import io.github.magalz.borealis.host.video.StreamStartupGuard
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
+import io.github.magalz.borealis.stream.AudioOutput
+import io.github.magalz.borealis.stream.AudioOutputs
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.GameStreamActions
 import io.github.magalz.borealis.stream.GamepadMouseSync
@@ -83,8 +85,11 @@ import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamControls
 import io.github.magalz.borealis.stream.StreamFailures
 import io.github.magalz.borealis.stream.StreamKeyboards
+import io.github.magalz.borealis.stream.StreamNotice
+import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamSessionFactory
+import io.github.magalz.borealis.stream.SurroundLayout
 import io.github.magalz.borealis.stream.TouchContexts
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.host.HeldKeys
@@ -96,7 +101,9 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Locale
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
@@ -114,7 +121,6 @@ class Game :
     View.OnTouchListener,
     NvConnectionListener,
     View.OnSystemUiVisibilityChangeListener,
-    GameGestures,
     StreamView.InputCallbacks,
     UsbDriverService.UsbDriverStateListener,
     View.OnKeyListener {
@@ -161,6 +167,10 @@ class Game :
     // caused. Written on the main thread only; volatile because stageFailed reads it on the native
     // start thread (leave)
     @Volatile private var stopRan = false
+    // BOREALIS: the connection stops once: a surface that goes away, the end of the stream and
+    // onStop each ask for a stop, and a second one only waits for the first (leave)
+    private val stopClaimed = AtomicBoolean(false)
+    private val connectionStopped = CompletableFuture<Unit>()
     // BOREALIS: the first frame was on screen, so an ending stream "stopped" and did not fail to
     // start (stream)
     @Volatile private var firstFrameShown = false
@@ -175,6 +185,19 @@ class Game :
     private var appName: String? = null
     private lateinit var app: NvApp
     private var desiredRefreshRate = 0f
+    // BOREALIS: the configuration that the settings asked for, when the stream asked the host for
+    // stereo because the output has two channels; null when it asked for what the settings say.
+    // Decided at the start; the notices of the stream read it (audio)
+    internal var stereoFallback: MoonBridge.AudioConfiguration? = null
+        private set
+
+    // BOREALIS: the audio went to a Bluetooth output when the stream started (audio)
+    internal var startedOnBluetooth = false
+        private set
+
+    // BOREALIS: where the audio goes; while the stream runs it tells when that moves to a Bluetooth
+    // output (audio)
+    private lateinit var audioOutputs: AudioOutputs
 
     private lateinit var inputCaptureProvider: InputCaptureProvider
     private var modifierFlags = 0
@@ -199,6 +222,10 @@ class Game :
     private var requestedNotificationOverlayVisibility = View.GONE
 
     private lateinit var decoderRenderer: MediaCodecDecoderRenderer
+
+    // BOREALIS: made with the decoder renderer, so that the overlay of the decoder can read the
+    // audio delay of it (audio)
+    private lateinit var audioRenderer: AndroidAudioRenderer
 
     // BOREALIS: first-frame watchdog (host.video)
     private val startupGuard =
@@ -474,16 +501,25 @@ class Game :
             MediaCodecDecoderRenderer(
                 this,
                 prefConfig,
-                CrashListener {
-                    // The MediaCodec instance is going down due to a crash
-                    // let's tell the user something when they open the app again
+                object : CrashListener {
+                    override fun notifyCrash(e: Exception) {
+                        // The MediaCodec instance is going down due to a crash
+                        // let's tell the user something when they open the app again
 
-                    // We must use commit because the app will crash when we return from this
-                    // function
-                    tombstonePrefs.edit(commit = true) {
-                        putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        // We must use commit because the app will crash when we return from this
+                        // function
+                        tombstonePrefs.edit(commit = true) {
+                            putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        }
+                        reportedCrash = true
                     }
-                    reportedCrash = true
+
+                    // BOREALIS: the codec refused the surface, which stopped the renderer. The
+                    // renderer calls this on the thread that recovers the codec, while the other
+                    // threads wait for it, so it only posts (stream)
+                    override fun surfaceLost() {
+                        Handler(Looper.getMainLooper()).post { endStreamForLostSurface() }
+                    }
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
                 willStreamHdr,
@@ -580,6 +616,11 @@ class Game :
 
         // BOREALIS: audited as negotiated, not as requested (host.launch)
         streamFrameRate = chosenFrameRate
+        // BOREALIS: the output that the audio goes to when the stream starts decides the audio that
+        // the host is asked for (audio)
+        audioOutputs = AudioOutputs(applicationContext)
+        val audioOutput = audioOutputs.current()
+        startedOnBluetooth = audioOutput.bluetooth
         val config =
             StreamConfiguration.Builder()
                 .setResolution(prefConfig.width, prefConfig.height)
@@ -595,7 +636,7 @@ class Game :
                 .setSupportedVideoFormats(supportedVideoFormats)
                 .setAttachedGamepadMask(gamepadMask)
                 .setClientRefreshRateX100((displayRefreshRate * X100).toInt())
-                .setAudioConfiguration(prefConfig.audioConfiguration)
+                .setAudioConfiguration(audioConfigurationFor(audioOutput))
                 .setColorSpace(decoderRenderer.getPreferredColorSpace())
                 .setColorRange(decoderRenderer.getPreferredColorRange())
                 .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
@@ -699,6 +740,8 @@ class Game :
         controllerHandler.setMenuChordListener(streamSession::openMenu)
         controllerHandler.setChromeKeySink(chromeHost::dispatchUsbPadKey)
         decoderRenderer.setPerfSink(streamSession::onPerf)
+        audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx)
+        decoderRenderer.setAudioDelaySource(audioRenderer::audioDelayMs)
         PerfGate.bind(lifecycleScope, streamSession, decoderRenderer::setPerfEnabled)
         GamepadMouseSync.bind(lifecycleScope, streamSession) {
             controllerHandler.isMouseEmulationOnAnyPad
@@ -965,6 +1008,60 @@ class Game :
             (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED &&
                 prefConfig.reduceRefreshRate)
     }
+
+    // BOREALIS: a 2-channel output gets stereo from the host when the settings ask for 5.1 or
+    // 7.1: a track for more channels on it leaves the fast path of the audio mixer and adds
+    // latency. The setting is kept when the output has more channels or does not say (audio)
+    private fun audioConfigurationFor(output: AudioOutput): MoonBridge.AudioConfiguration? {
+        val asked = prefConfig.audioConfiguration
+        val stereo = MoonBridge.AUDIO_CONFIGURATION_STEREO
+        val channels = output.channelCount
+        val stereoOutput = channels != null && channels <= stereo.channelCount
+        if (asked == null || !stereoOutput || asked.channelCount <= stereo.channelCount) {
+            return asked
+        }
+
+        stereoFallback = asked
+        val label =
+            when (asked) {
+                MoonBridge.AUDIO_CONFIGURATION_51_SURROUND -> "5.1"
+                MoonBridge.AUDIO_CONFIGURATION_71_SURROUND -> "7.1"
+                else -> "${asked.channelCount} channels"
+            }
+        BorealisLog.i(
+            LogTag.APP,
+            "audio output has two channels, stereo asked of the host",
+            "asked" to label,
+            "used" to "stereo",
+        )
+        return stereo
+    }
+
+    // BOREALIS: tells the viewer what the audio start decided and, while the stream runs, each
+    // time the sound moves to a Bluetooth output. Called once, on the main thread, when the
+    // connection is up and the stop has not run: the card of a notice waits for the stream on
+    // screen, so nothing is lost by giving the notices before the first frame. The listener reads
+    // the session when it runs, and a stop closes it (audio)
+    private fun announceAudio() {
+        stereoFallback?.let {
+            streamSession.notify(StreamNotice.StereoFallback(surroundLayout(it)))
+        }
+        if (startedOnBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
+        var onBluetooth = startedOnBluetooth
+        audioOutputs.onChange { output ->
+            if (stopRan) return@onChange
+            if (output.bluetooth && !onBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
+            onBluetooth = output.bluetooth
+        }
+    }
+
+    // The configurations that the settings offer above stereo are 5.1 and 7.1
+    private fun surroundLayout(asked: MoonBridge.AudioConfiguration): SurroundLayout =
+        if (asked == MoonBridge.AUDIO_CONFIGURATION_71_SURROUND) {
+            SurroundLayout.SURROUND_7_1
+        } else {
+            SurroundLayout.SURROUND_5_1
+        }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress(
@@ -1768,7 +1865,7 @@ class Game :
         }
     }
 
-    override fun toggleKeyboard() {
+    fun toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay")
         // BOREALIS: hides the Android keyboard when it shows, else toggles the Borealis keyboard;
         // the Android one opens from it
@@ -2748,11 +2845,20 @@ class Game :
     }
 
     // BOREALIS: stops the connection and runs [done] once it has stopped, from the thread that
-    // stopped it; a connection that never connected is stopped too (leave)
+    // stopped it; a connection that never connected is stopped too. When another exit stopped it
+    // first, [done] runs when that stop ends, or at once, on the caller's thread if it ended
+    // (leave)
     internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
 
     private fun stopConnection(done: Runnable? = null) {
         stopRan = true // BOREALIS: no stream starts after this (leave)
+        // BOREALIS: the audio output tells nobody after the stop; closing twice is no harm (audio)
+        if (::audioOutputs.isInitialized) audioOutputs.close()
+        if (!stopClaimed.compareAndSet(false, true)) {
+            // BOREALIS: the stop of a Disconnect after another exit still gets its callback (leave)
+            done?.let { connectionStopped.thenRun(it) }
+            return
+        }
         startupGuard.cancel() // BOREALIS: first-frame watchdog
         if (connected) {
             connected = false
@@ -2776,17 +2882,22 @@ class Game :
         // during the process of stopping this one.
         object : Thread() {
                 override fun run() {
-                    val stopStarted = System.nanoTime() // BOREALIS: leave log
-                    conn.stop()
-                    BorealisLog.i(
-                        LogTag.APP,
-                        "connection stop done",
-                        "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
-                    )
-                    // BOREALIS: a start that failed after the decoder stage holds a decoder and no
-                    // connection (stream)
-                    tellConnectionStopped()
-                    done?.run()
+                    try {
+                        val stopStarted = System.nanoTime() // BOREALIS: leave log
+                        conn.stop()
+                        BorealisLog.i(
+                            LogTag.APP,
+                            "connection stop done",
+                            "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
+                        )
+                        // BOREALIS: a start that failed after the decoder stage holds a decoder
+                        // and no connection (stream)
+                        tellConnectionStopped()
+                        done?.run()
+                    } finally {
+                        // BOREALIS: a second stop gets its callback from here (leave)
+                        connectionStopped.complete(Unit)
+                    }
                 }
             }
             .start()
@@ -2855,7 +2966,8 @@ class Game :
 
     override fun connectionTerminated(errorCode: Int) {
         // BOREALIS: the host ends the stream when it gets the Quit that the user confirmed, and the
-        // control stream reports the ENet disconnect (-1); that end is the quit's, so no
+        // control stream reports the ENet disconnect (-1), or the graceful termination (0) when the
+        // host sends it before it disconnects a cancelled session; that end is the quit's, so no
         // connectivity test and no error. Any other code is a network drop (leave)
         val endedByQuit = ::streamSession.isInitialized && streamSession.endedByQuit(errorCode)
 
@@ -2885,25 +2997,25 @@ class Game :
 
         runOnUiThread {
             startupGuard.cancel() // BOREALIS: first-frame watchdog
-            SessionAudit.terminated(errorCode) // BOREALIS: audit trail
+            // BOREALIS: audit trail. The end that the session took for the quit's is the quit's
+            // here too, whether the host answered the cancel before or after it: the answer of a
+            // shared app (599) clears the quit that the audit waits for, and the end of the stream
+            // that follows is no error
+            if (endedByQuit) SessionAudit.quit() else SessionAudit.terminated(errorCode)
 
-            // Let the display go to sleep now
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-            // Stop processing controller input
-            controllerHandler.stop()
-
-            // Ungrab input
-            setInputGrabState(false)
+            releaseWindowAndInput()
 
             if (!displayedFailureDialog) {
                 displayedFailureDialog = true
                 if (!endedByQuit) LimeLog.severe("Connection terminated: $errorCode")
+                // BOREALIS: a Disconnect does not mark the failure screen as shown, but its stop
+                // ran already: the end of the stream that the user left is no failure (leave)
+                val leaving = stopRan
                 stopConnection()
 
                 // Display the error dialog if it was an unexpected termination.
                 // Otherwise, just finish the activity immediately.
-                if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
+                if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION && !leaving) {
                     // BOREALIS: the chrome shows the classified failure (stream)
                     val portBlocked =
                         portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE &&
@@ -2921,12 +3033,74 @@ class Game :
                         )
                     )
                 } else {
-                    // BOREALIS: another exit may have finished the activity already (leave)
-                    if (!isFinishing) finish()
+                    finishWithoutFailure(endedByQuit, errorCode)
                 }
             }
         }
     }
+
+    // BOREALIS: the stream ended with no failure to report. A graceful end that was the quit's
+    // tells the session, so that the 599 answer that waits for the end leaves now, with the notice
+    // for the Library, before the activity finishes (stream)
+    private fun finishWithoutFailure(endedByQuit: Boolean, errorCode: Int) {
+        if (endedByQuit && errorCode == MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
+            streamSession.onGracefulEnd()
+        }
+        // BOREALIS: another exit may have finished the activity already (leave)
+        if (!isFinishing) finish()
+    }
+
+    // BOREALIS: the stream is over, whatever ended it: the display may sleep, the controller input
+    // stops and the pointer goes free, before the chrome shows what happened (stream)
+    private fun releaseWindowAndInput() {
+        // Let the display go to sleep now
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Stop processing controller input
+        controllerHandler.stop()
+
+        // Ungrab input
+        setInputGrabState(false)
+    }
+
+    // BOREALIS: the video surface was lost: the picture is gone and nothing else says so. On the
+    // main thread, a stream that runs ends as an error termination does: the chrome shows the
+    // failure over the last frame, and the connection stops. Picture in picture keeps the stream
+    // running, so it ends too, and the chrome shows the failure when the window grows back. A
+    // stream that is ending already (the stop ran, a failure is shown, the activity is finishing)
+    // has said what there is to say, so this only warns. The checks run here, not where the report
+    // was posted, so a leave that came after the post counts (stream)
+    private fun endStreamForLostSurface() {
+        if (streamEndsAlready()) {
+            BorealisLog.w(LogTag.VIDEO, "video surface lost while the stream is ending")
+            return
+        }
+        displayedFailureDialog = true
+        LimeLog.severe("The video surface was lost")
+        // The last frame is copied before the connection stops and the decoder goes
+        if (firstFrameShown) chromeHost.freezeFrame()
+        // The audit says how the stream ended before the stop of the connection says that the user
+        // left. While the user's Quit is under way the end is the quit's, as it is for a
+        // termination of any code; the answer of the quit that comes later ends nothing more
+        if (streamSession.state.value.phase is StreamPhase.Quitting) {
+            SessionAudit.quit()
+        } else {
+            SessionAudit.failed("video_surface_lost")
+        }
+        releaseWindowAndInput()
+        stopConnection()
+        streamSession.onFailed(
+            StreamFailure(
+                if (firstFrameShown) FailureKind.STOPPED else FailureKind.GENERIC,
+                "The video surface was lost",
+                null,
+            )
+        )
+    }
+
+    // BOREALIS: the stop ran, a failure is on the screen, or the activity is going away (stream)
+    private fun streamEndsAlready(): Boolean =
+        stopRan || displayedFailureDialog || isFinishing || isDestroyed
 
     override fun connectionStatusUpdate(connectionStatus: Int) {
         runOnUiThread {
@@ -2969,6 +3143,7 @@ class Game :
                 )
             )
             startupGuard.onConnectionStarted() // BOREALIS: first-frame watchdog
+            announceAudio() // BOREALIS: the notices of the sound (audio)
             // BOREALIS: audit trail
             SessionAudit.started(
                 pcName,
@@ -3074,7 +3249,7 @@ class Game :
             UiHelper.notifyStreamConnecting(this)
 
             decoderRenderer.setRenderTarget(holder)
-            conn.start(AndroidAudioRenderer(this, prefConfig.enableAudioFx), decoderRenderer, this)
+            conn.start(audioRenderer, decoderRenderer, this)
         }
     }
 
@@ -3128,9 +3303,9 @@ class Game :
             // Let the decoder know immediately that the surface is gone
             decoderRenderer.prepareForStop()
 
-            if (connected) {
-                stopConnection()
-            }
+            // BOREALIS: a surface that goes away before the start is a leave too: the start that
+            // reports after it finds the stop done and opens no stream that nobody ends (leave)
+            stopConnection()
         }
     }
 

@@ -12,7 +12,6 @@ import com.limelight.computers.ComputerManagerService
 import com.limelight.grid.assets.DiskAssetLoader
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
-import com.limelight.ui.GameGestures
 import com.limelight.ui.StreamView
 import com.limelight.utils.CacheHelper
 import com.limelight.utils.Dialog
@@ -249,16 +248,6 @@ class SupportJavaVisibleApiTest {
 
         assertThat(method.isPublicStatic()).isTrue()
         assertThat(method.returnType).isEqualTo(Void.TYPE)
-    }
-
-    @Test
-    fun `the game gestures are an interface with one method`() {
-        assertThat(GameGestures::class.java.isInterface).isTrue()
-        assertThat(GameGestures::class.java.methods.map { it.name })
-            .containsExactly("toggleKeyboard")
-        val toggle = GameGestures::class.java.publicMethod("toggleKeyboard")
-        assertThat(toggle.returnType).isEqualTo(Void.TYPE)
-        assertThat(Modifier.isAbstract(toggle.modifiers)).isTrue()
     }
 
     @Test

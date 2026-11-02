@@ -5,6 +5,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.shadows.ShadowLooper
 import org.robolectric.util.ReflectionHelpers
 
 /** The surface callbacks of `Game` that do not start the connection. */
@@ -115,16 +116,39 @@ internal class GameSurfaceTest : GameTestBase() {
     }
 
     @Test
-    fun `a surface that goes away after the attempt makes the decoder ready to stop`() {
+    fun `a surface that goes away after the attempt makes the decoder ready to stop and leaves`() {
         rig.create()
         rig.game.surfaceCreated(holder)
         rig.markConnectionAttempted()
 
         rig.game.surfaceDestroyed(holder)
+        rig.awaitStop()
 
         assertThat(stopping()).isTrue()
-        // The connection had not started, so there is nothing to stop.
+        // A surface that goes away before the start counts as a leave, as one under a stream does.
+        assertThat(rig.field<Boolean>("stopRan")).isTrue()
+        // The connection never set its bridge up, so its stop makes no native call.
         assertThat(ShadowRecordingBridge.names).isEmpty()
+    }
+
+    @Test
+    fun `a start that reports after the surface went away stops the connection, no session opens`() {
+        rig.create()
+        rig.game.surfaceCreated(holder)
+        rig.markConnectionAttempted()
+        // The start is under way: it set the bridge up, and nothing has connected yet.
+        ReflectionHelpers.setField(rig.connection, "bridgeSetUp", true)
+
+        rig.game.surfaceDestroyed(holder)
+        rig.awaitStop()
+        rig.game.connectionStarted()
+        ShadowLooper.idleMainLooper()
+
+        assertThat(ShadowRecordingBridge.names)
+            .containsExactly("interruptConnection", "stopConnection", "cleanupBridge")
+            .inOrder()
+        assertThat(rig.audit).isEmpty()
+        assertThat(rig.field<Boolean>("connected")).isFalse()
     }
 
     @Test

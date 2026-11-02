@@ -1,20 +1,25 @@
 package io.github.magalz.borealis.stream.ui.glass
 
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.core.graphics.createBitmap
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val NANOS_PER_MILLI = 1_000_000L
+
+/** How long a copy may take before it is given up: a second, where the devices take 0.1 to 0.3. */
+private const val COPY_CAP_MS = 1_000L
 
 /**
  * The last frame of a stream that failed, which the popup of the error shows frozen behind it (the
@@ -27,25 +32,48 @@ private const val NANOS_PER_MILLI = 1_000_000L
  * thread that reports the end, which is not the main thread. So [request] may be called from any
  * thread. It reads how big the video is, which asks nothing about the place of a view; the copy
  * ends on the main thread ([VideoSource.copy] says so, also for a copy that cannot be made), and
- * there the place of the video and the place of the chrome ([origin]) are read and [frame] is set.
+ * there the place of the video is read and the copy becomes the [frame].
+ *
+ * The place of the frame is not fixed at the copy: [frame] reads where the video and the chrome
+ * ([origin]) are now, whenever it is read, and the popup reads it as it draws. A rotation, a
+ * split-screen resize or the end of picture-in-picture moves the video after the failure, and the
+ * frame goes with it. A video that has no bounds for a moment (its surface is being made again)
+ * leaves the frame at the last place that it had.
  *
  * Between the request and the end of the copy it is [pending], and the popup keeps the background
- * off the screen meanwhile. That relies on the source ending every copy that [request] asked for,
- * well or badly: `PixelCopy` answers each request it accepts on its handler, and [PixelCopySource]
- * answers one that it refuses. A copy that never ended would leave the popup on the black of the
- * frame, under its scrim, where it stays readable.
+ * off the screen meanwhile. The source ends every copy that [request] asked for, well or badly:
+ * `PixelCopy` answers each request it accepts on its handler, and [PixelCopySource] answers one
+ * that it refuses. The wait does not rely on that alone: a copy that has not ended after
+ * [COPY_CAP_MS] (it takes 0.1 to 0.3 s on the devices) is given up. Then it is no longer pending
+ * and there is no frame, so the popup sits on the background, and the copy that ends later is
+ * ignored. Without the cap, a copy that never ended would leave the popup on the black of the
+ * frame, under its scrim, with a solid panel.
  *
  * Only the first [request] copies. [release] lets go of the frame, once the activity is ending and
- * nothing draws it any more, and a copy that ends after it is dropped.
+ * nothing draws it any more, and a copy that ends after it is dropped. [schedule] runs an action on
+ * the main thread after a delay in milliseconds, for the cap; a test gives its own.
  */
 internal class FrozenFrame(
     private val source: VideoSource,
     private val origin: () -> IntOffset,
     private val clock: () -> Long = SystemClock::elapsedRealtimeNanos,
+    private val schedule: (Long, () -> Unit) -> Unit = ::postToMainThread,
 ) {
-    /** The copy, or null until one has worked, and after [release]. */
-    var frame: VideoFrame? by mutableStateOf(null)
-        private set
+    /** A copy that worked: the picture, and where the video was when it was last seen. */
+    private class Copy(val image: ImageBitmap, var bounds: VideoBounds)
+
+    private var copy: Copy? by mutableStateOf(null)
+
+    /**
+     * The copy, placed where the video is now, or null until one has worked, and after [release].
+     * Read it where it is drawn: each read asks [source] and [origin] again, on the main thread.
+     */
+    val frame: VideoFrame?
+        get() = copy?.let(::placed)
+
+    /** Whether there is a [frame], which asks nothing of the views. */
+    val hasFrame: Boolean
+        get() = copy != null
 
     /** Whether the copy was asked for and has neither ended with a frame nor failed yet. */
     var pending: Boolean by mutableStateOf(false)
@@ -57,9 +85,12 @@ internal class FrozenFrame(
      * Then the popup is over the game. A failed copy, or none asked for, leaves the background.
      */
     val coversBackground: Boolean
-        get() = frame != null || pending
+        get() = hasFrame || pending
 
     private val asked = AtomicBoolean(false)
+
+    // The copy has ended, or the cap has given it up: whichever comes first, the other is ignored.
+    private val settled = AtomicBoolean(false)
     @Volatile private var released = false
 
     /** Whether the copy has been asked for. */
@@ -87,12 +118,26 @@ internal class FrozenFrame(
         )
         val startedAt = clock()
         pending = true
-        source.copy(bitmap) { ok -> finish(ok, bitmap, size, startedAt) }
+        schedule(COPY_CAP_MS, ::givenUp)
+        source.copy(bitmap) { ok -> finish(ok, bitmap, startedAt) }
     }
 
-    private fun finish(ok: Boolean, bitmap: Bitmap, size: IntSize, startedAt: Long) {
+    // The cap ran out, on the main thread: the copy is no frame, unless it ended first.
+    private fun givenUp() {
+        if (!settled.compareAndSet(false, true)) return
         pending = false
         if (released) return
+        BorealisLog.w(LogTag.VIDEO, "Frozen frame failed", "reason" to "timeout")
+    }
+
+    // The copy ended; one that the cap gave up, or that came after release, is dropped.
+    private fun finish(ok: Boolean, bitmap: Bitmap, startedAt: Long) {
+        if (!settled.compareAndSet(false, true)) return
+        pending = false
+        if (!released) keep(ok, bitmap, startedAt)
+    }
+
+    private fun keep(ok: Boolean, bitmap: Bitmap, startedAt: Long) {
         if (!ok) {
             BorealisLog.w(LogTag.VIDEO, "Frozen frame failed", "reason" to "copy")
             return
@@ -108,23 +153,34 @@ internal class FrozenFrame(
             "Frozen frame copied",
             "ms" to (clock() - startedAt) / NANOS_PER_MILLI,
         )
+        copy = Copy(bitmap.asImageBitmap(), bounds)
+    }
+
+    // The copy where the video and the chrome are now; the video's last bounds stand in for a
+    // surface that has none.
+    private fun placed(copy: Copy): VideoFrame {
+        source.bounds()?.let { copy.bounds = it }
+        val bounds = copy.bounds
         val chrome = origin()
-        frame =
-            VideoFrame(
-                bitmap.asImageBitmap(),
-                left = (bounds.left - chrome.x).toFloat(),
-                top = (bounds.top - chrome.y).toFloat(),
-                scaleX = size.width.toFloat() / bitmap.width,
-                scaleY = size.height.toFloat() / bitmap.height,
-            )
+        return VideoFrame(
+            copy.image,
+            left = (bounds.left - chrome.x).toFloat(),
+            top = (bounds.top - chrome.y).toFloat(),
+            scaleX = bounds.width.toFloat() / copy.image.width,
+            scaleY = bounds.height.toFloat() / copy.image.height,
+        )
     }
 
     /** Lets go of the frame: the activity is ending, and nothing draws it any more. */
     fun release() {
         released = true
         pending = false
-        frame = null
+        copy = null
     }
+}
+
+private fun postToMainThread(delayMs: Long, action: () -> Unit) {
+    Handler(Looper.getMainLooper()).postDelayed({ action() }, delayMs)
 }
 
 /** The frozen frame behind the error popup. Null where there is no stream to have copied. */

@@ -70,6 +70,43 @@ class StreamSessionLeaveLogTest {
     }
 
     @Test
+    fun `the graceful end of the stream while quitting is the quit's too, with its code`() {
+        val session = streaming()
+        now = 1_000L
+        session.quitApp()
+        now = 1_250L
+
+        val byQuit = session.endedByQuit(GRACEFUL_TERMINATION)
+
+        assertThat(byQuit).isTrue()
+        val ended = log.records.single { it.message == "quit stream ended" }
+        assertThat(ended.level).isEqualTo(LogLevel.INFO)
+        assertThat(ended.fields).containsExactly("code" to "0", "since_quit_ms" to "250").inOrder()
+    }
+
+    @Test
+    fun `the graceful end of a stream nobody quit is not the quit's and logs nothing`() {
+        val session = streaming()
+
+        val byQuit = session.endedByQuit(GRACEFUL_TERMINATION)
+
+        assertThat(byQuit).isFalse()
+        assertThat(lines()).doesNotContain("quit stream ended")
+    }
+
+    @Test
+    fun `a quit that failed leaves the next graceful end of the stream to the failure path`() {
+        val session = streaming()
+        session.quitApp()
+        actions.quitFailed(RecordingQuitFailure())
+
+        val byQuit = session.endedByQuit(GRACEFUL_TERMINATION)
+
+        assertThat(byQuit).isFalse()
+        assertThat(lines()).doesNotContain("quit stream ended")
+    }
+
+    @Test
     fun `any other end of the stream while quitting is a network drop, not the quit's`() {
         val session = streaming()
         session.quitApp()
@@ -94,10 +131,14 @@ class StreamSessionLeaveLogTest {
     fun `a quit that failed leaves the next end of the stream to the failure path`() {
         val session = streaming()
         session.quitApp()
-        actions.quitFailed()
+        actions.quitFailed(RecordingQuitFailure())
 
         val byQuit = session.endedByQuit(-1)
 
         assertThat(byQuit).isFalse()
+    }
+
+    private companion object {
+        const val GRACEFUL_TERMINATION = 0
     }
 }

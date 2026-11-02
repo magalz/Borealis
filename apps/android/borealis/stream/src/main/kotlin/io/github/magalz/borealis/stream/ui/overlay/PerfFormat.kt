@@ -59,6 +59,13 @@ internal class PerfFormat(private val resources: Resources) {
         val network = listOfNotNull(network(perf), perf?.bitrateMbps?.let { "${tenths(it)} Mbps" })
         add(resources.getString(R.string.stream_overlay_network, network.joinToString(" · ")))
         add(resources.getString(R.string.stream_overlay_decode, tenths(perf?.decodeMs)))
+        add(resources.getString(R.string.stream_overlay_audio_delay, audioDelay(perf)))
+    }
+
+    /** The audio delay, for example "42 ms", or a dash until the audio track has a timestamp. */
+    private fun audioDelay(perf: PerfSnapshot?): String {
+        val delayMs = perf?.audioDelayMs ?: return NONE
+        return resources.getString(R.string.stream_overlay_audio_delay_value, delayMs.toString())
     }
 
     /** The host processing time as min / avg / max, for example "1.0 / 2.0 / 5.0 ms". */

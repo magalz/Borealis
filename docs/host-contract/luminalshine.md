@@ -853,6 +853,11 @@ handles it on its own side:
   `connection stop done ms=N` and `activity finished` (tags `Borealis.APP` and
   `Borealis.HOST`; `NvHTTP.quitApp`, `GameStreamActions`, `Game.stopConnection`). They
   show whether the time of a slow Quit is in `/cancel` or after it.
+- **Leave during the start (Sprint 17a).** Borealis also sends `/cancel` once after it leaves a
+  start whose `/launch` the host accepted and whose session never started (`NvConnection`, the
+  `launch cancel sent` and `launch cancel answered` lines). It never sends it after `/resume`, after
+  a refused or unanswered `/launch`, or on a GFE host. A `/cancel` that fails is logged as
+  `launch cancel failed`.
 
 **Filed upstream (2026-10-29): `NortheBridge/luminalshine#218`, open.** The owner filed
 it from the lines above, and plans to fix it: send `IDX_TERMINATION` with `0x80030023`
@@ -861,6 +866,22 @@ a session already does. That an app that exits by itself ends a session graceful
 inferred from the source and was not run. Until a host sends the message, Borealis keeps
 the rule above. A host that sends it ends the stream through the graceful path, which
 finishes the activity with no error and needs no rule.
+
+**Tested upstream (2026-11-02): `NortheBridge/luminalshine#232`.** With #232 the host sends the graceful
+termination (`0x80030023`, code 0) before it disconnects a cancelled session, as #218 asks. Borealis takes either
+end as the end of the user's own Quit since `4539b943b`: a code 0 during a Quit is a clean leave, as a -1 is.
+A `0.0.160-nightly` build with #232 ran a simple Quit and a shared Quit, and both left cleanly with no error
+toast. The 26.10.1 host still sends no message, so the rule above still holds for it.
+
+**Scope of a `/cancel` from a second device (2026-11-02).** With #227, a `/cancel` from a client that is not the
+only live one is logged as `Cancel scope: requester_only (other live sessions or launches: 1)`, and it stops only
+the caller's session. So "Quit and relaunch" from a second device does not end the first device's stream on those
+builds. On the `0.0.160-nightly` build of #232, which contains #227, a Quit and relaunch from the S22 with no
+session of its own logged that line, and the TV kept streaming. On 26.10.1 the same Quit and relaunch ended the
+first device's stream with error -1. The scope does not depend on who started the app: on the `0.0.167-nightly`
+build of #227, the Quit of the TV, which had started Desktop, with the S22 joined, ended only the TV's session, and
+its check got the 599. Borealis takes that as a clean leave since `fc815b85a`. Whether an explicit "Quit and
+relaunch" should keep this scope is asked on #227.
 
 **Why `/cancel` takes seconds.** The answer is written only after these steps, in this
 order (`src/nvhttp.cpp` unless a file is named):
@@ -1340,7 +1361,10 @@ host raises these messages:
   request: a `Host` containing `0.0.0.0` means normal quality
   (`src/rtsp.cpp:1597-1607`).
 - `continuousAudio=1` makes the host send audio without silence gaps
-  (`src/nvhttp.cpp:1617`, `src/rtsp.cpp:1631-1634`).
+  (`src/nvhttp.cpp:1617`, `src/rtsp.cpp:1631-1634`). Borealis does not send it: the client field
+  `StreamConfiguration.continuousAudio` is off by default and has no caller. It was measured worse
+  on 2026-11-02 (more dropped audio packets at the same client limit, in Sprint 17a's test
+  streams).
 - `localAudioPlayMode` selects whether the host also plays audio locally
   (`src/nvhttp.cpp:2822`).
 - There is no client-to-host microphone stream: the host has no microphone

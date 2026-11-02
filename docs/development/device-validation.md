@@ -5802,7 +5802,7 @@ Galaxy S22, on the debug build of `baf64f5dc`. Steps 1 to 5, 7 and 8 ran; step 6
 on the client side. Two parts of step 3 could not be produced: a leave before the launch request, and the 409/503
 retry, for which the host answers 400 instead. The owner listened to the sound of steps 5 and 7 on both devices at
 17:55 to 18:08 (see the owner's sound check below), and later reported the picture of steps 4 and 5 and steps 9,
-10, 12 to 15 and 17, and the S22 overlay of step 6 (see Results). Steps 11 and 16 are still open. The findings are below.
+10, 12 to 17, and the S22 overlay of step 6 (see Results). Step 11 is still open. The findings are below.
 
 ### Setup
 
@@ -5859,7 +5859,11 @@ retry, for which the host answers 400 instead. The owner listened to the sound o
 | 13 The stylus buttons | S22 | not run | No stylus was reported. |
 | 14 The on-screen controller | S22 | pass | Reported by the owner. |
 | 15 The two-finger trackpad tap and scroll | S22 | pass | Reported by the owner: it works as it should. |
-| 16 Pads | S22, TV | owner check | The owner was testing it when this was written. |
+| 16 Pad buttons | S22, TV | pass | Reported by the owner: the pad buttons work. |
+| 16 Weak rumble (C21) | S22, TV | pass for the rumble on the XInput dongle; the weak level was not judged separately | Rumble works only with the owner's 8BitDo `2DC8:310B` in XInput mode through its dongle, on the Borealis USB driver (Xbox 360 driver). In the other modes there is no rumble: the known [Sprint 17](../roadmap.md#sprint-17-general-fixes) item "Rumble for pads in D-input or Switch mode" (these kernels have no `NINTENDO_FF` or `XPAD_FF`). Not a Sprint 16 regression. |
+| 16 Battery (C20) | S22, TV | not run | Not reported by the owner. |
+| 16 A device change while held (C12) | S22, TV | not run | Not reported by the owner. |
+| 16 Trigger motors at stream end (U3) | S22, TV | not applicable | No GIP pad. |
 | 17 The DeX right click | S22 | not applicable | The owner has no DeX set-up. |
 
 ### Findings
@@ -5957,10 +5961,10 @@ The owner listened on each device while the PC played a Windows sound in a loop,
 - Step 3, the leave during a 409 or 503 retry: LuminalShine 26.10.1 answers 400 instead, so the retry needs a host that
   answers 409 or 503.
 - Step 3, the leave before the launch request (finding 2) and the start after a failed native start.
-- Steps 11 and 16, which need the owner: a forgotten host and a new pairing (11), and the pads (16; the trigger
-  motors need a GIP pad, `not applicable` without one). The stylus part of step 13 was not run (no stylus
-  reported). The owner reported the picture, the S22 overlay of step 6 and steps 9, 10, 12 to 15 and 17 (see
-  Results).
+- Step 11, which needs the owner: a forgotten host and a new pairing.
+- Not run: the stylus part of step 13 (no stylus reported), and the battery (C20) and the device change (C12) of
+  step 16 (not reported). The owner reported the picture, the S22 overlay of step 6 and steps 9, 10 and 12 to 17
+  (see Results).
 - The TV was in use from 11:02 to the owner's OK at 17:48 (the same app was already in front at 10:37, before the
   round started on the TV). After the run of 17:48 the TV was put to sleep with `KEYCODE_SLEEP` at 17:51
   (`mWakefulness=Asleep`).

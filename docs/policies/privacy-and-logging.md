@@ -112,8 +112,9 @@ are a choice, a time, a code, a reason word or an exception class. A decoder nam
   `quit cancel sent` and `quit cancel answered` keep their names, and the start adds the `launch` pair.
 - `Frozen frame failed` (the table above) has a new reason: `timeout`, for a copy that the time cap
   gave up. The other reasons are `no_surface` and `copy`.
-- The audio delay line adds the text of an exception from `AudioTrack.getTimestamp`. The code path
-  holds no address, but no device run has checked that text (TODO(verify)).
+- The audio delay warning adds the text of the exception that the audio delay source threw. That
+  source reads only the audio track's timestamp and frame counts, so the text holds no address, host
+  name or key.
 
 ## Settings storage
 

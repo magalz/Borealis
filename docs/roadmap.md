@@ -1309,7 +1309,7 @@ the client side, and none of its findings is a Sprint 16 regression.
 
 ### Sprint 17: general fixes
 
-Planned, not started. Owner decision of 2026-10-28, later the same day; see the
+Sprint 17a in progress, Sprint 17b planned. Owner decision of 2026-10-28, later the same day; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
 
 On 2026-11-02, after Sprint 16, the owner split the sprint in two, run one after the other, each
@@ -1670,8 +1670,8 @@ the round are in [device-validation section 20](development/device-validation.md
   Sprint 17a: done by inference (owner, 2026-11-02). A resumed session whose Quit is answered with 599,
   and whose stream ends with the quit's -1, leaves cleanly with the Library notice "`<App>` keeps running
   for another device." (without the name after a resume). The 5 s window of the answer covers the order
-  with the 599 first; for the order with the end first, the code takes the end while the Quit is pending,
-  with no time limit (TODO(verify)). The round checks it on a LuminalShine build with
+  with the 599 first; for the order with the end first, the session keeps the end while the Quit is
+  pending, until the answer comes. The round checks it on a LuminalShine build with
   NortheBridge/luminalshine#227 (runbook 3.32, step 11).
 - **The frozen frame after a rotation.** From Sprint 15 (the known limits). The frame is placed and scaled when
   the copy ends, so a rotation, a split-screen resize or leaving picture-in-picture after the failure leaves it
@@ -1851,13 +1851,15 @@ Planned, not started. Owner decision of 2026-10-28.
     seconds after the first failure that is not recovered …", failed once in a full gate under load,
     and passed 5 times out of 5 alone at the base and at the head of the batch. Make it
     deterministic.
-  - **A flaky controller test**, from Sprint 17a (seen in three gates of the phase, as the brief
-    counts them; the phase log records two: TODO(verify)). `ControllerNumberLimitTest`, "a number
+  - **A flaky controller test**, from Sprint 17a (seen once each in three task gates of the phase).
+    `ControllerNumberLimitTest`, "a number
     that frees up goes to the pad that was left out", fails with an NPE at `ControllerHandler.kt:244`
     and depends on the order of the tests. Make it deterministic.
-  - **The `menu_glass_*` Roborazzi references**, from Sprint 17a. Eight are tracked under
-    `apps/android/borealis/stream/src/test/screenshots/` (the brief says four: TODO(verify) which
-    ones). They change on every Windows re-record (TODO(verify)).
+  - **The `menu_glass_*` Roborazzi references**, from Sprint 17a. Four of the eight under
+    `apps/android/borealis/stream/src/test/screenshots/` (`menu_glass_handheld`, `menu_glass_phone`,
+    `menu_glass_phone_white-frame`, `menu_glass_tv_focused`) changed when two tasks re-recorded the
+    module on Windows, with no change to the menu; the tasks kept the committed ones, and the verify
+    passes with them. Find why they move.
 - **A code item, from Sprint 17a.** `StreamConfiguration.continuousAudio` has no caller (Sprint 17a
   turned continuous audio off after measuring it). Delete the field and its query in `NvHTTP`, or give
   it a setting with a consumer.

@@ -14,12 +14,12 @@ import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowToast
 
 /**
- * How the stream is audited when the user's Quit of an app that another device started ends it: the
- * host keeps the app and answers 599, and closes the stream with the quit's ENet disconnect, or
- * with the graceful termination when it sends that before it ends a cancelled session. The two can
- * come in either order, and the session takes both for a clean leave. The audit says the same: the
- * stream ended with a quit. Any other quit that failed, and any other end, is audited as it always
- * was.
+ * How the stream is audited when the user's Quit ends it while the host keeps the app for another
+ * device: the host answers 599, and closes the stream with the quit's ENet disconnect, or with the
+ * graceful termination when it sends that before it ends a cancelled session. The two can come in
+ * either order, and the session takes both for a clean leave, whether the stream launched the app
+ * or joined it. The audit says the same: the stream ended with a quit. Any other quit that failed,
+ * and any other end, is audited as it always was.
  */
 internal class GameSharedQuitAuditTest : GameTestBase() {
     @get:Rule val borealisLog = RecordingLog()
@@ -99,15 +99,19 @@ internal class GameSharedQuitAuditTest : GameTestBase() {
     }
 
     @Test
-    fun `a session that launched the app has no clean leave, and its end after the 599 is an error`() {
+    fun `a session that launched the app is a clean leave too, audited as a quit`() {
         rig.streaming()
-        val quit = SharedQuitRig(rig, shared, joined = false)
+        val quit = SharedQuitRig(rig, shared)
+        onConnectionThread { rig.game.launchStarting(false) }
+        ShadowLooper.idleMainLooper()
         quit.session.quitApp()
         quit.now = 1_000L
 
         streamEnds()
 
-        assertError(ENET_DISCONNECT)
+        assertThat(rig.game.isFinishing).isTrue()
+        assertQuit()
+        assertThat(leftKeepingTheApp()).isTrue()
     }
 
     @Test

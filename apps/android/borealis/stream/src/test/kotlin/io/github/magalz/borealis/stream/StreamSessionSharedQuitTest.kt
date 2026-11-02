@@ -23,10 +23,11 @@ internal class RecordingQuitFailure(override val notTheStarter: Boolean = false)
 }
 
 /**
- * A Quit of an app that the stream joined, once the host keeps the app for the device that started
- * it: the host answers the cancel with 599 and ends only this stream, with the quit's ENet
- * disconnect, in either order. Time is the test's: the clock, and the one task that the session
- * schedules.
+ * A Quit that the host answers with 599 because it keeps the app for another device (the one that
+ * started it, or one that joined), and that ends only this stream, with the quit's ENet disconnect
+ * or the graceful termination, in either order. The session does not know who started the app: it
+ * is the same for a stream that launched it and for one that joined it. Time is the test's: the
+ * clock, and the one task that the session schedules.
  */
 class StreamSessionSharedQuitTest {
     @get:Rule val log = RecordingLogSink()
@@ -49,8 +50,7 @@ class StreamSessionSharedQuitTest {
     private val phase: StreamPhase
         get() = session.state.value.phase
 
-    private fun streaming(resume: Boolean): StreamPhase {
-        session.launchRequested(resume)
+    private fun streaming(): StreamPhase {
         session.onConnectionStarted(aSessionInfo)
         session.onFirstFrame()
         return phase
@@ -77,7 +77,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a stream that ended before the answer of 599 is a clean leave of the app that keeps running`() {
-        val running = streaming(resume = true)
+        val running = streaming()
         session.quitApp()
         streamEnds()
 
@@ -89,7 +89,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `an end that the activity reports after the answer of 599 is still a clean leave`() {
-        val running = streaming(resume = true)
+        val running = streaming()
         session.quitApp()
         assertThat(session.endedByQuit(ENET_DISCONNECT)).isTrue()
 
@@ -102,7 +102,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a stream that ends after the answer of 599 is a clean leave, not a failure`() {
-        val running = streaming(resume = true)
+        val running = streaming()
         session.quitApp()
         actions.quitFailed(shared)
         now = 1_000L
@@ -116,7 +116,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `the answer of 599 is held for the window, then shown if the stream is still up`() {
-        val running = streaming(resume = true)
+        val running = streaming()
         session.quitApp()
 
         actions.quitFailed(shared)
@@ -134,7 +134,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a new quit takes the held answer with it, so the old one is not shown after it`() {
-        val running = streaming(resume = true)
+        val running = streaming()
         session.quitApp()
         actions.quitFailed(shared)
 
@@ -147,7 +147,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a clean leave in the window leaves nothing for the held answer to show`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         streamEnds()
@@ -160,7 +160,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `the end of the stream exactly at the end of the window is still the quit's`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         now = WINDOW_MS
@@ -172,7 +172,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `an end of the stream after the window is a failure as it was`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         now = WINDOW_MS + 1
@@ -186,7 +186,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `an end of the stream with another code in the window is a failure as it was`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         now = 1_000L
@@ -199,7 +199,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `an end with another code before the answer of 599 is a failure as it was`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         streamEnds(code = -100)
 
@@ -210,32 +210,8 @@ class StreamSessionSharedQuitTest {
     }
 
     @Test
-    fun `a session that launched the app is not a clean leave, the quit fails as it did`() {
-        streaming(resume = false)
-        session.quitApp()
-        streamEnds()
-
-        actions.quitFailed(shared)
-
-        assertThat(phase).isEqualTo(StreamPhase.Failed(aFailure))
-        assertThat(shared.calls).containsExactly("show")
-    }
-
-    @Test
-    fun `a session that launched the app shows the answer of 599 at once and holds nothing`() {
-        val running = streaming(resume = false)
-        session.quitApp()
-
-        actions.quitFailed(shared)
-
-        assertThat(phase).isEqualTo(running)
-        assertThat(shared.calls).containsExactly("show")
-        assertThat(scheduled).isEmpty()
-    }
-
-    @Test
-    fun `another error of the quit on a resumed session is a failure as it was`() {
-        streaming(resume = true)
+    fun `another error of the quit is a failure as it was`() {
+        streaming()
         session.quitApp()
         streamEnds()
         val other = RecordingQuitFailure(notTheStarter = false)
@@ -247,8 +223,8 @@ class StreamSessionSharedQuitTest {
     }
 
     @Test
-    fun `another error of the quit on a resumed session is shown at once and holds nothing`() {
-        val running = streaming(resume = true)
+    fun `another error of the quit is shown at once and holds nothing`() {
+        val running = streaming()
         session.quitApp()
         val other = RecordingQuitFailure(notTheStarter = false)
 
@@ -260,8 +236,8 @@ class StreamSessionSharedQuitTest {
     }
 
     @Test
-    fun `a quit that succeeds on a resumed session is unchanged`() {
-        val running = streaming(resume = true)
+    fun `a quit that succeeds is unchanged`() {
+        val running = streaming()
         session.quitApp()
 
         streamEnds()
@@ -273,7 +249,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a Disconnect in the window drops the held answer, so it is not shown after the window`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
 
@@ -286,7 +262,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `the end of the stream after a Disconnect in the window is not the quit's, and no line says so`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         session.disconnect()
@@ -303,7 +279,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a leave in the window drops the held answer, so it is not shown after the window`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
 
@@ -316,7 +292,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `the stop of the connection in the window drops the held answer, so no toast follows the activity`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
 
@@ -330,7 +306,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a Disconnect that is refused keeps the held answer`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         streamEnds(code = -100)
@@ -349,7 +325,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a graceful end before the answer of 599 is a clean leave of the app that keeps running`() {
-        val running = streaming(resume = true)
+        val running = streaming()
         session.quitApp()
         assertThat(streamEndsGracefully()).isTrue()
 
@@ -363,7 +339,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a graceful end after the answer of 599 is a clean leave, not a failure`() {
-        val running = streaming(resume = true)
+        val running = streaming()
         session.quitApp()
         actions.quitFailed(shared)
         now = 1_000L
@@ -380,7 +356,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a graceful end exactly at the end of the window is still the quit's`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         now = WINDOW_MS
@@ -392,7 +368,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a graceful end after the window is not the quit's, the answer is shown as it was`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         now = WINDOW_MS + 1
@@ -405,7 +381,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a graceful end after a Disconnect in the window is not the quit's, and no line says so`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
         session.disconnect()
@@ -420,7 +396,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a graceful end that was not the quit's leaves the held answer to its window`() {
-        streaming(resume = true)
+        streaming()
         session.quitApp()
         actions.quitFailed(shared)
 
@@ -434,7 +410,7 @@ class StreamSessionSharedQuitTest {
 
     @Test
     fun `a graceful end that ends a simple quit leaves nothing for the session to do`() {
-        val running = streaming(resume = true)
+        val running = streaming()
         session.quitApp()
 
         assertThat(streamEndsGracefully()).isTrue()

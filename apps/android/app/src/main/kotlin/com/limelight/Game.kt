@@ -2807,11 +2807,8 @@ class Game :
     }
 
     // BOREALIS: /launch or /resume is about to be requested: the chrome shows the "starting app"
-    // stage (host.failure), and the session learns whether the stream joins an app that runs
-    // already, which decides what a Quit of it can mean. Told from this thread, not posted: the
-    // session takes it from any thread, and the stream cannot end by a quit before it is known
+    // stage (host.failure)
     override fun launchStarting(resume: Boolean) {
-        streamSession.launchRequested(resume)
         runOnUiThread { streamSession.onStage(StartStage.STARTING_APP) }
     }
 

@@ -87,7 +87,7 @@ class AudioRendererDelayTest : AudioRendererTestBase() {
     @Test
     fun `the frames of a packet that was dropped are not counted`() {
         val renderer = ready()
-        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(40)
+        ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(100)
         renderer.playDecodedAudio(ShortArray(480))
         played(0)
 

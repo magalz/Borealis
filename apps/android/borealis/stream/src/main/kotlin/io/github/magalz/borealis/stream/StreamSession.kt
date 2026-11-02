@@ -98,10 +98,6 @@ class StreamSession(
     // When the quit was accepted, for the time that the end of the stream is logged with.
     @Volatile private var quitAcceptedAtMs = 0L
 
-    // Whether the stream joined an app that ran already (see launchRequested), which decides what
-    // the 599 answer to a quit means.
-    @Volatile private var joinedRunningApp = false
-
     // True once endedByQuit took the end of the stream for the quit's, from the connection thread.
     @Volatile private var endedByTheQuit = false
 
@@ -154,15 +150,6 @@ class StreamSession(
                 mutableNotice.value = waitingNotices.removeFirstOrNull()
             }
         }
-    }
-
-    /**
-     * The activity asks the host for the app, to [resume] it when it runs already: a stream that
-     * joins an app that another device started can find that a Quit only ends its own stream. The
-     * last request counts. Safe to call from any thread.
-     */
-    fun launchRequested(resume: Boolean) {
-        joinedRunningApp = resume
     }
 
     /** Who gets the input and what the chrome covers; one read of [state], from any thread. */

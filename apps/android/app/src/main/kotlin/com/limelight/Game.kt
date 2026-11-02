@@ -86,6 +86,7 @@ import io.github.magalz.borealis.stream.StreamControls
 import io.github.magalz.borealis.stream.StreamFailures
 import io.github.magalz.borealis.stream.StreamKeyboards
 import io.github.magalz.borealis.stream.StreamNotice
+import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamSessionFactory
 import io.github.magalz.borealis.stream.SurroundLayout
@@ -3070,8 +3071,14 @@ class Game :
         LimeLog.severe("The video surface was lost")
         // The last frame is copied before the connection stops and the decoder goes
         if (firstFrameShown) chromeHost.freezeFrame()
-        // The audit says the error before the stop of the connection says that the user left
-        SessionAudit.failed("video_surface_lost")
+        // The audit says how the stream ended before the stop of the connection says that the user
+        // left. While the user's Quit is under way the end is the quit's, as it is for a
+        // termination of any code; the answer of the quit that comes later ends nothing more
+        if (streamSession.state.value.phase is StreamPhase.Quitting) {
+            SessionAudit.quit()
+        } else {
+            SessionAudit.failed("video_surface_lost")
+        }
         releaseWindowAndInput()
         stopConnection()
         streamSession.onFailed(

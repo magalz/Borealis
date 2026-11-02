@@ -57,6 +57,7 @@ class StreamSession(
     private val dockKeyboard: () -> Boolean,
     private val actions: StreamActions,
     private val clockMs: () -> Long = { System.nanoTime() / NANOS_PER_MS },
+    private val schedule: (Long, () -> Unit) -> Unit = { _, _ -> },
 ) : StreamIntents {
     private val mutableState =
         MutableStateFlow(
@@ -122,6 +123,9 @@ class StreamSession(
             }
         }
     }
+
+    /** The activity asks the host for the app, to [resume] it when it runs already. */
+    fun launchRequested(resume: Boolean) = Unit
 
     /** Who gets the input and what the chrome covers; one read of [state], from any thread. */
     val chromeMode: ChromeMode

@@ -3,6 +3,7 @@ package com.limelight.binding.video
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.robolectric.util.ReflectionHelpers
@@ -33,6 +34,31 @@ class RendererRecoveryTest : RendererTestBase() {
     private fun MediaCodecDecoderRenderer.metByRendererThread(failure: () -> Throwable) {
         ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_OUTPUT, 1, failure)
         awaitQuiesced(RENDERER_THREAD)
+    }
+
+    /** How many times the listener was told that the surface is lost. */
+    private val surfaceLosses = AtomicInteger()
+
+    /**
+     * Swaps the listener of [this] for one that counts the surfaces it is told are lost and still
+     * collects the crashes into [crashes]. The renderer stays the one of the rig, so the watchdog
+     * of the rig still covers it.
+     */
+    private fun MediaCodecDecoderRenderer.watchSurface(): MediaCodecDecoderRenderer {
+        ReflectionHelpers.setField(
+            this,
+            "crashListener",
+            object : CrashListener {
+                override fun notifyCrash(e: Exception) {
+                    crashes += e
+                }
+
+                override fun surfaceLost() {
+                    surfaceLosses.incrementAndGet()
+                }
+            },
+        )
+        return this
     }
 
     private fun names() = journal.filterNot { it is CodecEvent.Output }.map { it::class.simpleName }
@@ -609,6 +635,110 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(crashes).isEmpty()
         assertThat(renderer.submit(pFrame(2))).isEqualTo(MoonBridge.DR_OK)
         assertThat(events<CodecEvent.Queued>()).isEmpty()
+    }
+
+    // A surface that the codec refuses is reported, once, unless the renderer was stopping already
+
+    private val surfaceWarning =
+        "WARNING: The surface is invalid and the renderer is already stopping"
+
+    @Test
+    fun `a restart that fails on an illegal argument tells the listener that the surface is lost`() {
+        val renderer = running().watchSurface()
+        renderer.metByRendererThread(recoverable)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            IllegalArgumentException("surface")
+        }
+
+        renderer.submit(pFrame(1))
+
+        assertThat(surfaceLosses.get()).isEqualTo(1)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).doesNotContain(surfaceWarning)
+    }
+
+    @Test
+    fun `a reset that fails on an illegal argument tells the listener that the surface is lost`() {
+        val renderer = running().watchSurface()
+        renderer.metByRendererThread(unrecoverable)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            IllegalArgumentException("surface")
+        }
+
+        renderer.submit(pFrame(1))
+
+        assertThat(surfaceLosses.get()).isEqualTo(1)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).doesNotContain(surfaceWarning)
+    }
+
+    @Test
+    fun `a new codec that fails on an illegal argument tells the listener that the surface is lost`() {
+        val renderer = running().watchSurface()
+        renderer.metByRendererThread(stateFailure)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 4) {
+            IllegalStateException("refused")
+        }
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            IllegalArgumentException("surface")
+        }
+
+        renderer.submit(pFrame(1))
+
+        assertThat(surfaceLosses.get()).isEqualTo(1)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).doesNotContain(surfaceWarning)
+    }
+
+    @Test
+    fun `a restart that fails on an illegal argument while the renderer stops is only logged`() {
+        val renderer = running().watchSurface()
+        renderer.metByRendererThread(recoverable)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            renderer.prepareForStop()
+            IllegalArgumentException("surface")
+        }
+
+        renderer.submit(pFrame(1))
+
+        assertThat(surfaceLosses.get()).isEqualTo(0)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).contains(surfaceWarning)
+    }
+
+    @Test
+    fun `a reset that fails on an illegal argument while the renderer stops is only logged`() {
+        val renderer = running().watchSurface()
+        renderer.metByRendererThread(unrecoverable)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            renderer.prepareForStop()
+            IllegalArgumentException("surface")
+        }
+
+        renderer.submit(pFrame(1))
+
+        assertThat(surfaceLosses.get()).isEqualTo(0)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).contains(surfaceWarning)
+    }
+
+    @Test
+    fun `a new codec that fails on an illegal argument while the renderer stops is only logged`() {
+        val renderer = running().watchSurface()
+        renderer.metByRendererThread(stateFailure)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 4) {
+            IllegalStateException("refused")
+        }
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            renderer.prepareForStop()
+            IllegalArgumentException("surface")
+        }
+
+        renderer.submit(pFrame(1))
+
+        assertThat(surfaceLosses.get()).isEqualTo(0)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).contains(surfaceWarning)
     }
 
     @Test

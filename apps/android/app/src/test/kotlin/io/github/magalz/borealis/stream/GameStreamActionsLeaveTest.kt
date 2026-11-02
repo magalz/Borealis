@@ -6,6 +6,7 @@ import android.view.View
 import com.google.common.truth.Truth.assertThat
 import com.limelight.Game
 import io.github.magalz.borealis.library.RecordingLog
+import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.shell.LeaveNotice
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.stream.host.HeldKeys
@@ -22,6 +23,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowToast
 
 /** An activity that counts the requests to finish it, which the system answers twice. */
 class CountingActivity : Activity() {
@@ -200,6 +202,54 @@ class GameStreamActionsLeaveTest {
         actions.quitApp {}
 
         assertThat(noticeOrNull()).isEqualTo(LeaveNotice.Quit)
+    }
+
+    private fun failedQuit(result: QuitResult.Failed): QuitFailure {
+        entryPoint.apps.result = result
+        lateinit var failure: QuitFailure
+        actions.quitApp { failure = it }
+        return failure
+    }
+
+    @Test
+    fun `a quit that failed with 599 tells the session that another device started the app`() {
+        val failure = failedQuit(QuitResult.Failed("No", notTheStarter = true))
+
+        assertThat(failure.notTheStarter).isTrue()
+    }
+
+    @Test
+    fun `a quit that failed another way does not tell the session that`() {
+        val failure = failedQuit(QuitResult.Failed("No"))
+
+        assertThat(failure.notTheStarter).isFalse()
+    }
+
+    @Test
+    fun `a failed quit shows nothing until the session asks for it`() {
+        failedQuit(QuitResult.Failed("No", notTheStarter = true))
+
+        assertThat(ShadowToast.getLatestToast()).isNull()
+    }
+
+    @Test
+    fun `leaving to keep the app finishes the activity once`() {
+        val failure = failedQuit(QuitResult.Failed("No", notTheStarter = true))
+
+        failure.leaveKeepingApp("Desktop")
+
+        assertThat(activity.isFinishing).isTrue()
+        assertThat(activity.finishRequests).isEqualTo(1)
+    }
+
+    @Test
+    fun `leaving to keep the app leaves the Library the notice with the name of the app`() {
+        val failure = failedQuit(QuitResult.Failed("No", notTheStarter = true))
+
+        failure.leaveKeepingApp("Desktop")
+
+        assertThat(noticeOrNull()).isEqualTo(LeaveNotice.KeepsRunning("Desktop"))
+        assertThat(ShadowToast.getLatestToast()).isNull()
     }
 
     @Test

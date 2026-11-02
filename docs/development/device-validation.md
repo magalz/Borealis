@@ -5796,13 +5796,27 @@ reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md
 
 ## 21. Results: Sprint 16
 
-This section holds the agent part of the Sprint 16 device round, [section 3.31](#331-sprint-16-checks), run on
-2026-11-01 from 10:35 to 11:45, and at 17:48 for one part of step 3, on the Google TV Streamer and the Samsung
-Galaxy S22, on the debug build of `baf64f5dc`. Steps 1 to 5, 7 and 8 ran; step 6 ran on the TV only. No step failed
-on the client side. Two parts of step 3 could not be produced: a leave before the launch request, and the 409/503
-retry, for which the host answers 400 instead. The owner listened to the sound of steps 5 and 7 on both devices at
-17:55 to 18:08 (see the owner's sound check below), and later reported the picture of steps 4 and 5 and steps 9,
-10, 12 to 17, and the S22 overlay of step 6 (see Results). Step 11 is still open. The findings are below.
+This section holds the Sprint 16 device round, [section 3.31](#331-sprint-16-checks), on the Google TV Streamer
+and the Samsung Galaxy S22, on the debug build of `baf64f5dc`. The agent part ran on 2026-11-01 from 10:35 to
+11:45, and at 17:48 for the 409/503 run of step 3. The owner listened to the sound of steps 5 and 7 with the agent
+from 17:55 to 18:08, and reported the other owner steps later the same day.
+
+No step failed on the client side. In short:
+
+- Pass: steps 1 to 9, 12, 14 and 15; step 11 except the retry after a wrong PIN; the mouse part of step 13; the pad
+  buttons and the rumble on the XInput dongle of step 16. The picture of steps 4 and 5 was judged perfect by the
+  owner. The sound of steps 5 and 7 plays after each start, with crackling on the S22 (finding 4).
+- Not run: the leave before the launch request and the start after a failed native start (step 3); Wake-on-LAN
+  (step 10), because the PC does not go to sleep; the stylus part of step 13 (no stylus reported); the battery
+  and the device change of step 16 (not reported).
+- Not applicable: the 409/503 retry of step 3, for which LuminalShine 26.10.1 answers 400; HDR on the TV, whose
+  display has no HDR; AV1 Main10 on both devices; the GFE part of step 3; the trigger motors of step 16 (no GIP
+  pad); DeX (step 17), which the owner does not have.
+- Known, host side: the retry after a wrong PIN in step 11,
+  [luminalshine#216](https://github.com/NortheBridge/luminalshine/issues/216).
+- Findings: the TV started the round unpaired, host side (1); a leave during the start does not stop the first
+  launch request, Sprint 17 (2); the host retries a virtual display after each unclaimed-launch rollback, host
+  side (3); the S22 sound crackles, the known audio runs of Sprint 17 (4). None is a Sprint 16 regression.
 
 ### Setup
 
@@ -5853,7 +5867,7 @@ retry, for which the host answers 400 instead. The owner listened to the sound o
 | 8 Upgrade with the legacy 5.1 switch | S22 | pass | With `checkbox_51_surround` = true and `list_audio_config` = `71`: after the start the value stays `71` and the legacy key is gone. With the key and no `list_audio_config`: after the start `list_audio_config` = `51`, the key is gone, and Settings shows "Channels: 5.1 surround". The preferences file was then put back byte for byte from a copy taken before the step. |
 | 9 The Library offline state after a re-open | S22 | pass | Reported by the owner: pass in every scenario. |
 | 10 Wake-on-LAN | S22 | not run | The owner's PC does not go to sleep, so it cannot be woken. |
-| 11 A host list with a forgotten host | S22 | owner check | Not reported yet. |
+| 11 A host list with a forgotten host | S22 | pass, except the retry after a wrong PIN (known, host side, [luminalshine#216](https://github.com/NortheBridge/luminalshine/issues/216)) | Reported by the owner: pairing, unpairing, a pairing with a wrong PIN (its error) and forgetting the host pass. |
 | 12 Pointer capture and the external keyboard | S22 | pass | Reported by the owner (mouse and keyboard). |
 | 13 The mouse buttons | S22 | pass | Reported by the owner (mouse and keyboard). |
 | 13 The stylus buttons | S22 | not run | No stylus was reported. |
@@ -5961,11 +5975,12 @@ The owner listened on each device while the PC played a Windows sound in a loop,
 - Step 3, the leave during a 409 or 503 retry: LuminalShine 26.10.1 answers 400 instead, so the retry needs a host that
   answers 409 or 503.
 - Step 3, the leave before the launch request (finding 2) and the start after a failed native start.
-- Step 11, which needs the owner: a forgotten host and a new pairing.
-- Not run: the stylus part of step 13 (no stylus reported), and the battery (C20) and the device change (C12) of
-  step 16 (not reported). The owner reported the picture, the S22 overlay of step 6 and steps 9, 10 and 12 to 17
-  (see Results).
+- Not run: Wake-on-LAN (step 10, the PC does not go to sleep), the stylus part of step 13 (no stylus reported), and
+  the battery (C20) and the device change (C12) of step 16 (not reported).
+- Every owner step has a result. The owner reported the picture, the S22 overlay of step 6 and steps 9 to 17; step
+  11 last.
 - The TV was in use from 11:02 to the owner's OK at 17:48 (the same app was already in front at 10:37, before the
   round started on the TV). After the run of 17:48 the TV was put to sleep with `KEYCODE_SLEEP` at 17:51
-  (`mWakefulness=Asleep`).
+  (`mWakefulness=Asleep`), again after the sound check at 18:10, and at the end of the round at 23:32, after the
+  owner's pad checks.
 - Left on the devices: the debug build of `baf64f5dc` on both, paired, with the S22 preferences as before the round.

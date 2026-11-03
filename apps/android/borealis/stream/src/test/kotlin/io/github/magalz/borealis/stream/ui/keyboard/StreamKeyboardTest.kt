@@ -17,6 +17,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyChild
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -25,6 +27,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.height
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -301,6 +304,39 @@ class StreamKeyboardTest {
         // A chip sent its chord, or Close and System keyboard ran their intents.
         assertThat(intents.chords.size + intents.calls.size).isEqualTo(1)
         assertThat(intents.chords.map { it.vk }).containsNoneOf(0x51, 0x57)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `a focused middle key keeps the reading order of its row`() {
+        showInKeyboardMode(FormFactor.Tv)
+        composeRule.onNodeWithTag("key:T").requestFocus()
+
+        val row = composeRule.onNode(hasAnyChild(hasTestTag("key:T")))
+
+        // The lift draws the focused key last, which moves it to the end of the children of its
+        // row. TalkBack sorts the children of a traversal group by traversalIndex, so each key has
+        // the place that it has on the screen, and the row is the group that those places are
+        // compared in. (The sort is stable: equal places keep the tree order.)
+        row.assert(SemanticsMatcher.expectValue(SemanticsProperties.IsTraversalGroup, true))
+        val reading =
+            row.fetchSemanticsNode().children.sortedBy {
+                it.config.getOrElse(SemanticsProperties.TraversalIndex) { 0f }
+            }
+        assertThat(reading.map { it.config[SemanticsProperties.TestTag] })
+            .containsExactly(
+                "key:Q",
+                "key:W",
+                "key:E",
+                "key:R",
+                "key:T",
+                "key:Y",
+                "key:U",
+                "key:I",
+                "key:O",
+                "key:P",
+            )
+            .inOrder()
     }
 
     // UC-005-T4

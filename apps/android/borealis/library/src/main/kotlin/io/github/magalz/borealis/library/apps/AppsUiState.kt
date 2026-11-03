@@ -49,6 +49,12 @@ data class AppsUiState(
     val runningAppId: Int? = null,
     /** The name of the app that is running, also when it is hidden and not in [items]. */
     val runningAppName: String? = null,
+    /**
+     * True while the host's state is unknown, for example right after a stream, when polling
+     * stopped and the host has not answered since: what runs on it is not known yet, so the header
+     * must not say that nothing runs.
+     */
+    val hostChecking: Boolean = false,
     val showHidden: Boolean = false,
     /** The visible apps: the running app first, then by name. */
     val items: List<AppItemUiState> = emptyList(),

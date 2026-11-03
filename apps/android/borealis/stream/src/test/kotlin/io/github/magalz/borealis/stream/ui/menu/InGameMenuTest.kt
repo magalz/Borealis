@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream.ui.menu
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -13,8 +14,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -64,6 +67,9 @@ private fun ComposeContentTestRule.showMenu(
 ) = LayerFixture(this, formFactor, phase, aPerf(), keyboardMode, appName).also { it.show() }
 
 /** UC-004: the in-game menu, a side panel over the stream. */
+// One suite for one screen: detekt's size limit is passed, and the helpers are shared by every
+// test.
+@Suppress("LargeClass")
 @RunWith(AndroidJUnit4::class)
 class InGameMenuTest {
     @get:Rule val composeRule = createComposeRule()
@@ -817,5 +823,40 @@ class InGameMenuTest {
 
         text("Keyboard")
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
+    }
+
+    /**
+     * The state of an option row is on the node of its segments, which have the role and the click,
+     * named as a screen reader says them ("Compact, Overlay"); the row does not take it. The text
+     * inside a segment is a child and holds none (the Sprint 17a read took the text).
+     */
+    private fun assertSegments(title: String, selected: String, vararg others: String) {
+        for (option in listOf(selected) + others) {
+            val segment = composeRule.onNode(hasContentDescription("$option, $title"))
+            segment
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+                .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick))
+            if (option == selected) segment.assertIsSelected() else segment.assertIsNotSelected()
+        }
+        text(title).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the active segment of an option row is its own selected radio button`() {
+        menu(FormFactor.Tv, overlay = OverlayMode.DETAILED, touchMode = null, gamepadMouse = true)
+
+        assertSegments("Gamepad mouse", selected = "On", "Off")
+        assertSegments("Pointer speed", selected = "Normal", "Slow", "Fast")
+        assertSegments("Overlay", selected = "Detailed", "Off", "Compact")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone the active segment of an option row is its own selected radio button`() {
+        menu(FormFactor.Phone, overlay = OverlayMode.COMPACT, touchMode = TouchMode.DIRECT)
+
+        assertSegments("Touch", selected = "Direct", "Trackpad", "Off")
+        assertSegments("Overlay", selected = "Compact", "Off", "Detailed")
     }
 }

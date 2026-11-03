@@ -30,7 +30,8 @@ private const val SAMPLE_PULSE_MS = 60L
 /**
  * The state and the actions of the settings screen (UC-009). Every change is stored at once through
  * the [SettingsRepository]; the rows that the device cannot use are left out, and the rows that
- * another setting blocks cannot be changed.
+ * another setting blocks cannot be changed. A vibration that is turned on, and the Vibration
+ * strength that the user lets go of, play a sample pulse through the [VibrationSample].
  *
  * The device facts are asked when the ViewModel is created and again on [refreshDeviceFacts],
  * because the display can change.
@@ -131,7 +132,16 @@ internal constructor(
         }
     }
 
-    fun onSliderReleased(item: SettingsItem, value: Int) = Unit
+    /**
+     * Plays a sample pulse at [value], in the stored unit, when the user lets go of the slider
+     * [item] and it is Vibration strength, so that the strength can be felt. A value outside the
+     * range of the slider is kept in it. Another slider plays nothing.
+     */
+    fun onSliderReleased(item: SettingsItem, value: Int) {
+        val spec = item.input.slider
+        if (item != SettingsItem.VIBRATION_STRENGTH || spec == null || !isChangeable(item)) return
+        vibrationSample.play(SAMPLE_PULSE_MS, value.coerceIn(spec.min, spec.max))
+    }
 
     /**
      * Resets the layout of the on-screen controls, off the main thread. The screen asks before it

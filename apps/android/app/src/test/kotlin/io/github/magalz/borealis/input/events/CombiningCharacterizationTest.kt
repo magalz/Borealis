@@ -301,19 +301,56 @@ class CombiningCharacterizationTest {
     }
 
     @Test
-    fun `the strongest of two triggers is ORed the same way`() {
-        val (first, _) =
+    fun `the stronger of two triggers is sent as it is, not the bits of both`() {
+        val (first, second) =
             twoPads(
-                mapOf("leftTrigger" to 1.toByte(), "rightTrigger" to (-1).toByte()),
-                mapOf("leftTrigger" to 2.toByte(), "rightTrigger" to 127.toByte()),
+                mapOf("leftTrigger" to 1.toByte(), "rightTrigger" to 127.toByte()),
+                mapOf("leftTrigger" to 2.toByte(), "rightTrigger" to 128.toByte()),
             )
 
-        val sent = first.send()
+        // The later pad is the stronger on both triggers. 1 and 2 are 3 as bits, and 127 and 128
+        // are -1; 128 is the stronger of the two as an unsigned byte.
+        assertThat(first.send())
+            .isEqualTo(Sent(1, 1, 0, leftTrigger = 2, rightTrigger = 128.toByte().toInt()))
 
-        // 1 then 2: 1 OR 2.
-        assertThat(sent.leftTrigger).isEqualTo(3)
-        // -1 is 255 as an unsigned byte, the strongest of the two; the OR is -1 as well.
-        assertThat(sent.rightTrigger).isEqualTo(-1)
+        // The same values with the pads the other way round: the earlier pad is the stronger.
+        first.set("leftTrigger", 2.toByte())
+        first.set("rightTrigger", 128.toByte())
+        second.set("leftTrigger", 1.toByte())
+        second.set("rightTrigger", 127.toByte())
+        assertThat(first.send())
+            .isEqualTo(Sent(1, 1, 0, leftTrigger = 2, rightTrigger = 128.toByte().toInt()))
+    }
+
+    @Test
+    fun `a trigger of a USB pad that is stronger than the one of a system pad is sent as it is`() {
+        rig.addPad(
+            7,
+            controllerNumber = 0,
+            fields = mapOf("leftTrigger" to 17.toByte(), "rightTrigger" to 34.toByte()),
+        )
+        rig.handler.deviceAdded(FakeUsbController(1, rig.handler))
+
+        // The USB values are floats: 0.4 is 102 and 0.8 is 204 as a trigger byte. 17 and 102 are
+        // 119 as bits, 34 and 204 are 238.
+        rig.handler.reportControllerState(1, 0, 0f, 0f, 0f, 0f, 0.4f, 0.8f)
+
+        assertThat(rig.packets.last())
+            .isEqualTo(Sent(0, 1, 0, leftTrigger = 102, rightTrigger = 204.toByte().toInt()))
+    }
+
+    @Test
+    fun `a trigger of the on-screen controller that is stronger than the one of a pad is sent as it is`() {
+        rig.addPad(
+            7,
+            controllerNumber = 0,
+            fields = mapOf("leftTrigger" to 17.toByte(), "rightTrigger" to 34.toByte()),
+        )
+
+        rig.handler.reportOscState(0, 0, 0, 0, 0, 102, 204.toByte())
+
+        assertThat(rig.packets.last())
+            .isEqualTo(Sent(0, 1, 0, leftTrigger = 102, rightTrigger = 204.toByte().toInt()))
     }
 
     @Test
@@ -327,8 +364,7 @@ class CombiningCharacterizationTest {
     @Test
     fun `triggers are compared as unsigned bytes, so one past half beats one below it`() {
         // Left: 153 (0.6 of the travel) first, 114 (0.45) second. Right: 65 first, 193 second. As
-        // signed bytes the pad with the lower magnitude won, and the packet held the other one
-        // ORed with it: -5 on the left and 65 on the right.
+        // signed bytes the pad with the lower magnitude won on both triggers.
         val (first, _) =
             twoPads(
                 mapOf("leftTrigger" to 153.toByte(), "rightTrigger" to 65.toByte()),
@@ -342,7 +378,7 @@ class CombiningCharacterizationTest {
     }
 
     @Test
-    fun `two system pads, a USB pad and the on-screen controller on one number are ORed in that order`() {
+    fun `two system pads, a USB pad and the on-screen controller on one number make one packet`() {
         rig.addPad(
             7,
             controllerNumber = 0,
@@ -384,8 +420,8 @@ class CombiningCharacterizationTest {
                     controller = 0,
                     activeMask = 1,
                     buttons = A_FLAG or B_FLAG or X_FLAG or Y_FLAG,
-                    leftTrigger = 127,
-                    rightTrigger = 119,
+                    leftTrigger = 68,
+                    rightTrigger = 66,
                     leftStickX = 3070,
                     leftStickY = -1,
                     rightStickX = -1,

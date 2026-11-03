@@ -249,11 +249,7 @@ class ControllerHandler(
         inputDeviceContexts.forEachValue { deviceContext -> deviceContext.destroy() }
 
         usbDeviceContexts.forEachValue { deviceContext ->
-            // The host may never send a zero for the motors at the end of the stream
-            deviceContext.device?.let {
-                it.rumble(0, 0)
-                it.rumbleTriggers(0, 0)
-            }
+            deviceContext.device?.let { zeroMotors(it) }
             deviceContext.destroy()
         }
 
@@ -261,6 +257,19 @@ class ControllerHandler(
         defaultContext.destroy()
 
         deviceVibrator.cancel()
+    }
+
+    // The host may never send a zero for the motors at the end of the stream. A write to a pad that
+    // does not answer blocks for the timeout of the driver and only logs, and the stop runs on the
+    // main thread: a pad whose motor write took that long gets no trigger write.
+    private fun zeroMotors(pad: AbstractController) {
+        val started = SystemClock.uptimeMillis()
+        pad.rumble(0, 0)
+        if (SystemClock.uptimeMillis() - started >= USB_WRITE_TIMEOUT_MS) {
+            LimeLog.warning("USB pad ${pad.controllerId} did not answer the zero of its motors")
+            return
+        }
+        pad.rumbleTriggers(0, 0)
     }
 
     fun destroy() {
@@ -4018,6 +4027,10 @@ class ControllerHandler(
         private const val MAX_GAMEPADS: Short = 16 // Limited by bits in activeGamepadMask
 
         private const val BATTERY_RECHECK_INTERVAL_MS = 120 * 1000
+
+        // The bulk writes of the USB drivers give up after 100 ms, and a write that took that long
+        // got no answer
+        private const val USB_WRITE_TIMEOUT_MS = 100L
 
         // Not a BatteryState status: marks a pad that reported that it has no battery
         private const val BATTERY_STATUS_NOT_PRESENT = -1

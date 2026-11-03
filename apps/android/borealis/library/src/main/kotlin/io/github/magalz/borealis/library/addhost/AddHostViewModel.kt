@@ -47,8 +47,14 @@ class AddHostViewModel @Inject constructor(private val repository: HostRepositor
         viewModelScope.launch {
             val result = repository.addHost(parsed.address)
             state.update { it.copy(busy = false, error = result.toError()) }
-            if (result is AddHostResult.Added)
-                effectChannel.trySend(AddHostEffect.Added(result.name))
+            when (result) {
+                is AddHostResult.Added -> effectChannel.trySend(AddHostEffect.Added(result.name))
+                is AddHostResult.AlreadyAdded ->
+                    effectChannel.trySend(AddHostEffect.AlreadyAdded(result.name, result.paired))
+                AddHostResult.InvalidAddress,
+                AddHostResult.WrongSubnet,
+                AddHostResult.Unreachable -> Unit
+            }
         }
     }
 }

@@ -248,8 +248,9 @@ class ControllerHandler(
 
         inputDeviceContexts.forEachValue { deviceContext -> deviceContext.destroy() }
 
+        val zeroingStarted = SystemClock.uptimeMillis()
         usbDeviceContexts.forEachValue { deviceContext ->
-            deviceContext.device?.let { zeroMotors(it) }
+            deviceContext.device?.let { zeroMotors(it, zeroingStarted) }
             deviceContext.destroy()
         }
 
@@ -261,15 +262,21 @@ class ControllerHandler(
 
     // The host may never send a zero for the motors at the end of the stream. A write to a pad that
     // does not answer blocks for the timeout of the driver and only logs, and the stop runs on the
-    // main thread: a pad whose motor write took that long gets no trigger write.
-    private fun zeroMotors(pad: AbstractController) {
+    // main thread: a pad whose motor write took that long gets no trigger write, and no pad is
+    // started once the zeroing has used up its time. The driver zeroes the motors again when it
+    // stops.
+    private fun zeroMotors(pad: AbstractController, zeroingStarted: Long) {
         val started = SystemClock.uptimeMillis()
+        if (started - zeroingStarted >= USB_ZERO_BUDGET_MS) {
+            LimeLog.warning("USB pad ${pad.controllerId} is left to its driver: no time to zero it")
+            return
+        }
         pad.rumble(0, 0)
         if (SystemClock.uptimeMillis() - started >= USB_WRITE_TIMEOUT_MS) {
             LimeLog.warning("USB pad ${pad.controllerId} did not answer the zero of its motors")
-            return
+        } else {
+            pad.rumbleTriggers(0, 0)
         }
-        pad.rumbleTriggers(0, 0)
     }
 
     fun destroy() {
@@ -4031,6 +4038,10 @@ class ControllerHandler(
         // The bulk writes of the USB drivers give up after 100 ms, and a write that took that long
         // got no answer
         private const val USB_WRITE_TIMEOUT_MS = 100L
+
+        // The stop zeroes the USB pads for this long at most: the time of two writes that get no
+        // answer, so a pad that does not answer does not take the pads after it with it
+        private const val USB_ZERO_BUDGET_MS = 2 * USB_WRITE_TIMEOUT_MS
 
         // Not a BatteryState status: marks a pad that reported that it has no battery
         private const val BATTERY_STATUS_NOT_PRESENT = -1

@@ -246,6 +246,40 @@ class RelativeTouchTapTest {
         assertThat(rig.sent()).isEmpty()
     }
 
+    // A second finger that lands 150 ms after the first and lifts 120 ms after landing is as good a
+    // tap whichever finger lifts first: the window is not the same in both orders yet.
+
+    @Test
+    fun `a second finger that lands 150 ms late and lifts first is a right click`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 150, true)).isTrue()
+
+        second.touchUpEvent(300, 100, T0 + 270)
+        setPointerCount(1, first, second)
+        first.touchUpEvent(100, 100, T0 + 280)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
+    fun `a second finger that lands 150 ms late and lifts last is a right click`() {
+        val first = rig.relative(0)
+        val second = rig.relative(1)
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 150, true)).isTrue()
+
+        liftFirstOfTwoFingers(first, second, T0 + 270)
+        first.touchUpEvent(300, 100, T0 + 280)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
     @Test
     fun `a two-finger tap whose last finger moves away before it lifts is no click`() {
         val first = rig.relative(0)

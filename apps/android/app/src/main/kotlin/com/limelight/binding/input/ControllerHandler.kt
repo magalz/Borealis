@@ -262,9 +262,9 @@ class ControllerHandler(
 
     // The host may never send a zero for the motors at the end of the stream. A write to a pad that
     // does not answer blocks for the timeout of the driver and only logs, and the stop runs on the
-    // main thread: a pad whose motor write took that long gets no trigger write, and no pad is
-    // started once the zeroing has used up its time. The Xbox drivers zero the motors again when
-    // the USB driver service stops them, which the unbind of the activity does.
+    // main thread: a pad whose motor write took the better part of that gets no trigger write, and
+    // no pad is started once the zeroing has used up its time. The Xbox drivers zero the motors
+    // again when the USB driver service stops them, which the unbind of the activity does.
     private fun zeroMotors(pad: AbstractController, zeroingStarted: Long) {
         val started = SystemClock.uptimeMillis()
         if (started - zeroingStarted >= USB_ZERO_BUDGET_MS) {

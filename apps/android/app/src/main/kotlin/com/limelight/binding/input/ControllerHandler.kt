@@ -112,6 +112,11 @@ class ControllerHandler(
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
 
+    // Whether the last battery report that went to the host for each controller number said that no
+    // battery is present: the host keeps one battery per number, whichever pad it came from, and the
+    // pads on the number come and go. Only the background thread reads and writes it.
+    private val numberHasNoBattery = BooleanArray(MAX_GAMEPADS.toInt())
+
     init {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager =
@@ -291,6 +296,11 @@ class ControllerHandler(
             currentControllers =
                 (currentControllers.toInt() and (1 shl context.controllerNumber.toInt()).inv())
                     .toShort()
+
+            // The PC drops the controller with the zeroed packet below, and its battery with it: the
+            // next pad on the number has to tell the host again that it has none
+            val freedNumber = context.controllerNumber.toInt()
+            backgroundThreadHandler.post { numberHasNoBattery[freedNumber] = false }
 
             // The PC drops the controller with the zeroed packet below, so it has no input to
             // release
@@ -1070,25 +1080,32 @@ class ControllerHandler(
                 }
             }
         } else {
-            // From Android S the system says whether the pad has a battery: tell the host once
-            // that it has none, if the pad claimed a battery in its arrival (an external pad, see
-            // sendControllerArrival): the host has nothing to correct for a pad that did not. The
-            // same goes for a device without joystick axes, the touchpad of a pad: it takes the
+            // From Android S the system says whether the pad has a battery: tell the host that its
+            // number has none, once, if the pad claimed a battery in its arrival (an external pad,
+            // see sendControllerArrival): the host has nothing to correct for a pad that did not.
+            // The same goes for a device without joystick axes, the touchpad of a pad: it takes the
             // number of its joystick, which owns the battery. With a single controller pads that
             // claimed one share the number, and the host keeps one battery for it: the pad that
             // has none stays silent, or it would wipe what the other reports and the poll sends
-            // only a change. Before S we cannot know, and the pad claims no battery.
+            // only a change. What the host holds is the number's state, not the pad's: a pad that
+            // had none speaks again when the pad that had a battery leaves, and not when it takes
+            // the number of a pad that said none. Before S we cannot know, and the pad claims no
+            // battery.
             val ownsBattery = claimsBattery(context) && !sharesNumberWithClaimant(context)
+            val number = context.controllerNumber.toInt()
             if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                     ownsBattery &&
-                    context.lastReportedBatteryStatus != BATTERY_STATUS_NOT_PRESENT
+                    !numberHasNoBattery[number]
             ) {
                 conn.sendControllerBatteryEvent(
-                    context.controllerNumber.toByte(),
+                    number.toByte(),
                     MoonBridge.LI_BATTERY_STATE_NOT_PRESENT,
                     MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN,
                 )
+                numberHasNoBattery[number] = true
+
+                // A battery that comes back with the status it had is a change to the host
                 context.lastReportedBatteryStatus = BATTERY_STATUS_NOT_PRESENT
             }
             return
@@ -1122,6 +1139,7 @@ class ControllerHandler(
 
             conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), state, percentage)
 
+            numberHasNoBattery[context.controllerNumber.toInt()] = false
             context.lastReportedBatteryStatus = currentBatteryStatus
             context.lastReportedBatteryCapacity = currentBatteryCapacity
         }

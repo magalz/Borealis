@@ -679,7 +679,12 @@ class Game :
         if (prefConfig.onscreenController) {
             // create virtual onscreen controller
             val onscreenController =
-                VirtualController(controllerHandler, streamView.parent as FrameLayout?, this)
+                VirtualController(
+                    controllerHandler,
+                    streamView.parent as FrameLayout?,
+                    this,
+                    prefConfig,
+                )
             virtualController = onscreenController
             onscreenController.refreshLayout()
             onscreenController.show()

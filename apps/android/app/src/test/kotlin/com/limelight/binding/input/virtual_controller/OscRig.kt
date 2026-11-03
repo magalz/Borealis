@@ -10,6 +10,7 @@ import android.view.View.MeasureSpec
 import android.widget.Button
 import android.widget.FrameLayout
 import com.limelight.nvstream.input.ControllerPacket
+import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.input.ControllerHandlerRig
 import java.io.Closeable
 import org.json.JSONObject
@@ -78,14 +79,19 @@ private const val OPACITY_KEY = "seekbar_osc_opacity"
  * `ControllerHandler` that hands what it is told to a recording connection.
  *
  * The controller reads the screen from the activity's display metrics and the layout choices from
- * the default preferences, which [settings] writes; the layout comes from `refreshLayout`.
+ * the stream's configuration [config], as the stream screen passes its own; [settings] changes it
+ * and writes the default preferences as well. The layout comes from `refreshLayout`.
  */
 class OscRig(screen: Screen = PHONE, withHandler: Boolean = true) : Closeable {
     val handlerRig = ControllerHandlerRig()
     val activity: Activity = handlerRig.activity
     val frame = FrameLayout(activity)
+
+    /** The configuration the stream screen read at its start, which the controller was given. */
+    val config: PreferenceConfiguration = PreferenceConfiguration.readPreferences(activity)
+
     val controller =
-        VirtualController(if (withHandler) handlerRig.handler else null, frame, activity)
+        VirtualController(if (withHandler) handlerRig.handler else null, frame, activity, config)
 
     /** What reached the PC from the controller: the packets of the recording connection. */
     val packets
@@ -106,7 +112,10 @@ class OscRig(screen: Screen = PHONE, withHandler: Boolean = true) : Closeable {
         }
     }
 
-    /** Writes the settings of the on-screen controller; the layout reads them when it is built. */
+    /**
+     * Sets the settings of the on-screen controller: in [config], which the layout reads when it is
+     * built, and in the default preferences, where a test reads them with `readPreferences`.
+     */
     @Suppress("DEPRECATION") // The app reads its settings from the default preferences of this API.
     fun settings(
         onlyL3R3: Boolean = false,
@@ -121,6 +130,11 @@ class OscRig(screen: Screen = PHONE, withHandler: Boolean = true) : Closeable {
             .putBoolean(SHOW_GUIDE_BUTTON_KEY, showGuideButton)
             .apply { opacity?.let { putInt(OPACITY_KEY, it) } }
             .commit()
+
+        config.onlyL3R3 = onlyL3R3
+        config.flipFaceButtons = flipFaceButtons
+        config.showGuideButton = showGuideButton
+        opacity?.let { config.oscOpacity = it }
     }
 
     /** The preference file that holds the saved layout, `OSC`. */

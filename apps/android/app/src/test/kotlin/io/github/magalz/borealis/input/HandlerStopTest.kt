@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.input
 
 import android.os.Looper
+import android.os.SystemClock
 import android.view.KeyEvent.KEYCODE_BUTTON_SELECT
 import android.view.KeyEvent.KEYCODE_BUTTON_START
 import com.google.common.truth.Truth.assertThat
@@ -76,6 +77,18 @@ class HandlerStopTest {
 
         assertThat(stuck.writes).containsExactly("motors 0 0")
         assertThat(answering.writes).containsExactly("motors 0 0", "triggers 0 0").inOrder()
+    }
+
+    @Test
+    fun `however many pads do not answer, the stop waits for the timeout of two writes at most`() {
+        val pads = (1..4).map { ZeroingPad(it, rig.handler, answers = false) }
+        pads.forEach { rig.handler.deviceAdded(it) }
+        val before = SystemClock.uptimeMillis()
+
+        rig.handler.stop()
+
+        val waited = SystemClock.uptimeMillis() - before
+        assertThat(waited).isAtMost(2 * ZeroingPad.BULK_TIMEOUT_MS)
     }
 }
 

@@ -1410,14 +1410,8 @@ class ControllerHandler(
                     context.mouseEmulationActive == originalContext.mouseEmulationActive
             ) {
                 inputMap = inputMap or context.sentInputMap()
-                leftTrigger =
-                    (leftTrigger.toInt() or
-                            maxByMagnitude(leftTrigger, context.leftTrigger).toInt())
-                        .toByte()
-                rightTrigger =
-                    (rightTrigger.toInt() or
-                            maxByMagnitude(rightTrigger, context.rightTrigger).toInt())
-                        .toByte()
+                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
+                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
                 leftStickX =
                     (leftStickX.toInt() or maxByMagnitude(leftStickX, context.leftStickX).toInt())
                         .toShort()
@@ -1441,14 +1435,8 @@ class ControllerHandler(
                     context.mouseEmulationActive == originalContext.mouseEmulationActive
             ) {
                 inputMap = inputMap or context.sentInputMap()
-                leftTrigger =
-                    (leftTrigger.toInt() or
-                            maxByMagnitude(leftTrigger, context.leftTrigger).toInt())
-                        .toByte()
-                rightTrigger =
-                    (rightTrigger.toInt() or
-                            maxByMagnitude(rightTrigger, context.rightTrigger).toInt())
-                        .toByte()
+                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
+                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
                 leftStickX =
                     (leftStickX.toInt() or maxByMagnitude(leftStickX, context.leftStickX).toInt())
                         .toShort()
@@ -1467,14 +1455,8 @@ class ControllerHandler(
         }
         if (defaultContext.controllerNumber == controllerNumber) {
             inputMap = inputMap or defaultContext.sentInputMap()
-            leftTrigger =
-                (leftTrigger.toInt() or
-                        maxByMagnitude(leftTrigger, defaultContext.leftTrigger).toInt())
-                    .toByte()
-            rightTrigger =
-                (rightTrigger.toInt() or
-                        maxByMagnitude(rightTrigger, defaultContext.rightTrigger).toInt())
-                    .toByte()
+            leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
+            rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
             leftStickX =
                 (leftStickX.toInt() or
                         maxByMagnitude(leftStickX, defaultContext.leftStickX).toInt())

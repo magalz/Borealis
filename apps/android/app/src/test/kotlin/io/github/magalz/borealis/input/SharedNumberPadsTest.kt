@@ -49,6 +49,38 @@ class SharedNumberPadsTest {
             )
     }
 
+    private fun reportSticks(
+        pad: Int,
+        leftX: Float,
+        leftY: Float,
+        rightX: Float,
+        rightY: Float,
+    ): Packet {
+        rig.handler.reportControllerState(pad, 0, leftX, leftY, rightX, rightY, 0f, 0f)
+        return rig.connection.packets.last()
+    }
+
+    @Test
+    fun `the stick of larger magnitude of two pads goes to the host, axis by axis`() {
+        // As stick shorts 0.25 is 8191 and 0.5 is 16383, and Y is upside down: 0.5 up is -16383.
+        // 8191 and -16383 are -8193 as bits, and -8191 and 16383 are -1.
+        reportSticks(FIRST, 0.25f, 0.5f, -0.25f, 0.5f)
+        val packet = reportSticks(SECOND, -0.5f, 0.25f, 0.5f, -0.25f)
+
+        // Left X and right X: the second pad is the stronger. Left Y and right Y: the first is.
+        assertThat(packet)
+            .isEqualTo(
+                Packet(
+                    0,
+                    0,
+                    leftStickX = -16383,
+                    leftStickY = -16383,
+                    rightStickX = 16383,
+                    rightStickY = -16383,
+                )
+            )
+    }
+
     private companion object {
         const val FIRST = 1
         const val SECOND = 2

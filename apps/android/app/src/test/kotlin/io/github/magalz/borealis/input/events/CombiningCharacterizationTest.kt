@@ -272,32 +272,114 @@ class CombiningCharacterizationTest {
     }
 
     @Test
-    fun `the strongest of two stick values is ORed into the packet, so the sum of bits can differ from both`() {
-        // 1000 then -3000: the second is stronger, and the packet holds 1000 OR -3000, not -3000.
+    fun `the stronger of two stick values is sent as it is, not the bits of both`() {
+        // Left X and right X: the later pad is the stronger, and 1000 OR -3000 is -2072, 500 OR
+        // 4000 is 4084. Left Y and right Y: the earlier pad is the stronger.
         val (first, _) =
             twoPads(
                 mapOf(
                     "leftStickX" to 1000.toShort(),
                     "leftStickY" to (-3000).toShort(),
-                    "rightStickX" to 1000.toShort(),
-                    "rightStickY" to (-1000).toShort(),
+                    "rightStickX" to 500.toShort(),
+                    "rightStickY" to (-4000).toShort(),
                 ),
                 mapOf(
                     "leftStickX" to (-3000).toShort(),
                     "leftStickY" to 1000.toShort(),
-                    "rightStickX" to (-1000).toShort(),
-                    "rightStickY" to 1000.toShort(),
+                    "rightStickX" to 4000.toShort(),
+                    "rightStickY" to 500.toShort(),
                 ),
             )
 
-        val sent = first.send()
+        assertThat(first.send())
+            .isEqualTo(
+                Sent(
+                    1,
+                    1,
+                    0,
+                    leftStickX = -3000,
+                    leftStickY = -3000,
+                    rightStickX = 4000,
+                    rightStickY = -4000,
+                )
+            )
+    }
 
-        assertThat(sent.leftStickX).isEqualTo(-2072)
-        // The other order gives the stronger value back: it is the first that is ORed in.
-        assertThat(sent.leftStickY).isEqualTo(-3000)
-        // Equal strength takes the later pad's value, ORed with the earlier one.
-        assertThat(sent.rightStickX).isEqualTo(-8)
-        assertThat(sent.rightStickY).isEqualTo(-1000 or 1000)
+    @Test
+    fun `two sticks of the same strength send the value of the later pad as it is`() {
+        val (first, _) =
+            twoPads(
+                mapOf("rightStickX" to 1000.toShort(), "rightStickY" to (-1000).toShort()),
+                mapOf("rightStickX" to (-1000).toShort(), "rightStickY" to 1000.toShort()),
+            )
+
+        // 1000 OR -1000 is -8
+        assertThat(first.send()).isEqualTo(Sent(1, 1, 0, rightStickX = -1000, rightStickY = 1000))
+    }
+
+    @Test
+    fun `a stick of a USB pad that is stronger than the one of a system pad is sent as it is`() {
+        rig.addPad(
+            7,
+            controllerNumber = 0,
+            fields =
+                mapOf(
+                    "leftStickX" to 430.toShort(),
+                    "leftStickY" to (-300).toShort(),
+                    "rightStickX" to (-243).toShort(),
+                    "rightStickY" to (-4000).toShort(),
+                ),
+        )
+        rig.handler.deviceAdded(FakeUsbController(1, rig.handler))
+
+        // The USB values are floats. As sticks 0.09 is 2948, -0.04 is 1310 (Y is upside down),
+        // 0.03 is 982 and -0.1 is 3276. The USB pad is the stronger on the first three, and the
+        // system pad on right Y.
+        rig.handler.reportControllerState(1, 0, 0.09f, -0.04f, 0.03f, -0.1f, 0f, 0f)
+
+        assertThat(rig.packets.last())
+            .isEqualTo(
+                Sent(
+                    0,
+                    1,
+                    0,
+                    leftStickX = 2948,
+                    leftStickY = 1310,
+                    rightStickX = 982,
+                    rightStickY = -4000,
+                )
+            )
+    }
+
+    @Test
+    fun `a stick of the on-screen controller that is stronger than the one of a pad is sent as it is`() {
+        rig.addPad(
+            7,
+            controllerNumber = 0,
+            fields =
+                mapOf(
+                    "leftStickX" to 1000.toShort(),
+                    "leftStickY" to (-300).toShort(),
+                    "rightStickX" to 243.toShort(),
+                    "rightStickY" to 4000.toShort(),
+                ),
+        )
+
+        // The on-screen controller is the stronger on the first three, and the pad on right Y.
+        rig.handler.reportOscState(0, 3016, 1841, -1986, -183, 0, 0)
+
+        assertThat(rig.packets.last())
+            .isEqualTo(
+                Sent(
+                    0,
+                    1,
+                    0,
+                    leftStickX = 3016,
+                    leftStickY = 1841,
+                    rightStickX = -1986,
+                    rightStickY = 4000,
+                )
+            )
     }
 
     @Test
@@ -358,7 +440,7 @@ class CombiningCharacterizationTest {
         val (first, _) =
             twoPads(mapOf("leftStickX" to 32767.toShort()), mapOf("leftStickX" to Short.MIN_VALUE))
 
-        assertThat(first.send().leftStickX).isEqualTo(-1)
+        assertThat(first.send().leftStickX).isEqualTo(Short.MIN_VALUE.toInt())
     }
 
     @Test
@@ -422,10 +504,10 @@ class CombiningCharacterizationTest {
                     buttons = A_FLAG or B_FLAG or X_FLAG or Y_FLAG,
                     leftTrigger = 68,
                     rightTrigger = 66,
-                    leftStickX = 3070,
-                    leftStickY = -1,
-                    rightStickX = -1,
-                    rightStickY = -49,
+                    leftStickX = 3016,
+                    leftStickY = 2687,
+                    rightStickX = 3298,
+                    rightStickY = 3712,
                 )
             )
     }

@@ -134,4 +134,52 @@ class AppsViewModelFirstPollTest {
             expectNoEvents()
         }
     }
+
+    @Test
+    fun `a host whose first poll ends offline closes the screen as offline and starts nothing`() =
+        runTest {
+            repository.emit(snapshot(desktop, steam, reachability = Reachability.UNKNOWN))
+            subscribe(viewModel.uiState)
+            viewModel.onLaunchRequested(2)
+
+            repository.emit(snapshot(desktop, steam, reachability = Reachability.OFFLINE))
+            runCurrent()
+
+            viewModel.effects.test {
+                assertThat(awaitItem()).isEqualTo(AppsEffect.Close(AppsMessage.HostOffline))
+                expectNoEvents()
+            }
+        }
+
+    @Test
+    fun `a launch request that waited does not start after the host answered offline`() = runTest {
+        repository.emit(snapshot(desktop, steam, reachability = Reachability.UNKNOWN))
+        subscribe(viewModel.uiState)
+        viewModel.onLaunchRequested(2)
+        repository.emit(snapshot(desktop, steam, reachability = Reachability.OFFLINE))
+        runCurrent()
+
+        repository.emit(snapshot(desktop, steam))
+        runCurrent()
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AppsEffect.Close(AppsMessage.HostOffline))
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `a host that answers but is not paired closes the screen and starts nothing`() = runTest {
+        repository.emit(snapshot(desktop, steam, reachability = Reachability.UNKNOWN))
+        subscribe(viewModel.uiState)
+        viewModel.onLaunchRequested(2)
+
+        repository.emit(snapshot(desktop, steam, paired = false))
+        runCurrent()
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AppsEffect.Close(AppsMessage.HostNotPaired))
+            expectNoEvents()
+        }
+    }
 }

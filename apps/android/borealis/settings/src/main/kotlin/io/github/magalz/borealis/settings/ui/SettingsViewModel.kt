@@ -10,6 +10,7 @@ import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.catalog.StringSetting
 import io.github.magalz.borealis.settings.device.DeviceFactsSource
 import io.github.magalz.borealis.settings.device.OscLayoutReset
+import io.github.magalz.borealis.settings.device.VibrationSample
 import io.github.magalz.borealis.settings.options.SettingsOptions
 import io.github.magalz.borealis.settings.repository.SettingsRepository
 import javax.inject.Inject
@@ -38,6 +39,7 @@ internal constructor(
     options: SettingsOptions,
     private val deviceFactsSource: DeviceFactsSource,
     private val oscLayoutReset: OscLayoutReset,
+    private val vibrationSample: VibrationSample,
     private val io: CoroutineDispatcher,
 ) : ViewModel() {
     @Inject
@@ -46,7 +48,15 @@ internal constructor(
         options: SettingsOptions,
         deviceFactsSource: DeviceFactsSource,
         oscLayoutReset: OscLayoutReset,
-    ) : this(repository, options, deviceFactsSource, oscLayoutReset, Dispatchers.IO)
+        vibrationSample: VibrationSample,
+    ) : this(
+        repository,
+        options,
+        deviceFactsSource,
+        oscLayoutReset,
+        vibrationSample,
+        Dispatchers.IO,
+    )
 
     private val stateBuilder = SettingsStateBuilder(options)
     private val facts = MutableStateFlow(deviceFactsSource.facts())

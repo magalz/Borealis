@@ -42,6 +42,18 @@ class AddHostRouteTest {
     }
 
     @Test
+    fun `a new host that is paired already says so and does not ask to pair it`() {
+        repository.addHostResult = AddHostResult.Added("desk", "Desk PC", paired = true)
+        show()
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("192.168.1.20")
+        composeRule.onNode(hasSetTextAction()).performImeAction()
+        composeRule.waitForIdle()
+
+        assertThat(added).containsExactly("Desk PC added. It is already paired.")
+    }
+
+    @Test
     fun `a host that was already added says so and does not ask to pair it`() {
         repository.addHostResult = AddHostResult.AlreadyAdded("desk", "Desk PC", paired = false)
         show()

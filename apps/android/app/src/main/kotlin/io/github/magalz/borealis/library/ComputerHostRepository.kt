@@ -69,10 +69,11 @@ constructor(
                     val id = checkNotNull(details.uuid)
                     val name = checkNotNull(details.name)
                     // The id says which host answered, whatever address it answered at; the poll
-                    // that just answered says whether it is paired.
-                    if (id in known)
-                        AddHostResult.AlreadyAdded(id, name, details.pairState == PairState.PAIRED)
-                    else AddHostResult.Added(id, name)
+                    // that just answered says whether it is paired, a new host as well as a known
+                    // one (a forgotten host still trusts this device).
+                    val paired = details.pairState == PairState.PAIRED
+                    if (id in known) AddHostResult.AlreadyAdded(id, name, paired)
+                    else AddHostResult.Added(id, name, paired)
                 }
                 // A known host that does not answer is still a host that was added.
                 knownAtAddress != null -> knownAtAddress

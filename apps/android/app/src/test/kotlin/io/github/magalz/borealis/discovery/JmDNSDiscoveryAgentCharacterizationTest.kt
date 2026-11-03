@@ -23,7 +23,8 @@ import org.robolectric.RobolectricTestRunner
  * the one jmDNS resolver. [NoMdnsNetwork] gives jmDNS no interface, so the thread runs and no
  * packet leaves the test.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
+ * about forgetting a computer (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class JmDNSDiscoveryAgentCharacterizationTest {
@@ -173,6 +174,24 @@ class JmDNSDiscoveryAgentCharacterizationTest {
         assertThat(log.messages(Level.INFO))
             .contains("mDNS: Retrying service resolution for machine: Den PC")
         assertThat(listener.added).isEmpty()
+    }
+
+    @Test
+    fun `a service that is forgotten is reported again when jmDNS announces it again`() {
+        val (_, event) = announce("Den PC" to MdnsInfo(47989, listOf("192.168.1.5")))
+        agent.serviceAdded(event)
+        agent.serviceAdded(event)
+        assertThat(listener.added).hasSize(1)
+
+        agent.forget(MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989))
+        agent.serviceAdded(event)
+
+        assertThat(listener.added)
+            .containsExactly(
+                MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989),
+                MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989),
+            )
+        assertThat(agent.getComputerSet()).hasSize(1)
     }
 
     @Test

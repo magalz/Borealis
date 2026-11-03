@@ -500,6 +500,65 @@ class RelativeTouchTapTest {
         assertThat(rig.sent()).containsExactly("sendMouseHighResScroll(150)")
     }
 
+    // A first finger that moved the pointer before the second finger landed has its move confirmed
+    // already, so the scroll that follows is not a move that leaves the tap box.
+
+    @Test
+    fun `a first finger that was moving when the second one landed and scrolls on is no click`() {
+        val (first, second) = rig.twoContexts()
+        first.start(100, 100)
+        first.moveTo(150, 100, T0 + 30)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 40, true)).isTrue()
+
+        first.moveTo(150, 130, T0 + 60) // the scroll
+        second.touchUpEvent(300, 100, T0 + 140)
+        setPointerCount(1, first, second)
+        first.touchUpEvent(150, 130, T0 + 160)
+        rig.advance(2000)
+
+        assertThat(rig.sent())
+            .containsExactly("sendMouseMove(50, 0)", "sendMouseHighResScroll(150)")
+            .inOrder()
+    }
+
+    // The first finger moved the pointer before the second one landed and rests: the right click
+    // depends on the lift order, as it did before the shared state. The second finger's context
+    // sees a still finger and clicks; the first finger's own context remembers its move and does not.
+
+    @Test
+    fun `a first finger that moved the pointer before the second one landed and rests keeps the right click`() {
+        val (first, second) = rig.twoContexts()
+        first.start(100, 100)
+        first.moveTo(150, 100, T0 + 30)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 40, true)).isTrue()
+
+        second.touchUpEvent(300, 100, T0 + 140)
+        setPointerCount(1, first, second)
+        first.touchUpEvent(150, 100, T0 + 160)
+        rig.advance(2000)
+
+        assertThat(rig.sent())
+            .containsExactly("sendMouseMove(50, 0)", "down RIGHT", "up RIGHT")
+            .inOrder()
+    }
+
+    @Test
+    fun `a first finger that moved the pointer before the second one landed and lifts first is no click`() {
+        val (first, second) = rig.twoContexts()
+        first.start(100, 100)
+        first.moveTo(150, 100, T0 + 30)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 40, true)).isTrue()
+
+        liftFirstOfTwoFingers(first, second, T0 + 140)
+        first.touchUpEvent(300, 100, T0 + 160)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("sendMouseMove(50, 0)")
+    }
+
     @Test
     fun `a first finger that slid 20 px before the second finger tapped still gives the right click`() {
         val (first, second) = rig.twoContexts()

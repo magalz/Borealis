@@ -35,7 +35,13 @@ fun AddHostRoute(
             viewModel.effects.collect { effect ->
                 when (effect) {
                     is AddHostEffect.Added ->
-                        currentOnAdded(resources.getString(R.string.shell_host_added, effect.name))
+                        currentOnAdded(
+                            resources.getString(
+                                if (effect.paired) R.string.shell_host_added_paired
+                                else R.string.shell_host_added,
+                                effect.name,
+                            )
+                        )
                     is AddHostEffect.AlreadyAdded ->
                         currentOnAdded(
                             resources.getString(

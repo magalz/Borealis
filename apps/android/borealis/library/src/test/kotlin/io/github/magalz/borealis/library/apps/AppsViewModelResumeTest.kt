@@ -142,6 +142,24 @@ class AppsViewModelResumeTest {
     }
 
     @Test
+    fun `a launch request that waits for the first poll keeps the choice of Try again`() = runTest {
+        repository.emit(snapshot(desktop, steam, reachability = Reachability.UNKNOWN))
+        subscribe(viewModel.uiState)
+        resumeChoice.remember("host-1", 1)
+        viewModel.onLaunchRequested(1)
+
+        viewModel.effects.test {
+            expectNoEvents()
+
+            repository.emit(snapshot(desktop, steam, running = desktop))
+            runCurrent()
+
+            assertThat(awaitItem())
+                .isEqualTo(AppsEffect.StartStream(desktopRequest.copy(resumeChosen = true)))
+        }
+    }
+
+    @Test
     fun `the choice of Try again is taken once`() = runTest {
         repository.emit(snapshot(desktop, steam, running = desktop))
         subscribe(viewModel.uiState)

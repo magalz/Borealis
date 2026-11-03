@@ -50,7 +50,9 @@ import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.keys.KeyChord
@@ -90,6 +92,10 @@ private const val VK_BACKSPACE = 0x08
  * between the keys (Left and Right wrap around at the ends of a row): A types through the
  * platform's D-pad centre fallback, B closes and Y is Backspace. Docked, the panel takes no focus
  * and handles no physical key, so a hardware keyboard keeps typing into the PC.
+ *
+ * The shortcut row follows the form factor of the window, not [docked]: on a phone-width window it
+ * starts with Esc, so the scroll never hides it, with a pad too, which makes the keyboard cover the
+ * stream.
  *
  * Nothing typed is logged: this code has no log calls.
  */
@@ -133,7 +139,12 @@ fun StreamKeyboard(docked: Boolean, intents: StreamIntents) {
             verticalArrangement = Arrangement.spacedBy(KEY_GAP),
         ) {
             ShortcutRow(
-                shortcuts = if (docked) Shortcuts.keyboardRowPhone else Shortcuts.keyboardRow,
+                shortcuts =
+                    if (LocalFormFactor.current == FormFactor.Phone) {
+                        Shortcuts.keyboardRowPhone
+                    } else {
+                        Shortcuts.keyboardRow
+                    },
                 onShortcut = ::sendShortcut,
                 onClose = intents::closePanel,
                 onSystemKeyboard = intents::openSystemKeyboard,

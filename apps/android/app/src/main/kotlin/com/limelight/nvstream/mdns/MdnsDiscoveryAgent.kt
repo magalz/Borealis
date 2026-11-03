@@ -51,6 +51,9 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
 
     fun getComputerSet(): List<MdnsComputer> = synchronized(computers) { ArrayList(computers) }
 
+    // Stub for the test-first commit: it forgets nothing yet.
+    fun forget(computer: MdnsComputer) = Unit
+
     private fun getLocalAddress(addresses: Array<Inet6Address>): Inet6Address? {
         for (addr in addresses) {
             if (addr.isLinkLocalAddress || addr.isSiteLocalAddress) {

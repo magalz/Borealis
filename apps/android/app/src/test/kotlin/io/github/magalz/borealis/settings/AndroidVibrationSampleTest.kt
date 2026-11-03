@@ -1,14 +1,17 @@
 package io.github.magalz.borealis.settings
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.os.VibrationAttributes
 import android.os.Vibrator
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.testing.ANDROID_11
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class AndroidVibrationSampleTest {
@@ -34,6 +37,18 @@ class AndroidVibrationSampleTest {
 
         val attributes = vibrator.vibrationAttributesFromLastVibration as VibrationAttributes?
         assertThat(attributes?.usage).isEqualTo(VibrationAttributes.USAGE_MEDIA)
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_11])
+    fun `before Android 13 the pulse has the game usage of the stream vibration`() {
+        vibrator.setHasVibrator(true)
+
+        sample.play(60, 100)
+
+        assertThat(vibrator.isVibrating).isTrue()
+        assertThat(vibrator.audioAttributesFromLastVibration?.usage)
+            .isEqualTo(AudioAttributes.USAGE_GAME)
     }
 
     @Test

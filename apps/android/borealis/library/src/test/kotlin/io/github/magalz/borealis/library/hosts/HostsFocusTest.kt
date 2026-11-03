@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -20,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
@@ -50,6 +52,12 @@ class HostsFocusTest {
     private var window: View? = null
     private val aardvark =
         HostItemUiState("aard", "Aardvark", Reachability.ONLINE, true, null, HostAction.OPEN)
+    /** More hosts than the grid composes at once, so the cards past the window are not in it. */
+    private val manyHosts =
+        (0 until 30).map { n ->
+            val id = "h${n.toString().padStart(2, '0')}"
+            HostItemUiState(id, "Host $id", Reachability.ONLINE, true, null, HostAction.OPEN)
+        }
 
     @Test
     fun `a host that appears before the focused card does not take the focus`() {
@@ -206,6 +214,28 @@ class HostsFocusTest {
 
         composeRule.onNodeWithText("Cancel").assertDoesNotExist()
         composeRule.onNodeWithTag("host:living").assertIsFocused()
+    }
+
+    @Test
+    fun `closing the options after the grid dropped the opener card leaves the screen usable`() {
+        state.value = withHostsNoContinue.copy(items = manyHosts)
+        show()
+        composeRule.onNodeWithTag("host:h04").requestFocus()
+        openOptions("host:h04")
+        resetWindowFocus()
+        // The grid composes only what is in view, and keeps a card that has the focus: the reset
+        // gave it to the first card, so the opener, which carries the requester, leaves the grid.
+        composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(manyHosts.size)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:h04").assertDoesNotExist()
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Details").assertDoesNotExist()
+        val last = "host:h${manyHosts.size - 1}"
+        composeRule.onNodeWithTag(last).requestFocus()
+        composeRule.onNodeWithTag(last).assertIsFocused()
     }
 
     @Test

@@ -77,8 +77,11 @@ internal fun HostsDialogs(
  * opened over the screen has closed: the options, the Forget confirmation or the details. On the TV
  * the focus was lost after Back (Sprint 14 UAT, U11); the tests assume that the window took it from
  * the screen and that Compose gave it back to the first card, not to the one that had it. Nothing
- * happens when that host is gone, as after Forget, and nothing when the screen starts with a window
- * already open: that is not a close.
+ * happens when that host is already gone, and nothing when the screen starts with a window already
+ * open: that is not a close. After Forget the removal is asynchronous (the ViewModel launches it),
+ * so the host may still be in [hosts] when the confirmation closes, and its card, about to go, asks
+ * for the focus. A card that the grid does not compose (many hosts, scrolled away while a window
+ * was open) has no node for [focus]: Compose logs it and answers false, so nothing fails.
  */
 @Composable
 internal fun RestoreOpenerFocus(

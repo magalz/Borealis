@@ -200,12 +200,9 @@ private fun NavGraphBuilder.libraryGraph(
         )
     }
     composable<AddHost> { entry ->
-        val resources = LocalResources.current
         AddHostRoute(
             onClose = { navController.close(entry) },
-            onAdded = { name ->
-                navController.close(entry, resources.getString(R.string.shell_host_added, name))
-            },
+            onAdded = { message -> navController.close(entry, message) },
         )
     }
     composable<Pairing> { entry ->

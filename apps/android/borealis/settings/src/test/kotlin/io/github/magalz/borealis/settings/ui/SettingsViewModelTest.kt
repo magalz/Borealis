@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.device.OscLayoutReset
+import io.github.magalz.borealis.settings.device.VibrationSample
 import io.github.magalz.borealis.settings.options.DisabledReason
 import io.github.magalz.borealis.settings.options.FrameRateChoice
 import io.github.magalz.borealis.settings.options.ResolutionChoice
@@ -36,12 +37,16 @@ class SettingsViewModelTest {
     private val facts = FakeDeviceFactsSource()
     private var resets = 0
 
+    /** The pulses that the screen asked for, as the duration in ms and the strength in percent. */
+    private val pulses = mutableListOf<Pair<Long, Int>>()
+
     private fun TestScope.viewModel(): SettingsViewModel =
         SettingsViewModel(
                 repository,
                 options,
                 facts,
                 OscLayoutReset { resets++ },
+                VibrationSample { durationMs, strength -> pulses += durationMs to strength },
                 UnconfinedTestDispatcher(testScheduler),
             )
             .also {
@@ -155,6 +160,70 @@ class SettingsViewModelTest {
             .containsExactlyElementsIn(switches.map { it.setting })
             .inOrder()
         assertThat(repository.writes.map { it.value }.toSet()).containsExactly(true)
+    }
+
+    @Test
+    fun `turning on the vibration fallback plays one pulse at the strength that is stored`() =
+        runTest {
+            stored(Settings.VIBRATE_FALLBACK_STRENGTH to 150)
+            val viewModel = viewModel()
+
+            viewModel.onSwitchChanged(SettingsItem.VIBRATE_FALLBACK, true)
+            advanceUntilIdle()
+
+            assertThat(pulses).containsExactly(60L to 150)
+        }
+
+    @Test
+    fun `turning on the vibration of the on-screen controls plays one pulse at the default strength`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.onSwitchChanged(SettingsItem.OSC_VIBRATE, true)
+            advanceUntilIdle()
+
+            assertThat(pulses).containsExactly(60L to 100)
+        }
+
+    @Test
+    fun `turning a vibration switch off plays nothing`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSwitchChanged(SettingsItem.VIBRATE_FALLBACK, false)
+        viewModel.onSwitchChanged(SettingsItem.OSC_VIBRATE, false)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
+        assertThat(repository.writes)
+            .containsExactly(
+                Write(Settings.VIBRATE_FALLBACK, false),
+                Write(Settings.VIBRATE_OSC, false),
+            )
+    }
+
+    @Test
+    fun `turning on a switch that is not a vibration plays nothing`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSwitchChanged(SettingsItem.STRETCH_VIDEO, true)
+        viewModel.onSwitchChanged(SettingsItem.SHOW_ON_SCREEN_CONTROLS, true)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
+    }
+
+    @Test
+    fun `a vibration switch that the device does not offer plays nothing`() = runTest {
+        options.rowStates[Settings.VIBRATE_FALLBACK] = RowState.Hidden
+        options.rowStates[Settings.VIBRATE_OSC] =
+            RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.SHOW_ONSCREEN_CONTROLS)
+        val viewModel = viewModel()
+
+        viewModel.onSwitchChanged(SettingsItem.VIBRATE_FALLBACK, true)
+        viewModel.onSwitchChanged(SettingsItem.OSC_VIBRATE, true)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
     }
 
     @Test
@@ -474,6 +543,55 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `releasing the Vibration strength slider plays one pulse at the value that it reached`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+            advanceUntilIdle()
+
+            assertThat(pulses).containsExactly(60L to 150)
+        }
+
+    @Test
+    fun `a value out of the range of the Vibration strength slider is kept in it`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 500)
+        advanceUntilIdle()
+
+        assertThat(pulses).containsExactly(60L to 200)
+    }
+
+    @Test
+    fun `releasing another slider plays nothing`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSliderReleased(SettingsItem.DEADZONE, 12)
+        viewModel.onSliderReleased(SettingsItem.OSC_OPACITY, 40)
+        viewModel.onSliderReleased(SettingsItem.BITRATE, 12_500)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
+    }
+
+    @Test
+    fun `releasing the Vibration strength slider while its row is disabled or hidden plays nothing`() =
+        runTest {
+            options.rowStates[Settings.VIBRATE_FALLBACK_STRENGTH] =
+                RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.VIBRATE_FALLBACK)
+            val disabled = viewModel()
+            disabled.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+
+            options.rowStates[Settings.VIBRATE_FALLBACK_STRENGTH] = RowState.Hidden
+            val hidden = viewModel()
+            hidden.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+            advanceUntilIdle()
+
+            assertThat(pulses).isEmpty()
+        }
+
+    @Test
     fun `turning on Unlock all frame rates changes the frame rate list at once`() = runTest {
         val viewModel = viewModel()
         assertThat(viewModel.uiState.value.frameRateChoices.map { it.fps })
@@ -615,6 +733,7 @@ class SettingsViewModelTest {
                     resetThread[0] = Thread.currentThread()
                     done.countDown()
                 },
+                VibrationSample { _, _ -> },
             )
 
         viewModel.onResetLayout()

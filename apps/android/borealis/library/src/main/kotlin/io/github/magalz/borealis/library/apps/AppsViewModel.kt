@@ -12,7 +12,6 @@ import io.github.magalz.borealis.library.domain.HostShortcuts
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.StreamRequest
-import io.github.magalz.borealis.library.shell.ResumeChoice
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +33,6 @@ constructor(
     @Assisted private val hostId: String,
     private val repository: AppRepository,
     private val shortcuts: HostShortcuts,
-    private val resumeChoice: ResumeChoice,
 ) : ViewModel() {
     private val showHidden = MutableStateFlow(false)
     private val actionsAppId = MutableStateFlow<Int?>(null)
@@ -54,7 +52,7 @@ constructor(
      * brings the app list cached on disk, but the host has no address until its first poll answers.
      * It starts with that answer; an offline or unpaired host closes the screen instead.
      */
-    private var pendingLaunch: PendingLaunch? = null
+    private var pendingLaunch: Int? = null
 
     /** Collecting it polls the app list; it stops five seconds after the last collector leaves. */
     val uiState: StateFlow<AppsUiState> =
@@ -80,25 +78,25 @@ constructor(
      * A launch request: a tap on [appId], also when the user hid the app since, unless the screen
      * is closing because the host is gone, offline or not paired. The caller waits until the apps
      * are loaded; the request then waits until the host is polled once, see [pendingLaunch]. It is
-     * the user's choice to resume only after Try again on the stream error screen, which
-     * [resumeChoice] says; a shortcut or a TV program is not, so the stream asks.
+     * never the user's choice to resume: a shortcut, a TV program and Try again on the stream error
+     * screen all ask the host to start the app, and the host does not tell whose session runs, so
+     * the stream asks when the app runs. Only a tap on the running app or its Resume is that
+     * choice, see [onAppSelected].
      */
     fun onLaunchRequested(appId: Int) {
-        // Taken first: the request ends the choice whatever comes of it.
-        val chosen = resumeChoice.take(hostId, appId)
         if (closed) return
         val snapshot = latest ?: return
         if (snapshot.host?.reachability == Reachability.UNKNOWN) {
-            pendingLaunch = PendingLaunch(appId, chosen)
+            pendingLaunch = appId
         } else {
-            startLaunch(snapshot, appId, chosen)
+            startLaunch(snapshot, appId)
         }
     }
 
-    private fun startLaunch(snapshot: AppsSnapshot, appId: Int, resumeChosen: Boolean) {
+    private fun startLaunch(snapshot: AppsSnapshot, appId: Int) {
         val running = snapshot.host?.runningApp?.id
         val app = snapshot.items(running).firstOrNull { it.id == appId } ?: return
-        select(app, running, resumeChosen)
+        select(app, running, resumeChosen = false)
     }
 
     /**
@@ -196,10 +194,10 @@ constructor(
      * The first answer of the host ends the wait; [closeIfUnavailable] dropped it if it was bad.
      */
     private fun startPendingLaunch(snapshot: AppsSnapshot) {
-        val pending = pendingLaunch ?: return
+        val appId = pendingLaunch ?: return
         if (snapshot.host?.reachability == Reachability.UNKNOWN) return
         pendingLaunch = null
-        startLaunch(snapshot, pending.appId, pending.resumeChosen)
+        startLaunch(snapshot, appId)
     }
 
     /** The host is open: its launcher shortcut is published once it is paired and not offline. */
@@ -230,9 +228,6 @@ constructor(
         const val STOP_TIMEOUT_MS = 5_000L
     }
 }
-
-/** A launch request that waits for the first poll of the host; [resumeChosen] as it was asked. */
-private data class PendingLaunch(val appId: Int, val resumeChosen: Boolean)
 
 /** Every app, hidden ones included, with the running one marked. */
 private fun AppsSnapshot.items(runningAppId: Int?) = apps.map {

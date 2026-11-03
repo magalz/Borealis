@@ -3,7 +3,6 @@ package io.github.magalz.borealis.library.apps
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.RunningApp
-import io.github.magalz.borealis.library.shell.ResumeChoice
 import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.MainDispatcherRule
@@ -23,7 +22,7 @@ class AppsViewModelDesktopTest {
     private val repository = FakeAppRepository()
     private val shortcuts = FakeHostShortcuts(canPinApps = false)
     // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
-    private val viewModel by lazy { AppsViewModel("host-1", repository, shortcuts, ResumeChoice()) }
+    private val viewModel by lazy { AppsViewModel("host-1", repository, shortcuts) }
 
     private val desktop = anApp(id = 1, name = "Desktop")
     private val steam = anApp(id = 2, name = "steam")

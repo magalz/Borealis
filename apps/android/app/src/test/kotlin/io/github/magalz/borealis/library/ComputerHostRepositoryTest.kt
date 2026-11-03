@@ -194,6 +194,73 @@ class ComputerHostRepositoryTest {
     }
 
     @Test
+    fun `a known host that answers again is already added, and paired when the poll says so`() =
+        runTest {
+            binder.computers["desk"] =
+                details(uuid = "desk", name = "Desk PC").reported(pairState = PairState.NOT_PAIRED)
+            val repository = repository()
+            collectHosts(repository)
+            binder.onAdd = {
+                it.uuid = "desk"
+                it.name = "Desk PC"
+                it.pairState = PairState.PAIRED
+                true
+            }
+
+            val result = repository.addHost(HostAddress("desk.local"))
+
+            assertThat(result)
+                .isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true))
+        }
+
+    @Test
+    fun `a known host that answers unpaired is already added and not paired`() = runTest {
+        binder.computers["desk"] = details(uuid = "desk", name = "Desk PC")
+        val repository = repository()
+        collectHosts(repository)
+        binder.onAdd = {
+            it.uuid = "desk"
+            it.name = "Desk PC"
+            it.pairState = PairState.NOT_PAIRED
+            true
+        }
+
+        val result = repository.addHost(HostAddress("desk.local"))
+
+        assertThat(result).isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = false))
+    }
+
+    @Test
+    fun `a known host at that address that does not answer is already added`() = runTest {
+        binder.computers["desk"] =
+            details(uuid = "desk", name = "Desk PC", address = "192.168.1.5")
+                .reported(state = ComputerDetails.State.OFFLINE, pairState = PairState.PAIRED)
+        val repository = repository()
+        collectHosts(repository)
+        binder.onAdd = { false }
+
+        val result = repository.addHost(HostAddress("192.168.1.5"))
+
+        assertThat(result).isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true))
+    }
+
+    @Test
+    fun `a different host that answers at the address of a known one is added`() = runTest {
+        binder.computers["desk"] = details(uuid = "desk", name = "Desk PC", address = "192.168.1.5")
+        val repository = repository()
+        collectHosts(repository)
+        binder.onAdd = {
+            it.uuid = "laptop"
+            it.name = "Laptop"
+            true
+        }
+
+        val result = repository.addHost(HostAddress("192.168.1.5"))
+
+        assertThat(result).isEqualTo(AddHostResult.Added("laptop", "Laptop"))
+    }
+
+    @Test
     fun `a host that does not answer is unreachable`() = runTest {
         val repository = repository()
         localNetworks = listOf(LocalIpv4(InetAddress.getByName("192.168.1.20") as Inet4Address, 24))

@@ -173,6 +173,28 @@ class SegmentedControlTest {
         assertThat(chosen).containsExactly("120")
     }
 
+    @Test
+    fun `a focused middle segment keeps the reading order of the segments`() {
+        composeRule.setContentInKeyboardMode { Specimen(selected = "30") }
+        composeRule.onNodeWithText("60 fps").requestFocus()
+
+        val control =
+            composeRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.SelectableGroup))
+
+        // The lift draws the focused segment last, which moves it to the end of the children of
+        // the control. TalkBack sorts the children of a traversal group by traversalIndex, so each
+        // segment has the place that it has on the screen, and the control is the group that
+        // those places are compared in. (The sort is stable: equal places keep the tree order.)
+        val reading =
+            control.fetchSemanticsNode().children.sortedBy {
+                it.config.getOrElse(SemanticsProperties.TraversalIndex) { 0f }
+            }
+        assertThat(reading.map { it.config[SemanticsProperties.Text].single().text })
+            .containsExactly("30 fps", "60 fps", "120 fps")
+            .inOrder()
+        control.assert(SemanticsMatcher.expectValue(SemanticsProperties.IsTraversalGroup, true))
+    }
+
     private fun tintOverPage() =
         BorealisTokens.Color.AccentTint.compositeOver(BorealisTokens.Color.Page)
 

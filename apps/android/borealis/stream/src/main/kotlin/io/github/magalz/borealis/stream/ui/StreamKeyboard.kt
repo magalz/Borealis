@@ -39,8 +39,10 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
@@ -300,14 +302,22 @@ private fun KeyRow(keys: List<KeySpec>, actions: KeyActions, firstKeyFocus: Firs
     val rowEnd = remember { FocusRequester() }
     // The keys of a row are as high as the highest: a caption that wraps makes its key grow.
     Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        Modifier.fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            // The keys are read in this group, in the order of their traversalIndex.
+            .semantics { isTraversalGroup = true },
         horizontalArrangement = Arrangement.spacedBy(KEY_GAP, Alignment.CenterHorizontally),
     ) {
         for ((index, key) in keys.withIndex()) {
             val name = key.label.name()
             val caption = key.label.onCap(key.label.resolve(), SHIFT in actions.latch.latched)
             var modifier =
-                Modifier.weight(key.style.weight, fill = false).fillMaxHeight().testTag("key:$name")
+                Modifier.weight(key.style.weight, fill = false)
+                    .fillMaxHeight()
+                    .testTag("key:$name")
+                    // The focused key is lifted over its neighbours, which moves it to the end of
+                    // the semantics children of the row; its place is the one it has on the screen.
+                    .semantics { traversalIndex = index.toFloat() }
             // A symbol on the cap is read out as the name of the key.
             if (!name.equals(caption, ignoreCase = true))
                 modifier = modifier.semantics { contentDescription = name }

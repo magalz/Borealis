@@ -10,6 +10,7 @@ import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.catalog.StringSetting
 import io.github.magalz.borealis.settings.device.DeviceFactsSource
 import io.github.magalz.borealis.settings.device.OscLayoutReset
+import io.github.magalz.borealis.settings.device.VibrationSample
 import io.github.magalz.borealis.settings.options.SettingsOptions
 import io.github.magalz.borealis.settings.repository.SettingsRepository
 import javax.inject.Inject
@@ -23,10 +24,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** The length of the sample pulse that a vibration option plays, in milliseconds. */
+private const val SAMPLE_PULSE_MS = 60L
+
 /**
  * The state and the actions of the settings screen (UC-009). Every change is stored at once through
  * the [SettingsRepository]; the rows that the device cannot use are left out, and the rows that
- * another setting blocks cannot be changed.
+ * another setting blocks cannot be changed. A vibration that is turned on, and the Vibration
+ * strength that the user lets go of, play a sample pulse through the [VibrationSample].
  *
  * The device facts are asked when the ViewModel is created and again on [refreshDeviceFacts],
  * because the display can change.
@@ -38,6 +43,7 @@ internal constructor(
     options: SettingsOptions,
     private val deviceFactsSource: DeviceFactsSource,
     private val oscLayoutReset: OscLayoutReset,
+    private val vibrationSample: VibrationSample,
     private val io: CoroutineDispatcher,
 ) : ViewModel() {
     @Inject
@@ -46,7 +52,15 @@ internal constructor(
         options: SettingsOptions,
         deviceFactsSource: DeviceFactsSource,
         oscLayoutReset: OscLayoutReset,
-    ) : this(repository, options, deviceFactsSource, oscLayoutReset, Dispatchers.IO)
+        vibrationSample: VibrationSample,
+    ) : this(
+        repository,
+        options,
+        deviceFactsSource,
+        oscLayoutReset,
+        vibrationSample,
+        Dispatchers.IO,
+    )
 
     private val stateBuilder = SettingsStateBuilder(options)
     private val facts = MutableStateFlow(deviceFactsSource.facts())
@@ -64,10 +78,11 @@ internal constructor(
         viewModelScope.launch { restoreOfferedChoices() }
     }
 
-    /** Stores [checked] for the switch [item]. */
+    /** Stores [checked] for the switch [item]. Turning a vibration on plays a sample pulse. */
     fun onSwitchChanged(item: SettingsItem, checked: Boolean) {
         val setting = item.setting as? BooleanSetting
         if (setting == null || !isChangeable(item)) return
+        if (checked) playSampleOf(item)
         viewModelScope.launch {
             repository.set(setting, checked)
             // Turning Unlock all frame rates off can leave 90 or 120 fps stored but no longer
@@ -118,6 +133,17 @@ internal constructor(
     }
 
     /**
+     * Plays a sample pulse at [value], in the stored unit, when the user lets go of the slider
+     * [item] and it is Vibration strength, so that the strength can be felt. A value outside the
+     * range of the slider is kept in it. Another slider plays nothing.
+     */
+    fun onSliderReleased(item: SettingsItem, value: Int) {
+        val spec = item.input.slider
+        if (item != SettingsItem.VIBRATION_STRENGTH || spec == null || !isChangeable(item)) return
+        vibrationSample.play(SAMPLE_PULSE_MS, value.coerceIn(spec.min, spec.max))
+    }
+
+    /**
      * Resets the layout of the on-screen controls, off the main thread. The screen asks before it
      * calls this.
      */
@@ -130,6 +156,23 @@ internal constructor(
     fun refreshDeviceFacts() {
         facts.value = deviceFactsSource.facts()
         viewModelScope.launch { restoreOfferedChoices() }
+    }
+
+    /**
+     * Plays a pulse so that the user can feel the vibration that the switch [item] turns on: at the
+     * strength stored for the vibration fallback, which the stream scales by, and at the default
+     * strength for the vibration of the on-screen controls, which the stream does not scale.
+     * Another switch plays nothing.
+     */
+    private fun playSampleOf(item: SettingsItem) {
+        val strength =
+            when (item) {
+                SettingsItem.VIBRATE_FALLBACK ->
+                    uiState.value.snapshot[Settings.VIBRATE_FALLBACK_STRENGTH]
+                SettingsItem.OSC_VIBRATE -> Settings.VIBRATE_FALLBACK_STRENGTH.default
+                else -> return
+            }
+        vibrationSample.play(SAMPLE_PULSE_MS, strength)
     }
 
     private fun isChangeable(item: SettingsItem): Boolean =

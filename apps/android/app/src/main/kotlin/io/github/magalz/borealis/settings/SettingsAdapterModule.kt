@@ -7,6 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.magalz.borealis.settings.device.DeviceFactsSource
 import io.github.magalz.borealis.settings.device.OscLayoutReset
+import io.github.magalz.borealis.settings.device.VibrationSample
 import javax.inject.Singleton
 
 /**
@@ -20,6 +21,8 @@ internal interface SettingsAdapterModule {
     @Binds fun deviceFactsSource(impl: AndroidDeviceFactsSource): DeviceFactsSource
 
     @Binds fun oscLayoutReset(impl: AndroidOscLayoutReset): OscLayoutReset
+
+    @Binds fun vibrationSample(impl: AndroidVibrationSample): VibrationSample
 
     companion object {
         @Provides

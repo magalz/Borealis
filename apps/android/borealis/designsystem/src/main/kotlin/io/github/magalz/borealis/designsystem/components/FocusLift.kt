@@ -15,6 +15,11 @@ import androidx.compose.ui.zIndex
  * ([io.github.magalz.borealis.designsystem.focus.borealisFocusIndication]), and the keys of a
  * keyboard and the segments of a control sit closer than that, so a neighbour drawn later would
  * cover part of the outline. Put this modifier before the focus indication.
+ *
+ * Drawing an element last also moves it to the end of the semantics children of its parent, so a
+ * screen reader may read it after its siblings. A row of lifted elements is a traversal group
+ * (`isTraversalGroup`) and gives each element its place in it (`traversalIndex`), as
+ * [SegmentedControl] does.
  */
 @Composable
 internal fun Modifier.liftedWhenFocused(): Modifier {

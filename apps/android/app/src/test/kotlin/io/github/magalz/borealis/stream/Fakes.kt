@@ -10,7 +10,6 @@ import io.github.magalz.borealis.library.domain.HostRepository
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.library.shell.QuitNotice
-import io.github.magalz.borealis.library.shell.ResumeChoice
 import io.github.magalz.borealis.stream.keys.KeyChord
 import java.util.Locale
 import kotlinx.coroutines.CompletableDeferred
@@ -83,15 +82,12 @@ class FakeEntryPoint(
     val apps: FakeApps = FakeApps(),
     val hosts: FakeHosts = FakeHosts(),
     val notice: QuitNotice = QuitNotice(),
-    val resumeChoice: ResumeChoice = ResumeChoice(),
 ) : StreamEntryPoint {
     override fun appRepository(): AppRepository = apps
 
     override fun hostRepository(): HostRepository = hosts
 
     override fun quitNotice(): QuitNotice = notice
-
-    override fun resumeChoice(): ResumeChoice = resumeChoice
 }
 
 /** Records what the session asks of the activity, by name. */

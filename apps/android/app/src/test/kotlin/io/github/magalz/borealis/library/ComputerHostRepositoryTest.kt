@@ -209,7 +209,8 @@ class ComputerHostRepositoryTest {
 
             val result = repository.addHost(HostAddress("desk.local"))
 
-            assertThat(result).isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true))
+            assertThat(result)
+                .isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true))
         }
 
     @Test
@@ -245,8 +246,7 @@ class ComputerHostRepositoryTest {
 
     @Test
     fun `a different host that answers at the address of a known one is added`() = runTest {
-        binder.computers["desk"] =
-            details(uuid = "desk", name = "Desk PC", address = "192.168.1.5")
+        binder.computers["desk"] = details(uuid = "desk", name = "Desk PC", address = "192.168.1.5")
         val repository = repository()
         collectHosts(repository)
         binder.onAdd = {

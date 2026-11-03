@@ -55,14 +55,27 @@ constructor(
             if (host.isEmpty()) null
             else runCatching { AddressTuple(host, address.port) }.getOrNull()
         if (manual == null) return AddHostResult.InvalidAddress
-        return add(ComputerDetails().also { it.manualAddress = manual }, host)
+        return add(manual, host)
     }
 
-    private suspend fun add(details: ComputerDetails, host: String): AddHostResult =
-        try {
+    private suspend fun add(manual: AddressTuple, host: String): AddHostResult {
+        val details = ComputerDetails().also { it.manualAddress = manual }
+        // The hosts the device knew before this add: the add publishes the host that it reaches.
+        val known = connection.updates.value
+        val knownAtAddress = known.alreadyAddedAt(manual)
+        return try {
             when {
-                connection.addComputer(details) ->
-                    AddHostResult.Added(checkNotNull(details.uuid), checkNotNull(details.name))
+                connection.addComputer(details) -> {
+                    val id = checkNotNull(details.uuid)
+                    val name = checkNotNull(details.name)
+                    // The id says which host answered, whatever address it answered at; the poll
+                    // that just answered says whether it is paired.
+                    if (id in known)
+                        AddHostResult.AlreadyAdded(id, name, details.pairState == PairState.PAIRED)
+                    else AddHostResult.Added(id, name)
+                }
+                // A known host that does not answer is still a host that was added.
+                knownAtAddress != null -> knownAtAddress
                 withContext(io) { subnet.isWrongSiteLocalAddress(host) } ->
                     AddHostResult.WrongSubnet
                 else -> AddHostResult.Unreachable
@@ -76,6 +89,7 @@ constructor(
             BorealisLog.w(LogTag.HOST, "host not added", "error" to e.javaClass.simpleName)
             AddHostResult.Unreachable
         }
+    }
 
     override suspend fun wake(hostId: String): WakeResult {
         val details = connection.lookup(hostId) ?: return WakeResult.FAILED
@@ -160,6 +174,25 @@ private fun ComputerDetails.toDetailsFacts() =
         macAddress = macAddress,
         runningApp = toHost().runningApp?.name,
     )
+
+/** The known host that has been reached at [address], as an added host; null when none has. */
+private fun Map<String, ComputerDetails>.alreadyAddedAt(
+    address: AddressTuple
+): AddHostResult.AlreadyAdded? =
+    entries
+        .firstOrNull { (_, host) ->
+            address in
+                listOfNotNull(
+                    host.activeAddress,
+                    host.localAddress,
+                    host.remoteAddress,
+                    host.manualAddress,
+                    host.ipv6Address,
+                )
+        }
+        ?.let { (id, host) ->
+            AddHostResult.AlreadyAdded(id, host.name.orEmpty(), host.pairState == PairState.PAIRED)
+        }
 
 /**
  * The address as the dialog shows it: the host alone on the default HTTP port, else `host:port` (an

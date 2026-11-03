@@ -56,8 +56,8 @@ sealed interface AddHostResult {
     data class Added(val hostId: String, val name: String) : AddHostResult
 
     /**
-     * The host answered, but this device already knew it (by its id or by the address it answers
-     * at). [paired] is true when it is paired too.
+     * This device already knew the host: by its id when it answered, or by the address it was
+     * reached at when it did not answer. [paired] is true when it is paired too.
      */
     data class AlreadyAdded(val hostId: String, val name: String, val paired: Boolean) :
         AddHostResult

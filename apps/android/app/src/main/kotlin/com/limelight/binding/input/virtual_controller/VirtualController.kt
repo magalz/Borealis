@@ -142,6 +142,7 @@ class VirtualController(
         VirtualControllerConfigurationLoader.createDefaultLayout(this, context, config)
 
         // Apply the user's saved layout (the file OSC, not the stream settings) onto the default
+        // layout
         VirtualControllerConfigurationLoader.loadFromPreferences(this, context)
     }
 

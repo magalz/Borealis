@@ -8,7 +8,9 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
 import io.github.magalz.borealis.library.shell.RailSelection
@@ -58,6 +60,21 @@ class AddHostScreenshotTest {
 
     @Test
     @Config(qualifiers = PHONE)
+    fun addHostPhoneBusyWithReduceMotion() {
+        // The indicator is a still arc: a frame that is the same at every run.
+        composeRule.setContent {
+            Screen(
+                AddHostUiState(address = "10.0.5.20", busy = true),
+                FormFactor.Phone,
+                look = BorealisLook(reduceMotion = ReduceMotion.On),
+            )
+        }
+
+        shoot("addhost_phone_busy-reduce-motion")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
     fun addHostPhoneOverTheBackground() {
         noAnimations()
         composeRule.setContent {
@@ -98,6 +115,7 @@ class AddHostScreenshotTest {
         state: AddHostUiState,
         formFactor: FormFactor,
         style: BackgroundStyle = BackgroundStyle.Off,
+        look: BorealisLook = BorealisLook(),
     ) {
         // The shell draws the rail beside Add host on a TV and a handheld.
         LibraryScaffold(
@@ -105,6 +123,7 @@ class AddHostScreenshotTest {
             actions = RailActions({}, {}, {}),
             selected = RailSelection.AddHost,
             backgroundStyle = style,
+            look = look,
         ) {
             AddHostScreen(
                 state = state,

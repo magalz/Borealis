@@ -66,6 +66,10 @@ class XboxOneControllerTest {
     private fun rumbleInit2(seq: Int) =
         listOf(0x09, 0x00, seq, 0x09, 0x00, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
 
+    // Byte 2 is the sequence number, 6 and 7 the trigger motors, 8 and 9 the main motors.
+    private fun rumblePacket(seq: Int, left: Int, right: Int, low: Int, high: Int) =
+        listOf(0x09, 0x00, seq, 0x09, 0x00, 0x0F, left, right, low, high, 0xFF, 0x00, 0xFF)
+
     private fun initPackets(vendorId: Int, productId: Int): List<List<Int>> {
         val pad = pad(vendorId, productId)
         assertThat(pad.start()).isTrue()
@@ -563,20 +567,43 @@ class XboxOneControllerTest {
         pad.controller.rumble(0x7FFF, 0x4000)
         pad.controller.rumbleTriggers(0x7FFF, 0x0200)
         pad.controller.rumble(0x8000.toShort(), 0xFFFF.toShort())
-        pad.controller.rumble(0x01FF, 0x0200)
+        pad.controller.rumble(0x0400, 0x0200)
 
-        // Byte 2 is the sequence number, 6 and 7 the trigger motors, 8 and 9 the main motors.
-        fun packet(seq: Int, left: Int, right: Int, low: Int, high: Int) =
-            listOf(0x09, 0x00, seq, 0x09, 0x00, 0x0F, left, right, low, high, 0xFF, 0x00, 0xFF)
         assertThat(pad.writtenBytes().drop(1))
             .containsExactly(
-                packet(1, 0x00, 0x00, 0x3F, 0x20),
-                packet(2, 0x3F, 0x01, 0x3F, 0x20),
-                packet(3, 0x3F, 0x01, 0xC0, 0xFF),
-                packet(4, 0x3F, 0x01, 0x00, 0x01),
+                rumblePacket(1, 0x00, 0x00, 0x3F, 0x20),
+                rumblePacket(2, 0x3F, 0x01, 0x3F, 0x20),
+                rumblePacket(3, 0x3F, 0x01, 0xC0, 0xFF),
+                rumblePacket(4, 0x3F, 0x01, 0x02, 0x01),
             )
             .inOrder()
         assertThat(pad.usb.writes.drop(1).map { it.timeoutMs }.toSet()).containsExactly(100)
+    }
+
+    @Test
+    fun `a weak motor stays above zero and a zero motor stays zero, the trigger motors too`() {
+        val pad = pad()
+        pad.start()
+
+        // A motor below 512 has no bits left after the shift: it goes out as 1, and only a real
+        // zero as 0.
+        pad.controller.rumble(0x0001, 0x0000)
+        pad.controller.rumble(0x0000, 0x01FF)
+        pad.controller.rumbleTriggers(0x0001, 0x0000)
+        pad.controller.rumbleTriggers(0x0000, 0x01FF)
+        pad.controller.rumbleTriggers(0x0000, 0x0000)
+        pad.controller.rumble(0x0000, 0x0000)
+
+        assertThat(pad.writtenBytes().drop(1))
+            .containsExactly(
+                rumblePacket(1, 0x00, 0x00, 0x01, 0x00),
+                rumblePacket(2, 0x00, 0x00, 0x00, 0x01),
+                rumblePacket(3, 0x01, 0x00, 0x00, 0x01),
+                rumblePacket(4, 0x00, 0x01, 0x00, 0x01),
+                rumblePacket(5, 0x00, 0x00, 0x00, 0x01),
+                rumblePacket(6, 0x00, 0x00, 0x00, 0x00),
+            )
+            .inOrder()
     }
 
     @Test

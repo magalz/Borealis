@@ -25,6 +25,9 @@
     <string name="stream_overlay_audio_delay">Audio delay %1$s</string>
     <!-- %1$s is the audio delay, a whole number. -->
     <string name="stream_overlay_audio_delay_value">%1$s ms</string>
+    <!-- %1$s is the audio delay or the dash. Added while the audio goes out over Bluetooth, which has
+         a delay of its own. -->
+    <string name="stream_overlay_audio_delay_bluetooth">%1$s (Bluetooth)</string>
     <!-- %1$s the bitrate in use, %2$s the limit, both in Mbps. -->
     <string name="stream_overlay_bitrate">%1$s of %2$s Mbps</string>
 </resources>

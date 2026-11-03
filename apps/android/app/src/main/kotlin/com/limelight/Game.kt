@@ -1529,7 +1529,11 @@ class Game :
         if (chordWaits) {
             if (specialKeyCode == androidKeyCode) {
                 // If this is a key up for the special key itself, eat that because the host never
-                // saw the original key down
+                // saw the original key down (BOREALIS: a key down of it eats its key up too, which
+                // may come after the modifiers)
+                if (down) {
+                    keysEatenByChord.add(androidKeyCode)
+                }
                 return true
             } else if (modifierFlags != 0) {
                 // While we're waiting for modifiers to come up, eat all key downs and allow all key
@@ -1599,6 +1603,9 @@ class Game :
                     // events until the modifiers come up
                     specialKeyCode = androidKeyCode
                     waitingForAllModifiersUp = true
+                    // BOREALIS: the host never sees this key down, so its key up is eaten even
+                    // when it comes after the modifiers, which end the chord
+                    keysEatenByChord.add(androidKeyCode)
                     return true
                 }
 

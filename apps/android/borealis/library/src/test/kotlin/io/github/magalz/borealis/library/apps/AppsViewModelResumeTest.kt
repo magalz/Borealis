@@ -20,9 +20,10 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * Only the user's own tap on the running app, the Resume of its actions, or Try again on the stream
- * error screen is the choice to resume it: the stream then joins it without asking. A launch
- * request from a shortcut or a TV program is not.
+ * Only the user's own tap on the running app or the Resume of its actions is the choice to resume
+ * it: the stream then joins it without asking. A launch request is not, whether it comes from Try
+ * again on the stream error screen, a shortcut or a TV program: the host does not tell whose
+ * session runs, so the stream asks.
  */
 class AppsViewModelResumeTest {
     @get:Rule val mainDispatcher = MainDispatcherRule()
@@ -113,7 +114,7 @@ class AppsViewModelResumeTest {
     }
 
     @Test
-    fun `a launch request after Try again resumes the app that runs, and says the user chose to`() =
+    fun `a launch request after Try again for the app that runs is not the user's choice`() =
         runTest {
             repository.emit(snapshot(desktop, steam, running = desktop))
             subscribe(viewModel.uiState)
@@ -122,13 +123,13 @@ class AppsViewModelResumeTest {
             viewModel.onLaunchRequested(1)
 
             viewModel.effects.test {
-                assertThat(awaitItem())
-                    .isEqualTo(AppsEffect.StartStream(desktopRequest.copy(resumeChosen = true)))
+                assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
             }
+            assertThat(resumeChoice.take("host-1", 1)).isFalse()
         }
 
     @Test
-    fun `Try again says so also when the Library does not show the app running yet`() = runTest {
+    fun `Try again starts the app as before when the Library shows nothing running`() = runTest {
         repository.emit(snapshot(desktop, steam))
         subscribe(viewModel.uiState)
         resumeChoice.remember("host-1", 1)
@@ -136,75 +137,38 @@ class AppsViewModelResumeTest {
         viewModel.onLaunchRequested(1)
 
         viewModel.effects.test {
-            assertThat(awaitItem())
-                .isEqualTo(AppsEffect.StartStream(desktopRequest.copy(resumeChosen = true)))
-        }
-    }
-
-    @Test
-    fun `a launch request that waits for the first poll keeps the choice of Try again`() = runTest {
-        repository.emit(snapshot(desktop, steam, reachability = Reachability.UNKNOWN))
-        subscribe(viewModel.uiState)
-        resumeChoice.remember("host-1", 1)
-        viewModel.onLaunchRequested(1)
-
-        viewModel.effects.test {
-            expectNoEvents()
-
-            repository.emit(snapshot(desktop, steam, running = desktop))
-            runCurrent()
-
-            assertThat(awaitItem())
-                .isEqualTo(AppsEffect.StartStream(desktopRequest.copy(resumeChosen = true)))
-        }
-    }
-
-    @Test
-    fun `the choice of Try again is taken once`() = runTest {
-        repository.emit(snapshot(desktop, steam, running = desktop))
-        subscribe(viewModel.uiState)
-        resumeChoice.remember("host-1", 1)
-
-        viewModel.onLaunchRequested(1)
-        viewModel.onLaunchRequested(1)
-
-        viewModel.effects.test {
-            assertThat(awaitItem())
-                .isEqualTo(AppsEffect.StartStream(desktopRequest.copy(resumeChosen = true)))
             assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
         }
     }
 
     @Test
-    fun `a launch request for another app, or for another host, is not the choice of Try again`() =
+    fun `a launch request after Try again that waits for the first poll is not the user's choice`() =
         runTest {
-            repository.emit(snapshot(desktop, steam))
+            repository.emit(snapshot(desktop, steam, reachability = Reachability.UNKNOWN))
             subscribe(viewModel.uiState)
             resumeChoice.remember("host-1", 1)
-            viewModel.onLaunchRequested(2)
-            resumeChoice.remember("other", 1)
-            viewModel.onLaunchRequested(1)
-            resumeChoice.remember("host-1", 1)
-            viewModel.onLaunchRequested(2)
             viewModel.onLaunchRequested(1)
 
             viewModel.effects.test {
-                assertThat(awaitItem())
-                    .isEqualTo(
-                        AppsEffect.StartStream(
-                            StreamRequest("host-1", 2, "steam", hdrSupported = true)
-                        )
-                    )
-                assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
-                assertThat(awaitItem())
-                    .isEqualTo(
-                        AppsEffect.StartStream(
-                            StreamRequest("host-1", 2, "steam", hdrSupported = true)
-                        )
-                    )
+                expectNoEvents()
+
+                repository.emit(snapshot(desktop, steam, running = desktop))
+                runCurrent()
+
                 assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
             }
         }
+
+    @Test
+    fun `a launch request for another app uses up the choice of Try again`() = runTest {
+        repository.emit(snapshot(desktop, steam))
+        subscribe(viewModel.uiState)
+        resumeChoice.remember("host-1", 1)
+
+        viewModel.onLaunchRequested(2)
+
+        assertThat(resumeChoice.take("host-1", 1)).isFalse()
+    }
 
     @Test
     fun `Try again while another app runs opens the actions and its choice is used up`() = runTest {

@@ -64,8 +64,13 @@ class RelativeTouchContext(
 
     private val dragTimerRunnable = Runnable { startDrag() }
 
+    // The release of a left click is posted and not sent yet. Handler.hasCallbacks would tell, but
+    // it needs API 29 and the app supports 28.
+    private var leftReleasePending = false
+
     // A tap gives only the left or the right button (getMouseButtonIndex).
     private val leftButtonUpRunnable = Runnable {
+        leftReleasePending = false
         conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
     }
     private val rightButtonUpRunnable = Runnable {
@@ -191,6 +196,9 @@ class RelativeTouchContext(
             }
         handler.removeCallbacks(buttonUpRunnable)
         handler.postDelayed(buttonUpRunnable, BUTTON_RELEASE_DELAY)
+        if (buttonIndex == MouseButtonPacket.BUTTON_LEFT) {
+            leftReleasePending = true
+        }
     }
 
     // The press of a double tap is held or moved: the left button goes down until the lift.
@@ -199,9 +207,8 @@ class RelativeTouchContext(
         confirmedDrag = true
 
         // The release of the click that came first may still be due: it goes out now, or it would
-        // end
-        // the drag
-        if (handler.hasCallbacks(leftButtonUpRunnable)) {
+        // end the drag
+        if (leftReleasePending) {
             handler.removeCallbacks(leftButtonUpRunnable)
             leftButtonUpRunnable.run()
         }
@@ -331,9 +338,8 @@ class RelativeTouchContext(
         get() = cancelled
 
     override fun setPointerCount(pointerCount: Int) {
-        // A new finger (the count rises) ends the two-finger tap that waited for the last finger,
-        // and
-        // takes the drag away from a second press
+        // A new finger (the count rises) ends the two-finger tap that waited for the last finger
+        // and takes the drag away from a second press
         if (pointerCount > this.pointerCount) {
             twoFingerTapPending = false
             clearSecondPress()

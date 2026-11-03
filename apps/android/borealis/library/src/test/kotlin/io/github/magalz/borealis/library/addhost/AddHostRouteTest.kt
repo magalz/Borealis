@@ -30,7 +30,7 @@ class AddHostRouteTest {
     private val added = mutableListOf<String>()
 
     @Test
-    fun `typing an address and pressing Done adds the host and reports its name`() {
+    fun `typing an address and pressing Done adds the host and says to pair it`() {
         show()
 
         composeRule.onNode(hasSetTextAction()).performTextInput("192.168.1.20")
@@ -38,7 +38,31 @@ class AddHostRouteTest {
         composeRule.waitForIdle()
 
         assertThat(repository.addedAddresses).containsExactly(HostAddress("192.168.1.20"))
-        assertThat(added).containsExactly("New PC")
+        assertThat(added).containsExactly("New PC added. Pair it to see its apps.")
+    }
+
+    @Test
+    fun `a host that was already added says so and does not ask to pair it`() {
+        repository.addHostResult = AddHostResult.AlreadyAdded("desk", "Desk PC", paired = false)
+        show()
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("192.168.1.20")
+        composeRule.onNode(hasSetTextAction()).performImeAction()
+        composeRule.waitForIdle()
+
+        assertThat(added).containsExactly("Desk PC is already added.")
+    }
+
+    @Test
+    fun `a host that was already added and paired says so`() {
+        repository.addHostResult = AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true)
+        show()
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("192.168.1.20")
+        composeRule.onNode(hasSetTextAction()).performImeAction()
+        composeRule.waitForIdle()
+
+        assertThat(added).containsExactly("Desk PC is already added and paired.")
     }
 
     @Test

@@ -1402,7 +1402,8 @@ class ControllerHandler(
 
         // In order to properly handle controllers that are split into multiple devices,
         // we must aggregate all controllers with the same controller number into a single
-        // device before we send it.
+        // device before we send it. The buttons are ORed; each trigger and each stick axis takes
+        // the value of larger magnitude, the later device's on a tie.
         inputDeviceContexts.forEachValue { context ->
             if (
                 context.assignedControllerNumber &&
@@ -1412,20 +1413,10 @@ class ControllerHandler(
                 inputMap = inputMap or context.sentInputMap()
                 leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
                 rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX =
-                    (leftStickX.toInt() or maxByMagnitude(leftStickX, context.leftStickX).toInt())
-                        .toShort()
-                leftStickY =
-                    (leftStickY.toInt() or maxByMagnitude(leftStickY, context.leftStickY).toInt())
-                        .toShort()
-                rightStickX =
-                    (rightStickX.toInt() or
-                            maxByMagnitude(rightStickX, context.rightStickX).toInt())
-                        .toShort()
-                rightStickY =
-                    (rightStickY.toInt() or
-                            maxByMagnitude(rightStickY, context.rightStickY).toInt())
-                        .toShort()
+                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
+                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
+                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
+                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
             }
         }
         usbDeviceContexts.forEachValue { context ->
@@ -1437,42 +1428,20 @@ class ControllerHandler(
                 inputMap = inputMap or context.sentInputMap()
                 leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
                 rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX =
-                    (leftStickX.toInt() or maxByMagnitude(leftStickX, context.leftStickX).toInt())
-                        .toShort()
-                leftStickY =
-                    (leftStickY.toInt() or maxByMagnitude(leftStickY, context.leftStickY).toInt())
-                        .toShort()
-                rightStickX =
-                    (rightStickX.toInt() or
-                            maxByMagnitude(rightStickX, context.rightStickX).toInt())
-                        .toShort()
-                rightStickY =
-                    (rightStickY.toInt() or
-                            maxByMagnitude(rightStickY, context.rightStickY).toInt())
-                        .toShort()
+                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
+                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
+                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
+                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
             }
         }
         if (defaultContext.controllerNumber == controllerNumber) {
             inputMap = inputMap or defaultContext.sentInputMap()
             leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
             rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
-            leftStickX =
-                (leftStickX.toInt() or
-                        maxByMagnitude(leftStickX, defaultContext.leftStickX).toInt())
-                    .toShort()
-            leftStickY =
-                (leftStickY.toInt() or
-                        maxByMagnitude(leftStickY, defaultContext.leftStickY).toInt())
-                    .toShort()
-            rightStickX =
-                (rightStickX.toInt() or
-                        maxByMagnitude(rightStickX, defaultContext.rightStickX).toInt())
-                    .toShort()
-            rightStickY =
-                (rightStickY.toInt() or
-                        maxByMagnitude(rightStickY, defaultContext.rightStickY).toInt())
-                    .toShort()
+            leftStickX = maxByMagnitude(leftStickX, defaultContext.leftStickX)
+            leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
+            rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
+            rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
         }
 
         if (originalContext.mouseEmulationActive) {

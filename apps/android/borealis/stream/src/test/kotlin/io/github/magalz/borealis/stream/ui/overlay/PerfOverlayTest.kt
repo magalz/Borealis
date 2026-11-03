@@ -98,6 +98,39 @@ class PerfOverlayTest {
     }
 
     @Test
+    @Config(qualifiers = TV)
+    fun `detailed says Bluetooth next to the audio delay while the audio goes out over Bluetooth`() {
+        val fixture = layer(FormFactor.Tv, OverlayMode.DETAILED, withPerf = false)
+        val plain = aPerf().copy(audioDelayMs = 235)
+
+        fixture.perf = plain
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Audio delay 235 ms").assertIsDisplayed()
+
+        fixture.perf = plain.copy(audioBluetooth = true)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Audio delay 235 ms (Bluetooth)").assertIsDisplayed()
+        composeRule.onNodeWithText("Audio delay 235 ms").assertDoesNotExist()
+
+        fixture.perf = plain
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Audio delay 235 ms").assertIsDisplayed()
+        composeRule.onNodeWithText("Audio delay 235 ms (Bluetooth)").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `compact does not say Bluetooth`() {
+        val fixture = layer(FormFactor.Phone, OverlayMode.COMPACT)
+
+        fixture.perf = aPerf().copy(audioDelayMs = 235, audioBluetooth = true)
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(compact).assertIsDisplayed()
+        composeRule.onNodeWithText("Bluetooth", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     @Config(qualifiers = PHONE)
     fun `the overlay follows the mode the user picks`() {
         val fixture = layer(FormFactor.Phone, OverlayMode.COMPACT)

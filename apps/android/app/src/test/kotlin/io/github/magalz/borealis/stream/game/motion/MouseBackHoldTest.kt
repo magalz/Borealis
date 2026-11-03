@@ -210,9 +210,15 @@ internal class MouseBackHoldTest : MotionTestBase() {
             .containsExactly(release(right), release(middle), release(forward))
             .inOrder()
         assertThat(panel()).isEqualTo(Panel.NONE)
-        // The activity forgot the buttons, so the next press of each is a press again.
+        // The activity forgot the buttons, so the next press of each is a press again (Back does
+        // not join Forward here: it would be a chord).
         forgetSent()
-        mouse(MotionEvent.ACTION_DOWN, held or MotionEvent.BUTTON_FORWARD)
+        mouse(
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.BUTTON_SECONDARY or
+                MotionEvent.BUTTON_TERTIARY or
+                MotionEvent.BUTTON_FORWARD,
+        )
         idle(SETTLE_MS)
         assertThat(buttonsSent())
             .containsExactly(press(right), press(middle), press(forward))
@@ -622,12 +628,12 @@ internal class MouseBackHoldTest : MotionTestBase() {
     }
 
     @Test
-    fun `without the navigation buttons Back and then Forward, pulses a moment apart, open the menu and neither reaches the host`() {
+    fun `without the navigation buttons Back and then Forward keys open the menu and send nothing`() {
         keysOpenTheMenu(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_FORWARD)
     }
 
     @Test
-    fun `without the navigation buttons Forward and then Back, pulses a moment apart, open the menu and neither reaches the host`() {
+    fun `without the navigation buttons Forward and then Back keys open the menu and send nothing`() {
         keysOpenTheMenu(KeyEvent.KEYCODE_FORWARD, KeyEvent.KEYCODE_BACK)
     }
 

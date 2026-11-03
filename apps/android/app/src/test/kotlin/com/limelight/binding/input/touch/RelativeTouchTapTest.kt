@@ -18,6 +18,22 @@ import org.robolectric.annotation.Config
 class RelativeTouchTapTest {
     private val rig = TouchRig()
 
+    // The two contexts of the trackpad as TouchContexts builds them: they share one two-finger tap.
+    private fun twoContexts(): Pair<RelativeTouchContext, RelativeTouchContext> {
+        val twoFingerTap = TwoFingerTap()
+        fun context(actionIndex: Int) =
+            RelativeTouchContext(
+                rig.connection,
+                actionIndex,
+                TouchRig.HD_WIDTH,
+                TouchRig.HD_HEIGHT,
+                rig.view,
+                rig.prefs,
+                twoFingerTap,
+            )
+        return context(0) to context(1)
+    }
+
     @Test
     fun `a quick touch without a move is a left click released 100 ms later`() {
         val context = rig.relative()
@@ -193,8 +209,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a tap of the second finger is a right click, and the first finger then clicks nothing`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         second.touchUpEvent(300, 100, T0 + 120)
@@ -214,8 +229,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a two-finger tap whose first finger lifts first is one right click`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         liftFirstOfTwoFingers(first, second, T0 + 100)
@@ -233,23 +247,108 @@ class RelativeTouchTapTest {
         assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
     }
 
+    // The tap time of a two-finger tap runs from the second finger's down (twoFingers lands it at
+    // T0 + 10), whichever finger lifts first.
+
     @Test
-    fun `a two-finger tap that lasts more than 250 ms from the first touch is no click`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+    fun `a two-finger tap that lasts more than 250 ms from the second touch is no click`() {
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         liftFirstOfTwoFingers(first, second, T0 + 100)
-        first.touchUpEvent(300, 100, T0 + 251)
+        first.touchUpEvent(300, 100, T0 + 261)
         rig.advance(2000)
 
         assertThat(rig.sent()).isEmpty()
     }
 
     @Test
+    fun `a second finger that lifts first more than 250 ms after landing is no click`() {
+        val (first, second) = twoContexts()
+        twoFingers(first, second)
+
+        second.touchUpEvent(300, 100, T0 + 261)
+        setPointerCount(1, first, second)
+        first.touchUpEvent(100, 100, T0 + 270)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).isEmpty()
+    }
+
+    @Test
+    fun `a two-finger tap that lasts 250 ms from the second touch is a right click`() {
+        val (first, second) = twoContexts()
+        twoFingers(first, second)
+
+        liftFirstOfTwoFingers(first, second, T0 + 100)
+        first.touchUpEvent(300, 100, T0 + 260)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
+    fun `a second finger that lifts first 250 ms after landing is a right click`() {
+        val (first, second) = twoContexts()
+        twoFingers(first, second)
+
+        second.touchUpEvent(300, 100, T0 + 260)
+        setPointerCount(1, first, second)
+        first.touchUpEvent(100, 100, T0 + 270)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
+    fun `a first finger that rested for a second before the second one tapped does not stop the right click`() {
+        val (first, second) = twoContexts()
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 1000, true)).isTrue()
+
+        liftFirstOfTwoFingers(first, second, T0 + 1100)
+        first.touchUpEvent(300, 100, T0 + 1120)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    // A second finger that lands 150 ms after the first and lifts 120 ms after landing is as good a
+    // tap whichever finger lifts first: the window is the same in both orders.
+
+    @Test
+    fun `a second finger that lands 150 ms late and lifts first is a right click`() {
+        val (first, second) = twoContexts()
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 150, true)).isTrue()
+
+        second.touchUpEvent(300, 100, T0 + 270)
+        setPointerCount(1, first, second)
+        first.touchUpEvent(100, 100, T0 + 280)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
+    fun `a second finger that lands 150 ms late and lifts last is a right click`() {
+        val (first, second) = twoContexts()
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 150, true)).isTrue()
+
+        liftFirstOfTwoFingers(first, second, T0 + 270)
+        first.touchUpEvent(300, 100, T0 + 280)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
     fun `a two-finger tap whose last finger moves away before it lifts is no click`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         liftFirstOfTwoFingers(first, second, T0 + 100)
@@ -262,8 +361,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a two-finger tap whose first finger moved before it lifted is no click`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         first.moveTo(125, 100)
@@ -276,8 +374,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a cancel after the first finger lifted ends the two-finger tap`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         liftFirstOfTwoFingers(first, second, T0 + 100)
@@ -290,8 +387,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a new touch after the first finger lifted starts over as a left click`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
         liftFirstOfTwoFingers(first, second, T0 + 100)
         setPointerCount(0, first, second)
@@ -304,8 +400,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a third finger that taps after the first finger lifted is the only right click`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
         liftFirstOfTwoFingers(first, second, T0 + 20)
 
@@ -323,8 +418,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a second finger that moves 24 px in small steps still taps`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         second.moveTo(310, 100)
@@ -337,8 +431,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a second finger that moves 25 px in small steps along x is no tap`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         second.moveTo(310, 100)
@@ -352,8 +445,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `a second finger that moves 25 px in small steps along y is no tap`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         second.moveTo(300, 110)
@@ -367,8 +459,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `the second finger starts no drag and the first one does not drag once a second finger is down`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         first.start(100, 100)
         rig.advance(300)
         setPointerCount(2, first, second)
@@ -381,8 +472,7 @@ class RelativeTouchTapTest {
 
     @Test
     fun `the second finger does not move the pointer`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
+        val (first, second) = twoContexts()
         twoFingers(first, second)
 
         assertThat(second.touchMoveEvent(300, 105, T0 + 20)).isTrue()

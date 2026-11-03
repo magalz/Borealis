@@ -44,12 +44,16 @@ import io.github.magalz.borealis.designsystem.theme.BorealisDimens
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
+import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 import io.github.magalz.borealis.settings.R
 import java.io.File
 import kotlinx.coroutines.launch
 
 private val ROW_INSET = 16.dp
 private val SNACKBAR_PADDING = 16.dp
+
+// The share of the bar that the still indicator fills, for a wait of unknown length.
+private const val STILL_PROGRESS = 0.5f
 
 /**
  * The Privacy and diagnostics rows and their dialogs, for the "Privacy and diagnostics" group of
@@ -252,10 +256,10 @@ private fun rememberAuditRowFocus(onOpenAudit: () -> Unit): AuditRowFocus {
 }
 
 /**
- * The export row. While the bundle is built its summary says so and a progress bar shows under it.
- * The row stays enabled so that it keeps the focus of a D-pad (a disabled row is a different
- * element); the ViewModel ignores a second request. The bar is hidden from a screen reader, which
- * reads the summary once.
+ * The export row. While the bundle is built its summary says so and a progress bar shows under it,
+ * still when animations are removed. The row stays enabled so that it keeps the focus of a D-pad (a
+ * disabled row is a different element); the ViewModel ignores a second request. The bar is hidden
+ * from a screen reader, which reads the summary once.
  */
 @Composable
 private fun ExportRow(exporting: Boolean, television: Boolean, onExport: () -> Unit) {
@@ -274,10 +278,19 @@ private fun ExportRow(exporting: Boolean, television: Boolean, onExport: () -> U
                 ),
         )
         if (exporting) {
-            LinearProgressIndicator(
-                Modifier.fillMaxWidth().padding(horizontal = ROW_INSET).clearAndSetSemantics {},
-                color = LocalBorealisColors.current.accent,
-            )
+            val modifier =
+                Modifier.fillMaxWidth().padding(horizontal = ROW_INSET).clearAndSetSemantics {}
+            val color = LocalBorealisColors.current.accent
+            if (rememberAnimationsRemoved()) {
+                LinearProgressIndicator(
+                    { STILL_PROGRESS },
+                    modifier,
+                    color = color,
+                    drawStopIndicator = {},
+                )
+            } else {
+                LinearProgressIndicator(modifier, color = color)
+            }
         }
     }
 }

@@ -84,7 +84,7 @@
     <string name="settings_audio_channels_title">Channels</string>
     <string name="settings_host_audio_title">Play audio on the PC</string>
     <string name="settings_audio_fx_title">Audio effects</string>
-    <string name="settings_audio_fx_summary">Let system audio effects work while you stream. This can add latency.</string>
+    <string name="settings_audio_fx_summary">Lets the device\'s equalizer and sound effects change the stream\'s sound. Uses a slower audio path, which adds latency.</string>
 
     <!-- Rows: Advanced -->
     <string name="settings_sops_title">Optimise game settings</string>

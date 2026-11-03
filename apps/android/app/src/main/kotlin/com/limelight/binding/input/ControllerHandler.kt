@@ -248,12 +248,9 @@ class ControllerHandler(
 
         inputDeviceContexts.forEachValue { deviceContext -> deviceContext.destroy() }
 
+        val zeroingStarted = SystemClock.uptimeMillis()
         usbDeviceContexts.forEachValue { deviceContext ->
-            // The host may never send a zero for the motors at the end of the stream
-            deviceContext.device?.let {
-                it.rumble(0, 0)
-                it.rumbleTriggers(0, 0)
-            }
+            deviceContext.device?.let { zeroMotors(it, zeroingStarted) }
             deviceContext.destroy()
         }
 
@@ -261,6 +258,25 @@ class ControllerHandler(
         defaultContext.destroy()
 
         deviceVibrator.cancel()
+    }
+
+    // The host may never send a zero for the motors at the end of the stream. A write to a pad that
+    // does not answer blocks for the timeout of the driver and only logs, and the stop runs on the
+    // main thread: a pad whose motor write took the better part of that gets no trigger write, and
+    // no pad is started once the zeroing has used up its time. The Xbox drivers zero the motors
+    // again when the USB driver service stops them, which the unbind of the activity does.
+    private fun zeroMotors(pad: AbstractController, zeroingStarted: Long) {
+        val started = SystemClock.uptimeMillis()
+        if (started - zeroingStarted >= USB_ZERO_BUDGET_MS) {
+            LimeLog.warning("USB pad ${pad.controllerId} is left to its driver: no time to zero it")
+            return
+        }
+        pad.rumble(0, 0)
+        if (SystemClock.uptimeMillis() - started >= USB_WRITE_STUCK_MS) {
+            LimeLog.warning("USB pad ${pad.controllerId} did not answer the zero of its motors")
+        } else {
+            pad.rumbleTriggers(0, 0)
+        }
     }
 
     fun destroy() {
@@ -4018,6 +4034,18 @@ class ControllerHandler(
         private const val MAX_GAMEPADS: Short = 16 // Limited by bits in activeGamepadMask
 
         private const val BATTERY_RECHECK_INTERVAL_MS = 120 * 1000
+
+        // The bulk writes of the USB drivers give up after 100 ms
+        private const val USB_WRITE_TIMEOUT_MS = 100L
+
+        // A write that took this long got no answer: one that times out can come back some
+        // milliseconds early, and a pad that answers takes a few
+        private const val USB_WRITE_STUCK_MS = USB_WRITE_TIMEOUT_MS / 2
+
+        // The stop starts no USB pad once its zeroing has taken this long: the time of two writes
+        // that time out, so a pad that does not answer does not take the pads after it with it. The
+        // pad started last still makes its writes: the stop takes this time and that pad's.
+        private const val USB_ZERO_BUDGET_MS = 2 * USB_WRITE_TIMEOUT_MS
 
         // Not a BatteryState status: marks a pad that reported that it has no battery
         private const val BATTERY_STATUS_NOT_PRESENT = -1

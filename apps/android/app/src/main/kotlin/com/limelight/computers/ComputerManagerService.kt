@@ -52,7 +52,11 @@ class ComputerManagerService : Service() {
     private val pollingTuples = LinkedList<PollingTuple>()
     private var listener: ComputerManagerListener? = null
     private val activePolls = AtomicInteger(0)
-    private var pollingActive = false
+    @Volatile private var pollingActive = false
+
+    // The stop of discovery that ends polling, and the restart that follows a removal, never run
+    // together: a restart that read pollingActive before the stop would start discovery after it.
+    private val discoveryLock = Any()
     private val defaultNetworkLock: Lock = ReentrantLock()
 
     // The adds of the hosts that mDNS finds run one at a time on this executor, in the order they
@@ -354,11 +358,11 @@ class ComputerManagerService : Service() {
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        // Stop mDNS autodiscovery
-        discoveryBinder?.stopDiscovery()
-
-        // Stop polling
-        pollingActive = false
+        // Stop polling, and mDNS autodiscovery with it
+        synchronized(discoveryLock) {
+            pollingActive = false
+            discoveryBinder?.stopDiscovery()
+        }
         synchronized(pollingTuples) {
             for (tuple in pollingTuples) {
                 val polling = tuple.thread
@@ -611,13 +615,19 @@ class ComputerManagerService : Service() {
             }
 
             // Discovery announces a computer once: let it announce this one again
-            discoveryBinder?.forget(computer)
-
-            // The platform reports a found service once, so while polling discovery starts over
             val discovery = discoveryBinder
-            if (pollingActive && discovery != null) {
-                discovery.stopDiscovery()
-                discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
+            discovery?.forget(computer)
+
+            // The platform reports a found service once, so while polling discovery starts over.
+            // Under the lock of the unbind, so that the restart is never after the stop that ends
+            // polling.
+            if (discovery != null) {
+                synchronized(discoveryLock) {
+                    if (pollingActive) {
+                        discovery.stopDiscovery()
+                        discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
+                    }
+                }
             }
         } finally {
             releaseLocalDatabaseReference()

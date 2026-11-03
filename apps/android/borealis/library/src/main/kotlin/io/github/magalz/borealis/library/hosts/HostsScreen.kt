@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -80,8 +81,9 @@ private val LOADING_SIZE = 64.dp
  *
  * The options (Details, Wake, Forget) and the Forget confirmation belong to the screen: it keeps
  * which host they are open for and calls [onDetails], [onWake] or [onForget] when the user chooses.
- * The details are shown while [HostsUiState.details] is set. [snackbarHostState] shows the messages
- * the route turns the ViewModel's effects into.
+ * The details are shown while [HostsUiState.details] is set. When the last of these windows closes,
+ * the card that opened the options has the focus again ([RestoreOpenerFocus]). [snackbarHostState]
+ * shows the messages the route turns the ViewModel's effects into.
  *
  * **Back.** The screen intercepts no Back, so Back still leaves the activity from the home screen:
  * a TV remote's Back must return to the launcher, and on a phone it is the system gesture. What it
@@ -107,13 +109,25 @@ fun HostsScreen(
     BorealisTheme(formFactor) {
         var optionsHostId by rememberSaveable { mutableStateOf<String?>(null) }
         var forgetHostId by rememberSaveable { mutableStateOf<String?>(null) }
+        var openerId by rememberSaveable { mutableStateOf<String?>(null) }
+        val openerFocus = remember { FocusRequester() }
         val focusedCard = rememberSaveable(saver = FocusedCardSaver) { FocusedCard() }
+        val options =
+            OptionsOpener(
+                // A phone starts with no focus, so there is nothing to give back.
+                hostId = openerId.takeIf { formFactor != FormFactor.Phone },
+                focus = openerFocus,
+                open = {
+                    optionsHostId = it
+                    openerId = it
+                },
+            )
         val handlers =
             HostsHandlers(
                 onHostSelected = onHostSelected,
                 onContinue = onContinue,
                 onWake = onWake,
-                onOptions = { optionsHostId = it },
+                options = options,
                 onAddHost = onAddHost,
                 // A phone starts with no focus, so nothing would read what it wrote.
                 focusedCard = focusedCard.takeIf { formFactor != FormFactor.Phone },
@@ -136,6 +150,12 @@ fun HostsScreen(
             onWake = onWake,
             onForget = onForget,
             onDetailsDismissed = onDetailsDismissed,
+        )
+        RestoreOpenerFocus(
+            open = optionsHostId != null || forgetHostId != null || state.details != null,
+            openerId = options.hostId,
+            hosts = state.items,
+            focus = openerFocus,
         )
     }
 }
@@ -171,12 +191,23 @@ private fun HostsLayout(
     }
 }
 
+/**
+ * What a card does to open the options of its host ([open]), and what gives the focus back to it
+ * when they are gone: [hostId] is the host whose card opened them last (null on a phone), and
+ * [focus] the requester of that card.
+ */
+private class OptionsOpener(
+    val hostId: String?,
+    val focus: FocusRequester,
+    val open: (String) -> Unit,
+)
+
 /** What the cards and the empty state do, as one argument for the layouts. */
 private class HostsHandlers(
     val onHostSelected: (String) -> Unit,
     val onContinue: (String) -> Unit,
     val onWake: (String) -> Unit,
-    val onOptions: (String) -> Unit,
+    val options: OptionsOpener,
     val onAddHost: () -> Unit,
     /** Null on a phone, which starts with no focus. */
     val focusedCard: FocusedCard?,
@@ -360,7 +391,17 @@ private fun HostItem(
                 handlers.onHostSelected(item.id)
             }
         },
-        modifier = modifier.keepsFocusIn(handlers.focusedCard, key).testTag(key),
+        modifier =
+            modifier
+                .then(
+                    if (item.id == handlers.options.hostId) {
+                        Modifier.focusRequester(handlers.options.focus)
+                    } else {
+                        Modifier
+                    }
+                )
+                .keepsFocusIn(handlers.focusedCard, key)
+                .testTag(key),
         detail = item.detailLine(),
         tags = item.tags.map { stringResource(it.labelRes()) },
         runningApp = item.runningApp?.let { it.name ?: unnamedApp },
@@ -368,7 +409,7 @@ private fun HostItem(
         onClickLabel = item.action.labelRes()?.let { stringResource(it) },
         onOptions = {
             handlers.remember(key)
-            handlers.onOptions(item.id)
+            handlers.options.open(item.id)
         },
         optionsLabel = optionsLabel,
     )

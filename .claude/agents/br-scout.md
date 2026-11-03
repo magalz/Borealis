@@ -20,14 +20,13 @@ Start by loading the `memtrace-skills:memtrace-first` skill (Skill tool) when it
    - hidden coupling: `get_cochange_context`.
 
    On an error, `busy` or an empty answer, retry once narrower (a `node_id` or a `file_path`) before moving on. Pass `repo_id: Borealis` and `branch: "main"` (the label of the orchestrator's checkout; quality tools match labels exactly); dead-code and duplicate results are leads to check by hand, not findings. When the question is about a task worktree the orchestrator indexed, also pass `worktree: "Borealis:<worktree folder>"` (from `list_worktrees`) to `find_code`. Memtrace indexes the orchestrator's checkout: map returned paths to the worktree you were given before reading them.
-2. **Entire Brain as the fallback**: when Memtrace is unavailable or answers wrong, ask Brain if it can answer (`entire brain inspect …`, see `.entire/agent-guide.md`). For why code is the way it is, or what was decided or tried before, use `entire brain recall`.
-3. **Targeted reads next**: Grep/Glob with narrow patterns, then Read only the line ranges you need.
+2. **Targeted reads next**: Grep/Glob with narrow patterns, then Read only the line ranges you need.
 
-If Memtrace or Brain fails to connect or returns errors, say so in your report and continue with the next option.
+If Memtrace fails to connect or returns errors, say so in your report and continue with the next option.
 
 ## Report (your last message)
 
 - **Answer:** the direct answer in two or three sentences.
 - **Findings:** a list of `path:line` references, each with one line explaining its relevance. Quote at most a few lines of code; never paste whole files.
 - **Risks or unknowns:** anything you could not confirm.
-- **Tools used:** the Memtrace queries you ran, which of Memtrace, Brain and Grep you relied on, and any that failed or returned nothing.
+- **Tools used:** the Memtrace queries you ran, whether you relied on Memtrace or Grep, and any that failed or returned nothing.

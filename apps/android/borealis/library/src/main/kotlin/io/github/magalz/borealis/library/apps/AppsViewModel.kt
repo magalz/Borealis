@@ -12,7 +12,6 @@ import io.github.magalz.borealis.library.domain.HostShortcuts
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.StreamRequest
-import io.github.magalz.borealis.library.shell.ResumeChoice
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +33,6 @@ constructor(
     @Assisted private val hostId: String,
     private val repository: AppRepository,
     private val shortcuts: HostShortcuts,
-    private val resumeChoice: ResumeChoice,
 ) : ViewModel() {
     private val showHidden = MutableStateFlow(false)
     private val actionsAppId = MutableStateFlow<Int?>(null)
@@ -83,11 +81,9 @@ constructor(
      * never the user's choice to resume: a shortcut, a TV program and Try again on the stream error
      * screen all ask the host to start the app, and the host does not tell whose session runs, so
      * the stream asks when the app runs. Only a tap on the running app or its Resume is that
-     * choice, see [onAppSelected]. What Try again left in [resumeChoice] ends here whatever comes
-     * of the request.
+     * choice, see [onAppSelected].
      */
     fun onLaunchRequested(appId: Int) {
-        resumeChoice.clear()
         if (closed) return
         val snapshot = latest ?: return
         if (snapshot.host?.reachability == Reachability.UNKNOWN) {

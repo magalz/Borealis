@@ -24,6 +24,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** The length of the sample pulse that a vibration option plays, in milliseconds. */
+private const val SAMPLE_PULSE_MS = 60L
+
 /**
  * The state and the actions of the settings screen (UC-009). Every change is stored at once through
  * the [SettingsRepository]; the rows that the device cannot use are left out, and the rows that
@@ -74,10 +77,11 @@ internal constructor(
         viewModelScope.launch { restoreOfferedChoices() }
     }
 
-    /** Stores [checked] for the switch [item]. */
+    /** Stores [checked] for the switch [item]. Turning a vibration on plays a sample pulse. */
     fun onSwitchChanged(item: SettingsItem, checked: Boolean) {
         val setting = item.setting as? BooleanSetting
         if (setting == null || !isChangeable(item)) return
+        if (checked) playSampleOf(item)
         viewModelScope.launch {
             repository.set(setting, checked)
             // Turning Unlock all frame rates off can leave 90 or 120 fps stored but no longer
@@ -140,6 +144,23 @@ internal constructor(
     fun refreshDeviceFacts() {
         facts.value = deviceFactsSource.facts()
         viewModelScope.launch { restoreOfferedChoices() }
+    }
+
+    /**
+     * Plays a pulse so that the user can feel the vibration that the switch [item] turns on: at the
+     * strength stored for the vibration fallback, which the stream scales by, and at the default
+     * strength for the vibration of the on-screen controls, which the stream does not scale.
+     * Another switch plays nothing.
+     */
+    private fun playSampleOf(item: SettingsItem) {
+        val strength =
+            when (item) {
+                SettingsItem.VIBRATE_FALLBACK ->
+                    uiState.value.snapshot[Settings.VIBRATE_FALLBACK_STRENGTH]
+                SettingsItem.OSC_VIBRATE -> Settings.VIBRATE_FALLBACK_STRENGTH.default
+                else -> return
+            }
+        vibrationSample.play(SAMPLE_PULSE_MS, strength)
     }
 
     private fun isChangeable(item: SettingsItem): Boolean =

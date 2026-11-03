@@ -146,16 +146,14 @@ class LibraryActivityRequestTest {
     }
 
     @Test
-    fun `a Launch request after Try again resumes the app that runs, as the user's choice`() {
+    fun `a Launch request after Try again for the app that runs is not the user's choice`() {
         apps.emit(deskApps(running = RunningApp(1, "Hades II")))
         resumeChoice.remember("desk", 1)
 
         launch(LibraryLaunchRequest.Launch("desk", 1))
 
         assertThat(streams.requests)
-            .containsExactly(
-                StreamRequest("desk", 1, "Hades II", hdrSupported = false, resumeChosen = true)
-            )
+            .containsExactly(StreamRequest("desk", 1, "Hades II", hdrSupported = false))
     }
 
     @Test

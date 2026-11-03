@@ -29,8 +29,8 @@ import org.robolectric.annotation.Config
  * it hands out, which agent it runs for each Android version, and what reaches the listener that
  * the client bound. The platform is Robolectric's `NsdManager`, which confirms a discovery at once.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the ones
- * about forgetting a host (Sprint 17b, BORE-6).
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
+ * ones about forgetting a host (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class DiscoveryServiceCharacterizationTest {

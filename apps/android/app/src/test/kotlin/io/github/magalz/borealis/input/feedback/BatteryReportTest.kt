@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.input.feedback
 
 import android.hardware.BatteryState
+import android.view.KeyEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import org.junit.Test
@@ -12,9 +13,12 @@ import org.robolectric.annotation.Config
  * The battery of a pad, as the handler's own thread reports it to the host from Android 12: once
  * when the pad arrives, then every 120 seconds, and only when the status or the capacity changed
  * since the last report. The status becomes the host's battery state, and the capacity its
- * percentage from 0 to 100, rounded; 255 means unknown. An external pad that has no battery says so
- * once, unless another external pad shares its number: the host keeps one battery for the number,
- * and the pad that has one owns it. A pad that is not external claims no battery, and says nothing.
+ * percentage from 0 to 100, rounded; 255 means unknown. The host keeps one battery for each
+ * controller number, whichever pad on it reported. An external pad that has no battery says so once
+ * for its number, unless another external pad on it has reported a battery: that pad owns it, and
+ * the one without speaks only when it is alone. A pad that takes the number of a pad that said none
+ * is silent, since the host still holds it. A pad that is not external claims no battery, and says
+ * nothing.
  */
 @RunWith(RobolectricTestRunner::class)
 class BatteryReportTest : FeedbackTestBase() {
@@ -42,6 +46,17 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     private fun events() = batteryEvents.toList()
+
+    private fun connect(rig: FeedbackRig, battery: Any, id: Int) =
+        rig.connectPad(id = id, features = DeviceFeatures(batteryState = battery))
+
+    /** The pads press a button before the handler's thread polls the battery of any of them. */
+    private fun wakeTogether(rig: FeedbackRig, vararg pads: Pad) {
+        val release = rig.holdBackground()
+        pads.forEach { rig.press(it, KeyEvent.KEYCODE_BUTTON_A) }
+        release()
+        rig.awaitBackground()
+    }
 
     private fun poll(rig: FeedbackRig, millis: Long = POLL_MS) {
         rig.advanceBackgroundBy(millis)
@@ -228,6 +243,37 @@ class BatteryReportTest : FeedbackTestBase() {
 
         assertThat(events().last())
             .isEqualTo(BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50))
+    }
+
+    @Test
+    fun `two pads without a battery that share a number from before the first poll say so once`() {
+        val rig = rig()
+        val first = connect(rig, battery(present = false), id = 5)
+        val second = connect(rig, battery(present = false), id = 6)
+
+        wakeTogether(rig, first, second)
+        poll(rig)
+
+        assertThat(events()).containsExactly(NO_BATTERY)
+    }
+
+    @Test
+    fun `a pad with a battery has the last word against a pad without one from before the first poll`() {
+        for (batteryFirst in listOf(true, false)) {
+            val rig = rig()
+            val withBattery = connect(rig, battery(), id = 5)
+            val without = connect(rig, battery(present = false), id = 6)
+
+            if (batteryFirst) {
+                wakeTogether(rig, withBattery, without)
+            } else {
+                wakeTogether(rig, without, withBattery)
+            }
+            poll(rig)
+            poll(rig)
+
+            assertThat(events().last()).isEqualTo(HALF_FULL)
+        }
     }
 
     @Test

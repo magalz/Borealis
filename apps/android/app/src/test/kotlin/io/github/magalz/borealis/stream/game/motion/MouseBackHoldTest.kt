@@ -49,15 +49,18 @@ internal class MouseBackHoldTest : MotionTestBase() {
     /** A pulse, as the side buttons of the Logi M650 send it. */
     private fun pulse(buttons: Int) = tap(buttons, PULSE_MS)
 
-    /** The side key of the mouse [code] goes down; the result is the time when it did. */
+    /**
+     * The side key of the mouse [code] goes down, the way the window hands it to the activity; the
+     * result is the time when it did.
+     */
     private fun keyDown(code: Int): Long {
         val at = SystemClock.uptimeMillis()
-        rig.game.handleKeyDown(mouseSideKey(KeyEvent.ACTION_DOWN, code, at))
+        rig.game.dispatchKeyEvent(mouseSideKey(KeyEvent.ACTION_DOWN, code, at))
         return at
     }
 
     private fun keyUp(code: Int, downTime: Long) {
-        rig.game.handleKeyUp(mouseSideKey(KeyEvent.ACTION_UP, code, downTime))
+        rig.game.dispatchKeyEvent(mouseSideKey(KeyEvent.ACTION_UP, code, downTime))
     }
 
     /** The side key goes down, stays down for [millis] and comes up. */
@@ -280,6 +283,7 @@ internal class MouseBackHoldTest : MotionTestBase() {
         idle(1_000)
 
         assertThat(buttonsSent()).isEmpty()
+        assertThat(panel()).isEqualTo(Panel.MENU)
     }
 
     @Test
@@ -297,6 +301,7 @@ internal class MouseBackHoldTest : MotionTestBase() {
         idle(1_000)
 
         assertThat(buttonsSent()).isEmpty()
+        assertThat(panel()).isEqualTo(Panel.MENU)
     }
 
     @Test
@@ -309,6 +314,7 @@ internal class MouseBackHoldTest : MotionTestBase() {
         assertThat(panel()).isEqualTo(Panel.MENU)
         idle(1_000)
         assertThat(buttonsSent()).isEmpty()
+        assertThat(panel()).isEqualTo(Panel.MENU)
     }
 
     @Test
@@ -323,6 +329,7 @@ internal class MouseBackHoldTest : MotionTestBase() {
         assertThat(panel()).isEqualTo(Panel.MENU)
         idle(1_000)
         assertThat(buttonsSent()).isEmpty()
+        assertThat(panel()).isEqualTo(Panel.MENU)
     }
 
     @Test
@@ -356,6 +363,7 @@ internal class MouseBackHoldTest : MotionTestBase() {
         idle(2_000)
 
         assertThat(buttonsSent()).isEmpty()
+        assertThat(panel()).isEqualTo(Panel.MENU)
     }
 
     @Test
@@ -621,15 +629,33 @@ internal class MouseBackHoldTest : MotionTestBase() {
         val at = keyDown(second)
         assertThat(panel()).isEqualTo(Panel.MENU)
         idle(PULSE_MS)
+        // The key up comes to the open menu, and it does not close it.
         keyUp(second, at)
         idle(1_000)
 
         assertThat(buttonsSent()).isEmpty()
+        assertThat(panel()).isEqualTo(Panel.MENU)
     }
 
     @Test
     fun `without the navigation buttons Back and then Forward keys open the menu and send nothing`() {
         keysOpenTheMenu(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_FORWARD)
+    }
+
+    @Test
+    fun `without the navigation buttons a right button that the host has already is let go when Forward joins`() {
+        streaming()
+        forgetSent()
+
+        // This is the cost of a normal mouse, whose Back must not wait for the 250 ms: the host did
+        // get the right button, and the chord lets it go once, so the host keeps nothing down.
+        keyDown(KeyEvent.KEYCODE_BACK)
+        idle(100)
+        assertThat(buttonsSent()).containsExactly(press(right)).inOrder()
+        keyDown(KeyEvent.KEYCODE_FORWARD)
+
+        assertThat(panel()).isEqualTo(Panel.MENU)
+        assertThat(buttonsSent()).containsExactly(press(right), release(right)).inOrder()
     }
 
     @Test

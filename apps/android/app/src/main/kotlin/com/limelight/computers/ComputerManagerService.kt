@@ -609,6 +609,9 @@ class ComputerManagerService : Service() {
                     }
                 }
             }
+
+            // Discovery announces a computer once: let it announce this one again
+            discoveryBinder?.forget(computer)
         } finally {
             releaseLocalDatabaseReference()
         }

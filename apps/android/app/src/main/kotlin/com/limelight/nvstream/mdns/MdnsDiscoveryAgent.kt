@@ -51,6 +51,12 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
 
     fun getComputerSet(): List<MdnsComputer> = synchronized(computers) { ArrayList(computers) }
 
+    // The listener is told of a computer once, so a computer that is dropped here is told of again
+    // when it is next reported. The same lock as the adds guards the set.
+    fun forget(computer: MdnsComputer) {
+        synchronized(computers) { computers.remove(computer) }
+    }
+
     private fun getLocalAddress(addresses: Array<Inet6Address>): Inet6Address? {
         for (addr in addresses) {
             if (addr.isLinkLocalAddress || addr.isSiteLocalAddress) {

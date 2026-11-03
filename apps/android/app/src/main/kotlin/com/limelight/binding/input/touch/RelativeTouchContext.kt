@@ -13,7 +13,6 @@ import kotlin.math.sqrt
 private const val TAP_MOVEMENT_THRESHOLD = 20
 private const val TAP_DISTANCE_THRESHOLD = 25
 private const val TAP_TIME_THRESHOLD = 250
-private const val DRAG_TIME_THRESHOLD = 650L
 
 private const val SCROLL_SPEED_FACTOR = 5
 
@@ -54,22 +53,6 @@ class RelativeTouchContext(
         get() = xFactor != 0.0 && yFactor != 0.0
 
     private val handler = Handler(Looper.getMainLooper())
-
-    private val dragTimerRunnable = Runnable {
-        // Check if someone already set move
-        if (confirmedMove) {
-            return@Runnable
-        }
-
-        // The drag should only be processed for the primary finger
-        if (actionIndex != maxPointerCountInGesture - 1) {
-            return@Runnable
-        }
-
-        // We haven't been cancelled before the timer expired so begin dragging
-        confirmedDrag = true
-        conn.sendMouseButtonDown(getMouseButtonIndex())
-    }
 
     // A tap gives only the left or the right button (getMouseButtonIndex).
     private val leftButtonUpRunnable = Runnable {
@@ -139,11 +122,6 @@ class RelativeTouchContext(
             confirmedScroll = false
             twoFingerTapPending = false
             distanceMoved = 0.0
-
-            if (actionIndex == 0) {
-                // Start the timer for engaging a drag
-                startDragTimer()
-            }
         }
 
         return true
@@ -153,9 +131,6 @@ class RelativeTouchContext(
         if (cancelled) {
             return
         }
-
-        // Cancel the drag timer
-        cancelDragTimer()
 
         val buttonIndex = getMouseButtonIndex()
         val otherFingerLiftedFirst = twoFingerTapPending
@@ -190,25 +165,15 @@ class RelativeTouchContext(
         handler.postDelayed(buttonUpRunnable, BUTTON_RELEASE_DELAY)
     }
 
-    private fun startDragTimer() {
-        cancelDragTimer()
-        handler.postDelayed(dragTimerRunnable, DRAG_TIME_THRESHOLD)
-    }
-
-    private fun cancelDragTimer() {
-        handler.removeCallbacks(dragTimerRunnable)
-    }
-
     private fun checkForConfirmedMove(eventX: Int, eventY: Int) {
         // If we've already confirmed something, get out now
         if (confirmedMove || confirmedDrag) {
             return
         }
 
-        // If it leaves the tap bounds before the drag time expires, it's a move.
+        // If it leaves the tap bounds, it's a move.
         if (!isWithinTapBounds(eventX, eventY)) {
             confirmedMove = true
-            cancelDragTimer()
             return
         }
 
@@ -217,7 +182,6 @@ class RelativeTouchContext(
             sqrt((eventX - lastTouchX).toDouble().pow(2) + (eventY - lastTouchY).toDouble().pow(2))
         if (distanceMoved >= TAP_DISTANCE_THRESHOLD) {
             confirmedMove = true
-            cancelDragTimer()
         }
     }
 
@@ -297,9 +261,6 @@ class RelativeTouchContext(
     override fun cancelTouch() {
         cancelled = true
         twoFingerTapPending = false
-
-        // Cancel the drag timer
-        cancelDragTimer()
 
         // If it was a confirmed drag, we'll need to raise the button now
         if (confirmedDrag) {

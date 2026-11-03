@@ -61,7 +61,7 @@ class TouchContextsTest {
 
     @Test
     @Config(shadows = [ShadowRecordingBridge::class])
-    fun `the trackpad contexts share the movement of the fingers, so a second finger that slid before the first one lifted is no click`() {
+    fun `the trackpad contexts share the movement of both fingers, so a second finger that slid is no click`() {
         val rig = TouchRig()
         val (first, second) =
             TouchContexts.build(TouchMode.TRACKPAD, rig.connection, rig.view, rig.prefs)!!.map {

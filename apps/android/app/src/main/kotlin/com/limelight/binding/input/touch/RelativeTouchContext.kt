@@ -22,21 +22,30 @@ private const val BUTTON_RELEASE_DELAY = 100L
 /**
  * What the two touch contexts of the trackpad share about a two-finger tap, which neither sees
  * alone: when the first finger lifts first, its context decides at the last lift and never sees the
- * second finger go down. The tap time runs from the second finger's down in both lift orders.
- * `TouchContexts` builds one for the contexts of a stream.
+ * second finger go down or slide, and the context of the second finger never sees the first one
+ * slide. The tap time runs from the second finger's down in both lift orders, and a move of either
+ * finger past the tap distance since then is no tap. `TouchContexts` builds one for the contexts of
+ * a stream.
  */
 class TwoFingerTap {
     private var secondFingerDownTime: Long? = null
+    private var moved = false
 
-    /** The second finger went down at [eventTime]: the tap time of the two fingers starts. */
+    /** The second finger went down at [eventTime]: the tap of the two fingers starts. */
     fun secondFingerDown(eventTime: Long) {
         secondFingerDownTime = eventTime
+        moved = false
     }
 
-    /** Whether [eventTime] is still within the tap time of the second finger's down. */
-    fun isWithinTapTime(eventTime: Long): Boolean {
+    /** A finger moved past the tap distance: the two fingers are no tap, whichever lifts first. */
+    fun fingerMoved() {
+        moved = true
+    }
+
+    /** Whether a lift at [eventTime] ends a tap of the two fingers: in time, no finger moved. */
+    fun isTapAt(eventTime: Long): Boolean {
         val downTime = secondFingerDownTime ?: return false
-        return eventTime - downTime <= TAP_TIME_THRESHOLD
+        return !moved && eventTime - downTime <= TAP_TIME_THRESHOLD
     }
 }
 
@@ -51,7 +60,7 @@ class RelativeTouchContext(
     private val referenceHeight: Int,
     private val targetView: View,
     private val prefConfig: PreferenceConfiguration,
-    private val twoFingerTap: TwoFingerTap = TwoFingerTap(),
+    private val twoFingerTap: TwoFingerTap,
 ) : TouchContext {
     private var lastTouchX = 0
     private var lastTouchY = 0
@@ -126,9 +135,10 @@ class RelativeTouchContext(
         isTapMotion() && eventTime - originalTouchTime <= TAP_TIME_THRESHOLD
 
     // The touch of a finger of two, ended at eventTime, is a tap of the two fingers: it runs from
-    // the second finger's down, whichever finger lifts first (twoFingerTap).
+    // the second finger's down, whichever finger lifts first, and neither finger moved past the tap
+    // distance (twoFingerTap).
     private fun isTwoFingerTapTouch(eventTime: Long): Boolean =
-        isTapMotion() && twoFingerTap.isWithinTapTime(eventTime)
+        isTapMotion() && twoFingerTap.isTapAt(eventTime)
 
     private fun isTap(eventTime: Long): Boolean {
         // If this input wasn't the last finger down, do not report
@@ -268,6 +278,7 @@ class RelativeTouchContext(
             startDrag()
         } else {
             confirmedMove = true
+            twoFingerTap.fingerMoved()
         }
     }
 

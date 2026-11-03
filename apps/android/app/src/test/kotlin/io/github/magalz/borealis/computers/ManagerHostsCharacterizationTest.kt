@@ -1,12 +1,18 @@
 package io.github.magalz.borealis.computers
 
 import com.google.common.truth.Truth.assertThat
+import com.limelight.computers.ComputerManagerService
+import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager
+import com.limelight.nvstream.mdns.MdnsComputer
+import com.limelight.nvstream.mdns.MdnsDiscoveryAgent
+import com.limelight.nvstream.mdns.MdnsDiscoveryListener
 import io.github.magalz.borealis.crypto.TestIdentities
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.testing.LimeLogCapture
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -24,7 +30,8 @@ import org.robolectric.RobolectricTestRunner
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
  * about a host that is handed over as online and does not answer (S12-16), which pins the fixed
  * behaviour: a host is added when a poll answered, not because it was handed over as online, and
- * the one about a removed host that mDNS announces again (Sprint 17b, BORE-6).
+ * the ones about a removed host that mDNS announces again, which restart discovery while polling
+ * (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerHostsCharacterizationTest {
@@ -315,6 +322,7 @@ class ManagerHostsCharacterizationTest {
         val host = reachable(UUID_1)
         rig.start()
         rig.binder.startPolling(Updates())
+        val before = rig.discoveries().single()
         rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
         rig.awaitAdds()
         val listed = checkNotNull(rig.binder.getComputer(UUID_1))
@@ -322,10 +330,53 @@ class ManagerHostsCharacterizationTest {
         rig.binder.removeComputer(listed)
 
         assertThat(rig.binder.getComputer(UUID_1)).isNull()
+        // The platform reports a found service once, so removing the host starts discovery anew.
+        assertThat(rig.discoveries().single()).isNotSameInstanceAs(before)
         rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
         rig.awaitAdds()
         assertThat(rig.binder.getComputer(UUID_1)).isNotNull()
         assertThat(rig.savedRows().map { it.uuid }).containsExactly(UUID_1)
+    }
+
+    @Test
+    fun `removing a host while polling restarts discovery with the period that polling used`() {
+        val host = reachable(UUID_1)
+        rig.seed(saved(UUID_1, "ONE", manual = host.address))
+        rig.start()
+        val discovery = recordDiscovery()
+        rig.binder.startPolling(Updates())
+        val started = discovery.calls.single()
+
+        rig.binder.removeComputer(saved(UUID_1))
+
+        assertThat(discovery.calls).containsExactly(started, "stop", started).inOrder()
+    }
+
+    @Test
+    fun `removing a host before polling started starts no discovery`() {
+        val host = reachable(UUID_1)
+        rig.seed(saved(UUID_1, "ONE", manual = host.address))
+        rig.start()
+        val discovery = recordDiscovery()
+
+        rig.binder.removeComputer(saved(UUID_1))
+
+        assertThat(discovery.calls).isEmpty()
+    }
+
+    @Test
+    fun `removing a host after polling stopped starts no discovery`() {
+        val host = reachable(UUID_1)
+        rig.seed(saved(UUID_1, "ONE", manual = host.address))
+        rig.start()
+        val discovery = recordDiscovery()
+        rig.binder.startPolling(Updates())
+        val started = discovery.calls.single()
+        rig.binder.stopPolling()
+
+        rig.binder.removeComputer(saved(UUID_1))
+
+        assertThat(discovery.calls).containsExactly(started, "stop").inOrder()
     }
 
     @Test
@@ -402,6 +453,45 @@ class ManagerHostsCharacterizationTest {
         assertThat(next.exceptionOrNull()).isNull()
         assertThat(next.getOrNull()).isTrue()
         assertThat(rig.binder.getComputer(UUID_1)).isSameInstanceAs(details)
+    }
+
+    /**
+     * Replaces the agent of the discovery service that the manager bound with one that records what
+     * it is asked, and closes the agent that was there. The manager holds the binder of the
+     * discovery service, the binder holds its service, and nothing hands out the agent: this reads
+     * the fields.
+     */
+    private fun recordDiscovery(): RecordingDiscoveryAgent {
+        val managerField = ComputerManagerService::class.java.getDeclaredField("discoveryBinder")
+        managerField.isAccessible = true
+        val binder = checkNotNull(managerField.get(rig.service))
+        val outerField = binder.javaClass.getDeclaredField("this\$0")
+        outerField.isAccessible = true
+        val discovery = outerField.get(binder) as DiscoveryService
+        val agentField = DiscoveryService::class.java.getDeclaredField("discoveryAgent")
+        agentField.isAccessible = true
+        (agentField.get(discovery) as MdnsDiscoveryAgent).close()
+        return RecordingDiscoveryAgent().also { agentField.set(discovery, it) }
+    }
+
+    /** An agent that finds nothing and remembers what it was asked: "start <period>" or "stop". */
+    private class RecordingDiscoveryAgent :
+        MdnsDiscoveryAgent(
+            object : MdnsDiscoveryListener {
+                override fun notifyComputerAdded(computer: MdnsComputer) = Unit
+
+                override fun notifyDiscoveryFailure(e: Exception) = Unit
+            }
+        ) {
+        val calls = CopyOnWriteArrayList<String>()
+
+        override fun startDiscovery(discoveryIntervalMs: Int) {
+            calls += "start $discoveryIntervalMs"
+        }
+
+        override fun stopDiscovery() {
+            calls += "stop"
+        }
     }
 
     private companion object {

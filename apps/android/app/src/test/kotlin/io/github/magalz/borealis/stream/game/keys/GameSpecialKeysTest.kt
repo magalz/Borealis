@@ -112,18 +112,20 @@ internal class GameSpecialKeysTest : GameTestBase() {
     }
 
     @Test
-    fun `a key that comes up after the chord ran reaches the host, which never saw it go down`() {
+    fun `the key that armed the chord comes up after it ran, and the host does not see that key up either`() {
         streamingAndCapturing()
         rig.holdCtrlAltShift()
         rig.down(KeyEvent.KEYCODE_Z)
         rig.releaseCtrlAltShift()
         forgetCalls()
 
-        // The chord ended with the last modifier, so the Z is a key like any other again.
+        // The chord ended with the last modifier, but the host never saw this Z go down.
         val released = rig.up(KeyEvent.KEYCODE_Z)
+        idle(250)
 
         assertThat(released).isTrue()
-        assertThat(sentKeys()).containsExactly(sent(0x805A, up, 0))
+        assertThat(rig.pointerCaptured).isFalse()
+        assertThat(sentKeys()).isEmpty()
     }
 
     @Test

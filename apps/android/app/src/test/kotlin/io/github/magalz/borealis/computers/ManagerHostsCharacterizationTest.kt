@@ -23,7 +23,8 @@ import org.robolectric.RobolectricTestRunner
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
  * about a host that is handed over as online and does not answer (S12-16), which pins the fixed
- * behaviour: a host is added when a poll answered, not because it was handed over as online.
+ * behaviour: a host is added when a poll answered, not because it was handed over as online, and
+ * the one about a removed host that mDNS announces again (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerHostsCharacterizationTest {
@@ -307,6 +308,24 @@ class ManagerHostsCharacterizationTest {
         val details = ComputerDetails().also { it.manualAddress = host.address }
         assertThat(rig.binder.addComputerBlocking(details)).isTrue()
         assertThat(rig.binder.getComputer(UUID_1)).isSameInstanceAs(details)
+    }
+
+    @Test
+    fun `a removed host that mDNS announces again is listed and saved again`() {
+        val host = reachable(UUID_1)
+        rig.start()
+        rig.binder.startPolling(Updates())
+        rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
+        rig.awaitAdds()
+        val listed = checkNotNull(rig.binder.getComputer(UUID_1))
+
+        rig.binder.removeComputer(listed)
+
+        assertThat(rig.binder.getComputer(UUID_1)).isNull()
+        rig.findAndResolve("Den PC", "127.0.0.1", host.httpPort)
+        rig.awaitAdds()
+        assertThat(rig.binder.getComputer(UUID_1)).isNotNull()
+        assertThat(rig.savedRows().map { it.uuid }).containsExactly(UUID_1)
     }
 
     @Test

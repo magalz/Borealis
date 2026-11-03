@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.mdns.JmDNSDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsComputer
 import com.limelight.nvstream.mdns.MdnsDiscoveryAgent
@@ -29,6 +30,9 @@ class DiscoveryService : Service() {
         }
 
         fun getComputerSet(): List<MdnsComputer> = discoveryAgent.getComputerSet()
+
+        // Stub for the test-first commit: it forgets nothing yet.
+        fun forget(host: ComputerDetails) = Unit
     }
 
     override fun onCreate() {

@@ -112,9 +112,9 @@ class ControllerHandler(
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
 
-    // Whether the last battery report that went to the host for each controller number said that no
-    // battery is present: the host keeps one battery per number, whichever pad it came from, and the
-    // pads on the number come and go. Only the background thread reads and writes it.
+    // Whether the last battery report that went to the host for each controller number said that
+    // no battery is present: the host keeps one battery per number, whichever pad it came from, and
+    // the pads on the number come and go. Only the background thread reads and writes it.
     private val numberHasNoBattery = BooleanArray(MAX_GAMEPADS.toInt())
 
     init {
@@ -297,8 +297,8 @@ class ControllerHandler(
                 (currentControllers.toInt() and (1 shl context.controllerNumber.toInt()).inv())
                     .toShort()
 
-            // The PC drops the controller with the zeroed packet below, and its battery with it: the
-            // next pad on the number has to tell the host again that it has none
+            // The PC drops the controller with the zeroed packet below, and its battery with it:
+            // the next pad on the number has to tell the host again that it has none
             val freedNumber = context.controllerNumber.toInt()
             backgroundThreadHandler.post { numberHasNoBattery[freedNumber] = false }
 
@@ -1086,16 +1086,17 @@ class ControllerHandler(
             // The same goes for a device without joystick axes, the touchpad of a pad: it takes the
             // number of its joystick, which owns the battery. With a single controller pads that
             // claimed one share the number, and the host keeps one battery for it: the pad that
-            // has none stays silent, or it would wipe what the other reports and the poll sends
-            // only a change. What the host holds is the number's state, not the pad's: a pad that
-            // had none speaks again when the pad that had a battery leaves, and not when it takes
-            // the number of a pad that said none. Before S we cannot know, and the pad claims no
+            // has none stays silent while another one on the number has reported a battery, or it
+            // would wipe it and the poll sends only a change. What the host holds is the number's
+            // state, not the pad's: the first pad polled speaks for the number, a pad without a
+            // battery speaks again when the pad that had one leaves, and not when it takes the
+            // number of a pad that said none. Before S we cannot know, and the pad claims no
             // battery.
-            val ownsBattery = claimsBattery(context) && !sharesNumberWithClaimant(context)
+            val speaksForNumber = claimsBattery(context) && !sharesNumberWithBattery(context)
             val number = context.controllerNumber.toInt()
             if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    ownsBattery &&
+                    speaksForNumber &&
                     !numberHasNoBattery[number]
             ) {
                 conn.sendControllerBatteryEvent(
@@ -1149,8 +1150,10 @@ class ControllerHandler(
     private fun claimsBattery(context: InputDeviceContext) =
         context.external && context.hasJoystickAxes
 
-    // Another pad on the controller number of the context that claimed a battery too
-    private fun sharesNumberWithClaimant(context: InputDeviceContext): Boolean {
+    // Another pad on the controller number of the context that claimed a battery and reported one:
+    // its status is a BatteryState value, from 1; 0 is no report yet, and
+    // BATTERY_STATUS_NOT_PRESENT is the report that none is present
+    private fun sharesNumberWithBattery(context: InputDeviceContext): Boolean {
         fun isOtherOnItsNumber(other: InputDeviceContext) =
             other !== context &&
                 other.assignedControllerNumber &&
@@ -1158,7 +1161,7 @@ class ControllerHandler(
 
         var shared = false
         inputDeviceContexts.forEachValue {
-            if (isOtherOnItsNumber(it) && claimsBattery(it)) {
+            if (isOtherOnItsNumber(it) && claimsBattery(it) && it.lastReportedBatteryStatus > 0) {
                 shared = true
             }
         }
@@ -3563,7 +3566,8 @@ class ControllerHandler(
         @JvmField var lightsSession: LightsManager.LightsSession? = null
         @JvmField var ledArgbValue = 0
 
-        // These are BatteryState values, not Moonlight values, or BATTERY_STATUS_NOT_PRESENT
+        // These are BatteryState values (from 1), not Moonlight values, or
+        // BATTERY_STATUS_NOT_PRESENT; the status is 0 until the first report
         @JvmField var lastReportedBatteryStatus = 0
         @JvmField var lastReportedBatteryCapacity = 0f
 

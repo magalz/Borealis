@@ -137,14 +137,11 @@ class VirtualController(
         params.topMargin = CONFIGURE_BUTTON_MARGIN
         requireFrame().addView(buttonConfigure, params)
 
-        // Start with the default layout, from the settings read once for this build
-        VirtualControllerConfigurationLoader.createDefaultLayout(
-            this,
-            context,
-            PreferenceConfiguration.readPreferences(context),
-        )
+        // Start with the default layout, from the configuration the stream passed in: a rebuild
+        // (a rotation, picture-in-picture) reads no settings
+        VirtualControllerConfigurationLoader.createDefaultLayout(this, context, config)
 
-        // Apply user preferences onto the default layout
+        // Apply the user's saved layout (the file OSC, not the stream settings) onto the default
         VirtualControllerConfigurationLoader.loadFromPreferences(this, context)
     }
 

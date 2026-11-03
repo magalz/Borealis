@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.game.motion
 
+import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
@@ -21,9 +22,12 @@ internal class MouseButtonsTest : MotionTestBase() {
     private val back = MouseButtonPacket.BUTTON_X1
     private val forward = MouseButtonPacket.BUTTON_X2
 
-    /** The mouse reports [buttons] as down, at (10, 20) of the stream view. */
+    /** The mouse reports [buttons] as down, at (10, 20) of the stream view, now. */
     private fun mouse(action: Int, buttons: Int): Boolean =
-        rig.game.onGenericMotion(streamView, mouseEvent(action, 10f, 20f, buttons))
+        rig.game.onGenericMotion(
+            streamView,
+            mouseEvent(action, 10f, 20f, buttons, SystemClock.uptimeMillis()),
+        )
 
     private fun thePointer() = position(10, 20)
 
@@ -45,8 +49,8 @@ internal class MouseButtonsTest : MotionTestBase() {
                 MotionEvent.BUTTON_STYLUS_PRIMARY to right,
                 MotionEvent.BUTTON_TERTIARY to middle,
                 MotionEvent.BUTTON_STYLUS_SECONDARY to middle,
-                // The Back button waits to see whether it is held; MouseBackHoldTest has it.
-                MotionEvent.BUTTON_FORWARD to forward,
+                // The Back button waits to see whether it is held, and the Forward button waits
+                // 25 ms to see whether it is a pulse; MouseBackHoldTest has both.
             )
 
         for ((state, button) in table) {
@@ -80,20 +84,20 @@ internal class MouseButtonsTest : MotionTestBase() {
     }
 
     @Test
-    fun `buttons that change together are sent in the order left, right, middle, back, forward`() {
+    fun `buttons that change together are sent in the order left, right, middle, then back`() {
         rig.preference("checkbox_mouse_nav_buttons", true)
         streaming()
         val all =
             MotionEvent.BUTTON_PRIMARY or
                 MotionEvent.BUTTON_SECONDARY or
                 MotionEvent.BUTTON_TERTIARY or
-                MotionEvent.BUTTON_BACK or
-                MotionEvent.BUTTON_FORWARD
+                MotionEvent.BUTTON_BACK
 
         // Back waits to see whether it is held: a short press is sent when the button comes up.
         mouse(MotionEvent.ACTION_DOWN, all)
-        assertSent(thePointer(), press(left), press(right), press(middle), press(forward))
+        assertSent(thePointer(), press(left), press(right), press(middle))
 
+        idle(SETTLE_MS)
         mouse(MotionEvent.ACTION_UP, 0)
         assertSent(
             thePointer(),
@@ -102,8 +106,32 @@ internal class MouseButtonsTest : MotionTestBase() {
             release(middle),
             press(back),
             release(back),
-            release(forward),
         )
+    }
+
+    @Test
+    fun `the Forward button comes after the three, pressed once it has been down for 25 ms`() {
+        rig.preference("checkbox_mouse_nav_buttons", true)
+        streaming()
+        val all =
+            MotionEvent.BUTTON_PRIMARY or
+                MotionEvent.BUTTON_SECONDARY or
+                MotionEvent.BUTTON_TERTIARY or
+                MotionEvent.BUTTON_FORWARD
+
+        // A press that comes up sooner is a pulse, which waits for the other button to join it
+        // (MouseBackHoldTest).
+        mouse(MotionEvent.ACTION_DOWN, all)
+        assertSent(thePointer(), press(left), press(right), press(middle))
+        idle(SETTLE_MS - 1)
+        assertThat(sent()).isEmpty()
+        idle(1)
+        assertSent(press(forward))
+
+        mouse(MotionEvent.ACTION_MOVE, all)
+        assertSent(thePointer())
+        mouse(MotionEvent.ACTION_UP, 0)
+        assertSent(thePointer(), release(left), release(right), release(middle), release(forward))
     }
 
     @Test
@@ -260,5 +288,8 @@ internal class MouseButtonsTest : MotionTestBase() {
     private companion object {
         /** A touchpad of Samsung DeX: the sources of a touch screen and a mouse, together. */
         const val SAMSUNG_DEX_SOURCE = 12290
+
+        /** A press this long is not a pulse of a side button. */
+        const val SETTLE_MS = 25L
     }
 }

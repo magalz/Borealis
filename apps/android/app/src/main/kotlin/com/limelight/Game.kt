@@ -128,11 +128,26 @@ class Game :
 
     // BOREALIS: the Back button of the mouse, held for BACK_HOLD_MS, opens the in-game menu and
     // sends nothing to the PC; a shorter press is X1, sent when the button comes up (stream)
-    private var backHoldOpenedMenu = false
     private val openMenuFromBackHold = Runnable {
-        backHoldOpenedMenu = true
+        sideBack.eat()
         streamSession.openMenu()
     }
+
+    // BOREALIS: the side buttons of the mouse. Back is X1 with "Mouse back and forward buttons"
+    // on and the right button with it off; Forward is X2 with it on and nothing with it off
+    // (stream)
+    private val sideBack =
+        SideButton(
+            navHost = MouseButtonPacket.BUTTON_X1,
+            plainHost = MouseButtonPacket.BUTTON_RIGHT,
+            navSentOnRelease = true,
+        )
+    private val sideForward =
+        SideButton(
+            navHost = MouseButtonPacket.BUTTON_X2,
+            plainHost = null,
+            navSentOnRelease = false,
+        )
 
     // Only 2 touches are supported
     private val touchContextMap = arrayOfNulls<TouchContext>(2)
@@ -307,6 +322,11 @@ class Game :
         private const val TOGGLE_GRAB_DELAY_MS = 250L
         private const val INPUT_GRAB_DELAY_MS = 500L
         private const val BACK_HOLD_MS = 1000L
+
+        // A side button that comes up within SIDE_PULSE_MS is a pulse. Back and Forward within
+        // SIDE_CHORD_MS of each other open the menu, and a pulse waits that long.
+        private const val SIDE_PULSE_MS = 25L
+        private const val SIDE_CHORD_MS = 250L
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -966,9 +986,9 @@ class Game :
         waitingForAllModifiersUp = false
         keysEatenByChord.clear()
 
-        // BOREALIS: the release of the mouse's Back button may come while another window has the
-        // focus (stream)
-        if (!hasFocus) cancelBackHold()
+        // BOREALIS: the release of a side button of the mouse may come while another window has
+        // the focus (stream)
+        if (!hasFocus) cancelSideButtons()
 
         // With Android native pointer capture, capture is lost when focus is lost,
         // so it must be requested again when focus is regained.
@@ -1334,7 +1354,7 @@ class Game :
     override fun onStop() {
         super.onStop()
         startupGuard.cancel() // BOREALIS: first-frame watchdog
-        cancelBackHold() // BOREALIS: the release of the mouse's Back button may never come (stream)
+        cancelSideButtons() // BOREALIS: the release of a mouse side button may never come (stream)
         // BOREALIS: a pending "app already running" question is a cancel (host.launch)
         if (::streamSession.isInitialized) {
             streamSession.answerConflict(ConflictChoice.CANCEL)
@@ -1425,8 +1445,12 @@ class Game :
         // The gamepad is zeroed and the game gets nothing from it
         controllerHandler.setCaptured(true)
         grabbedBeforeCapture = grabbedInput
-        // The PC is never left holding X1: Back is sent as a press and a release when it comes up
-        streamActions.releaseHeldInput(lastButtonState and MotionEvent.BUTTON_BACK.inv())
+        // The PC is never left holding a button. The side buttons are not in this: the ones that
+        // went to the PC are released with the grab (cancelSideButtons), and the others, which it
+        // never saw, must not get a release
+        streamActions.releaseHeldInput(
+            lastButtonState and (MotionEvent.BUTTON_BACK or MotionEvent.BUTTON_FORWARD).inv()
+        )
         lastButtonState = 0
         // A modifier that comes up while the chrome has the keys is never seen here
         modifierFlags = 0
@@ -1463,7 +1487,7 @@ class Game :
             }
         } else {
             inputCaptureProvider.disableCapture()
-            cancelBackHold()
+            cancelSideButtons()
         }
 
         // Grab/ungrab system keyboard shortcuts
@@ -1472,11 +1496,200 @@ class Game :
         grabbedInput = grab
     }
 
-    // BOREALIS: the Back button of the mouse stops waiting to open the menu: the pointer is no
-    // longer ours, so the release of the button may never be seen (stream)
-    private fun cancelBackHold() {
+    // BOREALIS: the side buttons of the mouse stop waiting: the pointer is no longer ours, so the
+    // release of a button may never be seen. A pulse that waited for the other button is dropped,
+    // and a button that the PC has down is released (stream)
+    private fun cancelSideButtons() {
         window.decorView.removeCallbacks(openMenuFromBackHold)
-        lastButtonState = lastButtonState and MotionEvent.BUTTON_BACK.inv()
+        sideBack.cancel()
+        sideForward.cancel()
+        lastButtonState =
+            lastButtonState and (MotionEvent.BUTTON_BACK or MotionEvent.BUTTON_FORWARD).inv()
+    }
+
+    // BOREALIS: Back or Forward of the mouse went down, at [eventTime]. The result is true when it
+    // is the second of the two within SIDE_CHORD_MS: the chord opens the menu, and the caller opens
+    // it when it has noted the state of the buttons (stream)
+    private fun sideButtonDown(button: SideButton, eventTime: Long): Boolean {
+        // The repeats of a key that stays down are the press that is down already
+        if (button.isDown) return false
+        val other = if (button === sideBack) sideForward else sideBack
+        if (other.armed) {
+            window.decorView.removeCallbacks(openMenuFromBackHold)
+            other.eat()
+            button.joinChord()
+            return true
+        }
+        button.down(eventTime, prefConfig.mouseNavButtons)
+        if (button === sideBack && prefConfig.mouseNavButtons) {
+            window.decorView.postDelayed(openMenuFromBackHold, BACK_HOLD_MS)
+        }
+        return false
+    }
+
+    // BOREALIS: Back or Forward of the mouse came up after [heldMs] (stream)
+    private fun sideButtonUp(button: SideButton, heldMs: Long) {
+        if (button === sideBack) window.decorView.removeCallbacks(openMenuFromBackHold)
+        button.up(heldMs)
+    }
+
+    // Returns true if the key is the Back that Android makes of a right click or of the side
+    // button of a mouse, or the Forward of a mouse with the setting off, and was taken here.
+    // BOREALIS: with the setting off those keys are the side buttons of the chord that opens the
+    // menu (Back is the right button of the mouse). The key up says how long the key was down.
+    // If the setting is on, handleMotionEvent() takes care of the buttons, and the Forward key
+    // goes on as any key (stream)
+    private fun handleMouseSideKey(event: KeyEvent, down: Boolean): Boolean {
+        val fromMouse =
+            event.source == InputDevice.SOURCE_MOUSE ||
+                event.source == InputDevice.SOURCE_MOUSE_RELATIVE
+        val button =
+            when {
+                !fromMouse -> null
+                event.keyCode == KeyEvent.KEYCODE_BACK -> sideBack
+                event.keyCode == KeyEvent.KEYCODE_FORWARD -> sideForward
+                else -> null
+            }
+        val navButtons = prefConfig.mouseNavButtons
+        if (button != null && !navButtons) {
+            if (!down) {
+                sideButtonUp(button, event.eventTime - event.downTime)
+            } else if (sideButtonDown(button, event.eventTime)) {
+                streamSession.openMenu()
+            }
+        }
+        // Always take the Back key, otherwise the back press will be propagated up to the parent
+        // and finish the activity.
+        return button === sideBack || (button != null && !navButtons)
+    }
+
+    // BOREALIS: Back or Forward of the mouse changed in a motion event; true when it opens the
+    // menu, as sideButtonDown says (stream)
+    private fun sideButtonMoved(button: SideButton, down: Boolean, eventTime: Long): Boolean {
+        if (down) return sideButtonDown(button, eventTime)
+        sideButtonUp(button, eventTime - button.pressedAt)
+        return false
+    }
+
+    // BOREALIS: a side button of the mouse, Back or Forward (stream). The PC never sees a press
+    // that may be half of the chord that opens the menu. A press that comes up within
+    // SIDE_PULSE_MS is a pulse (the side buttons of the Logi M650 send nothing else): it goes to
+    // the PC when SIDE_CHORD_MS have passed since the press, unless the other button joined it by
+    // then. A longer press goes on as before: Back is X1, sent when the button comes up (it may be
+    // held to open the menu), and Forward is X2, pressed once the press is no pulse and released
+    // when it comes up. With the setting off, Back is the right button of the mouse, and Forward
+    // goes nowhere.
+    private inner class SideButton(
+        private val navHost: Byte,
+        private val plainHost: Byte?,
+        private val navSentOnRelease: Boolean,
+    ) {
+        private var phase = SidePhase.IDLE
+        private var host: Byte? = null
+        private var sentOnRelease = false
+        private var windowOpen = false
+
+        // When the press went down, for the length of the next release
+        var pressedAt = 0L
+            private set
+
+        // Whether a press of this button can still be joined by the other button
+        val armed: Boolean
+            get() = windowOpen
+
+        val isDown: Boolean
+            get() =
+                phase == SidePhase.PRESSED || phase == SidePhase.HELD || phase == SidePhase.EATEN
+
+        // The press has lasted SIDE_PULSE_MS: no pulse
+        private val settle = Runnable {
+            phase = SidePhase.HELD
+            if (!sentOnRelease) host?.let { conn.sendMouseButtonDown(it) }
+        }
+
+        // The window of the chord is over: a pulse that waited goes to the PC
+        private val windowEnds = Runnable {
+            windowOpen = false
+            if (phase == SidePhase.PULSED) {
+                phase = SidePhase.IDLE
+                click()
+            }
+        }
+
+        fun down(eventTime: Long, navButtons: Boolean) {
+            if (phase == SidePhase.PULSED) {
+                // An earlier pulse still waits: it goes now, and this is another press
+                clearTimers()
+                click()
+            }
+            host = if (navButtons) navHost else plainHost
+            sentOnRelease = navButtons && navSentOnRelease
+            pressedAt = eventTime
+            phase = SidePhase.PRESSED
+            windowOpen = true
+            window.decorView.postDelayed(settle, SIDE_PULSE_MS)
+            window.decorView.postDelayed(windowEnds, SIDE_CHORD_MS)
+        }
+
+        // [heldMs] is how long the button was down, from the times of the events
+        fun up(heldMs: Long) {
+            if (phase == SidePhase.PRESSED) {
+                window.decorView.removeCallbacks(settle)
+                if (heldMs < SIDE_PULSE_MS) {
+                    // A pulse: it waits for the window to end
+                    phase = SidePhase.PULSED
+                    return
+                }
+                // The task that settles the press has not run yet, but the press is no pulse
+                settle.run()
+            }
+            if (phase == SidePhase.HELD) {
+                if (sentOnRelease) click() else host?.let { conn.sendMouseButtonUp(it) }
+            }
+            if (phase != SidePhase.PULSED) {
+                clearTimers()
+                phase = SidePhase.IDLE
+            }
+        }
+
+        // The other button joined this one: the chord takes this press, and the PC gets no more
+        // of it than it has got
+        fun eat() {
+            release()
+            clearTimers()
+            phase = if (phase == SidePhase.PULSED) SidePhase.IDLE else SidePhase.EATEN
+        }
+
+        // This press is the second of the chord, which takes it
+        fun joinChord() {
+            phase = SidePhase.EATEN
+        }
+
+        fun cancel() {
+            release()
+            clearTimers()
+            phase = SidePhase.IDLE
+        }
+
+        // The PC has the press of this button down: let it go
+        private fun release() {
+            if (phase == SidePhase.HELD && !sentOnRelease) {
+                host?.let { conn.sendMouseButtonUp(it) }
+            }
+        }
+
+        private fun click() {
+            host?.let {
+                conn.sendMouseButtonDown(it)
+                conn.sendMouseButtonUp(it)
+            }
+        }
+
+        private fun clearTimers() {
+            window.decorView.removeCallbacks(settle)
+            window.decorView.removeCallbacks(windowEnds)
+            windowOpen = false
+        }
     }
 
     private val toggleGrab = Runnable { setInputGrabState(!grabbedInput) }
@@ -1683,23 +1896,7 @@ class Game :
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click. This event WILL repeat if
         // the right mouse button is held down, so we ignore those.
-        val eventSource = event.source
-        if (
-            (eventSource == InputDevice.SOURCE_MOUSE ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) &&
-                event.keyCode == KeyEvent.KEYCODE_BACK
-        ) {
-            // Send the right mouse button event if mouse back and forward
-            // are disabled. If they are enabled, handleMotionEvent() will take
-            // care of this.
-            if (!prefConfig.mouseNavButtons) {
-                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-            }
-
-            // Always return true, otherwise the back press will be propagated
-            // up to the parent and finish the activity.
-            return true
-        }
+        if (handleMouseSideKey(event, down = true)) return true
 
         var handled = false
 
@@ -1786,23 +1983,7 @@ class Game :
 
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click.
-        val eventSource = event.source
-        if (
-            (eventSource == InputDevice.SOURCE_MOUSE ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) &&
-                event.keyCode == KeyEvent.KEYCODE_BACK
-        ) {
-            // Send the right mouse button event if mouse back and forward
-            // are disabled. If they are enabled, handleMotionEvent() will take
-            // care of this.
-            if (!prefConfig.mouseNavButtons) {
-                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-            }
-
-            // Always return true, otherwise the back press will be propagated
-            // up to the parent and finish the activity.
-            return true
-        }
+        if (handleMouseSideKey(event, down = false)) return true
 
         var handled = false
         if (ControllerHandler.isGameControllerDevice(event.device)) {
@@ -2442,28 +2623,26 @@ class Game :
                     }
                 }
 
+                // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see
+                // whether the other joins them (stream)
+                var sideChord = false
                 if (prefConfig.mouseNavButtons) {
                     if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
-                        if ((buttonState and MotionEvent.BUTTON_BACK) != 0) {
-                            // BOREALIS: Back waits to see whether it is held (stream)
-                            backHoldOpenedMenu = false
-                            window.decorView.postDelayed(openMenuFromBackHold, BACK_HOLD_MS)
-                        } else {
-                            window.decorView.removeCallbacks(openMenuFromBackHold)
-                            // BOREALIS: a short press is X1, sent now; a hold sent nothing (stream)
-                            if (!backHoldOpenedMenu) {
-                                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
-                                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
-                            }
-                        }
+                        sideChord =
+                            sideButtonMoved(
+                                sideBack,
+                                (buttonState and MotionEvent.BUTTON_BACK) != 0,
+                                event.eventTime,
+                            )
                     }
 
                     if ((changedButtons and MotionEvent.BUTTON_FORWARD) != 0) {
-                        if ((buttonState and MotionEvent.BUTTON_FORWARD) != 0) {
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X2)
-                        } else {
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
-                        }
+                        sideChord =
+                            sideButtonMoved(
+                                sideForward,
+                                (buttonState and MotionEvent.BUTTON_FORWARD) != 0,
+                                event.eventTime,
+                            ) || sideChord
                     }
                 }
 
@@ -2508,6 +2687,9 @@ class Game :
                 }
 
                 lastButtonState = buttonState
+                // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the
+                // input clears them (stream)
+                if (sideChord) streamSession.openMenu()
             }
             // This case is for fingers
             else {
@@ -2698,11 +2880,9 @@ class Game :
         ) {
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
         }
-        if (prefConfig.mouseNavButtons && (lastButtonState and MotionEvent.BUTTON_FORWARD) != 0) {
-            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
-        }
-        // Back sent nothing yet: it waits to see whether it is held
-        cancelBackHold()
+        // The side buttons: the PC has Forward down once it has been down for SIDE_PULSE_MS, and
+        // Back sent nothing yet, since it waits to see whether it is held
+        cancelSideButtons()
         lastButtonState = 0
     }
 
@@ -3357,4 +3537,14 @@ class Game :
             else -> false
         }
     }
+}
+
+// BOREALIS: where a side button of the mouse is: up, down for less than SIDE_PULSE_MS, down longer,
+// up again within that time and waiting for the other button, or taken by the chord (stream)
+private enum class SidePhase {
+    IDLE,
+    PRESSED,
+    HELD,
+    PULSED,
+    EATEN,
 }

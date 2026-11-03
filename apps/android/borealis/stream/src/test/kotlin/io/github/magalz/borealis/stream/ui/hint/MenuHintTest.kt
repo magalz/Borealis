@@ -73,9 +73,11 @@ class MenuHintTest {
     // The keyboard and the mouse
 
     // The mouse navigation buttons are off unless the phase says they are (the default setting).
-    private val chordHint = "Press Ctrl+Alt+Shift+M for the menu"
+    // Back with Forward opens the menu with the setting on or off; the Back hold needs it on.
+    private val chordHint =
+        "Press Ctrl+Alt+Shift+M or press the mouse Back and Forward buttons together for the menu"
     private val chordAndBackHint =
-        "Press Ctrl+Alt+Shift+M or hold the mouse Back button for the menu"
+        "Press Ctrl+Alt+Shift+M, hold the mouse Back button, or press Back and Forward together for the menu"
     private val mouse = InputDevice.SOURCE_MOUSE
     private val keyboard = InputDevice.SOURCE_KEYBOARD
     private val letters = InputDevice.KEYBOARD_TYPE_ALPHABETIC
@@ -102,7 +104,7 @@ class MenuHintTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `with the mouse navigation buttons on a mouse is told about the chord and the Back button`() {
+    fun `with the mouse navigation buttons on the hint names every way`() {
         plugIn(3, mouse)
 
         hintWith(FormFactor.Phone, mouseNavButtons = true)
@@ -113,7 +115,7 @@ class MenuHintTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `with the mouse navigation buttons off the chord is told alone`() {
+    fun `with the mouse navigation buttons off the hint leaves out the Back hold`() {
         plugIn(3, mouse)
 
         hintWith(FormFactor.Phone, mouseNavButtons = false)

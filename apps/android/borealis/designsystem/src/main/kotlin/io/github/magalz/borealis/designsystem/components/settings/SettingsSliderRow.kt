@@ -70,6 +70,7 @@ fun SettingsSliderRow(
     enabled: Boolean = true,
     disabledNote: String? = null,
     keyStep: Float = step,
+    onValueChangeFinished: (Float) -> Unit = {},
 ) {
     require(step > 0f) { "step must be positive: $step" }
     require(keyStep >= step) { "keyStep must be at least step: $keyStep < $step" }

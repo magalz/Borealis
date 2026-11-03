@@ -19,8 +19,31 @@ private const val SCROLL_SPEED_FACTOR = 5
 // The mouse button of a tap goes up this long after it went down.
 private const val BUTTON_RELEASE_DELAY = 100L
 
+/**
+ * What the two touch contexts of the trackpad share about a two-finger tap, which neither sees
+ * alone: when the first finger lifts first, its context decides at the last lift and never sees the
+ * second finger go down. The tap time runs from the second finger's down in both lift orders.
+ * `TouchContexts` builds one for the contexts of a stream.
+ */
+class TwoFingerTap {
+    private var secondFingerDownTime: Long? = null
+
+    /** The second finger went down at [eventTime]: the tap time of the two fingers starts. */
+    fun secondFingerDown(eventTime: Long) {
+        secondFingerDownTime = eventTime
+    }
+
+    /** Whether [eventTime] is still within the tap time of the second finger's down. */
+    fun isWithinTapTime(eventTime: Long): Boolean {
+        val downTime = secondFingerDownTime ?: return false
+        return eventTime - downTime <= TAP_TIME_THRESHOLD
+    }
+}
+
 // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-@Suppress("TooManyFunctions")
+// The parameters are the connection, the pointer, the reference screen, the view, the settings and
+// the two-finger tap that the contexts of a stream share.
+@Suppress("TooManyFunctions", "LongParameterList")
 class RelativeTouchContext(
     private val conn: NvConnection,
     override val actionIndex: Int,
@@ -28,6 +51,7 @@ class RelativeTouchContext(
     private val referenceHeight: Int,
     private val targetView: View,
     private val prefConfig: PreferenceConfiguration,
+    private val twoFingerTap: TwoFingerTap = TwoFingerTap(),
 ) : TouchContext {
     private var lastTouchX = 0
     private var lastTouchY = 0
@@ -88,27 +112,39 @@ class RelativeTouchContext(
         return xDelta <= TAP_MOVEMENT_THRESHOLD && yDelta <= TAP_MOVEMENT_THRESHOLD
     }
 
-    // Whether the motion of this finger so far, ended at eventTime, is still the one of a tap.
-    private fun isTapMotion(eventTime: Long): Boolean {
+    // Whether the motion of this finger so far, whatever the time, is still the one of a tap.
+    private fun isTapMotion(): Boolean {
         if (confirmedDrag || confirmedMove || confirmedScroll) {
             return false
         }
 
-        val timeDelta = eventTime - originalTouchTime
-        return isWithinTapBounds(lastTouchX, lastTouchY) && timeDelta <= TAP_TIME_THRESHOLD
+        return isWithinTapBounds(lastTouchX, lastTouchY)
     }
+
+    // The touch of this finger, ended at eventTime, is a tap: it runs from this finger's down.
+    private fun isTapTouch(eventTime: Long): Boolean =
+        isTapMotion() && eventTime - originalTouchTime <= TAP_TIME_THRESHOLD
+
+    // The touch of a finger of two, ended at eventTime, is a tap of the two fingers: it runs from
+    // the second finger's down, whichever finger lifts first (twoFingerTap).
+    private fun isTwoFingerTapTouch(eventTime: Long): Boolean =
+        isTapMotion() && twoFingerTap.isWithinTapTime(eventTime)
 
     private fun isTap(eventTime: Long): Boolean {
         // If this input wasn't the last finger down, do not report
         // a tap. This ensures we don't report duplicate taps for each
         // finger on a multi-finger tap gesture
-        return actionIndex + 1 == maxPointerCountInGesture && isTapMotion(eventTime)
+        if (actionIndex + 1 != maxPointerCountInGesture) {
+            return false
+        }
+
+        return if (actionIndex == 1) isTwoFingerTapTouch(eventTime) else isTapTouch(eventTime)
     }
 
     // The first of two fingers lifts and its touch is still a tap: the two fingers are a right
     // click if the other finger lifts as a tap too.
     private fun isFirstOfTwoFingersTap(eventTime: Long): Boolean =
-        actionIndex == 0 && pointerCount == 2 && isTapMotion(eventTime)
+        actionIndex == 0 && pointerCount == 2 && isTwoFingerTapTouch(eventTime)
 
     private fun getMouseButtonIndex(): Byte =
         if (actionIndex == 1) {
@@ -143,6 +179,11 @@ class RelativeTouchContext(
             twoFingerTapPending = false
             distanceMoved = 0.0
 
+            // The second finger starts the tap time of the two fingers
+            if (pointerCount == 2) {
+                twoFingerTap.secondFingerDown(eventTime)
+            }
+
             // Only the first finger of a gesture drags, and only right after a tap
             clearSecondPress()
             secondPress = actionIndex == 0 && pointerCount == 1 && followsTap(eventTime)
@@ -169,7 +210,7 @@ class RelativeTouchContext(
         if (confirmedDrag) {
             // Raise the button after a drag
             conn.sendMouseButtonUp(buttonIndex)
-        } else if (otherFingerLiftedFirst && pointerCount == 1 && isTapMotion(eventTime)) {
+        } else if (otherFingerLiftedFirst && pointerCount == 1 && isTwoFingerTapTouch(eventTime)) {
             // The second finger of a two-finger tap lifts, the first one lifted before it
             clickButton(MouseButtonPacket.BUTTON_RIGHT)
         } else if (isTap(eventTime)) {

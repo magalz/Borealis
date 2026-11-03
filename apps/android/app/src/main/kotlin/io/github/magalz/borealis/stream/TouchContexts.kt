@@ -4,6 +4,7 @@ import android.view.View
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
+import com.limelight.binding.input.touch.TwoFingerTap
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 
@@ -33,7 +34,9 @@ object TouchContexts {
         prefs: PreferenceConfiguration,
     ): Array<TouchContext>? =
         when (mode) {
-            TouchMode.TRACKPAD ->
+            TouchMode.TRACKPAD -> {
+                // The contexts share one two-finger tap: the one that decides it needs both fingers
+                val twoFingerTap = TwoFingerTap()
                 Array(COUNT) {
                     RelativeTouchContext(
                         connection,
@@ -42,8 +45,10 @@ object TouchContexts {
                         REFERENCE_HEIGHT,
                         streamView,
                         prefs,
+                        twoFingerTap,
                     )
                 }
+            }
             TouchMode.DIRECT -> Array(COUNT) { AbsoluteTouchContext(connection, it, streamView) }
             TouchMode.OFF -> null
         }

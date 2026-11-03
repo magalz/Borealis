@@ -131,6 +131,8 @@ internal constructor(
         }
     }
 
+    fun onSliderReleased(item: SettingsItem, value: Int) = Unit
+
     /**
      * Resets the layout of the on-screen controls, off the main thread. The screen asks before it
      * calls this.

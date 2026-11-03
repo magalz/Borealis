@@ -543,6 +543,55 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `releasing the Vibration strength slider plays one pulse at the value that it reached`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+            advanceUntilIdle()
+
+            assertThat(pulses).containsExactly(60L to 150)
+        }
+
+    @Test
+    fun `a value out of the range of the Vibration strength slider is kept in it`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 500)
+        advanceUntilIdle()
+
+        assertThat(pulses).containsExactly(60L to 200)
+    }
+
+    @Test
+    fun `releasing another slider plays nothing`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSliderReleased(SettingsItem.DEADZONE, 12)
+        viewModel.onSliderReleased(SettingsItem.OSC_OPACITY, 40)
+        viewModel.onSliderReleased(SettingsItem.BITRATE, 12_500)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
+    }
+
+    @Test
+    fun `releasing the Vibration strength slider while its row is disabled or hidden plays nothing`() =
+        runTest {
+            options.rowStates[Settings.VIBRATE_FALLBACK_STRENGTH] =
+                RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.VIBRATE_FALLBACK)
+            val disabled = viewModel()
+            disabled.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+
+            options.rowStates[Settings.VIBRATE_FALLBACK_STRENGTH] = RowState.Hidden
+            val hidden = viewModel()
+            hidden.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+            advanceUntilIdle()
+
+            assertThat(pulses).isEmpty()
+        }
+
+    @Test
     fun `turning on Unlock all frame rates changes the frame rate list at once`() = runTest {
         val viewModel = viewModel()
         assertThat(viewModel.uiState.value.frameRateChoices.map { it.fps })

@@ -14,6 +14,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.ui.StreamKeyboard
@@ -22,7 +23,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** Where the D-pad takes the focus on a TV, key by key, through both layers. */
+/**
+ * Where the D-pad takes the focus on a TV, key by key, through both layers, and on a phone-width
+ * window with a pad, where the keyboard covers the stream.
+ */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = TV)
 class KeyboardNavigationTest {
@@ -32,6 +36,13 @@ class KeyboardNavigationTest {
     private fun show() {
         composeRule.setContentInKeyboardMode {
             BorealisTheme(FormFactor.Tv) { StreamKeyboard(docked = false, intents) }
+        }
+    }
+
+    // A phone in split screen with a pad: the pad is connected, so the keyboard is not docked.
+    private fun showOnPhoneWithPad() {
+        composeRule.setContentInKeyboardMode {
+            BorealisTheme(FormFactor.Phone) { StreamKeyboard(docked = false, intents) }
         }
     }
 
@@ -214,6 +225,17 @@ class KeyboardNavigationTest {
         assertThat(leftFromFirst(LETTER_ENDS + BOTTOM_ENDS))
             .containsExactly("P", "Backspace", "Enter", "Fn 123")
             .inOrder()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone-width window with a pad the focus starts on Q and Up reaches Esc`() {
+        showOnPhoneWithPad()
+        assertThat(focused()).isEqualTo("Q")
+
+        press(Key.DirectionUp)
+
+        assertThat(focused()).isEqualTo("Esc")
     }
 
     private companion object {

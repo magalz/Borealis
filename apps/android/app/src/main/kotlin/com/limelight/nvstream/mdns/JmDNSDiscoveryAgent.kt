@@ -132,8 +132,19 @@ class JmDNSDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener) :
         synchronized(listeners) { listeners.remove(this) }
 
         // If there's already a running thread, interrupt it
-        discoveryThread?.interrupt()
+        val old = discoveryThread
         discoveryThread = null
+        old?.interrupt()
+
+        // The thread drops its reference to the shared resolver as it ends. A start that follows
+        // takes a reference at once, and one taken before the drop keeps the count above 0: the
+        // resolver is then never closed, and it does not report its cached services again.
+        // So wait for the thread, for no longer than one resolver call.
+        try {
+            old?.join(SERVICE_INFO_TIMEOUT_MS)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
     }
 
     override fun serviceAdded(event: ServiceEvent) {

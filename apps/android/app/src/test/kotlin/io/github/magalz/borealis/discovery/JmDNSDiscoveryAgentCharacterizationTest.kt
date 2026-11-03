@@ -372,6 +372,26 @@ class JmDNSDiscoveryAgentCharacterizationTest {
     }
 
     @Test
+    fun `stopping discovery gives up on a thread that does not let go`() {
+        agent.serviceAdded(FakeServiceEvent(FakeJmDns(), serviceInfo("Den PC", 47989)))
+        val stall = RetryStall()
+        val logger = Logger.getLogger(LIME_LOG)
+        logger.addHandler(stall)
+        try {
+            agent.startDiscovery(INTERVAL_MS)
+            stall.awaitReached()
+
+            val stop = thread { agent.stopDiscovery() }
+            stop.join(WAIT_MS)
+
+            assertThat(stop.isAlive).isFalse()
+        } finally {
+            stall.release()
+            logger.removeHandler(stall)
+        }
+    }
+
+    @Test
     fun `agents share one resolver until the last of them stops`() {
         agent.startDiscovery(INTERVAL_MS)
         val other = startAnother()

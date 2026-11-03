@@ -85,6 +85,22 @@ class AppActionsSheetFocusTest {
     }
 
     @Test
+    fun `Back from the actions of the first app keeps the focus on its card`() {
+        show()
+        tile(desktop).requestFocus()
+        tile(desktop).performKeyInput { pressKey(Key.ButtonX) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Resume").assertIsDisplayed()
+        resetWindowFocus()
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Resume").assertDoesNotExist()
+        tile(desktop).assertIsFocused()
+    }
+
+    @Test
     fun `an action that keeps the screen gives the focus back to the app that opened the actions`() {
         show()
         tile(steam).requestFocus()
@@ -198,7 +214,11 @@ class AppActionsSheetFocusTest {
         AppActionsUiState(
             app,
             desktop.name,
-            listOf(AppAction.QUIT_AND_START, AppAction.DETAILS, AppAction.ADD_TO_HOME_SCREEN),
+            if (app.running) {
+                listOf(AppAction.RESUME, AppAction.QUIT, AppAction.DETAILS)
+            } else {
+                listOf(AppAction.QUIT_AND_START, AppAction.DETAILS, AppAction.ADD_TO_HOME_SCREEN)
+            },
             runningAppIsDesktop = true,
         )
 

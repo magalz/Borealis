@@ -85,13 +85,14 @@ class AppActionsSheetFocusTest {
     }
 
     @Test
-    fun `Back from the actions of the first app keeps the focus on its card`() {
+    fun `actions that no tile asked for give the focus back to their app`() {
         show()
-        tile(desktop).requestFocus()
-        tile(desktop).performKeyInput { pressKey(Key.ButtonX) }
+        tile(hades).requestFocus()
+        // A launch request opens the actions of an app: no tile callback runs. The window keeps
+        // the focus of the screen here, so what is focused after Back is the opener or Hades.
+        composeRule.runOnUiThread { state.value = state.value.copy(actions = sheetFor(desktop)) }
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Resume").assertIsDisplayed()
-        resetWindowFocus()
 
         Espresso.pressBack()
         composeRule.waitForIdle()

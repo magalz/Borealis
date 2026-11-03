@@ -252,6 +252,7 @@ private fun AppsSnapshot.toUiState(
         hostName = host?.name,
         runningAppId = running?.id,
         runningAppName = running?.name,
+        hostChecking = host?.reachability == Reachability.UNKNOWN,
         showHidden = showHidden,
         items = items,
         actions =

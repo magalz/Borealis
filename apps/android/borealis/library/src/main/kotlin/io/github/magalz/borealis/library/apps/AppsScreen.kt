@@ -162,6 +162,8 @@ private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
                     state.runningAppName != null ->
                         stringResource(R.string.apps_status_running, state.runningAppName)
                     running -> stringResource(R.string.apps_status_running_unknown)
+                    // An unknown host may have an app running that the last poll did not see.
+                    state.hostChecking -> stringResource(R.string.hosts_status_checking)
                     else -> stringResource(R.string.apps_status_idle)
                 },
                 style = MaterialTheme.typography.bodySmall,

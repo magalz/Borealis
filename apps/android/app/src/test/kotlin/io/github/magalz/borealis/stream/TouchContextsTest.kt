@@ -6,11 +6,18 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
+import com.limelight.binding.input.touch.T0
+import com.limelight.binding.input.touch.TouchRig
+import com.limelight.binding.input.touch.liftFirstOfTwoFingers
+import com.limelight.binding.input.touch.setPointerCount
+import com.limelight.binding.input.touch.start
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class TouchContextsTest {
@@ -29,6 +36,25 @@ class TouchContextsTest {
         assertThat(contexts!!.map { it::class.java })
             .containsExactly(RelativeTouchContext::class.java, RelativeTouchContext::class.java)
         assertThat(contexts.map { it.actionIndex }).containsExactly(0, 1).inOrder()
+    }
+
+    @Test
+    @Config(shadows = [ShadowRecordingBridge::class])
+    fun `the trackpad contexts share the two-finger tap, so a late second finger that lifts last clicks`() {
+        val rig = TouchRig()
+        val (first, second) =
+            TouchContexts.build(TouchMode.TRACKPAD, rig.connection, rig.view, rig.prefs)!!.map {
+                it as RelativeTouchContext
+            }
+        first.start(100, 100)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 150, true)).isTrue()
+
+        liftFirstOfTwoFingers(first, second, T0 + 270)
+        first.touchUpEvent(300, 100, T0 + 280)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
     }
 
     @Test

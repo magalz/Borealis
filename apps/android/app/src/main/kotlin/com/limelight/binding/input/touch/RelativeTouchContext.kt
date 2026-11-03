@@ -19,6 +19,9 @@ private const val SCROLL_SPEED_FACTOR = 5
 // The mouse button of a tap goes up this long after it went down.
 private const val BUTTON_RELEASE_DELAY = 100L
 
+// Stub: the window of the two-finger tap that both contexts share (wired by the fix).
+class TwoFingerTap
+
 // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
 @Suppress("TooManyFunctions")
 class RelativeTouchContext(
@@ -28,6 +31,7 @@ class RelativeTouchContext(
     private val referenceHeight: Int,
     private val targetView: View,
     private val prefConfig: PreferenceConfiguration,
+    @Suppress("UNUSED_PARAMETER") twoFingerTap: TwoFingerTap = TwoFingerTap(),
 ) : TouchContext {
     private var lastTouchX = 0
     private var lastTouchY = 0

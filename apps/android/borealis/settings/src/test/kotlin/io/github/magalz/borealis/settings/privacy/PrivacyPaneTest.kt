@@ -2,23 +2,34 @@ package io.github.magalz.borealis.settings.privacy
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.diagnostics.bundle.ExportResult
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
@@ -47,6 +58,35 @@ class PrivacyPaneTest {
         PrivacyViewModel(settings, FakeDiagnosticsExport(result), audit)
 
     private fun bundle() = bundleFile(folder.root)
+
+    /**
+     * The pane while a bundle is built, under [reduceMotion], with the clock stopped so that a test
+     * says how long the bar runs. Nothing is pressed: the press of a row moves on its own.
+     */
+    private fun showExporting(reduceMotion: ReduceMotion) {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            BorealisTheme(FormFactor.Tv, BorealisLook(reduceMotion = reduceMotion)) {
+                PrivacyContent(
+                    PrivacyUiState(exporting = true),
+                    SnackbarHostState(),
+                    noopPrivacyActions(),
+                    Modifier.width(PANE_WIDTH.dp),
+                )
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+    }
+
+    /**
+     * What the pane draws now. The bar has no semantics to find it by: a screen reader skips it.
+     */
+    private fun pane(): PixelMap = composeRule.onRoot().captureToImage().toPixelMap()
+
+    private fun pixelsThatMoved(before: PixelMap, after: PixelMap): Int {
+        assertThat(after.width to after.height).isEqualTo(before.width to before.height)
+        return before.buffer.indices.count { before.buffer[it] != after.buffer[it] }
+    }
 
     private fun showPane(
         viewModel: PrivacyViewModel,
@@ -159,6 +199,34 @@ class PrivacyPaneTest {
 
         composeRule.onNodeWithText("Creating the diagnostic bundle…").assertExists()
         composeRule.onNodeWithText("Export diagnostic bundle").assertIsFocused()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `with Reduce motion On the export bar stands still`() {
+        showExporting(ReduceMotion.On)
+        val before = pane()
+
+        composeRule.mainClock.advanceTimeBy(RUN_MILLIS)
+
+        val moved = pixelsThatMoved(before, pane())
+        assertWithMessage("pixels of the pane that moved in $RUN_MILLIS ms")
+            .that(moved)
+            .isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `with Reduce motion Off the export bar runs`() {
+        showExporting(ReduceMotion.Off)
+        val before = pane()
+
+        composeRule.mainClock.advanceTimeBy(RUN_MILLIS)
+
+        val moved = pixelsThatMoved(before, pane())
+        assertWithMessage("pixels of the pane that moved in $RUN_MILLIS ms")
+            .that(moved)
+            .isGreaterThan(0)
     }
 
     @Test
@@ -277,5 +345,13 @@ class PrivacyPaneTest {
 
         composeRule.onNodeWithText("Erase the audit trail?").assertDoesNotExist()
         assertThat(backs).isEqualTo(0)
+    }
+
+    private companion object {
+        const val PANE_WIDTH = 640
+        const val SETTLE_MILLIS = 100L
+
+        // A run of Material's indeterminate bar takes 1750 ms; this is nearly half of one.
+        const val RUN_MILLIS = 800L
     }
 }

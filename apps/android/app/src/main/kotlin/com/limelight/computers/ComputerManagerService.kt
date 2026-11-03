@@ -612,6 +612,13 @@ class ComputerManagerService : Service() {
 
             // Discovery announces a computer once: let it announce this one again
             discoveryBinder?.forget(computer)
+
+            // The platform reports a found service once, so while polling discovery starts over
+            val discovery = discoveryBinder
+            if (pollingActive && discovery != null) {
+                discovery.stopDiscovery()
+                discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
+            }
         } finally {
             releaseLocalDatabaseReference()
         }

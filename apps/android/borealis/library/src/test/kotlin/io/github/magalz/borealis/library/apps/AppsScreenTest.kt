@@ -273,6 +273,24 @@ class AppsScreenTest {
     }
 
     @Test
+    @Config(qualifiers = PHONE)
+    fun `the header says it is checking when the host state is unknown and no app is known`() {
+        show(state(steam).copy(hostChecking = true))
+
+        composeRule.onNodeWithText("Checking…").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing running").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the header names the running app while the host state is unknown`() {
+        show(state(desktop, steam).copy(hostChecking = true))
+
+        composeRule.onNodeWithText("Desktop running").assertIsDisplayed()
+        composeRule.onNodeWithText("Checking…").assertDoesNotExist()
+    }
+
+    @Test
     @Config(qualifiers = TV)
     fun `showing hidden apps keeps focus on the tile that had it`() {
         val shown = mutableStateOf(state(desktop, steam))

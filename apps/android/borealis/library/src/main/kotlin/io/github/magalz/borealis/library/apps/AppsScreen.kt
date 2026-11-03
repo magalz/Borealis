@@ -19,10 +19,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -68,8 +73,9 @@ private val LOADER_SIZE = 64.dp
  * details of [AppsUiState] open as a sheet and a dialog over the grid, and Back closes them before
  * anything else. A phone has a top bar with a back arrow, which calls [onBack], and the toggle for
  * hidden apps; a TV or handheld has a header with the toggle as a button and no back arrow, because
- * the system Back there is handled by the navigation of the shell. Messages go through
- * [snackbarHostState]. Provides its own theme for [formFactor].
+ * the system Back there is handled by the navigation of the shell. When the last of these windows
+ * closes, the tile of the app they were for has the focus again ([RestoreOpenerFocus]). Messages go
+ * through [snackbarHostState]. Provides its own theme for [formFactor].
  */
 @Composable
 fun AppsScreen(
@@ -86,6 +92,14 @@ fun AppsScreen(
     modifier: Modifier = Modifier,
 ) {
     BorealisTheme(formFactor) {
+        // The app that the last window over the grid was for, whichever way it opened: a tap or OK
+        // on an app that asks, X or a long press, or a launch request. A phone starts with no
+        // focus, so there is nothing to give back.
+        var openerId by remember { mutableStateOf<Int?>(null) }
+        val windowAppId = state.actions?.app?.id ?: state.details?.id
+        LaunchedEffect(windowAppId) { if (windowAppId != null) openerId = windowAppId }
+        val opener = openerId.takeIf { formFactor != FormFactor.Phone }
+        val openerFocus = remember { FocusRequester() }
         Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Column(Modifier.fillMaxSize()) {
                 if (formFactor == FormFactor.Phone) {
@@ -99,7 +113,15 @@ fun AppsScreen(
                 } else {
                     Header(state, onToggleShowHidden)
                 }
-                Content(state, formFactor, onAppSelected, onActions, Modifier.weight(1f))
+                Content(
+                    state,
+                    formFactor,
+                    onAppSelected,
+                    onActions,
+                    opener,
+                    openerFocus,
+                    Modifier.weight(1f),
+                )
             }
             BorealisSnackbarHost(
                 snackbarHostState,
@@ -108,6 +130,33 @@ fun AppsScreen(
         }
         state.actions?.let { AppActionsSheet(it, onActionChosen, onActionsDismissed) }
         state.details?.let { AppDetailsDialog(it, onDetailsDismissed) }
+        RestoreOpenerFocus(
+            open = state.actions != null || state.details != null,
+            openerListed = state.items.any { it.id == opener },
+            focus = openerFocus,
+        )
+    }
+}
+
+/**
+ * Asks for [focus], the requester of the tile of the app that opened the windows, once the last
+ * window over the grid has closed: the actions, the quit confirmation inside them or the details.
+ * On the TV the focus was lost after Back (Sprint 14 UAT, U11); the tests assume that the window
+ * took it from the screen and that Compose gave it back to the first tile, not to the one that had
+ * it. Nothing happens when the app is already gone from the grid ([openerListed] is false), and
+ * nothing when the screen starts with a window already open: that is not a close. After Hide the
+ * removal is asynchronous (the ViewModel launches it), so the app may still be in the grid when the
+ * sheet closes, and its tile, about to go, asks for the focus. A tile that the grid does not
+ * compose (many apps, scrolled away while a window was open) has no node for [focus]: Compose logs
+ * it and answers false, so nothing fails. This is the effect of `RestoreOpenerFocus` of the hosts
+ * screen, written for apps because that one takes the host list and ids.
+ */
+@Composable
+private fun RestoreOpenerFocus(open: Boolean, openerListed: Boolean, focus: FocusRequester) {
+    var wasOpen by remember { mutableStateOf(open) }
+    LaunchedEffect(open) {
+        if (wasOpen && !open && openerListed) focus.requestFocus()
+        wasOpen = open
     }
 }
 
@@ -162,6 +211,8 @@ private fun Title(state: AppsUiState, modifier: Modifier = Modifier) {
                     state.runningAppName != null ->
                         stringResource(R.string.apps_status_running, state.runningAppName)
                     running -> stringResource(R.string.apps_status_running_unknown)
+                    // An unknown host may have an app running that the last poll did not see.
+                    state.hostChecking -> stringResource(R.string.hosts_status_checking)
                     else -> stringResource(R.string.apps_status_idle)
                 },
                 style = MaterialTheme.typography.bodySmall,
@@ -177,6 +228,8 @@ private fun Content(
     formFactor: FormFactor,
     onAppSelected: (Int) -> Unit,
     onActions: (Int) -> Unit,
+    openerId: Int?,
+    openerFocus: FocusRequester,
     modifier: Modifier,
 ) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
@@ -193,6 +246,8 @@ private fun Content(
                     ),
                     onAppSelected,
                     onActions,
+                    openerId,
+                    openerFocus,
                 )
             }
             state.loading -> {
@@ -218,6 +273,8 @@ private fun Grid(
     columns: Int,
     onAppSelected: (Int) -> Unit,
     onActions: (Int) -> Unit,
+    openerId: Int?,
+    openerFocus: FocusRequester,
 ) {
     val gutter = LocalBorealisSpacing.current.gutter
     val running = stringResource(R.string.apps_running)
@@ -238,7 +295,14 @@ private fun Grid(
             CoverTile(
                 name = app.name,
                 onClick = { onAppSelected(app.id) },
-                modifier = if (app.id == firstId) Modifier.initialFocus(firstFocus) else Modifier,
+                modifier =
+                    Modifier.then(
+                            if (app.id == firstId) Modifier.initialFocus(firstFocus) else Modifier
+                        )
+                        .then(
+                            if (app.id == openerId) Modifier.focusRequester(openerFocus)
+                            else Modifier
+                        ),
                 runningLabel = running.takeIf { app.running },
                 hidden = app.hidden,
                 hiddenLabel = hidden,

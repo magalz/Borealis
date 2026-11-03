@@ -14,7 +14,9 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
@@ -58,6 +60,31 @@ class SegmentedControlTest {
         composeRule.onNodeWithText("60 fps").assertIsSelected()
         composeRule.onNodeWithText("30 fps").assertIsNotSelected()
         composeRule.onNodeWithText("120 fps").assertIsNotSelected()
+    }
+
+    @Test
+    fun `the state is on the node of each segment, which has the role and the click`() {
+        composeRule.setContent { Specimen(selected = "60") }
+
+        assertStateIsOnTheSegments("60 fps")
+    }
+
+    @Test
+    fun `a segment of a control that is not a focus stop keeps its state on a phone`() {
+        composeRule.setContent {
+            BorealisTheme(FormFactor.Phone) {
+                SegmentedControl(
+                    OPTIONS,
+                    "60",
+                    { "$it fps" },
+                    {},
+                    groupLabel = "Frame rate",
+                    focusable = false,
+                )
+            }
+        }
+
+        assertStateIsOnTheSegments("60 fps")
     }
 
     @Test
@@ -193,6 +220,33 @@ class SegmentedControlTest {
             .containsExactly("30 fps", "60 fps", "120 fps")
             .inOrder()
         control.assert(SemanticsMatcher.expectValue(SemanticsProperties.IsTraversalGroup, true))
+    }
+
+    /**
+     * A screen reader reads the state on the node of the segment, the one that has the role and the
+     * click; the text inside it is a child and holds none (the Sprint 17a read took the text).
+     */
+    private fun assertStateIsOnTheSegments(selected: String) {
+        val withState =
+            composeRule
+                .onAllNodes(
+                    SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected),
+                    useUnmergedTree = true,
+                )
+                .fetchSemanticsNodes()
+
+        assertThat(withState).hasSize(OPTIONS.size)
+        for (node in withState) {
+            assertThat(node.config[SemanticsProperties.Role]).isEqualTo(Role.RadioButton)
+            assertThat(node.config.getOrNull(SemanticsActions.OnClick)).isNotNull()
+        }
+        val states = withState.associate {
+            // The label is the text of its only child.
+            it.children.single().config[SemanticsProperties.Text].single().text to
+                it.config[SemanticsProperties.Selected]
+        }
+        assertThat(states.filterValues { it }.keys).containsExactly(selected)
+        assertThat(states.keys).containsExactly("30 fps", "60 fps", "120 fps")
     }
 
     private fun tintOverPage() =

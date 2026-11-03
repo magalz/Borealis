@@ -204,6 +204,11 @@ class DiscoveryServiceCharacterizationTest {
     }
 
     @Test
+    fun `a host that is forgotten by its active address is announced again when it is found again`() {
+        forgetAndFindAgain(host().also { it.activeAddress = AddressTuple("192.168.1.5", PORT) })
+    }
+
+    @Test
     fun `forgetting a host leaves the computers of the other hosts`() {
         binder.startDiscovery(INTERVAL_MS)
         findAndResolve("Den PC", "192.168.1.5")

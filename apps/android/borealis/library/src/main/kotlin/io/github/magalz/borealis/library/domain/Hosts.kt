@@ -52,8 +52,13 @@ data class HostAddress(val host: String, val port: Int = DEFAULT_PORT) {
 }
 
 sealed interface AddHostResult {
-    /** The host answered and was added; [name] is the name it reported (UC-008 step 5). */
-    data class Added(val hostId: String, val name: String) : AddHostResult
+    /**
+     * The host answered and was added; [name] is the name it reported (UC-008 step 5). [paired] is
+     * true when its first poll says it is paired already, as a forgotten host that still trusts
+     * this device is.
+     */
+    data class Added(val hostId: String, val name: String, val paired: Boolean = false) :
+        AddHostResult
 
     /**
      * This device already knew the host: by its id when it answered, or by the address it was

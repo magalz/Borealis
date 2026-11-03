@@ -159,7 +159,9 @@ private fun rememberRailActions(navController: NavHostController): RailActions =
  * The NavHost where the next screen fades in and the one that is left goes at once; the rail is
  * outside it and stays put. The screens have no page of their own, so a fade-out beside the fade-in
  * would show two screens one over the other. `ExitTransition.None` is no help: the screen that is
- * left would stay drawn until the fade-in is done, so it fades out in a single frame instead.
+ * left would stay drawn until the fade-in is done, so it fades out in a single frame instead. The
+ * preview of a Back gesture has transitions of its own in Navigation, and their default shrinks the
+ * screen that is left, so it is set here to the same fade.
  */
 @Composable
 internal fun FadingNavHost(navController: NavHostController, graph: NavGraphBuilder.() -> Unit) {
@@ -174,6 +176,8 @@ internal fun FadingNavHost(navController: NavHostController, graph: NavGraphBuil
         exitTransition = { fadeOut(snap()) },
         popEnterTransition = { enter },
         popExitTransition = { fadeOut(snap()) },
+        predictivePopEnterTransition = { enter },
+        predictivePopExitTransition = { fadeOut(snap()) },
         builder = graph,
     )
 }

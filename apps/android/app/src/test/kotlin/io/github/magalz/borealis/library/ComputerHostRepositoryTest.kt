@@ -185,12 +185,28 @@ class ComputerHostRepositoryTest {
         binder.onAdd = {
             it.uuid = "new-id"
             it.name = "Living Room"
+            it.pairState = PairState.NOT_PAIRED
             true
         }
 
         val result = repository.addHost(HostAddress("192.168.1.9"))
 
-        assertThat(result).isEqualTo(AddHostResult.Added("new-id", "Living Room"))
+        assertThat(result).isEqualTo(AddHostResult.Added("new-id", "Living Room", paired = false))
+    }
+
+    @Test
+    fun `a new host whose first poll says it is paired is added and paired`() = runTest {
+        val repository = repository()
+        binder.onAdd = {
+            it.uuid = "new-id"
+            it.name = "Living Room"
+            it.pairState = PairState.PAIRED
+            true
+        }
+
+        val result = repository.addHost(HostAddress("192.168.1.9"))
+
+        assertThat(result).isEqualTo(AddHostResult.Added("new-id", "Living Room", paired = true))
     }
 
     @Test
@@ -257,7 +273,7 @@ class ComputerHostRepositoryTest {
 
         val result = repository.addHost(HostAddress("192.168.1.5"))
 
-        assertThat(result).isEqualTo(AddHostResult.Added("laptop", "Laptop"))
+        assertThat(result).isEqualTo(AddHostResult.Added("laptop", "Laptop", paired = false))
     }
 
     @Test

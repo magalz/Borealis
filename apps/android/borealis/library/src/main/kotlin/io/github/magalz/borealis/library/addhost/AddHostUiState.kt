@@ -21,8 +21,11 @@ data class AddHostUiState(
 )
 
 sealed interface AddHostEffect {
-    /** The host was added and reported [name]. The screen says so and closes. */
-    data class Added(val name: String) : AddHostEffect
+    /**
+     * The host was added and reported [name]; [paired] says whether it is paired already. The
+     * screen says so and closes.
+     */
+    data class Added(val name: String, val paired: Boolean = false) : AddHostEffect
 
     /** The host was already added; [paired] says whether it is paired too. The screen says so. */
     data class AlreadyAdded(val name: String, val paired: Boolean) : AddHostEffect

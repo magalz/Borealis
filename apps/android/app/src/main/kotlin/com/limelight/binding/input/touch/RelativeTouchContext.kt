@@ -24,8 +24,8 @@ private const val BUTTON_RELEASE_DELAY = 100L
  * alone: when the first finger lifts first, its context decides at the last lift and never sees the
  * second finger go down or slide, and the context of the second finger never sees the first one
  * slide. The tap time runs from the second finger's down in both lift orders, and a move of either
- * finger past the tap distance since then is no tap. `TouchContexts` builds one for the contexts of
- * a stream.
+ * finger past the tap distance since then, or a scroll, is no tap. `TouchContexts` builds one for
+ * the contexts of a stream.
  */
 class TwoFingerTap {
     private var secondFingerDownTime: Long? = null
@@ -37,7 +37,7 @@ class TwoFingerTap {
         moved = false
     }
 
-    /** A finger moved past the tap distance: the two fingers are no tap, whichever lifts first. */
+    /** A finger moved past the tap distance or scrolls: no tap, whichever finger lifts first. */
     fun fingerMoved() {
         moved = true
     }
@@ -343,6 +343,10 @@ class RelativeTouchContext(
                     // A move along x alone, or a y delta that scaled to zero, scrolls nothing
                     if (confirmedScroll && deltaY != 0) {
                         conn.sendMouseHighResScroll((deltaY * SCROLL_SPEED_FACTOR).toShort())
+
+                        // A scroll is no tap, also for a finger that left the tap box before the
+                        // second one landed (its move was confirmed then, confirmMove)
+                        twoFingerTap.fingerMoved()
                     }
                 } else {
                     if (prefConfig.absoluteMouseMode) {

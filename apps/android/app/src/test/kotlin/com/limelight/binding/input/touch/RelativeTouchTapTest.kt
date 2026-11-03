@@ -524,7 +524,8 @@ class RelativeTouchTapTest {
 
     // The first finger moved the pointer before the second one landed and rests: the right click
     // depends on the lift order, as it did before the shared state. The second finger's context
-    // sees a still finger and clicks; the first finger's own context remembers its move and does not.
+    // sees a still finger and clicks; the first finger's own context remembers its move and does
+    // not.
 
     @Test
     fun `a first finger that moved the pointer before the second one landed and rests keeps the right click`() {

@@ -47,6 +47,7 @@ fun SettingsRoute(
                 onChoiceSelected = viewModel::onChoiceSelected,
                 onSliderChanged = viewModel::onSliderChanged,
                 onResetLayout = viewModel::onResetLayout,
+                onSliderReleased = viewModel::onSliderReleased,
             )
         }
     SettingsScreen(

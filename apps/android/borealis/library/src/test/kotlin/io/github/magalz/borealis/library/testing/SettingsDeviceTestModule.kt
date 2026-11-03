@@ -9,10 +9,11 @@ import io.github.magalz.borealis.settings.device.DeviceFacts
 import io.github.magalz.borealis.settings.device.DeviceFactsSource
 import io.github.magalz.borealis.settings.device.DisplayMode
 import io.github.magalz.borealis.settings.device.OscLayoutReset
+import io.github.magalz.borealis.settings.device.VibrationSample
 
 /**
- * The two bindings the app module provides to the Settings graph, for the Library's Hilt tests: a
- * plain 1080p phone and a layout reset that does nothing.
+ * The bindings the app module provides to the Settings graph, for the Library's Hilt tests: a plain
+ * 1080p phone, a layout reset that does nothing and a vibration sample that does nothing.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -20,6 +21,8 @@ object SettingsDeviceTestModule {
     @Provides fun deviceFacts(): DeviceFactsSource = DeviceFactsSource { TEST_FACTS }
 
     @Provides fun oscLayoutReset(): OscLayoutReset = OscLayoutReset {}
+
+    @Provides fun vibrationSample(): VibrationSample = VibrationSample { _, _ -> }
 
     private val TEST_FACTS =
         DeviceFacts(

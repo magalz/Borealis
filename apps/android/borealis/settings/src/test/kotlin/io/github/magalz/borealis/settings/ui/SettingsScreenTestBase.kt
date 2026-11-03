@@ -66,7 +66,14 @@ open class SettingsScreenTestBase {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     protected open fun viewModel(): SettingsViewModel =
-        SettingsViewModel(repository, options, facts, { resets++ }, UnconfinedTestDispatcher())
+        SettingsViewModel(
+            repository,
+            options,
+            facts,
+            { resets++ },
+            { _, _ -> },
+            UnconfinedTestDispatcher(),
+        )
 
     /**
      * Shows the screen on [backdrop], which is the page colour the window has in the app: the

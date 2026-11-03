@@ -38,6 +38,7 @@ class SettingsSliderRowTest {
     @get:Rule val composeRule = createComposeRule()
     private var value by mutableFloatStateOf(10f)
     private val changes = mutableListOf<Float>()
+    private val finished = mutableListOf<Float>()
 
     @Test
     fun `Right and Left move the value by one step`() {
@@ -247,6 +248,85 @@ class SettingsSliderRowTest {
         assertThat(rootCause(failure)).isInstanceOf(IllegalArgumentException::class.java)
     }
 
+    @Test
+    fun `a tap on the track reports the value that it set as the end of the gesture`() {
+        composeRule.setContent { Specimen(step = 5f) }
+
+        composeRule.onNodeWithText("Deadzone").performTouchInput {
+            click(Offset(width * 0.75f, height * TRACK_Y))
+        }
+
+        assertThat(changes).containsExactly(15f)
+        assertThat(finished).containsExactly(15f)
+    }
+
+    @Test
+    fun `a tap on the value that is already set still reports the end`() {
+        composeRule.setContent { Specimen() }
+
+        composeRule.onNodeWithText("Deadzone").performTouchInput {
+            click(Offset(width * 0.5f, height * TRACK_Y))
+        }
+
+        assertThat(changes).isEmpty()
+        assertThat(finished).containsExactly(10f)
+    }
+
+    @Test
+    fun `a drag reports the end once, when the finger lifts, with the value it reached`() {
+        value = 0f
+        composeRule.setContent { Specimen() }
+
+        composeRule.onNodeWithText("Deadzone").performTouchInput {
+            swipe(
+                start = Offset(width * 0.1f, height * TRACK_Y),
+                end = Offset(width - 1f, height * TRACK_Y),
+                durationMillis = 200,
+            )
+        }
+
+        assertThat(changes.size).isGreaterThan(1)
+        assertThat(finished).containsExactly(20f)
+    }
+
+    @Test
+    fun `a key step reports the value that it moved to, and a key at the end of the range reports nothing`() {
+        value = 18f
+        composeRule.setContentInKeyboardMode { Specimen() }
+        composeRule.onNodeWithText("Deadzone").requestFocus()
+
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionRight) }
+
+        assertThat(finished).containsExactly(20f)
+    }
+
+    @Test
+    fun `an accessibility service that sets the progress reports the end`() {
+        composeRule.setContent { Specimen() }
+
+        composeRule.onNodeWithText("Deadzone").performSemanticsAction(
+            SemanticsActions.SetProgress
+        ) {
+            it(13.2f)
+        }
+
+        assertThat(finished).containsExactly(14f)
+    }
+
+    @Test
+    fun `a disabled row reports no end`() {
+        composeRule.setContentInKeyboardMode { Specimen(enabled = false) }
+
+        composeRule.onNodeWithText("Deadzone").requestFocus()
+        composeRule.onNodeWithText("Deadzone").performKeyInput { pressKey(Key.DirectionRight) }
+        composeRule.onNodeWithText("Deadzone").performTouchInput {
+            click(Offset(width * 0.75f, height * TRACK_Y))
+        }
+
+        assertThat(finished).isEmpty()
+    }
+
     private fun rootCause(failure: Throwable?): Throwable? {
         var cause = failure
         while (cause?.cause != null) cause = cause.cause
@@ -277,6 +357,7 @@ class SettingsSliderRowTest {
                 enabled = enabled,
                 disabledNote = disabledNote,
                 keyStep = keyStep,
+                onValueChangeFinished = { finished += it },
             )
         }
     }

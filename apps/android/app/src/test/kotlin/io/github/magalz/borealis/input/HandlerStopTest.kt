@@ -58,7 +58,7 @@ class HandlerStopTest {
 
     @Test
     fun `a pad that does not answer the motors is not sent the trigger motors`() {
-        val pad = ZeroingPad(1, rig.handler, answers = false)
+        val pad = ZeroingPad(1, rig.handler, writeMs = ZeroingPad.BULK_TIMEOUT_MS)
         rig.handler.deviceAdded(pad)
 
         rig.handler.stop()
@@ -67,8 +67,28 @@ class HandlerStopTest {
     }
 
     @Test
+    fun `a pad whose write ends a little before the timeout did not answer either`() {
+        val pad = ZeroingPad(1, rig.handler, writeMs = ZeroingPad.BULK_TIMEOUT_MS - 5)
+        rig.handler.deviceAdded(pad)
+
+        rig.handler.stop()
+
+        assertThat(pad.writes).containsExactly("motors 0 0")
+    }
+
+    @Test
+    fun `a pad that is slow to answer still gets the trigger motors zeroed`() {
+        val pad = ZeroingPad(1, rig.handler, writeMs = 10)
+        rig.handler.deviceAdded(pad)
+
+        rig.handler.stop()
+
+        assertThat(pad.writes).containsExactly("motors 0 0", "triggers 0 0").inOrder()
+    }
+
+    @Test
     fun `a pad that does not answer leaves the pads after it zeroed`() {
-        val stuck = ZeroingPad(1, rig.handler, answers = false)
+        val stuck = ZeroingPad(1, rig.handler, writeMs = ZeroingPad.BULK_TIMEOUT_MS)
         val answering = ZeroingPad(2, rig.handler)
         rig.handler.deviceAdded(stuck)
         rig.handler.deviceAdded(answering)
@@ -81,7 +101,7 @@ class HandlerStopTest {
 
     @Test
     fun `however many pads do not answer, the stop waits for the timeout of two writes at most`() {
-        val pads = (1..4).map { ZeroingPad(it, rig.handler, answers = false) }
+        val pads = (1..4).map { ZeroingPad(it, rig.handler, writeMs = ZeroingPad.BULK_TIMEOUT_MS) }
         pads.forEach { rig.handler.deviceAdded(it) }
         val before = SystemClock.uptimeMillis()
 
@@ -93,13 +113,13 @@ class HandlerStopTest {
 }
 
 /**
- * A pad the USB driver holds, with the writes it got. A pad that does not [answer] holds each write
- * for the whole bulk timeout of the drivers, on the clock of the test.
+ * A pad the USB driver holds, with the writes it got. Each write takes [writeMs] on the clock of
+ * the test: nothing for a pad that answers, the bulk timeout of the drivers for one that does not.
  */
 private class ZeroingPad(
     id: Int,
     listener: UsbDriverListener,
-    private val answers: Boolean = true,
+    private val writeMs: Long = 0,
 ) : AbstractController(id, listener, 0x045e, 0x028e) {
     val writes = mutableListOf<String>()
 
@@ -111,19 +131,15 @@ private class ZeroingPad(
 
     override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
         writes += "motors $lowFreqMotor $highFreqMotor"
-        waitForTheTimeout()
+        write()
     }
 
     override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
         writes += "triggers $leftTrigger $rightTrigger"
-        waitForTheTimeout()
+        write()
     }
 
-    private fun waitForTheTimeout() {
-        if (!answers) {
-            ShadowSystemClock.advanceBy(Duration.ofMillis(BULK_TIMEOUT_MS))
-        }
-    }
+    private fun write() = ShadowSystemClock.advanceBy(Duration.ofMillis(writeMs))
 
     companion object {
         /** The drivers' bulk write timeout. */

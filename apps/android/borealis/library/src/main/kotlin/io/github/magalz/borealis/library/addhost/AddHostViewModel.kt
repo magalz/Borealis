@@ -56,6 +56,7 @@ class AddHostViewModel @Inject constructor(private val repository: HostRepositor
 private fun AddHostResult.toError(): AddHostError? =
     when (this) {
         is AddHostResult.Added -> null
+        is AddHostResult.AlreadyAdded -> null
         AddHostResult.InvalidAddress -> AddHostError.INVALID
         AddHostResult.WrongSubnet -> AddHostError.WRONG_SUBNET
         AddHostResult.Unreachable -> AddHostError.UNREACHABLE

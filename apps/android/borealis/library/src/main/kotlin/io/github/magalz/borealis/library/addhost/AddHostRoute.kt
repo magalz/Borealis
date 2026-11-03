@@ -31,6 +31,7 @@ fun AddHostRoute(
             viewModel.effects.collect { effect ->
                 when (effect) {
                     is AddHostEffect.Added -> currentOnAdded(effect.name)
+                    is AddHostEffect.AlreadyAdded -> Unit
                     AddHostEffect.Close -> currentOnClose()
                 }
             }

@@ -55,6 +55,13 @@ sealed interface AddHostResult {
     /** The host answered and was added; [name] is the name it reported (UC-008 step 5). */
     data class Added(val hostId: String, val name: String) : AddHostResult
 
+    /**
+     * The host answered, but this device already knew it (by its id or by the address it answers
+     * at). [paired] is true when it is paired too.
+     */
+    data class AlreadyAdded(val hostId: String, val name: String, val paired: Boolean) :
+        AddHostResult
+
     /** The address cannot be resolved or is not a valid host. */
     data object InvalidAddress : AddHostResult
 

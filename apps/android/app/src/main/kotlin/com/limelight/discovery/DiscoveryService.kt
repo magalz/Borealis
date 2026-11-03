@@ -42,6 +42,7 @@ class DiscoveryService : Service() {
                         host.ipv6Address,
                         host.manualAddress,
                         host.remoteAddress,
+                        host.activeAddress,
                     )
                     .map { it.address }
             for (computer in discoveryAgent.getComputerSet()) {

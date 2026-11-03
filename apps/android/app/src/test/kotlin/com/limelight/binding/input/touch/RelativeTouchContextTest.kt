@@ -27,7 +27,7 @@ class RelativeTouchContextTest {
     }
 
     @Test
-    fun `the timers run on the main looper, whichever thread built the context`() {
+    fun `the release timer runs on the main looper, whichever thread built the context`() {
         val built = AtomicReference<RelativeTouchContext>()
         Thread { built.set(rig.relative()) }
             .apply {
@@ -38,9 +38,11 @@ class RelativeTouchContextTest {
         assertThat(context).isNotNull()
 
         context.start(100, 100)
-        rig.advance(650)
-
+        context.touchUpEvent(100, 100, T0 + 100)
         assertThat(rig.sent()).containsExactly("down LEFT")
+        rig.advance(100)
+
+        assertThat(rig.sent()).containsExactly("down LEFT", "up LEFT").inOrder()
     }
 
     // The deltas

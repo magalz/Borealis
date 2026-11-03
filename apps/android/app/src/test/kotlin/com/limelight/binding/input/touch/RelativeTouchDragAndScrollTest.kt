@@ -17,43 +17,20 @@ class RelativeTouchDragAndScrollTest {
     private val rig = TouchRig()
 
     @Test
-    fun `a touch held for 650 ms starts a left drag that the lift ends`() {
+    fun `a press held still sends no button down, however long it lasts`() {
         val context = rig.relative()
         context.start(100, 100)
 
-        rig.advance(649)
+        rig.advance(2000)
         assertThat(rig.sent()).isEmpty()
-        rig.advance(1)
-        assertThat(rig.sent()).containsExactly("down LEFT")
-
-        context.moveTo(105, 100)
-        context.touchUpEvent(105, 100, T0 + 900)
+        context.touchUpEvent(100, 100, T0 + 2000)
         rig.advance(2000)
 
-        assertThat(rig.sent())
-            .containsExactly("down LEFT", "sendMouseMove(5, 0)", "up LEFT")
-            .inOrder()
+        assertThat(rig.sent()).isEmpty()
     }
 
     @Test
-    fun `a move inside the tap box leaves the drag, one outside the box takes it away`() {
-        val context = rig.relative()
-        context.start(100, 100)
-        context.moveTo(110, 100)
-        rig.advance(650)
-        assertThat(rig.sent()).containsExactly("sendMouseMove(10, 0)", "down LEFT").inOrder()
-        context.touchUpEvent(110, 100, T0 + 700)
-        rig.forget()
-
-        context.start(100, 100)
-        context.moveTo(121, 100)
-        rig.advance(2000)
-
-        assertThat(rig.sent()).containsExactly("sendMouseMove(21, 0)")
-    }
-
-    @Test
-    fun `moves that add up to 25 px take the drag away`() {
+    fun `a press that moves 25 px in small steps sends no button down`() {
         val context = rig.relative()
         context.start(100, 100)
         context.moveTo(110, 100)
@@ -66,22 +43,7 @@ class RelativeTouchDragAndScrollTest {
     }
 
     @Test
-    fun `a new touch down replaces the pending drag timer`() {
-        val context = rig.relative()
-        context.start(100, 100)
-        rig.advance(400)
-        context.start(100, 100, T0 + 400)
-
-        rig.advance(649) // 1049 ms: the timer of the first touch was due at 650
-        assertThat(rig.sent()).isEmpty()
-        rig.advance(1)
-        assertThat(rig.sent()).containsExactly("down LEFT")
-        rig.advance(2000)
-        assertThat(rig.sent()).containsExactly("down LEFT")
-    }
-
-    @Test
-    fun `a lift too slow for a tap removes the drag timer`() {
+    fun `a lift too slow for a tap sends no click and no drag`() {
         val context = rig.relative()
         context.start(100, 100)
         rig.advance(300)
@@ -93,40 +55,7 @@ class RelativeTouchDragAndScrollTest {
     }
 
     @Test
-    fun `a drag does not turn into a scroll when a second finger joins`() {
-        val first = rig.relative(0)
-        val second = rig.relative(1)
-        first.start(100, 100)
-        rig.advance(650)
-        first.moveTo(150, 100) // far from the touch down, but the drag keeps the move away
-        rig.forget()
-
-        setPointerCount(2, first, second)
-        second.touchDownEvent(300, 100, T0 + 700, true)
-        first.moveTo(150, 130)
-
-        assertThat(rig.sent()).isEmpty()
-    }
-
-    @Test
-    fun `cancelling during a drag raises the button, and a cancel stops the touch`() {
-        val context = rig.relative()
-        context.start(100, 100)
-        rig.advance(650)
-        assertThat(context.isCancelled).isFalse()
-
-        context.cancelTouch()
-
-        assertThat(context.isCancelled).isTrue()
-        assertThat(rig.sent()).containsExactly("down LEFT", "up LEFT").inOrder()
-        assertThat(context.touchMoveEvent(150, 150, T0 + 700)).isTrue()
-        context.touchUpEvent(150, 150, T0 + 800)
-        rig.advance(2000)
-        assertThat(rig.sent()).containsExactly("down LEFT", "up LEFT").inOrder()
-    }
-
-    @Test
-    fun `cancelling before the drag removes the timer and sends nothing`() {
+    fun `cancelling a press sends nothing`() {
         val context = rig.relative()
         context.start(100, 100)
 

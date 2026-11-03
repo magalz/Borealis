@@ -231,6 +231,45 @@ class BatteryReportTest : FeedbackTestBase() {
     }
 
     @Test
+    fun `a pad without a battery says so again when the pad that had one leaves its number`() {
+        val rig = rig()
+        padWith(rig, battery(present = false), id = 5)
+        val withBattery = padWith(rig, battery(), id = 6)
+
+        // The host keeps the battery of the pad that left until somebody replaces it
+        rig.handler.onInputDeviceRemoved(withBattery.id)
+        poll(rig)
+        poll(rig)
+
+        assertThat(events()).containsExactly(NO_BATTERY, HALF_FULL, NO_BATTERY).inOrder()
+    }
+
+    @Test
+    fun `a pad without a battery that takes the number of one that said none stays silent`() {
+        val rig = rig()
+        val first = padWith(rig, battery(present = false), id = 5)
+
+        // With one controller the host keeps its controller 0, and what it holds for it
+        rig.handler.onInputDeviceRemoved(first.id)
+        padWith(rig, battery(present = false), id = 6)
+        poll(rig)
+
+        assertThat(events()).containsExactly(NO_BATTERY)
+    }
+
+    @Test
+    fun `a number that frees up starts again, and its new pad without a battery says so`() {
+        val rig = rig { multiController = true }
+        val first = padWith(rig, battery(present = false), id = 5)
+
+        // The host drops the controller with the number, and its battery with it
+        rig.handler.onInputDeviceRemoved(first.id)
+        padWith(rig, battery(present = false), id = 6)
+
+        assertThat(events()).containsExactly(NO_BATTERY, NO_BATTERY)
+    }
+
+    @Test
     fun `a battery that shows up later is reported as the battery it is`() {
         val rig = rig()
         val battery = battery(present = false)
@@ -411,6 +450,8 @@ class BatteryReportTest : FeedbackTestBase() {
     private companion object {
         const val POLL_MS = 120_000L
         val NOT_PRESENT = MoonBridge.LI_BATTERY_STATE_NOT_PRESENT.toInt()
+        val NO_BATTERY = BatteryEvent(0, NOT_PRESENT, -1)
+        val HALF_FULL = BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50)
     }
 }
 

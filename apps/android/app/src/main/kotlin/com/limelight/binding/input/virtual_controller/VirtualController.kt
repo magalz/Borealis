@@ -16,6 +16,7 @@ class VirtualController(
     private val controllerHandler: ControllerHandler?,
     private val frameLayout: FrameLayout?,
     private val context: Context,
+    private val config: PreferenceConfiguration,
 ) {
     class ControllerInputContext {
         @JvmField var inputMap: Short = 0x0000

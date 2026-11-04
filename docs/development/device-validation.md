@@ -2002,8 +2002,10 @@ leaves the state that the next one needs.
   - Owner: Hosts, Add host, type the address of the PC (do not record it), Add host. On the TV, OK
     on the field opens the keyboard (section 11, D1). On the S22 the keyboard opens at once.
   - Expected: "Adding host", then Hosts with the message "`<host>` added. Pair it to see its apps."
-    and the card of the PC: "Not paired", with Pair. The message reads the same for a paired host
-    (roadmap, Sprint 17): not a `fail`.
+    and the card of the PC: "Not paired", with Pair. A host that is already paired on its first poll
+    gets "`<host>` added. It is already paired." A host that is already in the list gets "`<host>` is
+    already added." (offline, by its saved address) or "`<host>` is already added and paired." (Sprint
+    17b, BORE-7; [3.33](#333-sprint-17b-checks), step 5).
   - Errors, one try each (`strings_addhost.xml`): an empty field gives "Enter an IP address or a
     host name."; a typo gives "Unable to resolve this address. Check it for typos."; a LAN address
     that no device uses gives "Unable to connect to the specified computer. Make sure the required
@@ -2273,8 +2275,9 @@ Steps:
      `adb -s <serial> shell am force-stop io.github.magalz.borealis.debug`, then
      `adb -s <serial> shell run-as io.github.magalz.borealis.debug rm shared_prefs/BorealisStream.xml`.
      With the keyboard and the mouse attached and no pad, and the setting Off, expected: "Press
-     Ctrl+Alt+Shift+M for the menu". With the setting On, expected: "Press Ctrl+Alt+Shift+M or hold the mouse
-     Back button for the menu". Without a keyboard or a mouse, expected: "Pull the handle down or press Back
+     Ctrl+Alt+Shift+M or press the mouse Back and Forward buttons together for the menu". With the setting
+     On, expected: "Press Ctrl+Alt+Shift+M, hold the mouse Back button, or press Back and Forward together
+     for the menu" (Sprint 17b, BORE-18; [3.33](#333-sprint-17b-checks), step 22). Without a keyboard or a mouse, expected: "Pull the handle down or press Back
      for the menu" on the phone, and "Press Back for the menu" on the TV.
 5. A second device (TV and S22, in both orders). Source: `NvConnection.askAboutRunning`,
    `LaunchConflicts`, issue #101, [UC-003](../use-cases/0003-join-or-replace-a-running-app.md). Read the
@@ -2583,8 +2586,9 @@ Steps:
     `RelativeTouchContext`.
     - Tap with two fingers, lifting the second finger first, then lifting the first finger first.
       Expected: one right click each time.
-    - A slow tap, and a tap with the second finger landing late. Note which ones click (the timing
-      is in the Sprint 17 item on the gaps of the tap).
+    - A tap with the second finger landing about 150 ms late, in both lift orders. Expected: one right
+      click each time. A long two-finger hold gives no click. Sprint 17b (BORE-21, BORE-22); the
+      cases are in [3.33](#333-sprint-17b-checks), step 15.
     - Scroll with two fingers, drifting sideways. Expected: no scroll for the sideways drift; a slow
       vertical drift still scrolls.
 16. Pads (S22, and the TV with the owner's OK). Entries U3, C12, C20 and C21. Needs the owner's pads.
@@ -2668,6 +2672,182 @@ or a PIN, and take no screenshot of the stream (section 5).
     the video. Record the decoder log of any stream that shows it.
 14. End: put back the settings that the steps changed, quit the stream, and end with
     `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
+
+### 3.33 Sprint 17b checks
+
+Run these on the Samsung Galaxy S22 and on the Google TV Streamer, with the owner's OK for the TV,
+against LuminalShine on the owner's PC. Sprint 17b changed the Library and Settings, the input and pad
+code, and the Compose screens ([roadmap, Sprint 17](../roadmap.md#sprint-17-general-fixes)). The steps
+run by device first, and the owner's steps come last, because they need the pads, the mouse and the
+keyboard.
+
+Record each item as `pass`, `fail`, `owner check` or `not applicable`, with a short note for each
+`fail`. An item marked `known` is recorded and is not a `fail`: its card is in the backlog. Do not record
+a host name, an address, a MAC address or a PIN, and take no screenshot of the stream (section 5).
+
+Set-up, and put back at the end:
+
+- The PC's network profile is Private, and ports 47984 and 47989 are reachable from the S22. A Public
+  profile with the rule "Bloquear Sunshine WebUI Externa" blocks 47984 from the internet side, and then
+  pairing fails and the host looks offline ([section 23](#23-results-sprint-17b), the pairing finding).
+- On the S22: the system font at its largest (2.0) and Borealis text size Largest, a combined 2.6 as the
+  roadmap states. Split screen and 3-button navigation are set for the steps that name them. Keep the
+  screen awake with `adb shell svc power stayon <source>`, the source the phone is on (`ac`, `usb` or
+  `true`), and set it back to `false` at the end.
+- The build is the phase head at the time of the round. Step 36 needs the Native fix that is on its own
+  branch, `fix/BORE-30-native-send-fix1`, which is not in the phase head `bd655d52d`: TODO(verify) that the
+  round's build contains it.
+
+1. Install the phase build on the S22 and on the TV. Expected: `logcat -b crash` is empty at the start
+   and at the end of the round.
+2. S22, pinned shortcut from a cold start (BORE-3). Borealis is not running, and a shortcut to an app of
+   a host that answers is pinned. Tap it. Expected: the stream starts after the host's first poll. With
+   a host that does not answer (block the app's network, as in 3.29, step 7, and restore it at once),
+   expected: the offline message, and no stream.
+3. S22 and TV, Try again from another device (BORE-4). On the TV, get "Desktop stopped" while the S22
+   runs Desktop, then tap Try again. Expected: "An app is already running" with Join, Quit and relaunch,
+   and Cancel, and no join without that question. With nothing running on the host, Try again starts the
+   app. Repeat in the other order.
+4. S22, the header after a Disconnect (BORE-5). Start a stream of Desktop and Disconnect it. Watch the app
+   page header from the first frame after the Disconnect. Expected: "Checking…" or the running app, never
+   "Nothing running" while the host's state is unknown. Section 23 did not see the first 9 to 12 seconds
+   of the round before this change, so note what the header shows from the first frame.
+5. S22, Add host texts (BORE-7). Use Add host in each case and read the message. A host that was paired,
+   forgotten and added again by its address: "`<host>` added. It is already paired." A host never paired:
+   "`<host>` added. Pair it to see its apps." A host already in the list and offline, added by its saved
+   address: "`<host>` is already added." A host already in the list and paired: "`<host>` is already added
+   and paired." An empty field and a typo give the errors of 3.28, step B2. Check the keyboard of the
+   address field: `.`, `/` and `:` should be at hand (`KeyboardType.Uri`), and a host name must still be
+   typeable. Record what the keyboard gives; the owner decides the type.
+6. S22, forget and stay on Hosts (BORE-6). Forget a paired host and stay on Hosts. Expected: the host comes
+   back as "Found on this network" within the mDNS period, with no app restart. Leave Hosts, then check the
+   log for the discovery stop. The JmDNS path of Android 9 to 13 is not on any device at hand (the S22 runs
+   Android 16, the TV Android 14): record it as `not applicable`, and TODO(verify) it on a device below
+   Android 14.
+7. S22, Back from Apps to Hosts (BORE-8). Use a slow, a complete, a cancelled and a quick Back swipe from
+   Apps. Expected: the screen fades like the other Library screens. A cancelled swipe may show a few blank
+   frames: the owner accepted them, so record them and do not fail. Repeat the Back with Reduce motion on,
+   and with the bar's Back button in 3-button navigation (TODO(verify) the purpose of the 3-button check:
+   the round notes name it without a step). Privacy and diagnostics on the phone also fade.
+8. S22, Reduce motion (BORE-10). Settings, Accessibility, Reduce motion on. Start Add host to an address
+   that does not answer, and an export from Privacy. Expected: both indicators stand still. TalkBack reads
+   "Adding host" with no percentage.
+9. S22, the Apps screen at 2.6 (BORE-27). Open the Apps screen of a host with a long name. Expected: the
+   title and "Desktop running" fit, and the title is stacked above the Show hidden button. Known: in the
+   unit runs, Wide at 2.6 still overflows in 3 of 16 runs (TV Luciole and Andika, phone Andika). Handheld
+   was not tested at 2.6, so record no handheld result.
+10. S22, Audio effects (BORE-11). Settings, Audio. Expected: the summary reads "Lets the device's equalizer
+    and sound effects change the stream's sound. Uses a slower audio path, which adds latency." It fits at
+    the largest text.
+11. S22, sample vibration (BORE-12). Turn on Vibrate in the on-screen controller settings, then Vibrate
+    fallback. Expected: a pulse of about 60 ms when the switch turns on, and one when the strength slider is
+    released. A device without a vibrator does nothing. The owner's calls on the pulse are in step 39.
+12. S22, the stream keyboard in split screen with a pad (BORE-13). Expected: the Esc key is first, and the
+    focus starts on Q. A wide landscape phone with a pad keeps the TV row.
+13. S22, TalkBack on the stream keyboard (BORE-14). Focus the middle key (T) of the keyboard, and a middle
+    segment of the menu. Expected: each is read in screen order, and the focused item is no longer read last.
+14. S22, the Trackpad double tap and hold (BORE-20). Expected: a double tap and hold drags, starting within
+    the 250 ms window. A tap and a swipe within 250 ms drag. A tap, a tap and a hold act as a triple-click
+    drag. A double click and drag selects words in an editor on the PC. A press and hold with no tap before
+    it no longer starts a drag.
+15. S22, the two-finger tap in Trackpad (BORE-21, BORE-22). Expected, each one:
+    - a still two-finger tap is a right click;
+    - the second finger lands about 150 ms late: a right click in both lift orders, whichever finger lifts
+      first;
+    - a long two-finger hold gives no click;
+    - a first finger resting still, then a quick tap of a second finger: a right click in both orders;
+    - move the pointer, keep the first finger down, and tap a second finger: a right click, even with 1 or
+      2 px of jitter (a pre-existing 5-unit scroll may come with it);
+    - the second finger slides 20 px or more while the first stays and lifts first: no click;
+    - a first finger scrolls 20 px or more while a second finger taps: no click.
+
+    Known, for BORE-44 (backlog): a new finger at index 0 after the first lifted restarts the shared time, and
+    a second-finger tap during a double-tap drag still right-clicks unless the dragging finger moved 20 px or
+    more.
+16. S22, the Touch row in Settings and the Touch sheet (BORE-29). Expected: Trackpad, Direct, Native and Off
+    are offered, and Native has its purpose line, "Sends real touch to the PC, as on a touchscreen. Needs a
+    host with touch support." The sheet and its four segments fit at the largest text. Start a stream in
+    Native: it starts in Native.
+17. S22, Native touch on the PC (BORE-30). On a page or a text editor of the PC, check a tap, a long press, a
+    drag and a scroll. Expected: each reaches the PC as touch, as on a touchscreen. A three-finger tap in
+    Native sends the fingers to the PC, and the menu still opens the keyboard.
+18. S22, Native in a narrow split-screen window (BORE-48, backlog). Open the Touch sheet of the menu. Known:
+    the Off segment is cut at the default size in a 360 dp window (BORE-48). Record it; do not fail.
+19. S22, the Native segment of the in-game menu (BORE-29). Open the menu in a stream and check the Touch row:
+    Trackpad, Direct, Native and Off. Expected: the segment that is active is the one applied.
+20. S22, the on-screen controller (BORE-17). Rotate and enter picture-in-picture mid-stream. Expected: the
+    layout stays. Move a button in configure mode, then rotate. Expected: the moved place survives. A setting
+    changed mid-stream applies at the next stream start.
+21. S22 and TV, the chord key with a keyboard (BORE-16). Hold Ctrl+Alt+Shift and press Z, Q, C or M. Release
+    the modifiers first, then the key, and then the reverse. Also hold Z first, add the three modifiers, then
+    release. Expected: the PC gets no lone key up.
+22. S22 portrait, the menu hint with a keyboard and a normal mouse, and no pad (BORE-18). With "Mouse back and
+    forward buttons" Off, expected: "Press Ctrl+Alt+Shift+M or press the mouse Back and Forward buttons together
+    for the menu". With it On, expected: "Press Ctrl+Alt+Shift+M, hold the mouse Back button, or press Back and
+    Forward together for the menu". The On text is about 100 characters and wraps to two lines in the pill;
+    check that it reads well. Clear the hint memory as in 3.29, step 4.
+23. S22, the Audio delay line with a Bluetooth output (BORE-19). Plug in and unplug a Bluetooth output in the
+    middle of a stream. Expected: "(Bluetooth)" shows on the Audio delay line of the Detailed overlay and goes
+    away within about 1 second. Compact is unchanged, and the longer line fits in landscape on the S22.
+    TODO(verify) the text before the first delay is measured: the K4 round report gives "Audio delay — (Bluetooth)"
+    as expected, and its known-edge note gives "Audio delay —" with no suffix until the first snapshot, about
+    1 second after the overlay appears. Known: below Android 13, any connected Bluetooth output counts.
+24. TV, the Apps screen and the Settings row at 2.6 (BORE-27, BORE-28). Expected: the Apps title fits, and on
+    Settings, Stream, the Bitrate row shows "Bitrate" and "10 Mbps" without a cut. Known: at 2.6 on the TV, the
+    grid keeps about 60 dp with a host name of 56 characters in Andika (round note of BORE-27).
+25. TV, the Audio effects summary at 2.6 (BORE-28). Expected: the summary fits on the TV.
+26. TV, the focus after the host Options sheet (BORE-9). Open the Options of a host that is not the first card:
+    Options then Back, Wake, Details then Close, and Forget then Cancel. Expected: the focus returns to the card
+    each time. Open the sheet, scroll the opener away, and close it. Expected: no crash.
+27. TV, the focus after each app sheet action (BORE-34). Expected: Back, an action that keeps the screen, Details
+    close, Quit and start. After Hide, note where the focus lands. Back on a real TV remote works from the sheet.
+28. TV, the Back fade and the remote Back from Apps (BORE-8). Expected: the Back from Apps to Hosts fades, and the
+    remote Back does the same.
+29. TV, forget and stay on Hosts (BORE-6). Expected: as step 6, on the TV.
+30. TV, Add host texts and the keyboard (BORE-7). Repeat step 5 on the TV. The TV keyboard may ignore
+    `KeyboardType.Uri`: record what it gives, and whether `.`, `/` and `:` are at hand.
+31. TV, a pinned shortcut from a cold start (BORE-3). Known: BORE-35 (backlog) says that a TV shortcut to Steam
+    Big Picture opens Hosts and starts nothing. Record the result as `known`.
+32. TV, the menu hint with a keyboard and a mouse, the setting On and Off (BORE-18). The texts are those of step 22.
+
+33. Owner (the owner's steps come last): the pads, the Ultimate 2 and the Pro 3 (BORE-23, BORE-24, BORE-25, BORE-26). PH1: two pads on one
+    controller number, with multi-controller off, or a pad plus the on-screen controller, push the same trigger
+    or stick: the host gets the stronger value. PH2: a pad without a battery and a pad with one on the same
+    number: the host shows the real battery, with no flicker. After the pad with the battery leaves, the host
+    shows "no battery" within 120 s. PH3: a USB pad that does not answer at the end of a stream: the stop ends
+    in a short time. Only unit tests cover it so far. PD1: a USB Xbox 360 or Xbox One pad with low motor values
+    gives a weak rumble, and a host zero stops it. Record `not applicable` for a pad that is not at hand.
+34. Owner: the pad battery and a device change while a pad is held (C20 and C12, deferred from 3.32). Hold a
+    button and a trigger while Android reports a change of the same pad, and note what was tried. The host must
+    not see the held button released by the change.
+35. Owner: the Logi M650 and a normal mouse, with "Mouse back and forward buttons" On and Off (BORE-18). With the
+    setting On: Back and Forward within 250 ms, in either order, open the menu, and neither reaches the PC; a lone
+    Back or Forward pulse reaches the PC within 250 ms; the 1 s Back hold works on the normal mouse. With the
+    setting Off, the chord uses the mouse's KEYCODE_BACK and KEYCODE_FORWARD keys: check it on the S22. A Back that
+    is a right click while the setting is Off is by design: record it. The M650 side buttons send pulses, so its
+    Back hold does not work (section 22, finding 3): record it.
+36. Owner, on the PC, with the S22 in Native (BORE-29, BORE-30): set `native_pen_touch` to off for this step, and on
+    again after it (step 42). Start a stream in Native. Expected: the notice "This PC does not take touch; using
+    Direct", once, and the Touch row of the menu shows Direct. TODO(verify) two checks of the Native fix on its own
+    branch: a finger held when the menu opens is released on the PC, and choosing Native again after a refusal
+    shows Direct and the notice again.
+37. Owner, TalkBack on the S22 menu segments (BORE-15). Each segment is read with its selected state, and the active
+    one is marked. The phone tree cannot be dumped in landscape, so the owner checks it.
+38. Owner, TalkBack on the Library: the app cards read the app name, the double-tap and tap actions and the state,
+    and the host cards read the name, the status, the address and the chips such as HDR and HEVC. Record what
+    TalkBack reads. Known: the app cards have no text in the accessibility tree, but the owner's TalkBack reads
+    the names (2026-11-04).
+39. Owner, the sample vibration (BORE-12). The owner decides the strength: 100 % maps to amplitude 127, which is
+    weaker than a strong stream rumble. Note that the on-screen controller samples use the default sample, that the
+    sample uses the media usage on API 33 and later (it plays with touch haptics off), and that a D-pad key held on
+    the strength slider pulses once per repeat. Record the owner's choice, not a `fail`.
+40. Owner, the Ultimate 2 Home button held (record only): does the held Home act as Win+Tab on the PC, as Windows
+    does for a long press of the Xbox button? Record the result.
+41. Owner, Alt+Tab on the S22 with a keyboard (record only, BORE-47). Record whether the first Alt+Tab opens the PC's
+    Alt menu, as section 23 found.
+42. End: put back the settings the steps changed (the Touch row, the hint setting, the S22 system font and Borealis
+    text size, split screen, 3-button navigation, `svc power stayon false`, the host's `native_pen_touch` of step 36).
+    Quit the stream, and end with `adb -s <serial-tv> shell input keyevent KEYCODE_SLEEP` on the Streamer.
 
 ## 4. Results templates
 
@@ -4996,7 +5176,8 @@ Results of the evening of 2026-10-24 (owner and orchestrator, same build):
   without showing it. The app recognised the known host: no duplicate card, and the
   paired host stayed Online. The message "`<host>` added. Pair it to see its apps."
   shows for any added host, a paired one too. The owner put the wording in Sprint 15, and moved it to
-  Sprint 17 on 2026-10-28.
+  Sprint 17 on 2026-10-28. This is the Sprint 17 record; Sprint 17b (BORE-7) gives a paired host, and a
+  host already in the list, their own texts ([3.33](#333-sprint-17b-checks), step 5).
 - Wrong PIN on 26.10.0-beta.1 (owner): the same as before Sprint 12. After a wrong
   PIN, a retry shows a new PIN for a moment, then the "try again" screen. This is
   the same symptom as before Sprint 12, and it matches the host keeping the failed
@@ -6271,3 +6452,36 @@ Resume or the first card by position. Roadmap, Sprint 17b, Accessibility and lay
   cover the lost surface in picture-in-picture.
 - Left on the devices: the debug build of `fc815b85a` on both, paired, and the settings as before the round. The
   host is back on 26.10.1.
+
+## 23. Results: Sprint 17b
+
+This section holds the device reads of Sprint 17b, which ran before the device round, and the round itself,
+[section 3.33](#333-sprint-17b-checks). The reads ran on 2026-11-02 to 2026-11-04 on the Samsung Galaxy S22
+and the Google TV Streamer, against LuminalShine 26.10.1, with the owner for the owner's steps. The round
+is not run yet: its results go in "Device round" below.
+
+### Device reads
+
+| Read | Device | Result | Notes and cards |
+| --- | --- | --- | --- |
+| R1, native touch on the host | PC, S22 | The host's Windows input code injects touch events, and it advertises the pen and touch capability when `native_pen_touch` is on. The default is on in 26.10.1, and the owner's configuration does not set it. MoonBridge has no getter for the flag; a refused send comes back as `LI_ERR_UNSUPPORTED`. | The stream check, that the host sends the capability in a real stream, runs in the round (3.33, steps 16 and 17). |
+| R2, Pro 3 over Bluetooth in Switch mode | S22, TV | On the S22 Android reads the pad as "Nintendo Switch Pro Controller" on Bluetooth (vendor 057E, product 2009), through the uhid driver, with keys and four axes. It has no sensor device, no battery in `dumpsys input` or the power supply, and no sensor in the sensor service. The TV reads the Switch Pro receiver as plain HID, with no sensor. So Android exposes no Nintendo sensor on either device. | The open decision on a Nintendo pad with sensors does not arise on these devices: BORE-46 (research, backlog). A userspace driver for the Switch Pro receiver (rumble, and maybe gyro and battery from the `0x30` reports) is larger than size M: BORE-45 (feature, backlog), owner decision of 2026-11-04. |
+| R3, Alt+Tab with a keyboard | S22 | On One UI 8.0 (Android 16, SDK 36.0), with a Bluetooth keyboard in a Desktop stream, every Alt and Tab reaches the kernel. At each Tab down the phone's window manager takes the key as a gesture, and the input dispatcher drops it for the game window. The client's keyboard capture call needs SDK 36.1; on SDK 36.0 only the Samsung call for the Meta key runs. The owner saw the first Alt+Tab open the Alt menu of the PC, and the second one work. | BORE-47 (research, backlog, found by the agent). The round records it only (3.33, step 41). |
+| R4, S22 audio A/B | S22 | On USB, 1080p, stereo, three runs of each row with the method of Sprint 17a. At 100 ms: Balanced 14, 12 and 13 drops (peak 140 to 145 ms); the fps limit row gave one invalid run (the stream did not start), then 24 and 0. With a limit of 160 ms for the first 2 s after the first packet, and 100 ms after: Balanced 0, 12 and 16 drops; the fps limit 26, 0 and 0. In 3 of the 6 spike rows the burst moved to about 2.5 s, the end of the window, with peaks of 125 to 140 ms. The queue does not drain, so a start window only moves the drop. | A1 (BORE-31) is canceled by the owner. The question is research: BORE-33 (backlog). The S22 was restored to its settings after the runs. |
+| R5, "Nothing running" after a Disconnect | S22 | Not reproduced. Three Disconnects, one of them on a fresh launch from "Nothing running". The first frame that was observed, 9 to 12 seconds after the start, to 40 seconds later, read "Desktop running". The first 9 to 12 seconds were not observed. Each return to the Library logged "Timing out polled state": the poll state turns UNKNOWN after its time to live, and the next poll follows about 0.1 s later. | BORE-5: for an UNKNOWN host the header shows "Checking…" when no running app is known, and a known running app is still named. Round step 4 checks the header from the first frame. |
+| R6, accessibility reads | S22, TV | Library cards on the S22, in portrait (2026-11-02): the clickable node of an app card has no text or content description. The name is the content description of a non-clickable child with the same bounds, and host cards have the same shape. The owner's TalkBack on the S22 (2026-11-04) reads the app name, the actions and the state. Menu segments on the TV (2026-11-03, with the owner's OK): each segment is checkable, the active one is checked and not clickable, and its text child reports `checked=false`, which is what the Sprint 17a read saw. The segments are not merged into the row. | No card change for the names. BORE-15 pins the selected state on the segment nodes, with a test. The owner's TalkBack check of the segments is round step 37. |
+
+Decisions taken from the reads, by the owner on 2026-11-03 and 2026-11-04: A1 canceled, with research BORE-33
+in the backlog; the Pro 3 driver and the Nintendo pad type as BORE-45 and BORE-46, both in the backlog.
+
+### Side finding: pairing on a Public network
+
+After the PC's Wi-Fi network came back as Public, pairing failed on the S22, and the desktop looked offline
+for it. The rule "Bloquear Sunshine WebUI Externa" blocks TCP 47984 from the internet side of a Public
+profile. The owner set the network back to Private, and ports 47984 and 47989 were then open from the S22.
+This is a setting of the host's PC, not a client defect. The set-up of 3.33 checks it before a round.
+
+### Device round
+
+To be filled after the round. The results go here as in [section 22](#22-results-sprint-17a): the steps of
+[3.33](#333-sprint-17b-checks) by device, the findings with the cards that take them, and the items not run.

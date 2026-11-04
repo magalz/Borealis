@@ -427,6 +427,101 @@ internal class GameKeyRoutingTest : GameTestBase() {
         assertThat(sentCalls()).isEmpty()
     }
 
+    // The key that arms a chord
+
+    /**
+     * Ctrl, Alt and Shift go down, then [code]; the key comes up after the three when
+     * [afterModifiers] is set, and before them otherwise. Nothing runs the main looper in between,
+     * so what the chord posts (the toggle of the grab, the chrome taking the input) has not run
+     * when the key comes up. Returns whether the activity handled the key down and the key up.
+     */
+    private fun chordKey(code: Int, afterModifiers: Boolean): List<Boolean> {
+        rig.holdCtrlAltShift()
+        val pressed = rig.down(code)
+        if (afterModifiers) {
+            rig.releaseCtrlAltShift()
+            return listOf(pressed, rig.up(code))
+        }
+        val released = rig.up(code)
+        rig.releaseCtrlAltShift()
+        return listOf(pressed, released)
+    }
+
+    @Test
+    fun `the Z that arms the grab chord, released after the modifiers, sends no key up to the host`() {
+        rig.streaming()
+        forgetCalls()
+
+        val handled = chordKey(KeyEvent.KEYCODE_Z, afterModifiers = true)
+
+        assertThat(handled).containsExactly(true, true)
+        // The host saw the modifiers and never the Z: no key down, so no key up.
+        assertThat(sentKeys().map { it.code }).containsExactlyElementsIn(MODIFIERS_ONLY).inOrder()
+    }
+
+    @Test
+    fun `the Z that arms the grab chord, released before the modifiers, is not the host's either`() {
+        rig.streaming()
+        forgetCalls()
+
+        val handled = chordKey(KeyEvent.KEYCODE_Z, afterModifiers = false)
+
+        assertThat(handled).containsExactly(true, true)
+        assertThat(sentKeys().map { it.code }).containsExactlyElementsIn(MODIFIERS_ONLY).inOrder()
+    }
+
+    @Test
+    fun `the M that arms the menu chord, released after the modifiers, sends no key up to the host`() {
+        rig.streaming()
+        forgetCalls()
+
+        val handled = chordKey(KeyEvent.KEYCODE_M, afterModifiers = true)
+
+        // The menu is modal as soon as it opens, so this key up goes to the chrome and never
+        // meets the chord code: no lone key up reaches the host before the change either.
+        assertThat(handled).containsExactly(true, true)
+        assertThat(sentKeys().map { it.code }).containsExactlyElementsIn(MODIFIERS_ONLY).inOrder()
+    }
+
+    @Test
+    fun `the M that arms the menu chord, released before the modifiers, is not the host's either`() {
+        rig.streaming()
+        forgetCalls()
+
+        val handled = chordKey(KeyEvent.KEYCODE_M, afterModifiers = false)
+
+        assertThat(handled).containsExactly(true, true)
+        assertThat(sentKeys().map { it.code }).containsExactlyElementsIn(MODIFIERS_ONLY).inOrder()
+    }
+
+    @Test
+    fun `the C that arms the cursor chord, released after the modifiers, sends no key up to the host`() {
+        rig.streaming()
+        forgetCalls()
+
+        val handled = chordKey(KeyEvent.KEYCODE_C, afterModifiers = true)
+
+        assertThat(handled).containsExactly(true, true)
+        assertThat(sentKeys().map { it.code }).containsExactlyElementsIn(MODIFIERS_ONLY).inOrder()
+    }
+
+    @Test
+    fun `the key of a chord that goes down again while the chord waits is eaten, and so is its key up`() {
+        rig.streaming()
+        forgetCalls()
+
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_Z)
+        rig.up(KeyEvent.KEYCODE_Z)
+        val pressedAgain = rig.down(KeyEvent.KEYCODE_Z)
+        rig.releaseCtrlAltShift()
+        val releasedAgain = rig.up(KeyEvent.KEYCODE_Z)
+
+        assertThat(pressedAgain).isTrue()
+        assertThat(releasedAgain).isTrue()
+        assertThat(sentKeys().map { it.code }).containsExactlyElementsIn(MODIFIERS_ONLY).inOrder()
+    }
+
     // The entry points
 
     @Test
@@ -504,5 +599,10 @@ internal class GameKeyRoutingTest : GameTestBase() {
     private companion object {
         const val ACTION_NONE = 99
         const val NO_BUTTONS = 0
+
+        /**
+         * The keys of the host that Ctrl, Alt and Shift make: they go down, then come up, in pairs.
+         */
+        val MODIFIERS_ONLY = listOf(0x80A2, 0x80A4, 0x80A0, 0x80A0, 0x80A4, 0x80A2)
     }
 }

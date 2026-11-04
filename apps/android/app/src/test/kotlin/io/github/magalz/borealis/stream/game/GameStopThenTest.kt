@@ -1,12 +1,14 @@
 package io.github.magalz.borealis.stream.game
 
 import com.google.common.truth.Truth.assertThat
+import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamControls
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import org.junit.Test
 import org.robolectric.shadows.ShadowLooper
 import org.robolectric.util.ReflectionHelpers
@@ -129,6 +131,43 @@ internal class GameStopThenTest : GameTestBase() {
         assertThat(seen.single())
             .containsAtLeast("interruptConnection", "stopConnection", "cleanupBridge")
             .inOrder()
+    }
+
+    @Test
+    fun `the callback of a stop that another stop preceded runs all the same`() {
+        rig.streaming()
+        // The stop of onStop, as the one of a surface that went away or of an end of the stream.
+        rig.stop()
+        val done = CountDownLatch(1)
+
+        rig.game.stopConnectionThen { done.countDown() }
+
+        assertThat(done.await(WAIT_MS, TimeUnit.MILLISECONDS)).isTrue()
+    }
+
+    @Test
+    fun `the callbacks of two stops that overlap run when the stop under way ends`() {
+        rig.streaming()
+        val order = CopyOnWriteArrayList<String>()
+        val held = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        // The stop waits for the native library, which this thread holds.
+        val holder = thread {
+            synchronized(MoonBridge::class.java) {
+                held.countDown()
+                release.await(WAIT_MS, TimeUnit.MILLISECONDS)
+            }
+        }
+        assertThat(held.await(WAIT_MS, TimeUnit.MILLISECONDS)).isTrue()
+
+        rig.game.stopConnectionThen { order += "first" }
+        rig.game.stopConnectionThen { order += "second" }
+        assertThat(order).isEmpty()
+        release.countDown()
+        holder.join(WAIT_MS)
+        rig.awaitStop()
+
+        assertThat(order).containsExactly("first", "second")
     }
 
     private companion object {

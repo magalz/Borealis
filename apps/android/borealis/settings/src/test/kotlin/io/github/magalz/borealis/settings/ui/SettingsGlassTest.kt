@@ -94,7 +94,8 @@ class PhonePrivacyRowGlassTest : SettingsGlassCases() {
                 SettingsScreen(
                     state = state,
                     formFactor = FormFactor.Phone,
-                    actions = SettingsActions({ _, _ -> }, { _, _ -> }, { _, _ -> }, {}),
+                    actions =
+                        SettingsActions({ _, _ -> }, { _, _ -> }, { _, _ -> }, {}, { _, _ -> }),
                     onBack = {},
                     onOpenPrivacy = {},
                     privacyPane = {},

@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream.ui.menu
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -13,8 +14,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -39,6 +42,7 @@ import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.aSessionInfo
@@ -64,6 +68,9 @@ private fun ComposeContentTestRule.showMenu(
 ) = LayerFixture(this, formFactor, phase, aPerf(), keyboardMode, appName).also { it.show() }
 
 /** UC-004: the in-game menu, a side panel over the stream. */
+// One suite for one screen: detekt's size limit is passed, and the helpers are shared by every
+// test.
+@Suppress("LargeClass")
 @RunWith(AndroidJUnit4::class)
 class InGameMenuTest {
     @get:Rule val composeRule = createComposeRule()
@@ -208,16 +215,18 @@ class InGameMenuTest {
     }
 
     @Test
-    @Config(qualifiers = PHONE)
+    @Config(qualifiers = PHONE_LANDSCAPE)
     fun `a phone offers the touch modes and marks the current one`() {
         val fixture = menu(FormFactor.Phone, touchMode = TouchMode.DIRECT)
 
         text("Direct").assertIsSelected()
+        text("Native").assertIsNotSelected()
         text("Trackpad").performClick()
+        text("Native").performClick()
         composeRule.onAllNodesWithText("Off")[0].performClick()
 
         assertThat(fixture.intents.calls)
-            .containsExactly("setTouchMode TRACKPAD", "setTouchMode OFF")
+            .containsExactly("setTouchMode TRACKPAD", "setTouchMode NATIVE", "setTouchMode OFF")
             .inOrder()
     }
 
@@ -753,7 +762,7 @@ class InGameMenuTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `OK on the Touch row cycles Trackpad, Direct, Off and back to Trackpad`() {
+    fun `OK on the Touch row cycles Trackpad, Direct, Native, Off and back to Trackpad`() {
         // A phone with a keyboard or a gamepad attached: the keys reach the row.
         val fixture =
             composeRule.showMenu(
@@ -765,11 +774,18 @@ class InGameMenuTest {
         pressOk("Touch")
         fixture.reflect { it.copy(touchMode = TouchMode.DIRECT) }
         pressOk("Touch")
+        fixture.reflect { it.copy(touchMode = TouchMode.NATIVE) }
+        pressOk("Touch")
         fixture.reflect { it.copy(touchMode = TouchMode.OFF) }
         pressOk("Touch")
 
         assertThat(fixture.intents.calls)
-            .containsExactly("setTouchMode DIRECT", "setTouchMode OFF", "setTouchMode TRACKPAD")
+            .containsExactly(
+                "setTouchMode DIRECT",
+                "setTouchMode NATIVE",
+                "setTouchMode OFF",
+                "setTouchMode TRACKPAD",
+            )
             .inOrder()
     }
 
@@ -817,5 +833,40 @@ class InGameMenuTest {
 
         text("Keyboard")
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
+    }
+
+    /**
+     * The state of an option row is on the node of its segments, which have the role and the click,
+     * named as a screen reader says them ("Compact, Overlay"); the row does not take it. The text
+     * inside a segment is a child and holds none (the Sprint 17a read took the text).
+     */
+    private fun assertSegments(title: String, selected: String, vararg others: String) {
+        for (option in listOf(selected) + others) {
+            val segment = composeRule.onNode(hasContentDescription("$option, $title"))
+            segment
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+                .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick))
+            if (option == selected) segment.assertIsSelected() else segment.assertIsNotSelected()
+        }
+        text(title).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `on a TV the active segment of an option row is its own selected radio button`() {
+        menu(FormFactor.Tv, overlay = OverlayMode.DETAILED, touchMode = null, gamepadMouse = true)
+
+        assertSegments("Gamepad mouse", selected = "On", "Off")
+        assertSegments("Pointer speed", selected = "Normal", "Slow", "Fast")
+        assertSegments("Overlay", selected = "Detailed", "Off", "Compact")
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone the active segment of an option row is its own selected radio button`() {
+        menu(FormFactor.Phone, overlay = OverlayMode.COMPACT, touchMode = TouchMode.DIRECT)
+
+        assertSegments("Touch", selected = "Direct", "Trackpad", "Native", "Off")
+        assertSegments("Overlay", selected = "Compact", "Off", "Detailed")
     }
 }

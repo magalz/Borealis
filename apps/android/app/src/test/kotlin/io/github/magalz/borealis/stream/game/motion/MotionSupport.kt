@@ -1,6 +1,8 @@
 package io.github.magalz.borealis.stream.game.motion
 
+import android.os.SystemClock
 import android.view.InputDevice
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import com.limelight.R
@@ -182,12 +184,35 @@ internal fun GameRig.addGamepadContext(deviceId: Int, controllerNumber: Short) {
         )
 }
 
-/** A mouse event of the source mouse, with the pointer at ([x], [y]) and these buttons down. */
-internal fun mouseEvent(action: Int, x: Float, y: Float, buttons: Int = 0): MotionEvent =
+/**
+ * A mouse event of the source mouse, with the pointer at ([x], [y]) and these buttons down. The
+ * event has the time [eventTime]; a test that cares how long a button stays down gives the clock of
+ * the looper, which `idle` moves.
+ */
+internal fun mouseEvent(
+    action: Int,
+    x: Float,
+    y: Float,
+    buttons: Int = 0,
+    eventTime: Long = MotionSpec.EVENT_TIME,
+): MotionEvent =
     motionEventOf(InputDevice.SOURCE_MOUSE, action) {
         pointer(x, y)
         buttonState = buttons
+        this.eventTime = eventTime
     }
+
+/**
+ * The key that Android makes of a side button of a mouse ([KeyEvent.KEYCODE_BACK] or
+ * [KeyEvent.KEYCODE_FORWARD]). Like the framework's, its time is now and an up event knows when the
+ * key went down ([downTime]), so how long the button was held.
+ */
+internal fun mouseSideKey(
+    action: Int,
+    code: Int,
+    downTime: Long,
+    source: Int = InputDevice.SOURCE_MOUSE,
+): KeyEvent = KeyEvent(downTime, SystemClock.uptimeMillis(), action, code, 0, 0, 0, 0, 0, source)
 
 /**
  * A touch screen event with fingers at [points], in the order of the event; the action is for the

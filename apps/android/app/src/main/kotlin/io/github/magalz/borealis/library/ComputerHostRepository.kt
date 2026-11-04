@@ -18,6 +18,8 @@ import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import java.io.IOException
+import java.net.InetAddress
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -55,17 +57,29 @@ constructor(
             if (host.isEmpty()) null
             else runCatching { AddressTuple(host, address.port) }.getOrNull()
         if (manual == null) return AddHostResult.InvalidAddress
-        return add(ComputerDetails().also { it.manualAddress = manual }, host)
+        return add(manual, host)
     }
 
-    private suspend fun add(details: ComputerDetails, host: String): AddHostResult =
-        try {
+    private suspend fun add(manual: AddressTuple, host: String): AddHostResult {
+        val details = ComputerDetails().also { it.manualAddress = manual }
+        // The hosts the device knew before this add: the add publishes the host that it reaches.
+        val known = connection.updates.value
+        val knownAtAddress = known.alreadyAddedAt(manual)
+        return try {
             when {
-                connection.addComputer(details) ->
-                    AddHostResult.Added(checkNotNull(details.uuid), checkNotNull(details.name))
-                withContext(io) { subnet.isWrongSiteLocalAddress(host) } ->
-                    AddHostResult.WrongSubnet
-                else -> AddHostResult.Unreachable
+                connection.addComputer(details) -> {
+                    val id = checkNotNull(details.uuid)
+                    val name = checkNotNull(details.name)
+                    // The id says which host answered, whatever address it answered at; the poll
+                    // that just answered says whether it is paired, a new host as well as a known
+                    // one (a forgotten host still trusts this device).
+                    val paired = details.pairState == PairState.PAIRED
+                    if (id in known) AddHostResult.AlreadyAdded(id, name, paired)
+                    else AddHostResult.Added(id, name, paired)
+                }
+                // A known host that does not answer is still a host that was added.
+                knownAtAddress != null -> knownAtAddress
+                else -> withContext(io) { unanswered(host) }
             }
         } catch (e: IllegalArgumentException) {
             // OkHttp throws this when the host name does not canonicalize to a valid name.
@@ -76,6 +90,32 @@ constructor(
             BorealisLog.w(LogTag.HOST, "host not added", "error" to e.javaClass.simpleName)
             AddHostResult.Unreachable
         }
+    }
+
+    /**
+     * What a host that did not answer is. The service swallows the failed lookup of its poll, so
+     * the name is looked up here, only now that the add failed; a name that does not resolve is a
+     * typo, not a closed port. The subnet check gets the address that the lookup found, so the name
+     * is looked up once. Blocks: call it off the main thread.
+     */
+    private fun unanswered(host: String): AddHostResult {
+        val target =
+            try {
+                InetAddress.getByName(host)
+            } catch (e: UnknownHostException) {
+                BorealisLog.w(
+                    LogTag.HOST,
+                    "host name not resolved",
+                    "error" to e.javaClass.simpleName,
+                )
+                return AddHostResult.InvalidAddress
+            }
+        return if (subnet.isWrongSiteLocalAddress(target.hostAddress)) {
+            AddHostResult.WrongSubnet
+        } else {
+            AddHostResult.Unreachable
+        }
+    }
 
     override suspend fun wake(hostId: String): WakeResult {
         val details = connection.lookup(hostId) ?: return WakeResult.FAILED
@@ -160,6 +200,25 @@ private fun ComputerDetails.toDetailsFacts() =
         macAddress = macAddress,
         runningApp = toHost().runningApp?.name,
     )
+
+/** The known host that has been reached at [address], as an added host; null when none has. */
+private fun Map<String, ComputerDetails>.alreadyAddedAt(
+    address: AddressTuple
+): AddHostResult.AlreadyAdded? =
+    entries
+        .firstOrNull { (_, host) ->
+            address in
+                listOfNotNull(
+                    host.activeAddress,
+                    host.localAddress,
+                    host.remoteAddress,
+                    host.manualAddress,
+                    host.ipv6Address,
+                )
+        }
+        ?.let { (id, host) ->
+            AddHostResult.AlreadyAdded(id, host.name.orEmpty(), host.pairState == PairState.PAIRED)
+        }
 
 /**
  * The address as the dialog shows it: the host alone on the default HTTP port, else `host:port` (an

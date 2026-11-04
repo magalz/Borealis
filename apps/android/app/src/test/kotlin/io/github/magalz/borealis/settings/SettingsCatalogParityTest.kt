@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings
 
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.settings.catalog.BooleanSetting
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.SettingStore
 import io.github.magalz.borealis.settings.catalog.Settings
@@ -44,6 +45,18 @@ class SettingsCatalogParityTest {
             )
             .containsExactly("off", "compact", "detailed")
             .inOrder()
+    }
+
+    @Test
+    fun `the Native touch switch is a Boolean in the preferences file that is off by default`() {
+        assertThat(Settings.TOUCHSCREEN_NATIVE.key).isEqualTo("borealis_touchscreen_native")
+        assertThat(Settings.TOUCHSCREEN_NATIVE).isInstanceOf(BooleanSetting::class.java)
+        assertThat(Settings.TOUCHSCREEN_NATIVE.default).isFalse()
+        assertThat(Settings.TOUCHSCREEN_NATIVE.store).isEqualTo(SettingStore.PREFS)
+        assertThat(Settings.all).contains(Settings.TOUCHSCREEN_NATIVE)
+        // The stored values of the existing modes do not change.
+        assertThat(Settings.TOUCHSCREEN_TRACKPAD.key).isEqualTo("checkbox_touchscreen_trackpad")
+        assertThat(Settings.TOUCHSCREEN_TRACKPAD.default).isTrue()
     }
 
     @Test

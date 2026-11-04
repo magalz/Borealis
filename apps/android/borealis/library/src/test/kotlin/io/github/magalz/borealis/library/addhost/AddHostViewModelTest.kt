@@ -46,13 +46,55 @@ class AddHostViewModelTest {
 
     @Test
     fun `an added host reports its name and is not busy any more`() = runTest {
-        repository.addHostResult = AddHostResult.Added("id", "Desk PC")
+        repository.addHostResult = AddHostResult.Added("id", "Desk PC", paired = false)
         viewModel.onAddressChanged("192.168.1.20")
 
         viewModel.onSubmit()
 
-        viewModel.effects.test { assertThat(awaitItem()).isEqualTo(AddHostEffect.Added("Desk PC")) }
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AddHostEffect.Added("Desk PC", paired = false))
+        }
         assertThat(viewModel.uiState.value.busy).isFalse()
+        assertThat(viewModel.uiState.value.error).isNull()
+    }
+
+    @Test
+    fun `an added host that is paired already reports that too`() = runTest {
+        repository.addHostResult = AddHostResult.Added("id", "Desk PC", paired = true)
+        viewModel.onAddressChanged("192.168.1.20")
+
+        viewModel.onSubmit()
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AddHostEffect.Added("Desk PC", paired = true))
+        }
+        assertThat(viewModel.uiState.value.error).isNull()
+    }
+
+    @Test
+    fun `a host that was already added reports that and is not busy any more`() = runTest {
+        repository.addHostResult = AddHostResult.AlreadyAdded("id", "Desk PC", paired = false)
+        viewModel.onAddressChanged("192.168.1.20")
+
+        viewModel.onSubmit()
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AddHostEffect.AlreadyAdded("Desk PC", paired = false))
+        }
+        assertThat(viewModel.uiState.value.busy).isFalse()
+        assertThat(viewModel.uiState.value.error).isNull()
+    }
+
+    @Test
+    fun `a host that was already added and paired reports that too`() = runTest {
+        repository.addHostResult = AddHostResult.AlreadyAdded("id", "Desk PC", paired = true)
+        viewModel.onAddressChanged("192.168.1.20")
+
+        viewModel.onSubmit()
+
+        viewModel.effects.test {
+            assertThat(awaitItem()).isEqualTo(AddHostEffect.AlreadyAdded("Desk PC", paired = true))
+        }
         assertThat(viewModel.uiState.value.error).isNull()
     }
 

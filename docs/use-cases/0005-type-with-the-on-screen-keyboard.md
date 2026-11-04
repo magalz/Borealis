@@ -22,12 +22,18 @@ awkward to type.
 
 1. The user opens Keyboard from the in-game menu
    ([UC-004](0004-use-the-in-game-menu.md)). On touch, a three-finger tap also
-   opens the keyboard, as in Moonlight 12.2.
+   opens the keyboard, as in Moonlight 12.2, in the Trackpad and Direct touch
+   modes. In Native a three-finger tap goes to the PC, as every finger does, and
+   does not open the keyboard: the menu does (Sprint 17b, BORE-30). A host that
+   takes no touch sends Native to Direct, and the tap opens the keyboard again
+   ([host contract, section 13](../host-contract/luminalshine.md#13-input)).
 2. The system shows the keyboard. On a phone it is docked at the bottom and the
    stream stays visible above it, unless a game controller is connected when the
    keyboard opens. A pad that the app's USB driver holds counts. Then the keyboard
    covers the stream, and the pad navigates it. On a TV or handheld it is shown on
-   the stream screen. On a phone the shortcut row starts with Esc.
+   the stream screen. On a phone the shortcut row starts with Esc, docked or
+   not, and a pad does not change it; on a TV or a handheld Esc is the seventh
+   chip (Sprint 17b, BORE-13: the row follows the form factor).
 3. The user taps a modifier (Ctrl, Alt, Win or Shift). The modifier latches and
    shows as on.
 4. The user taps a key. Letter keys show in lowercase unless Shift is latched;
@@ -57,7 +63,8 @@ awkward to type.
 1. The keys go to the PC from the physical keyboard. Android 16 keyboard
    capture stays for physical keyboards, as in 12.2.
 2. The on-screen keyboard opens only on request, from the menu or with a
-   three-finger tap. Both keyboards can be used at the same time; the
+   three-finger tap (not in the Native touch mode, step 1 of the main flow).
+   Both keyboards can be used at the same time; the
    on-screen modifiers latch only for keys typed on screen.
 
 ### A4: The user types digits, function keys or arrows (branches from step 4)
@@ -91,13 +98,14 @@ what they name; the host's response to a key is outside this use case.
 | UC-005-T4 | Given the handheld keyboard is open, when Y is pressed, then Backspace is sent. | UI | exists (Sprint 5, UI) |
 | UC-005-T5 | Given the phone keyboard is open, when the stream is shown, then the picture stays visible above the keyboard. | UI | partly exists (Sprint 5, UI; device round) |
 | UC-005-T6 | Given keys are typed, when logs and the audit trail are read, then no typed key text appears in them. | unit | partly exists (Sprint 5, unit) |
-| UC-005-T7 | Given the docked keyboard on a phone, when the shortcut row shows, then Esc is its first chip. | unit | exists (Sprint 5, unit) |
+| UC-005-T7 | Given the keyboard on a phone, docked or covering the stream because a pad is connected, when the shortcut row shows, then Esc is its first chip; on a TV or a handheld it is the seventh. | unit, UI | exists (Sprint 5, unit; the form factor decides since Sprint 17b): `ShortcutsTest`, `KeyboardLayoutTest`, `KeyboardDockedByPhaseTest`, `KeyboardNavigationTest` |
 | UC-005-T8 | Given Shift is not latched, when the letter keys show, then they are lowercase; with Shift latched, the next letter shows in uppercase. | UI | exists (Sprint 5, UI; device round) |
 | UC-005-T9 | Given the keyboard is open, when the user taps Win+Tab, then Win+Tab is sent once. | unit | exists (Sprint 5, unit; device round) |
 | UC-005-T10 | Given the keyboard is open, when the user taps Fn 123, then the digits, F1 to F10 and the arrows show instead of the letters, and Fn 123 again shows the letters. A latched modifier stays latched across the switch. | UI | exists (Sprint 5, UI) |
 | UC-005-T11 | Given the keyboard is open, when the bottom row shows, then it reads Ctrl, Win, Alt, Space, Tab and Fn 123, and the D-pad walks up the Fn layer from Fn 123 and back down. | UI | exists (Sprint 9, UI): `KeyboardLayoutTest`, `KeyboardNavigationTest` |
 | UC-005-T12 | Given the keyboard is open, when the D-pad moves past the last key of a row, then focus goes to the first key of that row, and past the first key, to the last key. Up and Down do not wrap. | UI | exists (Sprint 9, UI): `KeyboardNavigationTest` |
 | UC-005-T13 | Given a phone with a game controller connected, or with a pad that the USB driver holds, when the user opens the keyboard, then it covers the stream and the pad moves and types on it. | UI | exists (Sprint 9, UI): `PadKeyboardTest`, `StreamSessionChromeModeTest` |
+| UC-005-T14 | Given the Native touch mode on a host that takes touch, when three fingers go down, then each goes to the host as a touch event and the three-finger tap does not open the keyboard; after the host refuses touch and the mode is Direct, then the tap opens the keyboard. | unit | exists (Sprint 17b, unit): `NativeTouchTest`, `NativeTouchRefusedTest` |
 
 Sprint 5 built the Borealis keyboard and its logic. A test marked "exists (Sprint
 5, unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose

@@ -9,6 +9,7 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
+import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.input.Packet
 import io.github.magalz.borealis.testing.OwnedResources
@@ -22,28 +23,16 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
 
 /**
- * A context that counts how often the default preferences are read whole: every full read of the
- * stream settings starts by asking for the legacy resolution and frame rate setting, and nothing
- * else does.
+ * A context that counts how often the default preferences are opened: they hold the stream
+ * settings, and every read of those, whole or in part, starts by opening them.
  */
-private class FullReadCountingContext(base: Context) : ContextWrapper(base) {
-    var fullReads = 0
+private class SettingsOpenCountingContext(base: Context) : ContextWrapper(base) {
+    var opens = 0
         private set
 
     override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
-        val real = super.getSharedPreferences(name, mode)
-        if (name != "${packageName}_preferences") return real
-
-        return object : SharedPreferences by real {
-            override fun getString(key: String?, defValue: String?): String? {
-                if (key == FIRST_KEY_OF_A_FULL_READ) fullReads++
-                return real.getString(key, defValue)
-            }
-        }
-    }
-
-    private companion object {
-        const val FIRST_KEY_OF_A_FULL_READ = "list_resolution_fps"
+        if (name == "${packageName}_preferences") opens++
+        return super.getSharedPreferences(name, mode)
     }
 }
 
@@ -121,16 +110,34 @@ class VirtualControllerCharacterizationTest {
     }
 
     @Test
-    fun `a layout build reads the settings once, and so does each rebuild`() {
-        val counting = FullReadCountingContext(rig.activity)
-        val counted = VirtualController(rig.handlerRig.handler, rig.frame, counting)
+    fun `a layout build reads no stream settings, and neither does a rebuild`() {
         rig.settings()
+        val counting = SettingsOpenCountingContext(rig.activity)
+        val counted = VirtualController(rig.handlerRig.handler, rig.frame, counting, rig.config)
 
         counted.refreshLayout()
-        assertThat(counting.fullReads).isEqualTo(1)
+        assertThat(counting.opens).isEqualTo(0)
 
         counted.refreshLayout()
-        assertThat(counting.fullReads).isEqualTo(2)
+        assertThat(counting.opens).isEqualTo(0)
+    }
+
+    @Test
+    fun `a rebuild builds the layout of the configuration it was given, whatever the stored settings say`() {
+        rig.settings() // stored: the full layout with the guide button
+        val given =
+            PreferenceConfiguration().apply {
+                onlyL3R3 = true
+                showGuideButton = false
+            }
+        val built = VirtualController(rig.handlerRig.handler, rig.frame, rig.activity, given)
+
+        built.refreshLayout()
+        built.refreshLayout()
+
+        assertThat(built.elements.map { it.placed() })
+            .containsExactlyElementsIn(GoldenLayouts.of(OscRig.PHONE, true, false))
+            .inOrder()
     }
 
     @Test
@@ -174,7 +181,7 @@ class VirtualControllerCharacterizationTest {
     }
 
     @Test
-    fun `refreshing builds the layout the settings ask for now`() {
+    fun `refreshing builds the layout the configuration asks for now`() {
         controller.refreshLayout()
 
         rig.settings(onlyL3R3 = true, showGuideButton = false)
@@ -571,7 +578,9 @@ class VirtualControllerCharacterizationTest {
     @Test
     fun `the retransmits run on the main looper whichever thread built the controller`() {
         lateinit var built: VirtualController
-        Thread { built = VirtualController(rig.handlerRig.handler, rig.frame, rig.activity) }
+        Thread {
+            built = VirtualController(rig.handlerRig.handler, rig.frame, rig.activity, rig.config)
+        }
             .apply {
                 start()
                 join()

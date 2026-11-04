@@ -12,9 +12,11 @@ class StreamSessionFactoryTest {
         trackpad: Boolean = true,
         mouseEmulation: Boolean = false,
         mouseNavButtons: Boolean = false,
+        nativeTouch: Boolean = false,
     ) =
         PreferenceConfiguration().apply {
             touchscreenTrackpad = trackpad
+            touchscreenNative = nativeTouch
             this.mouseEmulation = mouseEmulation
             this.mouseNavButtons = mouseNavButtons
         }
@@ -35,7 +37,7 @@ class StreamSessionFactoryTest {
     }
 
     @Test
-    fun `the touch mode follows the trackpad preference, and is absent without a touch screen`() {
+    fun `the touch mode follows the touch preferences, and is absent without a touch screen`() {
         assertThat(
                 StreamSessionFactory.defaults(prefs(trackpad = true), "off", true, true).touchMode
             )
@@ -44,6 +46,11 @@ class StreamSessionFactoryTest {
                 StreamSessionFactory.defaults(prefs(trackpad = false), "off", true, true).touchMode
             )
             .isEqualTo(TouchMode.DIRECT)
+        assertThat(
+                StreamSessionFactory.defaults(prefs(nativeTouch = true), "off", true, true)
+                    .touchMode
+            )
+            .isEqualTo(TouchMode.NATIVE)
         assertThat(StreamSessionFactory.defaults(prefs(), "off", false, true).touchMode).isNull()
     }
 

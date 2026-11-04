@@ -52,7 +52,14 @@ class ComputerManagerService : Service() {
     private val pollingTuples = LinkedList<PollingTuple>()
     private var listener: ComputerManagerListener? = null
     private val activePolls = AtomicInteger(0)
-    private var pollingActive = false
+    @Volatile private var pollingActive = false
+
+    // pollingActive and the call into discovery that follows it are one step: the start that begins
+    // polling, the stop that ends it and the restart that follows a removal never run together, so
+    // a restart that read pollingActive before the stop cannot start discovery after it. This does
+    // not keep two discovery threads apart: the discovery agent does that itself. Nothing under the
+    // lock waits for a discovery thread, so the unbind on the main thread never waits behind it.
+    private val discoveryLock = Any()
     private val defaultNetworkLock: Lock = ReentrantLock()
 
     // The adds of the hosts that mDNS finds run one at a time on this executor, in the order they
@@ -245,14 +252,16 @@ class ComputerManagerService : Service() {
             // the two fields below first, so a failed start left the service polling.)
             val discovery = checkNotNull(discoveryBinder) { "The discovery service is not bound" }
 
-            // Polling is active
-            pollingActive = true
+            synchronized(discoveryLock) {
+                // Polling is active
+                pollingActive = true
 
-            // Set the listener
-            this@ComputerManagerService.listener = listener
+                // Set the listener
+                this@ComputerManagerService.listener = listener
 
-            // Start mDNS autodiscovery too
-            discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
+                // Start mDNS autodiscovery too
+                discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
+            }
 
             synchronized(pollingTuples) {
                 for (tuple in pollingTuples) {
@@ -354,11 +363,11 @@ class ComputerManagerService : Service() {
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        // Stop mDNS autodiscovery
-        discoveryBinder?.stopDiscovery()
-
-        // Stop polling
-        pollingActive = false
+        // Stop polling, and mDNS autodiscovery with it
+        synchronized(discoveryLock) {
+            pollingActive = false
+            discoveryBinder?.stopDiscovery()
+        }
         synchronized(pollingTuples) {
             for (tuple in pollingTuples) {
                 val polling = tuple.thread
@@ -606,6 +615,22 @@ class ComputerManagerService : Service() {
                         }
                         pollingTuples.remove(tuple)
                         break
+                    }
+                }
+            }
+
+            // Discovery announces a computer once: let it announce this one again
+            val discovery = discoveryBinder
+            discovery?.forget(computer)
+
+            // The platform reports a found service once, so while polling discovery starts over.
+            // Under the lock of the start and of the unbind, so that the restart is never after
+            // the stop that ends polling and never in the middle of the start that begins it.
+            if (discovery != null) {
+                synchronized(discoveryLock) {
+                    if (pollingActive) {
+                        discovery.stopDiscovery()
+                        discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
                     }
                 }
             }

@@ -53,11 +53,12 @@ targets of 48 dp on a phone and a handheld.
 2. With the animations removed, the background is one still frame and no clip
    plays, a tile takes the focus without the 1.04 scale, a screen shows without
    its fade, a list scrolls without animation, the Aurora loader and the check
-   mark stand still and a section opens at once. The indeterminate progress
-   indicators of Material (Add host and Privacy and diagnostics) do not follow it
-   yet; [Sprint 17](../roadmap.md#sprint-17-general-fixes) of the roadmap has the
-   item. The loader of Quitting and Disconnecting is the Aurora loader, which stands
-   still.
+   mark stand still and a section opens at once. The Material progress indicators
+   stand still too: the busy indicator of Add host is a still arc of three
+   quarters, and the export bar of Privacy and diagnostics is a still half bar. A
+   screen reader hears the busy indicator of Add host as busy, with no value; the
+   export bar is hidden from it, and the export summary is read once. The loader
+   of Quitting and Disconnecting is the Aurora loader, which stands still.
 3. The battery saver also gives the background one still frame.
 
 ### A2: Transparency (branches from step 3)
@@ -175,6 +176,7 @@ targets of 48 dp on a phone and a handheld.
 UC-010-T1 to T14 are Sprint 10 tests (Compose tests run on Robolectric).
 UC-010-T15 is the Sprint 10 device round.
 UC-010-T16 to T18 are Sprint 11 rows.
+UC-010-T19 is a Sprint 17b row (BORE-10).
 
 | ID | Behaviour | Level | Status |
 | --- | --- | --- | --- |
@@ -196,6 +198,7 @@ UC-010-T16 to T18 are Sprint 11 rows.
 | UC-010-T16 | Given the Accessibility group, when the user chooses Text spacing (Normal, Wide or Wider), then the choice is stored under `borealis_text_spacing` as `normal`, `wide` or `wider`, the text draws the letter and word spacing of A8 (Wide 0.12 em and 0.16 em, Wider 0.18 em and 0.5 em), the line height is at least 1.5 at Wide and Wider, TalkBack reads the original text, and a layout that does not fit at Wide or Wider is changed rather than cut, as in A8. | UI, unit | exists (Sprint 11, UI and unit): `TextSpacingTypographyTest`, `TextSpacingThemeTest`, `TextWordSpacingTest`, `WordGapTest`, `SettingsTextSpacingTest` |
 | UC-010-T17 | Given an Online host, when its dot is drawn, then a soft dark shadow in the page colour lies round the dot, outside its box, it is static, and it is not drawn under High contrast. | UI | exists (Sprint 11, UI): `StatusDotTest` |
 | UC-010-T18 | Given Wider chosen, when the font scale (the system scale times the Text size) is below 2.0, then Wider is drawn as Wider, and from 2.0 it is drawn as Wide, in the Library, Settings and the stream chrome, and the choice stays stored; when the user chooses Wider at 2.0 or more, then a dialog says that Wide is used instead, with one OK button that has the focus on a TV and a title that names the window, the row says the same under its value, and no dialog opens below 2.0 or for Wide or Normal. Given the Pairing screen of a TV, the rail footer and an Audit entry at large text, then the steps keep their room, the name wraps and the title keeps its room. | UI, unit | exists (Sprint 11, UI and unit): `TextSpacingLimitThemeTest`, `StreamChromeTextSpacingTest`, `SettingsTextSpacingLimitTest`, `SettingsTextSpacingLimitPhoneTest`, `SpacingLimitScreenshotTest`, `PairingTvRoomTest`, `RailFooterNarrowTest`, `AuditEntryRoomTest` |
+| UC-010-T19 | Given Reduce motion On, when the busy indicator of Add host or the export bar of Privacy and diagnostics shows, then it does not move, and a screen reader hears the busy indicator of Add host as busy with no value; with Reduce motion Off, the indicator turns and the bar runs. | UI | exists (Sprint 17b, UI): `AddHostScreenTest`, `PrivacyPaneTest` |
 
 Not covered by a test: the traversal links that TalkBack follows (Robolectric
 cannot see them), a visible snackbar (no check covers it), and the halo and the

@@ -185,12 +185,95 @@ class ComputerHostRepositoryTest {
         binder.onAdd = {
             it.uuid = "new-id"
             it.name = "Living Room"
+            it.pairState = PairState.NOT_PAIRED
             true
         }
 
         val result = repository.addHost(HostAddress("192.168.1.9"))
 
-        assertThat(result).isEqualTo(AddHostResult.Added("new-id", "Living Room"))
+        assertThat(result).isEqualTo(AddHostResult.Added("new-id", "Living Room", paired = false))
+    }
+
+    @Test
+    fun `a new host whose first poll says it is paired is added and paired`() = runTest {
+        val repository = repository()
+        binder.onAdd = {
+            it.uuid = "new-id"
+            it.name = "Living Room"
+            it.pairState = PairState.PAIRED
+            true
+        }
+
+        val result = repository.addHost(HostAddress("192.168.1.9"))
+
+        assertThat(result).isEqualTo(AddHostResult.Added("new-id", "Living Room", paired = true))
+    }
+
+    @Test
+    fun `a known host that answers again is already added, and paired when the poll says so`() =
+        runTest {
+            binder.computers["desk"] =
+                details(uuid = "desk", name = "Desk PC").reported(pairState = PairState.NOT_PAIRED)
+            val repository = repository()
+            collectHosts(repository)
+            binder.onAdd = {
+                it.uuid = "desk"
+                it.name = "Desk PC"
+                it.pairState = PairState.PAIRED
+                true
+            }
+
+            val result = repository.addHost(HostAddress("desk.local"))
+
+            assertThat(result)
+                .isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true))
+        }
+
+    @Test
+    fun `a known host that answers unpaired is already added and not paired`() = runTest {
+        binder.computers["desk"] = details(uuid = "desk", name = "Desk PC")
+        val repository = repository()
+        collectHosts(repository)
+        binder.onAdd = {
+            it.uuid = "desk"
+            it.name = "Desk PC"
+            it.pairState = PairState.NOT_PAIRED
+            true
+        }
+
+        val result = repository.addHost(HostAddress("desk.local"))
+
+        assertThat(result).isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = false))
+    }
+
+    @Test
+    fun `a known host at that address that does not answer is already added`() = runTest {
+        binder.computers["desk"] =
+            details(uuid = "desk", name = "Desk PC", address = "192.168.1.5")
+                .reported(state = ComputerDetails.State.OFFLINE, pairState = PairState.PAIRED)
+        val repository = repository()
+        collectHosts(repository)
+        binder.onAdd = { false }
+
+        val result = repository.addHost(HostAddress("192.168.1.5"))
+
+        assertThat(result).isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true))
+    }
+
+    @Test
+    fun `a different host that answers at the address of a known one is added`() = runTest {
+        binder.computers["desk"] = details(uuid = "desk", name = "Desk PC", address = "192.168.1.5")
+        val repository = repository()
+        collectHosts(repository)
+        binder.onAdd = {
+            it.uuid = "laptop"
+            it.name = "Laptop"
+            true
+        }
+
+        val result = repository.addHost(HostAddress("192.168.1.5"))
+
+        assertThat(result).isEqualTo(AddHostResult.Added("laptop", "Laptop", paired = false))
     }
 
     @Test
@@ -201,6 +284,41 @@ class ComputerHostRepositoryTest {
 
         assertThat(repository.addHost(HostAddress("192.168.1.9")))
             .isEqualTo(AddHostResult.Unreachable)
+    }
+
+    // The service swallows the failed lookup of the poll, so the add only learns that nothing
+    // answered. `.invalid` never resolves (RFC 6761), so no lookup depends on the network.
+    @Test
+    fun `a host name that does not resolve is an invalid address, a typo and not a firewall`() =
+        runTest {
+            val repository = repository()
+            binder.onAdd = { false }
+
+            assertThat(repository.addHost(HostAddress("magalz-dekstop.invalid")))
+                .isEqualTo(AddHostResult.InvalidAddress)
+        }
+
+    @Test
+    fun `a host name that resolves but does not answer is unreachable`() = runTest {
+        val repository = repository()
+        binder.onAdd = { false }
+
+        assertThat(repository.addHost(HostAddress("localhost")))
+            .isEqualTo(AddHostResult.Unreachable)
+    }
+
+    @Test
+    fun `a known host at a name that no longer resolves is still already added`() = runTest {
+        binder.computers["desk"] =
+            details(uuid = "desk", name = "Desk PC", address = "desk.invalid")
+                .reported(state = ComputerDetails.State.OFFLINE, pairState = PairState.PAIRED)
+        val repository = repository()
+        collectHosts(repository)
+        binder.onAdd = { false }
+
+        val result = repository.addHost(HostAddress("desk.invalid"))
+
+        assertThat(result).isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true))
     }
 
     @Test

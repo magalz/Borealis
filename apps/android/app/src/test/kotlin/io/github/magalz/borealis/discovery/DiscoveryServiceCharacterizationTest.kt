@@ -9,6 +9,9 @@ import android.os.Binder
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.discovery.DiscoveryService
+import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import com.limelight.nvstream.mdns.JmDNSDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsComputer
 import io.github.magalz.borealis.testing.ANDROID_13
 import io.github.magalz.borealis.testing.ANDROID_14
@@ -27,7 +30,9 @@ import org.robolectric.annotation.Config
  * it hands out, which agent it runs for each Android version, and what reaches the listener that
  * the client bound. The platform is Robolectric's `NsdManager`, which confirms a discovery at once.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
+ * ones about forgetting a host and the ones about an unbind or a destroy while the jmDNS thread is
+ * slow to let go of the resolver (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class DiscoveryServiceCharacterizationTest {
@@ -53,23 +58,60 @@ class DiscoveryServiceCharacterizationTest {
         return discoveryThreads()
     }
 
+    /** The jmDNS agent that the service made: it is private to the service, so this reads it. */
+    private fun jmdnsAgent(): JmDNSDiscoveryAgent {
+        val field = DiscoveryService::class.java.getDeclaredField("discoveryAgent")
+        field.isAccessible = true
+        return field.get(service) as JmDNSDiscoveryAgent
+    }
+
     private fun foundService(name: String) =
         NsdServiceInfo().apply {
             serviceName = name
             serviceType = SERVICE_TYPE
         }
 
-    /** Has the platform find [name] and resolve it to the IPv4 address [address]. */
-    private fun findAndResolve(name: String, address: String) {
+    /** Has the platform find [name] and resolve it to [addresses]. */
+    private fun findAndResolve(name: String, vararg addresses: String) {
         val found = foundService(name)
         discoveries().single().onServiceFound(found)
         val resolved =
             NsdServiceInfo().apply {
                 serviceName = name
                 port = PORT
-                hostAddresses = listOf(InetAddress.getByName(address))
+                hostAddresses = addresses.map { InetAddress.getByName(it) }
             }
         platform.getServiceInfoCallbacks(found).orEmpty().single().onServiceUpdated(resolved)
+    }
+
+    /** A saved host with the given addresses, all on the port of the hosts that discovery finds. */
+    private fun host(
+        name: String = "Den PC",
+        local: String? = null,
+        ipv6: String? = null,
+        manual: String? = null,
+        remote: String? = null,
+    ) =
+        ComputerDetails().also {
+            it.name = name
+            it.localAddress = local?.let { address -> AddressTuple(address, PORT) }
+            it.ipv6Address = ipv6?.let { address -> AddressTuple(address, PORT) }
+            it.manualAddress = manual?.let { address -> AddressTuple(address, PORT) }
+            it.remoteAddress = remote?.let { address -> AddressTuple(address, PORT) }
+        }
+
+    /** Finds a host with an IPv4 and a global IPv6 address, forgets [host], and finds it again. */
+    private fun forgetAndFindAgain(host: ComputerDetails) {
+        binder.setListener(listener)
+        binder.startDiscovery(INTERVAL_MS)
+        findAndResolve("Den PC", "192.168.1.5", "2001:db8::1")
+
+        binder.forget(host)
+
+        assertThat(binder.getComputerSet()).isEmpty()
+        findAndResolve("Den PC", "192.168.1.5", "2001:db8::1")
+        assertThat(listener.added).hasSize(2)
+        assertThat(binder.getComputerSet()).hasSize(1)
     }
 
     @Test
@@ -145,6 +187,55 @@ class DiscoveryServiceCharacterizationTest {
         binder.startDiscovery(INTERVAL_MS)
 
         findAndResolve("Den PC", "192.168.1.5")
+
+        assertThat(binder.getComputerSet())
+            .containsExactly(MdnsComputer("Den PC", ip4("192.168.1.5"), null, PORT))
+    }
+
+    @Test
+    fun `a host that is forgotten by its local address is announced again when it is found again`() {
+        forgetAndFindAgain(host(local = "192.168.1.5"))
+    }
+
+    @Test
+    fun `a host that is forgotten by its IPv6 address is announced again when it is found again`() {
+        forgetAndFindAgain(host(ipv6 = ip6("2001:db8::1").hostAddress))
+    }
+
+    @Test
+    fun `a host that is forgotten by its manual address is announced again when it is found again`() {
+        forgetAndFindAgain(host(manual = "192.168.1.5"))
+    }
+
+    @Test
+    fun `a host that is forgotten by its remote address is announced again when it is found again`() {
+        forgetAndFindAgain(host(remote = "192.168.1.5"))
+    }
+
+    @Test
+    fun `a host that is forgotten by its active address is announced again when it is found again`() {
+        forgetAndFindAgain(host().also { it.activeAddress = AddressTuple("192.168.1.5", PORT) })
+    }
+
+    @Test
+    fun `forgetting a host leaves the computers of the other hosts`() {
+        binder.startDiscovery(INTERVAL_MS)
+        findAndResolve("Den PC", "192.168.1.5")
+        findAndResolve("Laptop", "192.168.1.9")
+
+        binder.forget(host(local = "192.168.1.5"))
+
+        assertThat(binder.getComputerSet())
+            .containsExactly(MdnsComputer("Laptop", ip4("192.168.1.9"), null, PORT))
+    }
+
+    @Test
+    fun `a host is found by its addresses and not by its name`() {
+        binder.startDiscovery(INTERVAL_MS)
+        findAndResolve("Den PC", "192.168.1.5")
+
+        binder.forget(host(name = "Den PC"))
+        binder.forget(host(name = "Den PC", local = "10.9.9.9", remote = "203.0.113.7"))
 
         assertThat(binder.getComputerSet())
             .containsExactly(MdnsComputer("Den PC", ip4("192.168.1.5"), null, PORT))
@@ -227,6 +318,39 @@ class DiscoveryServiceCharacterizationTest {
         // Ends the thread when the destroy did not, so that it does not outlive the test.
         service.onUnbind(Intent())
         assertThat(left).isEmpty()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_13])
+    fun `before Android 14 unbinding does not wait for a jmDNS thread that is slow to let go`() {
+        jmdnsAgent().holdUnresolvedService()
+        withRetryStall {
+            binder.startDiscovery(INTERVAL_MS)
+            it.awaitReached()
+
+            val unbind = callUntilItEndsOrWaits { service.onUnbind(Intent()) }
+
+            // The stall holds the thread, so it is alive: the unbind ended without it.
+            assertThat(unbind.state).isEqualTo(Thread.State.TERMINATED)
+            assertThat(discoveryThreads()).hasSize(1)
+        }
+        assertThat(awaitThreads(0)).isEmpty()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_13])
+    fun `before Android 14 destroying the service does not wait for a jmDNS thread that is slow to let go`() {
+        jmdnsAgent().holdUnresolvedService()
+        withRetryStall {
+            binder.startDiscovery(INTERVAL_MS)
+            it.awaitReached()
+
+            val destroy = callUntilItEndsOrWaits { service.onDestroy() }
+
+            assertThat(destroy.state).isEqualTo(Thread.State.TERMINATED)
+            assertThat(discoveryThreads()).hasSize(1)
+        }
+        assertThat(awaitThreads(0)).isEmpty()
     }
 
     private companion object {

@@ -112,6 +112,17 @@ internal class GameConstructionTest : GameTestBase() {
     }
 
     @Test
+    fun `the on-screen controller reads the settings of the activity`() {
+        rig.preference("checkbox_show_onscreen_controls", true)
+
+        rig.create()
+
+        val controller = checkNotNull(rig.field<VirtualController?>("virtualController"))
+        assertThat(ReflectionHelpers.getField<Any>(controller, "config"))
+            .isSameInstanceAs(rig.field<PreferenceConfiguration>("prefConfig"))
+    }
+
+    @Test
     fun `without the on-screen controller setting there is none`() {
         rig.create()
 

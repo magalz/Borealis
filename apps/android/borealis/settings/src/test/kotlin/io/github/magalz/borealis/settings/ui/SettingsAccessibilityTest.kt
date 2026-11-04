@@ -119,6 +119,7 @@ abstract class SettingsLookTestBase : SettingsScreenTestBase() {
             DefaultSettingsOptions(),
             facts,
             { resets++ },
+            { _, _ -> },
             UnconfinedTestDispatcher(),
         )
 

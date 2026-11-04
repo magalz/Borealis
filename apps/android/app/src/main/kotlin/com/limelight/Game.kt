@@ -20,6 +20,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Rational
 import android.view.Display
 import android.view.InputDevice
@@ -61,7 +62,6 @@ import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.GlPreferences
 import com.limelight.preferences.PreferenceConfiguration
-import com.limelight.ui.GameGestures
 import com.limelight.ui.StreamView
 import com.limelight.utils.ServerHelper
 import com.limelight.utils.ShortcutHelper
@@ -74,6 +74,8 @@ import io.github.magalz.borealis.host.launch.SessionAudit
 import io.github.magalz.borealis.host.video.StreamStartupGuard
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
+import io.github.magalz.borealis.stream.AudioOutput
+import io.github.magalz.borealis.stream.AudioOutputs
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.GameStreamActions
 import io.github.magalz.borealis.stream.GamepadMouseSync
@@ -83,8 +85,11 @@ import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamControls
 import io.github.magalz.borealis.stream.StreamFailures
 import io.github.magalz.borealis.stream.StreamKeyboards
+import io.github.magalz.borealis.stream.StreamNotice
+import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamSessionFactory
+import io.github.magalz.borealis.stream.SurroundLayout
 import io.github.magalz.borealis.stream.TouchContexts
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.host.HeldKeys
@@ -96,7 +101,9 @@ import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Locale
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
@@ -114,7 +121,6 @@ class Game :
     View.OnTouchListener,
     NvConnectionListener,
     View.OnSystemUiVisibilityChangeListener,
-    GameGestures,
     StreamView.InputCallbacks,
     UsbDriverService.UsbDriverStateListener,
     View.OnKeyListener {
@@ -122,15 +128,37 @@ class Game :
 
     // BOREALIS: the Back button of the mouse, held for BACK_HOLD_MS, opens the in-game menu and
     // sends nothing to the PC; a shorter press is X1, sent when the button comes up (stream)
-    private var backHoldOpenedMenu = false
     private val openMenuFromBackHold = Runnable {
-        backHoldOpenedMenu = true
+        sideBack.eat()
         streamSession.openMenu()
     }
+
+    // BOREALIS: the side buttons of the mouse. Back is X1 with "Mouse back and forward buttons"
+    // on and the right button with it off; Forward is X2 with it on and nothing with it off
+    // (stream)
+    private val sideBack =
+        SideButton(
+            navHost = MouseButtonPacket.BUTTON_X1,
+            plainHost = MouseButtonPacket.BUTTON_RIGHT,
+            navSentOnRelease = true,
+        )
+    private val sideForward =
+        SideButton(
+            navHost = MouseButtonPacket.BUTTON_X2,
+            plainHost = null,
+            navSentOnRelease = false,
+        )
 
     // Only 2 touches are supported
     private val touchContextMap = arrayOfNulls<TouchContext>(2)
     private var threeFingerDownTime = 0L
+
+    // BOREALIS: true once the host refused a touch event; its answer holds for the whole stream
+    // (stream)
+    private var nativeTouchRefused = false
+
+    // BOREALIS: true while a finger that the host took may still be down on the PC (stream)
+    private var nativeTouchDown = false
 
     // STYLUS_DOWN_DEAD_ZONE_DELAY, STYLUS_DOWN_DEAD_ZONE_RADIUS, STYLUS_UP_DEAD_ZONE_DELAY,
     // STYLUS_UP_DEAD_ZONE_RADIUS and THREE_FINGER_TAP_THRESHOLD are in the companion object.
@@ -161,6 +189,10 @@ class Game :
     // caused. Written on the main thread only; volatile because stageFailed reads it on the native
     // start thread (leave)
     @Volatile private var stopRan = false
+    // BOREALIS: the connection stops once: a surface that goes away, the end of the stream and
+    // onStop each ask for a stop, and a second one only waits for the first (leave)
+    private val stopClaimed = AtomicBoolean(false)
+    private val connectionStopped = CompletableFuture<Unit>()
     // BOREALIS: the first frame was on screen, so an ending stream "stopped" and did not fail to
     // start (stream)
     @Volatile private var firstFrameShown = false
@@ -175,6 +207,23 @@ class Game :
     private var appName: String? = null
     private lateinit var app: NvApp
     private var desiredRefreshRate = 0f
+    // BOREALIS: the configuration that the settings asked for, when the stream asked the host for
+    // stereo because the output has two channels; null when it asked for what the settings say.
+    // Decided at the start; the notices of the stream read it (audio)
+    internal var stereoFallback: MoonBridge.AudioConfiguration? = null
+        private set
+
+    // BOREALIS: the audio went to a Bluetooth output when the stream started (audio)
+    internal var startedOnBluetooth = false
+        private set
+
+    // BOREALIS: the audio goes to a Bluetooth output now. The route listener sets it on the main
+    // thread; the perf sink reads it on the video thread (audio)
+    @Volatile private var audioOnBluetooth = false
+
+    // BOREALIS: where the audio goes; while the stream runs it tells when that moves to a Bluetooth
+    // output (audio)
+    private lateinit var audioOutputs: AudioOutputs
 
     private lateinit var inputCaptureProvider: InputCaptureProvider
     private var modifierFlags = 0
@@ -199,6 +248,10 @@ class Game :
     private var requestedNotificationOverlayVisibility = View.GONE
 
     private lateinit var decoderRenderer: MediaCodecDecoderRenderer
+
+    // BOREALIS: made with the decoder renderer, so that the overlay of the decoder can read the
+    // audio delay of it (audio)
+    private lateinit var audioRenderer: AndroidAudioRenderer
 
     // BOREALIS: first-frame watchdog (host.video)
     private val startupGuard =
@@ -246,8 +299,8 @@ class Game :
         const val EXTRA_APP_HDR = "HDR"
         const val EXTRA_SERVER_CERT = "ServerCert"
 
-        // BOREALIS: true when the user chose Resume, Continue or Try again for the app that
-        // runs; absent, as in an older shortcut, it is false (stream)
+        // BOREALIS: true when the user chose Resume or Continue for the app that runs (Try again
+        // asks instead); absent, as in an older shortcut, it is false (stream)
         const val EXTRA_RESUME_CHOSEN = "ResumeChosen"
 
         private const val STYLUS_DOWN_DEAD_ZONE_DELAY = 100
@@ -280,6 +333,11 @@ class Game :
         private const val TOGGLE_GRAB_DELAY_MS = 250L
         private const val INPUT_GRAB_DELAY_MS = 500L
         private const val BACK_HOLD_MS = 1000L
+
+        // A side button that comes up within SIDE_PULSE_MS is a pulse. Back and Forward within
+        // SIDE_CHORD_MS of each other open the menu, and a pulse waits that long.
+        private const val SIDE_PULSE_MS = 25L
+        private const val SIDE_CHORD_MS = 250L
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -474,16 +532,25 @@ class Game :
             MediaCodecDecoderRenderer(
                 this,
                 prefConfig,
-                CrashListener {
-                    // The MediaCodec instance is going down due to a crash
-                    // let's tell the user something when they open the app again
+                object : CrashListener {
+                    override fun notifyCrash(e: Exception) {
+                        // The MediaCodec instance is going down due to a crash
+                        // let's tell the user something when they open the app again
 
-                    // We must use commit because the app will crash when we return from this
-                    // function
-                    tombstonePrefs.edit(commit = true) {
-                        putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        // We must use commit because the app will crash when we return from this
+                        // function
+                        tombstonePrefs.edit(commit = true) {
+                            putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        }
+                        reportedCrash = true
                     }
-                    reportedCrash = true
+
+                    // BOREALIS: the codec refused the surface, which stopped the renderer. The
+                    // renderer calls this on the thread that recovers the codec, while the other
+                    // threads wait for it, so it only posts (stream)
+                    override fun surfaceLost() {
+                        Handler(Looper.getMainLooper()).post { endStreamForLostSurface() }
+                    }
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
                 willStreamHdr,
@@ -580,6 +647,12 @@ class Game :
 
         // BOREALIS: audited as negotiated, not as requested (host.launch)
         streamFrameRate = chosenFrameRate
+        // BOREALIS: the output that the audio goes to when the stream starts decides the audio that
+        // the host is asked for (audio)
+        audioOutputs = AudioOutputs(applicationContext)
+        val audioOutput = audioOutputs.current()
+        startedOnBluetooth = audioOutput.bluetooth
+        audioOnBluetooth = startedOnBluetooth
         val config =
             StreamConfiguration.Builder()
                 .setResolution(prefConfig.width, prefConfig.height)
@@ -595,7 +668,7 @@ class Game :
                 .setSupportedVideoFormats(supportedVideoFormats)
                 .setAttachedGamepadMask(gamepadMask)
                 .setClientRefreshRateX100((displayRefreshRate * X100).toInt())
-                .setAudioConfiguration(prefConfig.audioConfiguration)
+                .setAudioConfiguration(audioConfigurationFor(audioOutput))
                 .setColorSpace(decoderRenderer.getPreferredColorSpace())
                 .setColorRange(decoderRenderer.getPreferredColorRange())
                 .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
@@ -638,7 +711,12 @@ class Game :
         if (prefConfig.onscreenController) {
             // create virtual onscreen controller
             val onscreenController =
-                VirtualController(controllerHandler, streamView.parent as FrameLayout?, this)
+                VirtualController(
+                    controllerHandler,
+                    streamView.parent as FrameLayout?,
+                    this,
+                    prefConfig,
+                )
             virtualController = onscreenController
             onscreenController.refreshLayout()
             onscreenController.show()
@@ -669,6 +747,7 @@ class Game :
                 ),
                 heldKeys,
             )
+        streamActions.touchModeChange = ::touchModeChanging
         streamSession =
             StreamSessionFactory.create(
                 this,
@@ -698,7 +777,12 @@ class Game :
         // the gamepad mouse follow the session (stream)
         controllerHandler.setMenuChordListener(streamSession::openMenu)
         controllerHandler.setChromeKeySink(chromeHost::dispatchUsbPadKey)
-        decoderRenderer.setPerfSink(streamSession::onPerf)
+        // BOREALIS: each snapshot says whether the audio goes out over Bluetooth (audio)
+        decoderRenderer.setPerfSink {
+            streamSession.onPerf(it.copy(audioBluetooth = audioOnBluetooth))
+        }
+        audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx)
+        decoderRenderer.setAudioDelaySource(audioRenderer::audioDelayMs)
         PerfGate.bind(lifecycleScope, streamSession, decoderRenderer::setPerfEnabled)
         GamepadMouseSync.bind(lifecycleScope, streamSession) {
             controllerHandler.isMouseEmulationOnAnyPad
@@ -918,9 +1002,9 @@ class Game :
         waitingForAllModifiersUp = false
         keysEatenByChord.clear()
 
-        // BOREALIS: the release of the mouse's Back button may come while another window has the
-        // focus (stream)
-        if (!hasFocus) cancelBackHold()
+        // BOREALIS: the release of a side button of the mouse may come while another window has
+        // the focus (stream)
+        if (!hasFocus) cancelSideButtons()
 
         // With Android native pointer capture, capture is lost when focus is lost,
         // so it must be requested again when focus is regained.
@@ -965,6 +1049,62 @@ class Game :
             (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_BALANCED &&
                 prefConfig.reduceRefreshRate)
     }
+
+    // BOREALIS: a 2-channel output gets stereo from the host when the settings ask for 5.1 or
+    // 7.1: a track for more channels on it leaves the fast path of the audio mixer and adds
+    // latency. The setting is kept when the output has more channels or does not say (audio)
+    private fun audioConfigurationFor(output: AudioOutput): MoonBridge.AudioConfiguration? {
+        val asked = prefConfig.audioConfiguration
+        val stereo = MoonBridge.AUDIO_CONFIGURATION_STEREO
+        val channels = output.channelCount
+        val stereoOutput = channels != null && channels <= stereo.channelCount
+        if (asked == null || !stereoOutput || asked.channelCount <= stereo.channelCount) {
+            return asked
+        }
+
+        stereoFallback = asked
+        val label =
+            when (asked) {
+                MoonBridge.AUDIO_CONFIGURATION_51_SURROUND -> "5.1"
+                MoonBridge.AUDIO_CONFIGURATION_71_SURROUND -> "7.1"
+                else -> "${asked.channelCount} channels"
+            }
+        BorealisLog.i(
+            LogTag.APP,
+            "audio output has two channels, stereo asked of the host",
+            "asked" to label,
+            "used" to "stereo",
+        )
+        return stereo
+    }
+
+    // BOREALIS: tells the viewer what the audio start decided and, while the stream runs, each
+    // time the sound moves to a Bluetooth output. Called once, on the main thread, when the
+    // connection is up and the stop has not run: the card of a notice waits for the stream on
+    // screen, so nothing is lost by giving the notices before the first frame. The listener reads
+    // the session when it runs, and a stop closes it. It also keeps audioOnBluetooth, which the
+    // snapshots of the overlay carry (audio)
+    private fun announceAudio() {
+        stereoFallback?.let {
+            streamSession.notify(StreamNotice.StereoFallback(surroundLayout(it)))
+        }
+        if (startedOnBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
+        audioOutputs.onChange { output ->
+            if (stopRan) return@onChange
+            if (output.bluetooth && !audioOnBluetooth) {
+                streamSession.notify(StreamNotice.BluetoothOutput)
+            }
+            audioOnBluetooth = output.bluetooth
+        }
+    }
+
+    // The configurations that the settings offer above stereo are 5.1 and 7.1
+    private fun surroundLayout(asked: MoonBridge.AudioConfiguration): SurroundLayout =
+        if (asked == MoonBridge.AUDIO_CONFIGURATION_71_SURROUND) {
+            SurroundLayout.SURROUND_7_1
+        } else {
+            SurroundLayout.SURROUND_5_1
+        }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress(
@@ -1232,7 +1372,7 @@ class Game :
     override fun onStop() {
         super.onStop()
         startupGuard.cancel() // BOREALIS: first-frame watchdog
-        cancelBackHold() // BOREALIS: the release of the mouse's Back button may never come (stream)
+        cancelSideButtons() // BOREALIS: the release of a mouse side button may never come (stream)
         // BOREALIS: a pending "app already running" question is a cancel (host.launch)
         if (::streamSession.isInitialized) {
             streamSession.answerConflict(ConflictChoice.CANCEL)
@@ -1323,8 +1463,14 @@ class Game :
         // The gamepad is zeroed and the game gets nothing from it
         controllerHandler.setCaptured(true)
         grabbedBeforeCapture = grabbedInput
-        // The PC is never left holding X1: Back is sent as a press and a release when it comes up
-        streamActions.releaseHeldInput(lastButtonState and MotionEvent.BUTTON_BACK.inv())
+        // The chrome gets the up of a finger that the host took, so the PC would keep it pressed
+        cancelNativeTouch()
+        // The PC is never left holding a button. The side buttons are not in this: the ones that
+        // went to the PC are released with the grab (cancelSideButtons), and the others, which it
+        // never saw, must not get a release
+        streamActions.releaseHeldInput(
+            lastButtonState and (MotionEvent.BUTTON_BACK or MotionEvent.BUTTON_FORWARD).inv()
+        )
         lastButtonState = 0
         // A modifier that comes up while the chrome has the keys is never seen here
         modifierFlags = 0
@@ -1361,7 +1507,7 @@ class Game :
             }
         } else {
             inputCaptureProvider.disableCapture()
-            cancelBackHold()
+            cancelSideButtons()
         }
 
         // Grab/ungrab system keyboard shortcuts
@@ -1370,11 +1516,200 @@ class Game :
         grabbedInput = grab
     }
 
-    // BOREALIS: the Back button of the mouse stops waiting to open the menu: the pointer is no
-    // longer ours, so the release of the button may never be seen (stream)
-    private fun cancelBackHold() {
+    // BOREALIS: the side buttons of the mouse stop waiting: the pointer is no longer ours, so the
+    // release of a button may never be seen. A pulse that waited for the other button is dropped,
+    // and a button that the PC has down is released (stream)
+    private fun cancelSideButtons() {
         window.decorView.removeCallbacks(openMenuFromBackHold)
-        lastButtonState = lastButtonState and MotionEvent.BUTTON_BACK.inv()
+        sideBack.cancel()
+        sideForward.cancel()
+        lastButtonState =
+            lastButtonState and (MotionEvent.BUTTON_BACK or MotionEvent.BUTTON_FORWARD).inv()
+    }
+
+    // BOREALIS: Back or Forward of the mouse went down, at [eventTime]. The result is true when it
+    // is the second of the two within SIDE_CHORD_MS: the chord opens the menu, and the caller opens
+    // it when it has noted the state of the buttons (stream)
+    private fun sideButtonDown(button: SideButton, eventTime: Long): Boolean {
+        // The repeats of a key that stays down are the press that is down already
+        if (button.isDown) return false
+        val other = if (button === sideBack) sideForward else sideBack
+        if (other.armed) {
+            window.decorView.removeCallbacks(openMenuFromBackHold)
+            other.eat()
+            button.joinChord()
+            return true
+        }
+        button.down(eventTime, prefConfig.mouseNavButtons)
+        if (button === sideBack && prefConfig.mouseNavButtons) {
+            window.decorView.postDelayed(openMenuFromBackHold, BACK_HOLD_MS)
+        }
+        return false
+    }
+
+    // BOREALIS: Back or Forward of the mouse came up after [heldMs] (stream)
+    private fun sideButtonUp(button: SideButton, heldMs: Long) {
+        if (button === sideBack) window.decorView.removeCallbacks(openMenuFromBackHold)
+        button.up(heldMs)
+    }
+
+    // Returns true if the key is the Back that Android makes of a right click or of the side
+    // button of a mouse, or the Forward of a mouse with the setting off, and was taken here.
+    // BOREALIS: with the setting off those keys are the side buttons of the chord that opens the
+    // menu (Back is the right button of the mouse). The key up says how long the key was down.
+    // If the setting is on, handleMotionEvent() takes care of the buttons, and the Forward key
+    // goes on as any key (stream)
+    private fun handleMouseSideKey(event: KeyEvent, down: Boolean): Boolean {
+        val fromMouse =
+            event.source == InputDevice.SOURCE_MOUSE ||
+                event.source == InputDevice.SOURCE_MOUSE_RELATIVE
+        val button =
+            when {
+                !fromMouse -> null
+                event.keyCode == KeyEvent.KEYCODE_BACK -> sideBack
+                event.keyCode == KeyEvent.KEYCODE_FORWARD -> sideForward
+                else -> null
+            }
+        val navButtons = prefConfig.mouseNavButtons
+        if (button != null && !navButtons) {
+            if (!down) {
+                sideButtonUp(button, event.eventTime - event.downTime)
+            } else if (sideButtonDown(button, event.eventTime)) {
+                streamSession.openMenu()
+            }
+        }
+        // Always take the Back key, otherwise the back press will be propagated up to the parent
+        // and finish the activity.
+        return button === sideBack || (button != null && !navButtons)
+    }
+
+    // BOREALIS: Back or Forward of the mouse changed in a motion event; true when it opens the
+    // menu, as sideButtonDown says (stream)
+    private fun sideButtonMoved(button: SideButton, down: Boolean, eventTime: Long): Boolean {
+        if (down) return sideButtonDown(button, eventTime)
+        sideButtonUp(button, eventTime - button.pressedAt)
+        return false
+    }
+
+    // BOREALIS: a side button of the mouse, Back or Forward (stream). The PC never sees a press
+    // that may be half of the chord that opens the menu. A press that comes up within
+    // SIDE_PULSE_MS is a pulse (the side buttons of the Logi M650 send nothing else): it goes to
+    // the PC when SIDE_CHORD_MS have passed since the press, unless the other button joined it by
+    // then. A longer press goes on as before: Back is X1, sent when the button comes up (it may be
+    // held to open the menu), and Forward is X2, pressed once the press is no pulse and released
+    // when it comes up. With the setting off, Back is the right button of the mouse, and Forward
+    // goes nowhere.
+    private inner class SideButton(
+        private val navHost: Byte,
+        private val plainHost: Byte?,
+        private val navSentOnRelease: Boolean,
+    ) {
+        private var phase = SidePhase.IDLE
+        private var host: Byte? = null
+        private var sentOnRelease = false
+        private var windowOpen = false
+
+        // When the press went down, for the length of the next release
+        var pressedAt = 0L
+            private set
+
+        // Whether a press of this button can still be joined by the other button
+        val armed: Boolean
+            get() = windowOpen
+
+        val isDown: Boolean
+            get() =
+                phase == SidePhase.PRESSED || phase == SidePhase.HELD || phase == SidePhase.EATEN
+
+        // The press has lasted SIDE_PULSE_MS: no pulse
+        private val settle = Runnable {
+            phase = SidePhase.HELD
+            if (!sentOnRelease) host?.let { conn.sendMouseButtonDown(it) }
+        }
+
+        // The window of the chord is over: a pulse that waited goes to the PC
+        private val windowEnds = Runnable {
+            windowOpen = false
+            if (phase == SidePhase.PULSED) {
+                phase = SidePhase.IDLE
+                click()
+            }
+        }
+
+        fun down(eventTime: Long, navButtons: Boolean) {
+            if (phase == SidePhase.PULSED) {
+                // An earlier pulse still waits: it goes now, and this is another press
+                clearTimers()
+                click()
+            }
+            host = if (navButtons) navHost else plainHost
+            sentOnRelease = navButtons && navSentOnRelease
+            pressedAt = eventTime
+            phase = SidePhase.PRESSED
+            windowOpen = true
+            window.decorView.postDelayed(settle, SIDE_PULSE_MS)
+            window.decorView.postDelayed(windowEnds, SIDE_CHORD_MS)
+        }
+
+        // [heldMs] is how long the button was down, from the times of the events
+        fun up(heldMs: Long) {
+            if (phase == SidePhase.PRESSED) {
+                window.decorView.removeCallbacks(settle)
+                if (heldMs < SIDE_PULSE_MS) {
+                    // A pulse: it waits for the window to end
+                    phase = SidePhase.PULSED
+                    return
+                }
+                // The task that settles the press has not run yet, but the press is no pulse
+                settle.run()
+            }
+            if (phase == SidePhase.HELD) {
+                if (sentOnRelease) click() else host?.let { conn.sendMouseButtonUp(it) }
+            }
+            if (phase != SidePhase.PULSED) {
+                clearTimers()
+                phase = SidePhase.IDLE
+            }
+        }
+
+        // The other button joined this one: the chord takes this press, and the PC gets no more
+        // of it than it has got
+        fun eat() {
+            release()
+            clearTimers()
+            phase = if (phase == SidePhase.PULSED) SidePhase.IDLE else SidePhase.EATEN
+        }
+
+        // This press is the second of the chord, which takes it
+        fun joinChord() {
+            phase = SidePhase.EATEN
+        }
+
+        fun cancel() {
+            release()
+            clearTimers()
+            phase = SidePhase.IDLE
+        }
+
+        // The PC has the press of this button down: let it go
+        private fun release() {
+            if (phase == SidePhase.HELD && !sentOnRelease) {
+                host?.let { conn.sendMouseButtonUp(it) }
+            }
+        }
+
+        private fun click() {
+            host?.let {
+                conn.sendMouseButtonDown(it)
+                conn.sendMouseButtonUp(it)
+            }
+        }
+
+        private fun clearTimers() {
+            window.decorView.removeCallbacks(settle)
+            window.decorView.removeCallbacks(windowEnds)
+            windowOpen = false
+        }
     }
 
     private val toggleGrab = Runnable { setInputGrabState(!grabbedInput) }
@@ -1432,7 +1767,11 @@ class Game :
         if (chordWaits) {
             if (specialKeyCode == androidKeyCode) {
                 // If this is a key up for the special key itself, eat that because the host never
-                // saw the original key down
+                // saw the original key down (BOREALIS: a key down of it eats its key up too, which
+                // may come after the modifiers)
+                if (down) {
+                    keysEatenByChord.add(androidKeyCode)
+                }
                 return true
             } else if (modifierFlags != 0) {
                 // While we're waiting for modifiers to come up, eat all key downs and allow all key
@@ -1502,6 +1841,9 @@ class Game :
                     // events until the modifiers come up
                     specialKeyCode = androidKeyCode
                     waitingForAllModifiersUp = true
+                    // BOREALIS: the host never sees this key down, so its key up is eaten even
+                    // when it comes after the modifiers, which end the chord
+                    keysEatenByChord.add(androidKeyCode)
                     return true
                 }
 
@@ -1574,23 +1916,7 @@ class Game :
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click. This event WILL repeat if
         // the right mouse button is held down, so we ignore those.
-        val eventSource = event.source
-        if (
-            (eventSource == InputDevice.SOURCE_MOUSE ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) &&
-                event.keyCode == KeyEvent.KEYCODE_BACK
-        ) {
-            // Send the right mouse button event if mouse back and forward
-            // are disabled. If they are enabled, handleMotionEvent() will take
-            // care of this.
-            if (!prefConfig.mouseNavButtons) {
-                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-            }
-
-            // Always return true, otherwise the back press will be propagated
-            // up to the parent and finish the activity.
-            return true
-        }
+        if (handleMouseSideKey(event, down = true)) return true
 
         var handled = false
 
@@ -1677,23 +2003,7 @@ class Game :
 
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click.
-        val eventSource = event.source
-        if (
-            (eventSource == InputDevice.SOURCE_MOUSE ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE) &&
-                event.keyCode == KeyEvent.KEYCODE_BACK
-        ) {
-            // Send the right mouse button event if mouse back and forward
-            // are disabled. If they are enabled, handleMotionEvent() will take
-            // care of this.
-            if (!prefConfig.mouseNavButtons) {
-                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-            }
-
-            // Always return true, otherwise the back press will be propagated
-            // up to the parent and finish the activity.
-            return true
-        }
+        if (handleMouseSideKey(event, down = false)) return true
 
         var handled = false
         if (ControllerHandler.isGameControllerDevice(event.device)) {
@@ -1768,7 +2078,7 @@ class Game :
         }
     }
 
-    override fun toggleKeyboard() {
+    fun toggleKeyboard() {
         LimeLog.info("Toggling keyboard overlay")
         // BOREALIS: hides the Android keyboard when it shows, else toggles the Borealis keyboard;
         // the Android one opens from it
@@ -2085,16 +2395,84 @@ class Game :
         ) != MoonBridge.LI_ERR_UNSUPPORTED
     }
 
-    // Nothing calls it since the Java commented out the call in handleMotionEvent; the owner keeps
-    // the native touch path.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount", "UnusedPrivateFunction")
+    // BOREALIS: sends the fingers to the host as touch events (the Native touch mode). False when
+    // the touch contexts take the event: it is no touch of a finger, the host refused it before
+    // (nativeTouchRefused) or refuses it now, which puts the session in Direct (stream)
     private fun trySendTouchEvent(view: View, event: MotionEvent): Boolean {
         val eventType = getLiTouchTypeFromEvent(event)
-        if (eventType < 0) {
+        if (nativeTouchRefused || eventType < 0) {
             return false
         }
 
+        val taken = sendTouchEvents(view, event, eventType)
+        if (taken) {
+            noteNativeTouch(event)
+        } else {
+            fallBackToDirectTouch()
+        }
+        return taken
+    }
+
+    // BOREALIS: a finger that the host took is down until its up or cancel (stream)
+    private fun noteNativeTouch(event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_POINTER_DOWN -> nativeTouchDown = true
+
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> nativeTouchDown = false
+        }
+    }
+
+    // BOREALIS: the host takes no touch events (LI_ERR_UNSUPPORTED). What a host supports does not
+    // change during a stream, so the session goes to Direct for the rest of it, where the pen
+    // events ask the host again each time (stream)
+    private fun fallBackToDirectTouch() {
+        nativeTouchRefused = true
+        // A host that refused took no finger: nothing to cancel when the mode changes
+        nativeTouchDown = false
+        BorealisLog.i(LogTag.INPUT, "the host takes no touch events, the touch mode is direct")
+        showDirectTouch()
+    }
+
+    // BOREALIS: Direct stands for the Native that the host refused, and the notice says so (stream)
+    private fun showDirectTouch() {
+        streamSession.setTouchMode(TouchMode.DIRECT)
+        streamSession.notify(StreamNotice.NativeTouchRefused)
+    }
+
+    // BOREALIS: cancels the finger the host took, once, when its up can no longer come (stream)
+    private fun cancelNativeTouch() {
+        if (!nativeTouchDown) return
+        nativeTouchDown = false
+        sendCancelAllTouches()
+    }
+
+    // BOREALIS: asked before the contexts change; false for a Native that was refused, which is
+    // Direct again (stream)
+    private fun touchModeChanging(mode: TouchMode): Boolean {
+        val refused = mode == TouchMode.NATIVE && nativeTouchRefused
+        if (mode != TouchMode.NATIVE) cancelNativeTouch()
+        if (refused) showDirectTouch()
+        return !refused
+    }
+
+    private fun sendCancelAllTouches(): Int =
+        conn.sendTouchEvent(
+            MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+            0,
+            0f,
+            0f,
+            0f,
+            0f,
+            0f,
+            MoonBridge.LI_ROT_UNKNOWN,
+        )
+
+    // True when the host took the event, false when it answered that touch is not supported.
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("ReturnCount")
+    private fun sendTouchEvents(view: View, event: MotionEvent, eventType: Byte): Boolean {
         if (event.actionMasked == MotionEvent.ACTION_MOVE) {
             // Move events may impact all active pointers
             for (i in 0 until event.pointerCount) {
@@ -2105,16 +2483,7 @@ class Game :
             return true
         } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
             // Cancel impacts all active pointers
-            return conn.sendTouchEvent(
-                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
-                0,
-                0f,
-                0f,
-                0f,
-                0f,
-                0f,
-                MoonBridge.LI_ROT_UNKNOWN,
-            ) != MoonBridge.LI_ERR_UNSUPPORTED
+            return sendCancelAllTouches() != MoonBridge.LI_ERR_UNSUPPORTED
         } else {
             // Up, Down, and Hover events are specific to the action index
             return sendTouchEventForPointer(view, event, eventType, event.actionIndex)
@@ -2127,7 +2496,6 @@ class Game :
     @Suppress(
         "ComplexCondition",
         "CyclomaticComplexMethod",
-        "ForbiddenComment",
         "LongMethod",
         "NestedBlockDepth",
         "ReturnCount",
@@ -2333,28 +2701,26 @@ class Game :
                     }
                 }
 
+                // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see
+                // whether the other joins them (stream)
+                var sideChord = false
                 if (prefConfig.mouseNavButtons) {
                     if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
-                        if ((buttonState and MotionEvent.BUTTON_BACK) != 0) {
-                            // BOREALIS: Back waits to see whether it is held (stream)
-                            backHoldOpenedMenu = false
-                            window.decorView.postDelayed(openMenuFromBackHold, BACK_HOLD_MS)
-                        } else {
-                            window.decorView.removeCallbacks(openMenuFromBackHold)
-                            // BOREALIS: a short press is X1, sent now; a hold sent nothing (stream)
-                            if (!backHoldOpenedMenu) {
-                                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X1)
-                                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X1)
-                            }
-                        }
+                        sideChord =
+                            sideButtonMoved(
+                                sideBack,
+                                (buttonState and MotionEvent.BUTTON_BACK) != 0,
+                                event.eventTime,
+                            )
                     }
 
                     if ((changedButtons and MotionEvent.BUTTON_FORWARD) != 0) {
-                        if ((buttonState and MotionEvent.BUTTON_FORWARD) != 0) {
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_X2)
-                        } else {
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
-                        }
+                        sideChord =
+                            sideButtonMoved(
+                                sideForward,
+                                (buttonState and MotionEvent.BUTTON_FORWARD) != 0,
+                                event.eventTime,
+                            ) || sideChord
                     }
                 }
 
@@ -2399,6 +2765,9 @@ class Game :
                 }
 
                 lastButtonState = buttonState
+                // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the
+                // input clears them (stream)
+                if (sideChord) streamSession.openMenu()
             }
             // This case is for fingers
             else {
@@ -2434,6 +2803,16 @@ class Game :
                 val eventX = (event.getX(actionIndex) + xOffset).toInt()
                 val eventY = (event.getY(actionIndex) + yOffset).toInt()
 
+                // BOREALIS: the Native touch mode sends every finger to the host as a touch event,
+                // the third one too, and the code below takes what the host refuses. A tap of
+                // three fingers that opens the keyboard is theirs: a finger that went to the host
+                // does not reach it (stream)
+                if (
+                    touchMode == TouchMode.NATIVE && view != null && trySendTouchEvent(view, event)
+                ) {
+                    return true
+                }
+
                 // Special handling for 3 finger gesture
                 if (
                     event.actionMasked == MotionEvent.ACTION_POINTER_DOWN &&
@@ -2450,15 +2829,6 @@ class Game :
 
                     return true
                 }
-
-                // TODO: Re-enable native touch when have a better solution for handling
-                // cancelled touches from Android gestures and 3 finger taps to activate
-                // the software keyboard.
-                /*if (touchMode == TouchMode.DIRECT && trySendTouchEvent(view, event)) {
-                    // If this host supports touch events and absolute touch is enabled,
-                    // send it directly as a touch event.
-                    return true;
-                }*/
 
                 val context = getTouchContext(actionIndex)
                 if (context == null) {
@@ -2589,11 +2959,12 @@ class Game :
         ) {
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
         }
-        if (prefConfig.mouseNavButtons && (lastButtonState and MotionEvent.BUTTON_FORWARD) != 0) {
-            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_X2)
-        }
-        // Back sent nothing yet: it waits to see whether it is held
-        cancelBackHold()
+        // The side buttons, which cancelSideButtons lets go of if the PC has them down. With "Mouse
+        // back and forward buttons" on, the PC has Forward (X2) down once it has been down for
+        // SIDE_PULSE_MS, and Back (X1) sent nothing yet, since it waits to see whether it is held.
+        // With it off, the PC has the right button down once Back has been down for SIDE_PULSE_MS,
+        // and Forward sends nothing
+        cancelSideButtons()
         lastButtonState = 0
     }
 
@@ -2748,11 +3119,20 @@ class Game :
     }
 
     // BOREALIS: stops the connection and runs [done] once it has stopped, from the thread that
-    // stopped it; a connection that never connected is stopped too (leave)
+    // stopped it; a connection that never connected is stopped too. When another exit stopped it
+    // first, [done] runs when that stop ends, or at once, on the caller's thread if it ended
+    // (leave)
     internal fun stopConnectionThen(done: Runnable) = stopConnection(done)
 
     private fun stopConnection(done: Runnable? = null) {
         stopRan = true // BOREALIS: no stream starts after this (leave)
+        // BOREALIS: the audio output tells nobody after the stop; closing twice is no harm (audio)
+        if (::audioOutputs.isInitialized) audioOutputs.close()
+        if (!stopClaimed.compareAndSet(false, true)) {
+            // BOREALIS: the stop of a Disconnect after another exit still gets its callback (leave)
+            done?.let { connectionStopped.thenRun(it) }
+            return
+        }
         startupGuard.cancel() // BOREALIS: first-frame watchdog
         if (connected) {
             connected = false
@@ -2776,17 +3156,22 @@ class Game :
         // during the process of stopping this one.
         object : Thread() {
                 override fun run() {
-                    val stopStarted = System.nanoTime() // BOREALIS: leave log
-                    conn.stop()
-                    BorealisLog.i(
-                        LogTag.APP,
-                        "connection stop done",
-                        "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
-                    )
-                    // BOREALIS: a start that failed after the decoder stage holds a decoder and no
-                    // connection (stream)
-                    tellConnectionStopped()
-                    done?.run()
+                    try {
+                        val stopStarted = System.nanoTime() // BOREALIS: leave log
+                        conn.stop()
+                        BorealisLog.i(
+                            LogTag.APP,
+                            "connection stop done",
+                            "ms" to TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - stopStarted),
+                        )
+                        // BOREALIS: a start that failed after the decoder stage holds a decoder
+                        // and no connection (stream)
+                        tellConnectionStopped()
+                        done?.run()
+                    } finally {
+                        // BOREALIS: a second stop gets its callback from here (leave)
+                        connectionStopped.complete(Unit)
+                    }
                 }
             }
             .start()
@@ -2855,7 +3240,8 @@ class Game :
 
     override fun connectionTerminated(errorCode: Int) {
         // BOREALIS: the host ends the stream when it gets the Quit that the user confirmed, and the
-        // control stream reports the ENet disconnect (-1); that end is the quit's, so no
+        // control stream reports the ENet disconnect (-1), or the graceful termination (0) when the
+        // host sends it before it disconnects a cancelled session; that end is the quit's, so no
         // connectivity test and no error. Any other code is a network drop (leave)
         val endedByQuit = ::streamSession.isInitialized && streamSession.endedByQuit(errorCode)
 
@@ -2885,25 +3271,25 @@ class Game :
 
         runOnUiThread {
             startupGuard.cancel() // BOREALIS: first-frame watchdog
-            SessionAudit.terminated(errorCode) // BOREALIS: audit trail
+            // BOREALIS: audit trail. The end that the session took for the quit's is the quit's
+            // here too, whether the host answered the cancel before or after it: the answer of a
+            // shared app (599) clears the quit that the audit waits for, and the end of the stream
+            // that follows is no error
+            if (endedByQuit) SessionAudit.quit() else SessionAudit.terminated(errorCode)
 
-            // Let the display go to sleep now
-            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-            // Stop processing controller input
-            controllerHandler.stop()
-
-            // Ungrab input
-            setInputGrabState(false)
+            releaseWindowAndInput()
 
             if (!displayedFailureDialog) {
                 displayedFailureDialog = true
                 if (!endedByQuit) LimeLog.severe("Connection terminated: $errorCode")
+                // BOREALIS: a Disconnect does not mark the failure screen as shown, but its stop
+                // ran already: the end of the stream that the user left is no failure (leave)
+                val leaving = stopRan
                 stopConnection()
 
                 // Display the error dialog if it was an unexpected termination.
                 // Otherwise, just finish the activity immediately.
-                if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
+                if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION && !leaving) {
                     // BOREALIS: the chrome shows the classified failure (stream)
                     val portBlocked =
                         portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE &&
@@ -2921,12 +3307,74 @@ class Game :
                         )
                     )
                 } else {
-                    // BOREALIS: another exit may have finished the activity already (leave)
-                    if (!isFinishing) finish()
+                    finishWithoutFailure(endedByQuit, errorCode)
                 }
             }
         }
     }
+
+    // BOREALIS: the stream ended with no failure to report. A graceful end that was the quit's
+    // tells the session, so that the 599 answer that waits for the end leaves now, with the notice
+    // for the Library, before the activity finishes (stream)
+    private fun finishWithoutFailure(endedByQuit: Boolean, errorCode: Int) {
+        if (endedByQuit && errorCode == MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
+            streamSession.onGracefulEnd()
+        }
+        // BOREALIS: another exit may have finished the activity already (leave)
+        if (!isFinishing) finish()
+    }
+
+    // BOREALIS: the stream is over, whatever ended it: the display may sleep, the controller input
+    // stops and the pointer goes free, before the chrome shows what happened (stream)
+    private fun releaseWindowAndInput() {
+        // Let the display go to sleep now
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Stop processing controller input
+        controllerHandler.stop()
+
+        // Ungrab input
+        setInputGrabState(false)
+    }
+
+    // BOREALIS: the video surface was lost: the picture is gone and nothing else says so. On the
+    // main thread, a stream that runs ends as an error termination does: the chrome shows the
+    // failure over the last frame, and the connection stops. Picture in picture keeps the stream
+    // running, so it ends too, and the chrome shows the failure when the window grows back. A
+    // stream that is ending already (the stop ran, a failure is shown, the activity is finishing)
+    // has said what there is to say, so this only warns. The checks run here, not where the report
+    // was posted, so a leave that came after the post counts (stream)
+    private fun endStreamForLostSurface() {
+        if (streamEndsAlready()) {
+            BorealisLog.w(LogTag.VIDEO, "video surface lost while the stream is ending")
+            return
+        }
+        displayedFailureDialog = true
+        LimeLog.severe("The video surface was lost")
+        // The last frame is copied before the connection stops and the decoder goes
+        if (firstFrameShown) chromeHost.freezeFrame()
+        // The audit says how the stream ended before the stop of the connection says that the user
+        // left. While the user's Quit is under way the end is the quit's, as it is for a
+        // termination of any code; the answer of the quit that comes later ends nothing more
+        if (streamSession.state.value.phase is StreamPhase.Quitting) {
+            SessionAudit.quit()
+        } else {
+            SessionAudit.failed("video_surface_lost")
+        }
+        releaseWindowAndInput()
+        stopConnection()
+        streamSession.onFailed(
+            StreamFailure(
+                if (firstFrameShown) FailureKind.STOPPED else FailureKind.GENERIC,
+                "The video surface was lost",
+                null,
+            )
+        )
+    }
+
+    // BOREALIS: the stop ran, a failure is on the screen, or the activity is going away (stream)
+    private fun streamEndsAlready(): Boolean =
+        stopRan || displayedFailureDialog || isFinishing || isDestroyed
 
     override fun connectionStatusUpdate(connectionStatus: Int) {
         runOnUiThread {
@@ -2969,6 +3417,7 @@ class Game :
                 )
             )
             startupGuard.onConnectionStarted() // BOREALIS: first-frame watchdog
+            announceAudio() // BOREALIS: the notices of the sound (audio)
             // BOREALIS: audit trail
             SessionAudit.started(
                 pcName,
@@ -3074,7 +3523,7 @@ class Game :
             UiHelper.notifyStreamConnecting(this)
 
             decoderRenderer.setRenderTarget(holder)
-            conn.start(AndroidAudioRenderer(this, prefConfig.enableAudioFx), decoderRenderer, this)
+            conn.start(audioRenderer, decoderRenderer, this)
         }
     }
 
@@ -3128,9 +3577,9 @@ class Game :
             // Let the decoder know immediately that the surface is gone
             decoderRenderer.prepareForStop()
 
-            if (connected) {
-                stopConnection()
-            }
+            // BOREALIS: a surface that goes away before the start is a leave too: the start that
+            // reports after it finds the stop done and opens no stream that nobody ends (leave)
+            stopConnection()
         }
     }
 
@@ -3170,4 +3619,14 @@ class Game :
             else -> false
         }
     }
+}
+
+// BOREALIS: where a side button of the mouse is: up, down for less than SIDE_PULSE_MS, down longer,
+// up again within that time and waiting for the other button, or taken by the chord (stream)
+private enum class SidePhase {
+    IDLE,
+    PRESSED,
+    HELD,
+    PULSED,
+    EATEN,
 }

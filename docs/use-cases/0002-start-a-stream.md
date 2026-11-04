@@ -77,7 +77,8 @@ says what happened and what to do next.
 
 1. The host reports a running app, in `/serverinfo` at step 3 or in its refusal
    of the launch at step 4, and the system shows the conflict dialog. It does
-   not, for the app that the user chose to resume
+   not, for the app that the user chose to resume with Resume, a tap on the app
+   that runs or Continue; Try again after an error asks like a Start
    ([UC-003](0003-join-or-replace-a-running-app.md), A3).
 2. The flow continues in [UC-003](0003-join-or-replace-a-running-app.md).
 
@@ -166,7 +167,9 @@ says what happened and what to do next.
    was shown, so there is none to copy, and the popup stands on the background
    of A6.
 2. SESSION_START was written when the connection started. The system writes
-   SESSION_END with outcome FAILURE and `reason=error code=<code>`.
+   SESSION_END with outcome FAILURE and `reason=error code=<code>`. When the video
+   surface is lost instead, the session ends with `reason=error cause=video_surface_lost
+   duration_s=N`, with no `code=` (`SessionAudit.failed`).
 
 ### E5: The host ends a stream that ran (branches from step 8)
 
@@ -199,10 +202,15 @@ says what happened and what to do next.
    draws as it does with no frozen frame, with no scrim where the host blurs the
    background and the dialog scrim where it does not.
 4. The system writes SESSION_END with outcome FAILURE and `reason=error
-   code=-1`. A graceful end (code 0) is `reason=host_ended`. A quit that the
+   code=-1`. A lost video surface ends it with `reason=error
+   cause=video_surface_lost duration_s=N`, and no `code=`. A graceful end (code 0)
+   is `reason=host_ended`. A quit that the
    user chose is `reason=quit` ([UC-004](0004-use-the-in-game-menu.md)).
 5. The use case ends. Back or Close ends the activity and lets the copy go.
-   Try again starts a new activity.
+   Try again starts a new activity. If the host reports an app running then,
+   the Conflict dialog asks "An app is already running": Try again is not the
+   user's choice to resume ([UC-003](0003-join-or-replace-a-running-app.md),
+   A3).
 
 Known limit: the frame is placed when the copy ends, so a rotation or a resize
 after the failure does not place it again.

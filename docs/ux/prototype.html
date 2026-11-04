@@ -826,7 +826,7 @@ R.error=function(){
 function desk(){
   let o='';
   if(S.overlay==='compact') o='<div class="ovl"><span><b>59</b> fps</span><span>host <b>4.1</b> ms</span><span>net <b>9</b> ms</span><span>HEVC 10-bit HDR</span></div>';
-  if(S.overlay==='detailed') o='<div class="ovl det"><span>2560×1440 · <b>59</b> fps (cap) · HEVC Main10 · HDR10</span><span>Decoder c2.qti.hevc.decoder.low_latency</span><span>Host processing <b>3.8 / 4.1 / 6.0</b> ms (min/avg/max)</span><span>Network <b>9</b> ms ± 2 · loss 0.0 % · 38.2 Mbps</span><span>Decode 2.1 ms · render queue 4.9 ms</span></div>';
+  if(S.overlay==='detailed') o='<div class="ovl det"><span>2560×1440 · <b>59</b> fps (cap) · HEVC Main10 · HDR10</span><span>Decoder c2.qti.hevc.decoder.low_latency</span><span>Host processing <b>3.8 / 4.1 / 6.0</b> ms (min/avg/max)</span><span>Network <b>9</b> ms ± 2 · loss 0.0 % · 38.2 Mbps</span><span>Decode 2.1 ms · render queue 4.9 ms</span><span>Audio delay <b>—</b></span></div>';
   const hint=S.hint&&S.screen==='stream'?'<div class="toast" style="bottom:46px">'+(S.mode==='phone'?'Pull the handle down or press Back for the menu':(hh()?'Hold Select + Start for the menu':'Press Back for the menu'))+'</div>':'';
   return '<div class="desk"><div class="icons"><i></i><i></i><i></i></div><div class="ridge"></div><div class="cursor"></div><div class="task"><i></i><i></i><i></i><i></i><i></i></div></div>'+o+
     (S.mode==='phone'?'<button class="handle" data-act="menu" aria-label="Open menu">'+ic('down','s')+'</button>':'')+hint;

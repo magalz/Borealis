@@ -12,6 +12,10 @@ data class PerfSnapshot(
     /** Null when the decoder reports no decode time, which some low-latency decoders do not. */
     val decodeMs: Float?,
     val bitrateMbps: Float?,
+    /** Null until the audio track has a timestamp, and while no audio renderer is wired in. */
+    val audioDelayMs: Int? = null,
+    /** True while the audio goes out over Bluetooth, which adds latency of its own. */
+    val audioBluetooth: Boolean = false,
 )
 
 /** The host processing time over the sample window, in ms. */

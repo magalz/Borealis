@@ -11,7 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -52,6 +56,11 @@ private val THUMB_RADIUS = 9.dp
  * returns to the group list of a [SettingsTwoPane]. A screen reader reads the value as progress and
  * can set it.
  *
+ * [onValueChangeFinished] is called with the value that a gesture ended on, so that a caller can
+ * react to the value that was chosen and not to each step on the way: when a finger lifts after a
+ * tap or a drag (also when it set no new value), after each key step that moved the value and after
+ * an accessibility action that did.
+ *
  * A disabled row is dimmed and ignores input, but it stays a focus stop: on a TV the user can still
  * land on it and read [disabledNote], which says why it is disabled and shows only then. The
  * outline of a focused row reaches 5dp outside it, 7dp when it is the thicker one, so a list of
@@ -70,17 +79,25 @@ fun SettingsSliderRow(
     enabled: Boolean = true,
     disabledNote: String? = null,
     keyStep: Float = step,
+    onValueChangeFinished: (Float) -> Unit = {},
 ) {
     require(step > 0f) { "step must be positive: $step" }
     require(keyStep >= step) { "keyStep must be at least step: $keyStep < $step" }
     val dim = if (enabled) 1f else DISABLED_ALPHA
+    // The value that the last touch, drag or key asked for. A tap ends before the row is composed
+    // with the value that it set, so the end of a gesture cannot read it from [value].
+    var reached by remember { mutableFloatStateOf(value) }
     val change: (Float) -> Boolean = { target ->
+        reached = target
         val changed = target != value
         if (changed) onValueChange(target)
         changed
     }
+    val finish: () -> Unit = { onValueChangeFinished(reached) }
     val moveBy: (Float) -> Boolean = { delta ->
-        change(nearestStep(value + delta, valueRange, step))
+        val moved = change(nearestStep(value + delta, valueRange, step))
+        if (moved) finish()
+        moved
     }
     val steps = (((valueRange.endInclusive - valueRange.start) / step).roundToInt() - 1)
     Column(
@@ -96,7 +113,7 @@ fun SettingsSliderRow(
                 stateDescription = valueLabel
                 if (enabled) {
                     setProgress { target ->
-                        change(nearestStep(target, valueRange, step))
+                        if (change(nearestStep(target, valueRange, step))) finish()
                         true
                     }
                 } else {
@@ -118,6 +135,7 @@ fun SettingsSliderRow(
                     )
                 )
             },
+            onRelease = finish,
             modifier = Modifier.alpha(dim),
         )
     }
@@ -168,16 +186,21 @@ private fun stepOnKey(event: KeyEvent, keyStep: Float, moveBy: (Float) -> Boolea
     }
 }
 
-/** The track and thumb of a slider; a touch or a drag reports where along the track it is. */
+/**
+ * The track and thumb of a slider; a touch or a drag reports where along the track it is, and
+ * [onRelease] when the finger lifts, or the gesture is cancelled.
+ */
 @Composable
 private fun SliderTrack(
     fraction: Float,
     enabled: Boolean,
     onFraction: (Float) -> Unit,
+    onRelease: () -> Unit,
     modifier: Modifier,
 ) {
     val colors = LocalBorealisColors.current
     val report = rememberUpdatedState(onFraction)
+    val release = rememberUpdatedState(onRelease)
     Box(
         modifier
             .fillMaxWidth()
@@ -186,12 +209,19 @@ private fun SliderTrack(
                 if (enabled) {
                     Modifier.pointerInput(Unit) {
                             val radius = THUMB_RADIUS.toPx()
-                            detectTapGestures { report.value(fractionAt(it.x, size.width, radius)) }
+                            detectTapGestures {
+                                report.value(fractionAt(it.x, size.width, radius))
+                                release.value()
+                            }
                         }
                         .pointerInput(Unit) {
                             val radius = THUMB_RADIUS.toPx()
                             detectHorizontalDragGestures(
-                                onDragStart = { report.value(fractionAt(it.x, size.width, radius)) }
+                                onDragStart = {
+                                    report.value(fractionAt(it.x, size.width, radius))
+                                },
+                                onDragEnd = { release.value() },
+                                onDragCancel = { release.value() },
                             ) { change, _ ->
                                 report.value(fractionAt(change.position.x, size.width, radius))
                                 change.consume()

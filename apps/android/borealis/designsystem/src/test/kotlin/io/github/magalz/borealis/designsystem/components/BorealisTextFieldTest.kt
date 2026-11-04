@@ -1,7 +1,9 @@
 package io.github.magalz.borealis.designsystem.components
 
 import android.content.Context
+import android.text.InputType
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -37,6 +39,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -69,7 +72,11 @@ class BorealisTextFieldTest {
     private var rejectEdits = false
     private val reported = mutableListOf<String>()
 
-    private fun show(leaveWithDpad: Boolean = true, showKeyboardOnFocus: Boolean = true) {
+    private fun show(
+        leaveWithDpad: Boolean = true,
+        showKeyboardOnFocus: Boolean = true,
+        keyboardType: KeyboardType = KeyboardType.Text,
+    ) {
         composeRule.setContentInKeyboardMode {
             view = LocalView.current
             BorealisTheme(FormFactor.Tv) {
@@ -87,6 +94,7 @@ class BorealisTextFieldTest {
                             onDone = { done++ },
                             label = "Address",
                             leaveWithDpad = leaveWithDpad,
+                            keyboardType = keyboardType,
                             showKeyboardOnFocus = showKeyboardOnFocus,
                         )
                         Box(Modifier.size(40.dp).testTag(BELOW).focusable())
@@ -112,6 +120,13 @@ class BorealisTextFieldTest {
      * keyboard for the app (an editor, in the log of the input method).
      */
     private fun textSessionIsOpen() = composeRule.runOnIdle { view.onCheckIsTextEditor() }
+
+    /** The `inputType` the focused field hands the input method in its `EditorInfo`. */
+    private fun inputType() = composeRule.runOnIdle {
+        val info = EditorInfo()
+        view.onCreateInputConnection(info)
+        info.inputType
+    }
 
     /**
      * Whether the system keyboard is up, as the framework's input method manager has it. This is
@@ -205,6 +220,26 @@ class BorealisTextFieldTest {
         show()
 
         assertThat(keyboardIsShown()).isTrue()
+    }
+
+    @Test
+    fun `a Uri field keeps the URI keyboard and asks for no auto-correct`() {
+        show(keyboardType = KeyboardType.Uri)
+
+        val inputType = inputType()
+
+        assertThat(inputType and InputType.TYPE_MASK_CLASS).isEqualTo(InputType.TYPE_CLASS_TEXT)
+        assertThat(inputType and InputType.TYPE_MASK_VARIATION)
+            .isEqualTo(InputType.TYPE_TEXT_VARIATION_URI)
+        assertThat(inputType and InputType.TYPE_TEXT_FLAG_AUTO_CORRECT).isEqualTo(0)
+    }
+
+    @Test
+    fun `a text field keeps auto-correct`() {
+        show()
+
+        assertThat(inputType() and InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
+            .isEqualTo(InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
     }
 
     @Test

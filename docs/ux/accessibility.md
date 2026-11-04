@@ -963,7 +963,14 @@ dp (an accepted finding, below).
   title, the options of a host say the name of the host, the in-game menu says its header, the
   keyboard says "Keyboard" (`StreamTalkBackTest`).
 - **Names and states.** A host card is one sentence: name, status, address, capabilities and "Running
-  Desktop"; the status dot says nothing of its own. A pairing step is one thing to read, with its
+  Desktop"; the status dot says nothing of its own. An app card (`CoverTile`) is one control: the
+  cover carries the name as its content description, the state ("Running" and "Hidden") as its
+  state description, and the actions of a tap and of the options, and the name written under it is
+  hidden from the tree so that it is not read twice. A dump of the Apps page with uiautomator (S22,
+  2026-11-02) shows the name on a child of the clickable node, not on the node itself, and
+  TalkBack on the S22 (the owner's check of 2026-11-04) reads the app name, the double-tap and tap
+  actions and the state. Host cards read the name, the status, the address and the chips. No
+  change was needed. A pairing step is one thing to read, with its
   number, its text and its address. `SegmentedControl` says its group label after the name of a
   segment, so that the Off of one row is not the Off of another. The rows of the menu and the
   groups of the settings are read in the order that they are drawn.
@@ -972,7 +979,8 @@ dp (an accepted finding, below).
   button. Snackbars are polite live regions.
 - **Large text** (WCAG 1.4.4). The `LargeTextFitTest` classes of the design system and of the
   Library, and `SettingsLargeTextFitTest` and `AuditLargeTextFitTest`, run the screens at a font
-  scale of 2.0 and fail on a text that is cut or ends in an ellipsis.
+  scale of 2.0 and fail on a text that is cut or ends in an ellipsis. Cases of them also run the
+  combined scale of 2.6 at Normal spacing (limits in Text spacing, below).
 
 ### What the ATF does not see
 
@@ -980,8 +988,13 @@ dp (an accepted finding, below).
   contrast checks see the colours that the text really has. Over the animated background the
   contrast is owned by the tool in `design/accessibility/`, which this page describes.
 - **TalkBack itself.** Robolectric cannot see the traversal links that TalkBack follows. The
-  segments and the keys of the keyboard are still lifted over their neighbours while they have the
-  focus, so the merged tree lists the focused one last.
+  segments and the keys of the keyboard are lifted over their neighbours while they have the focus,
+  which moves the focused one to the end of the children of its parent, so a screen reader could
+  read it last. Since Sprint 17b (BORE-14) a segmented control and each row of the keyboard are a
+  traversal group, and each segment and key has its place as its `traversalIndex`, so the reading
+  order is the order on the screen with any of them focused. The lift stays. A test reads the
+  children the way TalkBack sorts a traversal group, by `traversalIndex` and stable
+  (`SegmentedControlTest`, `StreamKeyboardTest`); a test does not hear what TalkBack says.
 - **A visible snackbar**: no check covers it.
 
 ### Accepted findings
@@ -1729,11 +1742,29 @@ The dialog and the row of Settings, and what they say, are in
   their box (see the limit above). The fit tests find none cut or ending in an ellipsis. It has not
   been seen on a device.
 - At a combined font scale above 2.0 (a system font of 2.0 with Largest text is 2.6), Normal text
-  already fails the fit tests in 8 of the 84 runs of the Library (Apps with a long host name, on a
-  TV and on a phone) and in 1 of the 70 runs of the components (the rows of the settings on a TV);
-  Settings and the Audit trail pass. Wider is drawn as Wide there, and Wide is not limited: Wide
-  above a combined 2.0 has not been measured, only Normal was, at 2.6. It is in
-  [Sprint 17](../roadmap.md#sprint-17-general-fixes) of the roadmap.
+  fits the Library, the components, Settings and the Audit trail in the fit tests. Before Sprint
+  17b the Library and the components did not: 8 of the 84 runs of the Library failed (Apps with a
+  long host name: the title shared its row with the Show hidden button of a TV or with the bar of
+  a phone, and "Desktop running" and the host name were cut), and 1 of the 70 runs of the
+  components (the rows of the settings on a TV).
+  - **The Library** is fixed (BORE-27). Above a font scale of 2.0 the title of Apps takes the whole
+    width: under the bar on a phone, above the Show hidden button on a TV or a handheld. At 2.0 and
+    below the layout is the one it was. `LargeTextFitTest` of the Library holds it, with a TV and a
+    phone in every font.
+  - **The components run was the test, not a row** (BORE-28). The rig stacked the rows of the
+    settings in a column that did not scroll, in the 540 dp window of a TV, so the third row was
+    cut at the bottom. Every real pane scrolls, and the real panes pass at 2.6: the Audio group
+    with its whole Audio effects summary on a TV, a handheld and a phone, and the Stream group
+    with the Bitrate slider on a TV (`SettingsLargeTextFitTest`). The rig scrolls now, and no
+    row changed.
+  - **A scrolling rig pins the width and the ellipsis, not the height.** In a scrolling list the
+    height of a text is not bounded, so the fit tests of the settings rows, which scroll as the
+    panes do, report a text cut at its width, an ellipsis and a line over its maximum, and no
+    longer a text cut at the bottom.
+  - **Wide at 2.6 is not fixed.** Wider is drawn as Wide there, and Wide is not limited. Measured
+    once on 2026-11-04, 3 of the 16 runs of Wide and Wider of the Library still run past the screen:
+    a TV in Luciole and in Andika, and a phone in Andika. It is not a kept test.
+  - **A handheld at 2.6 is not tested** in the Library, whose cases are a TV and a phone.
 - At Wide and Wider, the line ends of a wrapped text can draw up to one word spacing past their
   box: about 12 px in IBM Plex Sans at Wider, and up to 23 px at the largest TV text in the system
   font. The review found no text cut. The ink lands in the padding or in the gaps.
@@ -1926,7 +1957,7 @@ and AAA (1.4.6) for the text of High contrast.
 | 1.4.12 Text Spacing | AA | The Text spacing row: Wide sets 0.12 em of letter spacing, 0.16 em of word spacing and a line height of 1.5, the minimums of the criterion, and Wider sets 0.5 em of word spacing. The spaces are drawn apart in every font (`WordGapTest`, `TextWordSpacingTest`), and the layouts that do not fit at Wide or Wider are changed (`TextFitTest`). The 200 % system font size is tested at Normal, Wide and Wider, and at 2.0 Wider is drawn as Wide, with a dialog and a line in the row that say so (see text spacing: the limit at a very large font). |
 | 1.4.11 Non-text Contrast | AA | The offline ring at 3.25:1 or more, the icons on the background through the halo (Tables I to K), the outlines of the text field (Tables L and M), the opaque borders of High contrast, and the Online dot with its shadow: 5.68:1 over the brightest host-card glass (3.79:1 without it, today's palette). The Apps title dot on the animated background is not measured (a known limitation, see the status dot). |
 | 2.1.1 Keyboard | A | The D-pad and a gamepad reach every control; OK on a Settings group enters its pane, and the licence text and the Audit detail scroll with the D-pad. |
-| 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. In the stream the same holds outside the game, the glass of the menu makes no copy of the video with Reduce motion or the battery saver, and the loader of Quitting and Disconnecting stands still with Reduce motion. The other progress indicators are not covered yet (roadmap, Sprint 17). |
+| 2.2.2 Pause, Stop, Hide | A | The animated background is the only decorative moving content; it stops with Reduce motion On, the system's Remove animations or the battery saver, and the background Off is the plain page. In the stream the same holds outside the game, the glass of the menu makes no copy of the video with Reduce motion or the battery saver, and the loader of Quitting and Disconnecting stands still with Reduce motion. The indeterminate indicators of Material also stand still with Reduce motion: the busy indicator of Add host and the export bar of Privacy and diagnostics (BORE-10). |
 | 2.4.3 Focus Order | A | The traversal order of every screen is tested (`readingOrder`), and the focus goes back to the card that had it after Back from Apps. |
 | 2.4.6 Headings and Labels | AA | Headings on every screen title and section label. |
 | 2.4.7 Focus Visible | AA | The Borealis focus outline, 3 dp in accent-soft, and 5 dp in `ink` with Thicker focus outline and High contrast, with a casing of the `page` colour over the video glass of the stream. |

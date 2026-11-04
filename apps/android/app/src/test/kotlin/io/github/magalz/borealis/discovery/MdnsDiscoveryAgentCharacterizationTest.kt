@@ -20,7 +20,7 @@ import org.junit.Test
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
  * ones about the lock of the computer set (Sprint 16, S12-06): the Java class added an IPv6-only
  * host outside the lock and told the listener from inside it, and now it adds under the lock and
- * tells the listener after it.
+ * tells the listener after it. The ones about forgetting a computer are new (Sprint 17b, BORE-6).
  */
 class MdnsDiscoveryAgentCharacterizationTest {
     @get:Rule val log = LimeLogCapture()
@@ -93,6 +93,47 @@ class MdnsDiscoveryAgentCharacterizationTest {
 
         assertThat(listener.added).hasSize(1)
         assertThat(agent.getComputerSet()).hasSize(1)
+    }
+
+    @Test
+    fun `a host that is forgotten is announced again when it is reported again`() {
+        report(v4 = listOf(ip4("192.168.1.5")))
+
+        agent.forget(MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989))
+
+        assertThat(agent.getComputerSet()).isEmpty()
+        report(v4 = listOf(ip4("192.168.1.5")))
+        assertThat(listener.added)
+            .containsExactly(
+                MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989),
+                MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989),
+            )
+        assertThat(agent.getComputerSet()).hasSize(1)
+    }
+
+    @Test
+    fun `forgetting one computer leaves the others, and only the forgotten one is announced again`() {
+        report(v4 = listOf(ip4("192.168.1.5"), ip4("10.0.0.2")))
+
+        agent.forget(MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989))
+
+        assertThat(agent.getComputerSet())
+            .containsExactly(MdnsComputer("Den PC", ip4("10.0.0.2"), null, 47989))
+        report(v4 = listOf(ip4("192.168.1.5"), ip4("10.0.0.2")))
+        assertThat(listener.added).hasSize(3)
+        assertThat(listener.added.last())
+            .isEqualTo(MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989))
+    }
+
+    @Test
+    fun `forgetting a computer that was never reported changes nothing`() {
+        report(v4 = listOf(ip4("192.168.1.5")))
+
+        agent.forget(MdnsComputer("Other PC", ip4("192.168.1.9"), null, 47989))
+
+        assertThat(agent.getComputerSet()).hasSize(1)
+        report(v4 = listOf(ip4("192.168.1.5")))
+        assertThat(listener.added).hasSize(1)
     }
 
     @Test

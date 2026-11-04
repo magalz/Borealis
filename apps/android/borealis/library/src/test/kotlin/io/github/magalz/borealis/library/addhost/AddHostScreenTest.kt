@@ -7,14 +7,18 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -23,6 +27,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -45,9 +50,13 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisDimens
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
 import org.junit.Rule
@@ -276,6 +285,49 @@ class AddHostScreenTest {
     }
 
     @Test
+    @Config(qualifiers = PHONE)
+    fun `with Reduce motion On the busy indicator stands still`() {
+        showBusy(ReduceMotion.On)
+        val before = busyIndicator()
+
+        composeRule.mainClock.advanceTimeBy(TURN_MILLIS)
+
+        val moved = pixelsThatMoved(before, busyIndicator())
+        assertWithMessage("pixels of the indicator that moved in $TURN_MILLIS ms")
+            .that(moved)
+            .isEqualTo(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `with Reduce motion Off the busy indicator turns`() {
+        showBusy(ReduceMotion.Off)
+        val before = busyIndicator()
+
+        composeRule.mainClock.advanceTimeBy(TURN_MILLIS)
+
+        val moved = pixelsThatMoved(before, busyIndicator())
+        assertWithMessage("pixels of the indicator that moved in $TURN_MILLIS ms")
+            .that(moved)
+            .isGreaterThan(0)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `with Reduce motion On a screen reader still hears a busy indicator with no value`() {
+        showBusy(ReduceMotion.On)
+
+        composeRule
+            .onNodeWithContentDescription("Adding host")
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ProgressBarRangeInfo,
+                    ProgressBarRangeInfo.Indeterminate,
+                )
+            )
+    }
+
+    @Test
     @Config(qualifiers = TV)
     fun `on a TV Down from an address with text leaves the field for Add host`() {
         showStateful("192.168.1.20")
@@ -442,6 +494,37 @@ class AddHostScreenTest {
         }
     }
 
+    /**
+     * The busy screen under [reduceMotion], with the clock stopped so that a test says how long the
+     * indicator runs.
+     */
+    private fun showBusy(reduceMotion: ReduceMotion) {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            CompositionLocalProvider(
+                LocalBorealisLook provides BorealisLook(reduceMotion = reduceMotion)
+            ) {
+                AddHostScreen(
+                    state = AddHostUiState(address = "192.168.1.20", busy = true),
+                    formFactor = FormFactor.Phone,
+                    onAddressChanged = {},
+                    onSubmit = {},
+                    onCancel = {},
+                )
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+    }
+
+    /** What the indicator draws now. Only it: the caret of the field blinks on its own. */
+    private fun busyIndicator(): PixelMap =
+        composeRule.onNodeWithContentDescription("Adding host").captureToImage().toPixelMap()
+
+    private fun pixelsThatMoved(before: PixelMap, after: PixelMap): Int {
+        assertThat(after.width to after.height).isEqualTo(before.width to before.height)
+        return before.buffer.indices.count { before.buffer[it] != after.buffer[it] }
+    }
+
     private fun show(state: AddHostUiState, formFactor: FormFactor = FormFactor.Phone) {
         composeRule.setContent {
             AddHostScreen(
@@ -458,5 +541,9 @@ class AddHostScreenTest {
     private companion object {
         const val NEIGHBOUR = "neighbour"
         const val MAX_GUTTER_DP = 64f
+        const val SETTLE_MILLIS = 100L
+
+        // A turn of Material's indeterminate indicator takes 1332 ms; this is over half of one.
+        const val TURN_MILLIS = 700L
     }
 }

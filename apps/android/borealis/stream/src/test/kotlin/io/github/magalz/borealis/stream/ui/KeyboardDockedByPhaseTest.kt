@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream.ui
 
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -16,8 +17,10 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * The keyboard the chrome draws is the one the session decided when it opened, not the one the form
- * factor of the moment would pick: the window and the chrome host must agree on who gets the keys.
+ * Whether the keyboard the chrome draws takes the focus and the keys is what the session decided
+ * when it opened, not what the form factor of the moment would pick: the window and the chrome host
+ * must agree on who gets the keys. Its shortcut row is the other way round: it follows the form
+ * factor of the window alone, so a phone-width window with a pad gets the row of the phone.
  */
 @RunWith(AndroidJUnit4::class)
 class KeyboardDockedByPhaseTest {
@@ -36,13 +39,12 @@ class KeyboardDockedByPhaseTest {
     private fun chipStart(name: String) =
         composeRule.onNodeWithTag("chip:$name").getUnclippedBoundsInRoot().left.value
 
-    // The docked keyboard of a phone starts its shortcut row with Esc (UC-005-T7).
     @Test
     @Config(qualifiers = HANDHELD)
-    fun `a keyboard that opened docked is drawn docked, whatever the form factor says now`() {
+    fun `a keyboard that opened docked does not start its focus on Q, whatever the form factor`() {
         show(FormFactor.Handheld, dockedKeyboard = true)
 
-        assertThat(chipStart("Esc")).isLessThan(chipStart("Alt+Tab"))
+        composeRule.onNodeWithTag("key:Q").assertIsNotFocused()
     }
 
     @Test
@@ -51,5 +53,14 @@ class KeyboardDockedByPhaseTest {
         show(FormFactor.Phone, dockedKeyboard = false)
 
         composeRule.onNodeWithTag("key:Q").assertIsFocused()
+    }
+
+    // A phone in split screen with a pad: the keyboard covers the stream, and Esc is still first.
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `a keyboard that opened covering on a phone-width window starts its shortcut row with Esc`() {
+        show(FormFactor.Phone, dockedKeyboard = false)
+
+        assertThat(chipStart("Esc")).isLessThan(chipStart("Alt+Tab"))
     }
 }

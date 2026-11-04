@@ -33,6 +33,17 @@ class QuitNoticeTest {
     }
 
     @Test
+    fun `a keeps-running notice is delivered as it was posted, with the app name`() = runTest {
+        notice.attach()
+
+        notice.post(LeaveNotice.KeepsRunning("Desktop"))
+
+        notice.notices.test {
+            assertThat(awaitItem()).isEqualTo(LeaveNotice.KeepsRunning("Desktop"))
+        }
+    }
+
+    @Test
     fun `a notice left while the Library does not show waits for it`() = runTest {
         notice.attach()
 

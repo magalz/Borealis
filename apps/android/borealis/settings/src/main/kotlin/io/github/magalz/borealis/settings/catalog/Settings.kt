@@ -95,8 +95,16 @@ object Settings {
 
     // Input
 
-    /** Touch acts as a trackpad (on) or as a direct touch (off). */
+    /**
+     * Touch acts as a trackpad (on) or as a direct touch (off), while [TOUCHSCREEN_NATIVE] is off.
+     */
     val TOUCHSCREEN_TRACKPAD = BooleanSetting("checkbox_touchscreen_trackpad", default = true)
+
+    /**
+     * Touch sends real touch to the PC. It wins over [TOUCHSCREEN_TRACKPAD] while it is on; an
+     * install that never wrote it reads as off, so it starts as the old key says.
+     */
+    val TOUCHSCREEN_NATIVE = BooleanSetting("borealis_touchscreen_native", default = false)
 
     /** Send the mouse back and forward buttons. */
     val MOUSE_NAV_BUTTONS = BooleanSetting("checkbox_mouse_nav_buttons", default = false)
@@ -473,6 +481,7 @@ object Settings {
             GAMEPAD_MOTION_SENSORS,
             GAMEPAD_MOTION_FALLBACK,
             TOUCHSCREEN_TRACKPAD,
+            TOUCHSCREEN_NATIVE,
             MOUSE_NAV_BUTTONS,
             ABSOLUTE_MOUSE_MODE,
             SHOW_ONSCREEN_CONTROLS,

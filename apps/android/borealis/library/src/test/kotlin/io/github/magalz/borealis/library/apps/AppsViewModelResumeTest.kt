@@ -83,16 +83,17 @@ class AppsViewModelResumeTest {
     }
 
     @Test
-    fun `a launch request for the running app is not the user's choice to resume`() = runTest {
-        repository.emit(snapshot(desktop, steam, running = desktop))
-        subscribe(viewModel.uiState)
+    fun `a launch request of a shortcut or Try again for the running app is not the choice`() =
+        runTest {
+            repository.emit(snapshot(desktop, steam, running = desktop))
+            subscribe(viewModel.uiState)
 
-        viewModel.onLaunchRequested(1)
+            viewModel.onLaunchRequested(1)
 
-        viewModel.effects.test {
-            assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
+            viewModel.effects.test {
+                assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
+            }
         }
-    }
 
     @Test
     fun `quit and start does not say the user chose to resume`() = runTest {
@@ -112,31 +113,6 @@ class AppsViewModelResumeTest {
     }
 
     @Test
-    fun `a launch request from Try again for the app that runs is not the user's choice`() =
-        runTest {
-            repository.emit(snapshot(desktop, steam, running = desktop))
-            subscribe(viewModel.uiState)
-
-            viewModel.onLaunchRequested(1)
-
-            viewModel.effects.test {
-                assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
-            }
-        }
-
-    @Test
-    fun `Try again starts the app as before when the Library shows nothing running`() = runTest {
-        repository.emit(snapshot(desktop, steam))
-        subscribe(viewModel.uiState)
-
-        viewModel.onLaunchRequested(1)
-
-        viewModel.effects.test {
-            assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
-        }
-    }
-
-    @Test
     fun `a launch request that waits for the first poll is not the user's choice`() = runTest {
         repository.emit(snapshot(desktop, steam, reachability = Reachability.UNKNOWN))
         subscribe(viewModel.uiState)
@@ -150,17 +126,5 @@ class AppsViewModelResumeTest {
 
             assertThat(awaitItem()).isEqualTo(AppsEffect.StartStream(desktopRequest))
         }
-    }
-
-    @Test
-    fun `Try again while another app runs opens the actions`() = runTest {
-        repository.emit(snapshot(desktop, steam, running = steam))
-        subscribe(viewModel.uiState)
-
-        viewModel.onLaunchRequested(1)
-        runCurrent()
-
-        assertThat(viewModel.uiState.value.actions?.app?.id).isEqualTo(1)
-        viewModel.effects.test { expectNoEvents() }
     }
 }

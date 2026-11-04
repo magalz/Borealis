@@ -3,8 +3,10 @@ package io.github.magalz.borealis.stream.game.motion
 import android.view.MotionEvent
 import android.view.View
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.game.session
 import org.junit.Test
@@ -12,7 +14,9 @@ import org.junit.Test
 /**
  * The fingers in the Native touch mode: each pointer that goes down, moves, goes up or is cancelled
  * reaches the host as a touch event, with the place it has on the stream view normalized to 0..1,
- * and nothing reaches it as a mouse. The other modes send no touch events.
+ * and nothing reaches it as a mouse. A finger that the host took and that is still down when the
+ * chrome takes the input, or the mode leaves Native, is cancelled on the host once. The other modes
+ * send no touch events.
  */
 internal class NativeTouchTest : MotionTestBase() {
     private fun native() = rig.session.setTouchMode(TouchMode.NATIVE)
@@ -275,7 +279,141 @@ internal class NativeTouchTest : MotionTestBase() {
         assertThat(sent().map { it.name }.toSet()).containsExactly("sendTouchEvent")
     }
 
+    // ----- A finger that is still down when the chrome takes the input -----
+
+    private fun touchTypes() = touches().map { it.type }
+
+    // The chrome gives the input back and takes it again, as the menu does each time it opens.
+    private fun reopenMenu() {
+        rig.session.closePanel()
+        idle(1)
+        rig.session.openMenu()
+        assertThat(rig.session.chromeMode).isEqualTo(ChromeMode.MODAL)
+    }
+
+    @Test
+    fun `a finger the host took, still down when the chrome takes the input, is cancelled on the host`() {
+        streaming()
+        native()
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 160f, 90f))
+        forgetSent()
+
+        rig.session.openMenu()
+
+        // The chrome gets what follows, so the up of the finger never reaches the host.
+        assertThat(sent().map { it.name }).containsExactly("sendTouchEvent")
+        val cancel = touches(1).single()
+        assertThat(cancel.type).isEqualTo(CANCEL_ALL)
+        assertThat(cancel.pointerId).isEqualTo(0)
+        assertThat(cancel.x).isEqualTo(0f)
+        assertThat(cancel.y).isEqualTo(0f)
+        assertThat(cancel.pressure).isEqualTo(0f)
+        assertThat(cancel.rotation).isEqualTo(MoonBridge.LI_ROT_UNKNOWN.toInt())
+    }
+
+    @Test
+    fun `the cancel goes once, however often the chrome takes the input after it`() {
+        streaming()
+        native()
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 160f, 90f))
+        forgetSent()
+
+        rig.session.openMenu()
+        reopenMenu()
+        reopenMenu()
+
+        assertThat(touchTypes()).containsExactly(CANCEL_ALL)
+    }
+
+    @Test
+    fun `a finger that is still down when its mate is lifted is cancelled with the chrome taking the input`() {
+        streaming()
+        native()
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 80f, 45f))
+        touch(streamView, twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1))
+        touch(streamView, twoFingers(MotionEvent.ACTION_POINTER_UP, 1))
+        forgetSent()
+
+        rig.session.openMenu()
+
+        assertThat(touchTypes()).containsExactly(CANCEL_ALL)
+    }
+
+    @Test
+    fun `with no finger down the chrome taking the input sends the host no touch event`() {
+        streaming()
+        native()
+        rig.session.openMenu()
+        assertThat(touches()).isEmpty()
+
+        // Fingers that went up, and a gesture that Android cancelled, leave nothing down either.
+        rig.session.closePanel()
+        idle(1)
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 160f, 90f))
+        touch(streamView, finger(MotionEvent.ACTION_UP, 160f, 90f, TIME + 50))
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 160f, 90f, TIME + 500))
+        touch(streamView, finger(MotionEvent.ACTION_CANCEL, 160f, 90f, TIME + 550))
+        forgetSent()
+        rig.session.openMenu()
+
+        assertThat(touches()).isEmpty()
+    }
+
+    // ----- A mode change away from Native with a finger down -----
+
+    @Test
+    fun `a mode change away from Native cancels the finger that the host took, once`() {
+        streaming()
+
+        for (mode in listOf(TouchMode.TRACKPAD, TouchMode.DIRECT, TouchMode.OFF)) {
+            native()
+            touch(streamView, finger(MotionEvent.ACTION_DOWN, 160f, 90f))
+            forgetSent()
+
+            rig.session.setTouchMode(mode)
+            rig.session.setTouchMode(mode)
+
+            assertWithMessage(mode.name).that(touchTypes()).containsExactly(CANCEL_ALL)
+        }
+    }
+
+    @Test
+    fun `picking Native while in Native, and a mode change with no finger down, cancel nothing`() {
+        streaming()
+        native()
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 160f, 90f))
+        forgetSent()
+
+        native()
+        assertThat(touches()).isEmpty()
+
+        // The finger goes on where it is.
+        touch(streamView, finger(MotionEvent.ACTION_UP, 160f, 90f, TIME + 50))
+        forgetSent()
+        rig.session.setTouchMode(TouchMode.DIRECT)
+        assertThat(touches()).isEmpty()
+    }
+
     // ----- The other modes -----
+
+    @Test
+    fun `the trackpad and the direct mode send no touch event when the chrome takes the input`() {
+        streaming()
+
+        for (mode in listOf(TouchMode.TRACKPAD, TouchMode.DIRECT)) {
+            rig.session.setTouchMode(mode)
+            touch(streamView, finger(MotionEvent.ACTION_DOWN, 160f, 90f))
+            touch(streamView, twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1))
+            forgetSent()
+
+            rig.session.openMenu()
+            reopenMenu()
+            rig.session.closePanel()
+            idle(1)
+
+            assertWithMessage(mode.name).that(touches()).isEmpty()
+        }
+    }
 
     @Test
     fun `the trackpad and the direct mode send no touch events`() {
@@ -298,6 +436,7 @@ internal class NativeTouchTest : MotionTestBase() {
     private companion object {
         const val TIME = 10_000L
         const val EPSILON = 1e-6f
+        val CANCEL_ALL = MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL.toInt()
         val DOWN = MoonBridge.LI_TOUCH_EVENT_DOWN.toInt()
         val MOVE = MoonBridge.LI_TOUCH_EVENT_MOVE.toInt()
         val UP = MoonBridge.LI_TOUCH_EVENT_UP.toInt()

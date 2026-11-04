@@ -83,6 +83,13 @@ internal constructor(
         appScope,
     )
 
+    /**
+     * Asked first by every touch mode change, with the new mode: the activity cancels the finger
+     * the host took when Native ends. False when it dealt with the change itself. The activity sets
+     * it once, before the session that calls [setTouchMode] exists.
+     */
+    internal var touchModeChange: (TouchMode) -> Boolean = { true }
+
     private val hostId: String? = activity.intent.getStringExtra(Game.EXTRA_PC_UUID)
     private var retried = false
     private var quitting = false
@@ -148,6 +155,8 @@ internal constructor(
      * screen and keeps the contexts it has.
      */
     override fun setTouchMode(mode: TouchMode) {
+        // Native ends: the activity cancels the host's finger; a refused Native stays Direct
+        if (!touchModeChange(mode)) return
         val contexts = controls.touchContexts
         contexts.forEach { it?.cancelTouch() }
         val built = controls.buildTouch(mode) ?: return

@@ -157,6 +157,9 @@ class Game :
     // (stream)
     private var nativeTouchRefused = false
 
+    // BOREALIS: true while a finger that the host took may still be down on the PC (stream)
+    private var nativeTouchDown = false
+
     // STYLUS_DOWN_DEAD_ZONE_DELAY, STYLUS_DOWN_DEAD_ZONE_RADIUS, STYLUS_UP_DEAD_ZONE_DELAY,
     // STYLUS_UP_DEAD_ZONE_RADIUS and THREE_FINGER_TAP_THRESHOLD are in the companion object.
 
@@ -744,6 +747,7 @@ class Game :
                 ),
                 heldKeys,
             )
+        streamActions.touchModeChange = ::touchModeChanging
         streamSession =
             StreamSessionFactory.create(
                 this,
@@ -1459,6 +1463,8 @@ class Game :
         // The gamepad is zeroed and the game gets nothing from it
         controllerHandler.setCaptured(true)
         grabbedBeforeCapture = grabbedInput
+        // The chrome gets the up of a finger that the host took, so the PC would keep it pressed
+        cancelNativeTouch()
         // The PC is never left holding a button. The side buttons are not in this: the ones that
         // went to the PC are released with the grab (cancelSideButtons), and the others, which it
         // never saw, must not get a release
@@ -2399,10 +2405,23 @@ class Game :
         }
 
         val taken = sendTouchEvents(view, event, eventType)
-        if (!taken) {
+        if (taken) {
+            noteNativeTouch(event)
+        } else {
             fallBackToDirectTouch()
         }
         return taken
+    }
+
+    // BOREALIS: a finger that the host took is down until its up or cancel (stream)
+    private fun noteNativeTouch(event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_POINTER_DOWN -> nativeTouchDown = true
+
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> nativeTouchDown = false
+        }
     }
 
     // BOREALIS: the host takes no touch events (LI_ERR_UNSUPPORTED). What a host supports does not
@@ -2410,10 +2429,45 @@ class Game :
     // events ask the host again each time (stream)
     private fun fallBackToDirectTouch() {
         nativeTouchRefused = true
+        // A host that refused took no finger: nothing to cancel when the mode changes
+        nativeTouchDown = false
         BorealisLog.i(LogTag.INPUT, "the host takes no touch events, the touch mode is direct")
+        showDirectTouch()
+    }
+
+    // BOREALIS: Direct stands for the Native that the host refused, and the notice says so (stream)
+    private fun showDirectTouch() {
         streamSession.setTouchMode(TouchMode.DIRECT)
         streamSession.notify(StreamNotice.NativeTouchRefused)
     }
+
+    // BOREALIS: cancels the finger the host took, once, when its up can no longer come (stream)
+    private fun cancelNativeTouch() {
+        if (!nativeTouchDown) return
+        nativeTouchDown = false
+        sendCancelAllTouches()
+    }
+
+    // BOREALIS: asked before the contexts change; false for a Native that was refused, which is
+    // Direct again (stream)
+    private fun touchModeChanging(mode: TouchMode): Boolean {
+        val refused = mode == TouchMode.NATIVE && nativeTouchRefused
+        if (mode != TouchMode.NATIVE) cancelNativeTouch()
+        if (refused) showDirectTouch()
+        return !refused
+    }
+
+    private fun sendCancelAllTouches(): Int =
+        conn.sendTouchEvent(
+            MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+            0,
+            0f,
+            0f,
+            0f,
+            0f,
+            0f,
+            MoonBridge.LI_ROT_UNKNOWN,
+        )
 
     // True when the host took the event, false when it answered that touch is not supported.
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -2429,16 +2483,7 @@ class Game :
             return true
         } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
             // Cancel impacts all active pointers
-            return conn.sendTouchEvent(
-                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
-                0,
-                0f,
-                0f,
-                0f,
-                0f,
-                0f,
-                MoonBridge.LI_ROT_UNKNOWN,
-            ) != MoonBridge.LI_ERR_UNSUPPORTED
+            return sendCancelAllTouches() != MoonBridge.LI_ERR_UNSUPPORTED
         } else {
             // Up, Down, and Hover events are specific to the action index
             return sendTouchEventForPointer(view, event, eventType, event.actionIndex)

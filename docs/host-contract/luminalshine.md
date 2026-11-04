@@ -1258,6 +1258,23 @@ host raises these messages:
   default true at `src/config.cpp:893`); `0x02` controller touch events (set
   unless the gamepad emulation mode is `x360`; **changed in 26.10.0**, see the item
   below).
+- **Native touch (Sprint 17b, BORE-29 and BORE-30).** In the Native touch mode (the
+  third entry of the Touch row, after Trackpad and Direct; Trackpad and Direct send no
+  touch events) Borealis sends touch events to the host: `LI_TOUCH_EVENT_DOWN`, `MOVE`,
+  `UP` and `CANCEL` for every finger, with the pointer id, the position in the stream view,
+  the pressure, the contact area and the rotation (`LiSendTouchEvent`), and
+  `LI_TOUCH_EVENT_CANCEL_ALL` when Android cancels the gesture. The third finger goes to
+  the host as well, so in Native a three-finger tap is the PC's and does not open the
+  keyboard ([UC-005](../use-cases/0005-type-with-the-on-screen-keyboard.md)). The mode
+  needs feature bit `0x01` above. A host that does not set it makes moonlight-common-c
+  answer `LI_ERR_UNSUPPORTED` without sending anything
+  (`core/third_party/moonlight-common-c/src/InputStream.c:1339-1341`). Borealis then goes to
+  Direct for the rest of that stream, because what a host supports does not change during a
+  stream: the touch mode of the session becomes Direct, the notice "This PC does not take
+  touch; using Direct" shows, and `Borealis.INPUT` logs one line at info (`Game.trySendTouchEvent`,
+  `Game.fallBackToDirectTouch` in `:app`). The host does not advertise the `mouse` setting
+  (the item on `mouse = disabled` below), so Native on such a host sends the fingers and the
+  host drops them; Borealis cannot tell.
 - **Changed in 26.10.0** (verified in source at `dba21a9e`; the `src/` lines of this
   item are at that revision, and 26.10.1 keeps the same driver package): the Windows
   host no longer uses ViGEmBus. It drives Nonary's `libvirtualgamepad` UMDF/VHF driver,

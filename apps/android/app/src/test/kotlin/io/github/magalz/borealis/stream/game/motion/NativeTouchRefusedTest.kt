@@ -182,6 +182,48 @@ internal class NativeTouchRefusedTest : MotionTestBase() {
         assertThat(asked()).isEqualTo(1)
     }
 
+    // ----- Nothing to cancel on a host that refused -----
+
+    @Test
+    fun `after the refusal the chrome taking the input sends the host no touch event`() {
+        hostWithoutTouch()
+        streaming()
+        native()
+        touch(streamView, down())
+
+        rig.session.openMenu()
+
+        assertThat(asked()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a host that took the touch down and refused the move is sent no cancel when the chrome takes the input`() {
+        streaming()
+        native()
+        touch(streamView, down())
+        hostWithoutTouch()
+        touch(streamView, finger(MotionEvent.ACTION_MOVE, 110f, 50f, TIME + 10))
+        assertThat(asked()).isEqualTo(2)
+
+        rig.session.openMenu()
+
+        assertThat(asked()).isEqualTo(2)
+    }
+
+    @Test
+    fun `a host that refuses the cancel of a mode change leaves the mode that was picked`() {
+        streaming()
+        native()
+        touch(streamView, down())
+        hostWithoutTouch()
+
+        rig.session.setTouchMode(TouchMode.TRACKPAD)
+
+        assertThat(touchMode()).isEqualTo(TouchMode.TRACKPAD)
+        assertThat(notices()).isEmpty()
+        assertThat(refusalLines()).isEmpty()
+    }
+
     // ----- Only a refusal is a refusal -----
 
     @Test

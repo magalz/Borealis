@@ -9,8 +9,8 @@ How the roadmap is used:
   the owner changes it.
 - Each task that enters a sprint gets an itsaplan card, a subtask of the sprint's Phase card (from
   Sprint 17b; GitHub issues before it).
-- The phase pull request closes those cards with `Fixes BORE-N` lines (see
-  [orchestration, itsaplan](development/orchestration.md#itsaplan)).
+- The phase pull request closes those cards from its summary, with one `- Fixes BORE-N: ...` line
+  per card (see [orchestration, itsaplan](development/orchestration.md#itsaplan)).
 - This page is updated when a sprint is planned or merged.
 
 ## Done

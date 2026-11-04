@@ -2771,8 +2771,8 @@ Set-up, and put back at the end:
 17. S22, Native touch on the PC (BORE-30). On a page or a text editor of the PC, check a tap, a long press, a
     drag and a scroll. Expected: each reaches the PC as touch, as on a touchscreen. A three-finger tap in
     Native sends the fingers to the PC, and the menu still opens the keyboard.
-18. S22, Native in a narrow split-screen window (BORE-48, backlog). Open the Touch sheet of the menu. Known:
-    the Off segment is cut at the default size in a 360 dp window (BORE-48). Record it; do not fail.
+18. S22, the in-game menu's Touch row in a narrow split-screen window (BORE-48, backlog). Known: the Off
+    segment is cut at the default size in a 360 dp window (BORE-48). Record it; do not fail.
 19. S22, the Native segment of the in-game menu (BORE-29). Open the menu in a stream and check the Touch row:
     Trackpad, Direct, Native and Off. Expected: the segment that is active is the one applied.
 20. S22, the on-screen controller (BORE-17). Rotate and enter picture-in-picture mid-stream. Expected: the

@@ -189,7 +189,13 @@ class LargeTextFitTest(private val case: FitCase) {
 
     @Composable
     private fun SettingsRows() {
-        Column(Modifier.width(400.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // The rows are in a list that scrolls, as they are in the panes of Settings (PaneRows):
+        // stacked in a window of 540dp that does not scroll, a TV at a combined 2.6 in Andika runs
+        // out of height for the slider, the third row (the first two take 273dp and 214dp of it).
+        Column(
+            Modifier.width(400.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             SettingsValueRow("Frame pacing", "Lowest latency", {}, summary = "Trades smoothness")
             SettingsSwitchRow("Thicker focus outline", false, {}, summary = "Draws an outline")
             SettingsSliderRow("Bitrate", 10f, 1f..150f, 1f, "10 Mbps", {})

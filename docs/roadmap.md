@@ -1548,7 +1548,7 @@ results are in
   ships it as its MultiTouch mode, and LuminalShine accepts native pen and touch by default
   (`native_pen_touch`). Direct mode sends mouse input today; the parked path would send the touch to
   the host as a touch event.
-  Sprint 17b: done in the phase (BORE-29, BORE-30): a new touch mode, Native, sends real touch to the host, and Direct is unchanged. When the host refuses touch, the notice "This PC does not take touch; using Direct" shows and the mode goes to Direct. The round checks it (3.33, steps 16 to 19 and 36). TODO(verify): the fix for a finger held when the menu opens, and for choosing Native again after a refusal, is on its own branch and not yet in the phase head.
+  Sprint 17b: done in the phase (BORE-29, BORE-30): a new touch mode, Native, sends real touch to the host, and Direct is unchanged. When the host refuses touch, the notice "This PC does not take touch; using Direct" shows and the mode goes to Direct. The phase also releases a finger held when the menu opens, and a choice of Native again after a refusal shows Direct and the notice again. The round checks it (3.33, steps 16 to 19 and 36).
 - **Alt+Tab.** With Alt held, the first Tab is lost, and Windows opens its Alt menu. The main build
   (`ded969bdb`, Sprint 12 code) does the same, so it is not from Sprint 13.
   Sprint 17b: recorded. Research card BORE-47 (backlog). The raw key log on the S22 showed that the phone's window manager takes the Tab as a gesture (section 23, R3).
@@ -1689,7 +1689,7 @@ facts of both items and added the third item and the open decision. See the
   "not present" before a pad with a battery joined its number does not tell it again after that pad
   leaves. And two pads without a battery that share a number from before the first poll never send
   "not present".
-  Sprint 17b: the state is kept per controller number (BORE-24, PH2). TODO(verify): whether that covers the case of two pads without a battery. BORE-43 (backlog, found by the agent): a stray battery poll after destroy can mark a freed number.
+  Sprint 17b: done (BORE-24, PH2). The state is kept per controller number, which covers both cases: a number freed by a pad with a battery, and two pads without a battery on one number, where the first one polled speaks for the number. BORE-43 (backlog, found by the agent): a stray battery poll after destroy can mark a freed number.
 - **The fused trigger of pads that share a number.** From Sprint 16 (C6, the merge review of #108).
   Sprint 16 compares triggers as unsigned bytes, but when two pads share a controller number the
   trigger sent is the bitwise OR of their values, not the larger one.
@@ -1902,7 +1902,7 @@ Backlog column, and none is scheduled.
 - **BORE-36, found by the agent: a tap during the shortcut wait leaves the launch pending.**
 - **BORE-37, found by the agent: a flaky case of `RendererRecoveryTest`.** Found in the gate of the Screens lane.
 - **BORE-39, found by the agent: the Xbox One motor shift sign-extends a motor value of 0x8000 and above.** The
-  shift is inherited code. Check it against the GIP rumble packet before a card is opened on it.
+  shift is inherited code. Check it against the GIP rumble packet before changing the shift.
 - **BORE-40, feature: Try again joins without the question** when the host reports a running app, once the
   owner's host change lands (see the Try again item above).
 - **BORE-41, found by the agent: the Back and Forward chord waits only on mice seen sending pulses.** Today a
@@ -1918,7 +1918,9 @@ Backlog column, and none is scheduled.
   devices expose no Nintendo sensor, so the question stays open for other devices and kernels.
 - **BORE-47, found by the agent, research: Alt+Tab with a keyboard on the S22** (R3, section 23).
 - **BORE-48, found by the agent: the insets of a narrow split-screen window.** A 360 dp window cuts the Off segment
-  of the in-game menu's Touch row at the default size.
+  of the in-game menu's Touch row at the default size. With 3-button navigation the menu panel also loses the
+  end inset of the system bar (up to 48 dp), which narrows it; the S22 round records the Touch row there
+  (3.33, step 18).
 
 ### Sprint 18: refactor of the converted code
 

@@ -19,7 +19,7 @@ You implement exactly one Borealis task described in the brief you receive. The 
 - Before exploring code, load the `memtrace-skills:memtrace-first` skill (Skill tool) when it is available. Your first lookups are Memtrace queries on the symbols the brief names, before any Grep or broad Read (`repo_id: Borealis` and `branch: "main"`, plus `worktree: "Borealis:<your worktree folder>"` from `list_worktrees` when the orchestrator indexed your worktree): `get_symbol_context` for callers and callees, `find_code` for concepts. On an error, `busy` or an empty answer, retry once narrower (a `node_id` or a `file_path`), then use targeted Grep and ranged reads.
 - Before changing a symbol other code uses, run `get_impact` (`direction: "upstream"`, `depth` 1; never `preflight_check`) and `get_cochange_context` on its file, and update or test what they list. Never delete code on Memtrace dead-code output alone. Before the final report, run `detect_changes` with your diff and check that each affected symbol is covered by a test or by the brief. In the report, list the Memtrace queries that shaped the change and any that failed. Map every returned path to your worktree and read the file there before editing it.
 - Run the verification commands from the brief before finishing.
-- Commit on the task branch with Conventional Commit messages. Each commit carries a `Refs: <KEY-N>` trailer, the task's card, above the `Co-Authored-By` line; the commit hook refuses a commit without it. Pass the message with `git commit -m`: the hook reads the command line, and it refused a message file passed with `-F` that held the trailer. Each message ends with:
+- Commit on the task branch with Conventional Commit messages. Each commit carries a `Refs: <KEY-N>` trailer, the task's card, above the `Co-Authored-By` line; the commit hook refuses a commit without it. Pass the message with `git commit -m`; the hook cannot read a message from stdin (`-F -`). Each message ends with:
   `Refs: <KEY-N>`
   `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`
 - Never push, open PRs, comment on GitHub, or use any GitHub credentials.
@@ -30,7 +30,7 @@ You implement exactly one Borealis task described in the brief you receive. The 
 - The brief names the task's card, `KEY-N` (for example `BORE-7`), in the itsaplan project. Before your first edit, resolve it with `get_issue_by_number` and move it to the column named In Progress (`update_issue` with that column's id, from `get_project`). Choose the column by its name, not by its state type.
 - A refused move (the WIP limit, HTTP 409) or an itsaplan call that fails means stop and report `blocked`. Never retry the move in a loop, and never work around itsaplan with other credentials.
 - The card is the only one you touch. Do not comment on it, except a short comment that says what is left and why when you stop `blocked` or `partial`.
-- When the task is blocked, partial or failed, move its card back to Ready with that comment, or link it `blocked_by` what it waits for, so that it does not hold an In Progress slot. Your report names the card and what you did with it.
+- When the task is blocked, partial or failed, say so in your report. The session moves the card back to Ready, or links it `blocked_by` what it waits for, so that it does not hold an In Progress slot. You do not move the card yourself. Your report names the card and what you did with it.
 - A bug, follow-up or piece of tech debt you find on the way is not your card: report it, and the main session creates the Backlog card labelled `found-by-agent`.
 
 ## Final report (your last message)
@@ -40,4 +40,4 @@ You implement exactly one Borealis task described in the brief you receive. The 
 3. **Changes:** short bullet list by file or area.
 4. **Verification:** exact commands run and their result (pass/fail with the relevant failure lines).
 5. **Limitations and open questions:** anything not done, assumptions made, decisions the orchestrator or owner must take.
-6. **Card:** the In Progress move (done, refused or not attempted), and any comment on the card or move back to Ready.
+6. **Card:** the In Progress move (done, refused or not attempted), any comment on the card, and what the session must do with it (move it back to Ready, or link it `blocked_by`).

@@ -1,10 +1,10 @@
 # Device validation runbook
 
-This runbook checks Borealis Phase 1 and Sprints 2 to 16 on two devices against
+This runbook checks Borealis Phase 1 and Sprints 2 to 17b on two devices against
 LuminalShine 26.09.1, 26.10.0-beta.1 and 26.10.1 running on the owner's Windows PC. It is
 for the owner and for the orchestrator who runs the checks. Run the steps in
 order and record the results as a new section with a table, like sections 7 to
-10. Sections 6 to 21 hold the results of Phase 1 and Sprints 2 to 16, in that
+10. Sections 6 to 23 hold the results of Phase 1 and Sprints 2 to 17b, in that
 order.
 
 Sources: [host contract](../host-contract/luminalshine.md) (cited as "contract"),
@@ -2694,9 +2694,8 @@ Set-up, and put back at the end:
   roadmap states. Split screen and 3-button navigation are set for the steps that name them. Keep the
   screen awake with `adb shell svc power stayon <source>`, the source the phone is on (`ac`, `usb` or
   `true`), and set it back to `false` at the end.
-- The build is the phase head at the time of the round. Step 36 needs the Native fix that is on its own
-  branch, `fix/BORE-30-native-send-fix1`, which is not in the phase head `bd655d52d`: TODO(verify) that the
-  round's build contains it.
+- The build is the phase head at the time of the round, with the Native fix of BORE-30 (branch
+  `fix/BORE-30-native-send-fix1`) merged in. Step 36 needs that fix.
 
 1. Install the phase build on the S22 and on the TV. Expected: `logcat -b crash` is empty at the start
    and at the end of the round.
@@ -2721,14 +2720,12 @@ Set-up, and put back at the end:
    typeable. Record what the keyboard gives; the owner decides the type.
 6. S22, forget and stay on Hosts (BORE-6). Forget a paired host and stay on Hosts. Expected: the host comes
    back as "Found on this network" within the mDNS period, with no app restart. Leave Hosts, then check the
-   log for the discovery stop. The JmDNS path of Android 9 to 13 is not on any device at hand (the S22 runs
-   Android 16, the TV Android 14): record it as `not applicable`, and TODO(verify) it on a device below
-   Android 14.
+   log for the discovery stop. The JmDNS path of Android 9 to 13 is not checked in this round, covered by
+   unit tests: the S22 runs Android 16 and the TV Android 14, and no device of the round runs below 14.
 7. S22, Back from Apps to Hosts (BORE-8). Use a slow, a complete, a cancelled and a quick Back swipe from
    Apps. Expected: the screen fades like the other Library screens. A cancelled swipe may show a few blank
-   frames: the owner accepted them, so record them and do not fail. Repeat the Back with Reduce motion on,
-   and with the bar's Back button in 3-button navigation (TODO(verify) the purpose of the 3-button check:
-   the round notes name it without a step). Privacy and diagnostics on the phone also fade.
+   frames: the owner accepted them, so record them and do not fail. Repeat the Back with Reduce motion on.
+   Privacy and diagnostics on the phone also fade.
 8. S22, Reduce motion (BORE-10). Settings, Accessibility, Reduce motion on. Start Add host to an address
    that does not answer, and an export from Privacy. Expected: both indicators stand still. TalkBack reads
    "Adding host" with no percentage.
@@ -2772,7 +2769,10 @@ Set-up, and put back at the end:
     drag and a scroll. Expected: each reaches the PC as touch, as on a touchscreen. A three-finger tap in
     Native sends the fingers to the PC, and the menu still opens the keyboard.
 18. S22, the in-game menu's Touch row in a narrow split-screen window (BORE-48, backlog). Known: the Off
-    segment is cut at the default size in a 360 dp window (BORE-48). Record it; do not fail.
+    segment is cut at the default size in a 360 dp window (BORE-48). Record it; do not fail. Then, on the S22
+    with 3-button navigation, at the largest text size: the Touch row (Trackpad, Direct, Native, Off) has every
+    segment inside the panel. The panel loses the end inset of the system bar (up to 48 dp) with 3-button
+    navigation, which narrows it (BORE-48, known). Record it; do not fail.
 19. S22, the Native segment of the in-game menu (BORE-29). Open the menu in a stream and check the Touch row:
     Trackpad, Direct, Native and Off. Expected: the segment that is active is the one applied.
 20. S22, the on-screen controller (BORE-17). Rotate and enter picture-in-picture mid-stream. Expected: the
@@ -2789,9 +2789,10 @@ Set-up, and put back at the end:
 23. S22, the Audio delay line with a Bluetooth output (BORE-19). Plug in and unplug a Bluetooth output in the
     middle of a stream. Expected: "(Bluetooth)" shows on the Audio delay line of the Detailed overlay and goes
     away within about 1 second. Compact is unchanged, and the longer line fits in landscape on the S22.
-    TODO(verify) the text before the first delay is measured: the K4 round report gives "Audio delay — (Bluetooth)"
-    as expected, and its known-edge note gives "Audio delay —" with no suffix until the first snapshot, about
-    1 second after the overlay appears. Known: below Android 13, any connected Bluetooth output counts.
+    The text comes in three stages, in this order: "Audio delay —" until the first performance snapshot, about
+    1 second after the overlay shows; then, on Bluetooth, "Audio delay — (Bluetooth)" until the delay is
+    measured; then the measured delay in ms with "(Bluetooth)", for example "Audio delay 235 ms (Bluetooth)". Known: below Android 13, any
+    connected Bluetooth output counts.
 24. TV, the Apps screen and the Settings row at 2.6 (BORE-27, BORE-28). Expected: the Apps title fits, and on
     Settings, Stream, the Bitrate row shows "Bitrate" and "10 Mbps" without a cut. Known: at 2.6 on the TV, the
     grid keeps about 60 dp with a host name of 56 characters in Andika (round note of BORE-27).
@@ -2810,8 +2811,7 @@ Set-up, and put back at the end:
 31. TV, a pinned shortcut from a cold start (BORE-3). Known: BORE-35 (backlog) says that a TV shortcut to Steam
     Big Picture opens Hosts and starts nothing. Record the result as `known`.
 32. TV, the menu hint with a keyboard and a mouse, the setting On and Off (BORE-18). The texts are those of step 22.
-
-33. Owner (the owner's steps come last): the pads, the Ultimate 2 and the Pro 3 (BORE-23, BORE-24, BORE-25, BORE-26). PH1: two pads on one
+33. Owner: the pads, the Ultimate 2 and the Pro 3 (BORE-23, BORE-24, BORE-25, BORE-26). The owner's steps, 33 to 41, come last. PH1: two pads on one
     controller number, with multi-controller off, or a pad plus the on-screen controller, push the same trigger
     or stick: the host gets the stronger value. PH2: a pad without a battery and a pad with one on the same
     number: the host shows the real battery, with no flicker. After the pad with the battery leaves, the host
@@ -2829,9 +2829,8 @@ Set-up, and put back at the end:
     Back hold does not work (section 22, finding 3): record it.
 36. Owner, on the PC, with the S22 in Native (BORE-29, BORE-30): set `native_pen_touch` to off for this step, and on
     again after it (step 42). Start a stream in Native. Expected: the notice "This PC does not take touch; using
-    Direct", once, and the Touch row of the menu shows Direct. TODO(verify) two checks of the Native fix on its own
-    branch: a finger held when the menu opens is released on the PC, and choosing Native again after a refusal
-    shows Direct and the notice again.
+    Direct", once, and the Touch row of the menu shows Direct. Also: a finger held when the menu opens is released
+    on the PC, and choosing Native again after a refusal shows Direct and the notice again.
 37. Owner, TalkBack on the S22 menu segments (BORE-15). Each segment is read with its selected state, and the active
     one is marked. The phone tree cannot be dumped in landscape, so the owner checks it.
 38. Owner, TalkBack on the Library: the app cards read the app name, the double-tap and tap actions and the state,

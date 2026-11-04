@@ -59,7 +59,7 @@ From Sprint 17b the work of Borealis is tracked in itsaplan, the project `ignis-
 - **Columns, by name.** The columns are chosen by their names, since the state types are shared by several of them. Backlog holds new and imported cards. Ready holds refined cards, and a Phase card waits there while its tasks run. In Progress holds work that has started; it has a hard limit of 4 cards per project. Integrated means the task branch is merged `--no-ff` into the integration branch. In Review means the pull request to the default branch is open. Done is set only by the merge webhook, never by hand. Canceled holds abandoned work, with a comment that says why.
 - **Branches and commits.** A branch is `<type>/BORE-N-<slug>`, which links it to the card. Each commit carries a `Refs: BORE-N` trailer above its `Co-Authored-By` line, and the commit hook refuses a commit without it. A merge commit carries the trailer too.
 - **Pull requests.** The body has one `Fixes BORE-N` line for each card the pull request delivers, and a Phase card is named as `Refs BORE-N` (it closes when its last task does). A card imported from a GitHub issue also gets `Fixes #N`, with the keyword directly before the number. The phase pull request lists only the cards that are Integrated. `Refs BORE-N` for the Phase card goes in only when the pull request is marked ready: the webhook moves any cited card that is in Ready or Backlog to In Review when the pull request opens.
-- **Card moves.** An implementer moves its card to In Progress before its first edit. A refused move (the WIP limit, or an error from itsaplan) means stop and report, not retry in a loop. The session moves the card to Integrated when the task is merged, and to In Review when the pull request opens, with a short comment on each card that gives the result, the checks and the revision. A failed, blocked or partial task moves its card back to Ready with a comment that says what is left and why, or links the card `blocked_by` what it waits for, so it does not hold a WIP slot.
+- **Card moves.** An implementer moves its card to In Progress before its first edit. A refused move (the WIP limit, or an error from itsaplan) means stop and report, not retry in a loop. The session moves the card to Integrated when the task is merged, and to In Review when the pull request opens, with a short comment on each card that gives the result, the checks and the revision. The session moves the card of a failed, blocked or partial task back to Ready, with a comment that says what is left and why, or links the card `blocked_by` what it waits for, so it does not hold a WIP slot. The implementer only reports the state.
 - **Work found on the way.** A bug, follow-up or piece of tech debt found during a task becomes a Backlog card labelled `found-by-agent`, and the report cites it. Nobody creates GitHub issues for it.
 - **GitHub issues.** The session-start hook imports open issues as Backlog cards, labelled `from-github`, with the field `GitHub issue`, and comments the card link on each issue. A card that is canceled after such an import closes its issue as not planned, with the same reason. No one closes an imported issue otherwise.
 - **After a merge.** Check that the cards reached Done. A card that did not usually lacks a closing word in the pull request. Fix that, and say so before a card is moved by hand.
@@ -160,9 +160,9 @@ From Sprint 17b the work of Borealis is tracked in itsaplan, the project `ignis-
   orders needed state that the touch contexts share, which the task could not reach alone. The main session split
   it into two tasks with one card each (the shared window, then the movement check), in sequence, instead of
   sending the same brief again. The Native menu row (N1a) was blocked twice on the phone's panel width. The owner
-  asked for a wider panel on a phone, and the main session set the width at three quarters of the screen (the
-  implementer's figure of two thirds was the main session's own number, not the owner's). The change went in as
-  its own commit.
+  asked for a wider panel on a phone, and the main session set the phone panel to grow with the text up to three
+  quarters of the parent width (the two thirds in the brief was the main session's own number, not the owner's).
+  The change went in as its own commit.
 - **Read the device before the card is written.** The device reads R1 to R6 ran before the tasks that depended on
   them. Two of the reads changed a card: R5 did not reproduce the "Nothing running" header, so BORE-5 was written as
   a test first, with a narrow change (an unknown host's header says it is checking), and R6 showed that the menu
@@ -172,9 +172,8 @@ From Sprint 17b the work of Borealis is tracked in itsaplan, the project `ignis-
   options, the recommended one first, and recorded in the ledger before the task that followed. A card that the
   owner cancels after a measurement (BORE-31) moves to Canceled with a comment, and its question goes to Backlog as
   research.
-- **One `/phase-loop` call per task while cards are in progress.** A card stays In Progress until its merge, so a
-  call that covers several tasks holds several slots at once, and the limit of 4 is shared by the sessions of the
-  project. The Controls session ran one call per task instead of one per round.
+- **The WIP limit is shared.** A card stays In Progress until its merge, so a call that covers several tasks holds
+  several slots at once, and the limit of 4 is shared by the sessions of the project. Run one task at a time.
 - **Memtrace on the phase.** The phase label could not be indexed (the job failed on the graph publication lock, and
   the daemon's watcher lacked memory for the phase delta). The agents therefore queried the `main` label, whose code
   is the phase base, and read the current source of their worktree with Grep and reads. Task worktrees had no

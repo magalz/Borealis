@@ -35,7 +35,8 @@ object TouchContexts {
     ): Array<TouchContext>? =
         when (mode) {
             TouchMode.TRACKPAD -> {
-                // The contexts share one two-finger tap: the one that decides it needs both fingers
+                // The contexts share one two-finger tap: the one that decides it needs the time and
+                // the movement of both fingers
                 val twoFingerTap = TwoFingerTap()
                 Array(COUNT) {
                     RelativeTouchContext(

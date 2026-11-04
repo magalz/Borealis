@@ -1,19 +1,55 @@
 package io.github.magalz.borealis.stream.ui.keyboard
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.components.KeyStyle
+import io.github.magalz.borealis.designsystem.theme.BorealisTheme
+import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.keys.Shortcuts
+import io.github.magalz.borealis.stream.testing.HANDHELD
+import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.RecordingIntents
+import io.github.magalz.borealis.stream.ui.StreamKeyboard
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class KeyboardLayoutTest {
+    @get:Rule val composeRule = createComposeRule()
     private val context: Context = ApplicationProvider.getApplicationContext()
+
+    /** Whether the keyboard on show is docked, which a test can flip while it is composed. */
+    private var docked by mutableStateOf(true)
+
+    private fun show(formFactor: FormFactor) {
+        composeRule.setContent {
+            BorealisTheme(formFactor) { StreamKeyboard(docked, RecordingIntents()) }
+        }
+    }
+
+    private fun dock(value: Boolean) {
+        composeRule.runOnIdle { docked = value }
+        composeRule.waitForIdle()
+    }
+
+    /** The captions of the shortcut chips on show, from the left. */
+    private fun shortcutRow() =
+        Shortcuts.keyboardRow
+            .map { context.getString(it.label) }
+            .sortedBy {
+                composeRule.onNodeWithTag("chip:$it").fetchSemanticsNode().positionInRoot.x
+            }
 
     private fun KeySpec.caption() = label.resolve(context)
 
@@ -131,5 +167,29 @@ class KeyboardLayoutTest {
         val esc = Shortcuts.keyboardRow.single { context.getString(it.label) == "Esc" }
 
         assertThat(esc.chord).isEqualTo(KeyChord(27))
+    }
+
+    // The row follows the window, not the docking: a pad makes a keyboard cover the stream, and a
+    // phone in split screen with a pad is as narrow as one without.
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `on a phone-width window the shortcut row starts with Esc, docked or covering`() {
+        val phoneRow = Shortcuts.keyboardRowPhone.map { context.getString(it.label) }
+        show(FormFactor.Phone)
+
+        assertThat(shortcutRow()).containsExactlyElementsIn(phoneRow).inOrder()
+        dock(false)
+        assertThat(shortcutRow()).containsExactlyElementsIn(phoneRow).inOrder()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD)
+    fun `on a wide window the shortcut row keeps the order of the TV, docked or covering`() {
+        val tvRow = Shortcuts.keyboardRow.map { context.getString(it.label) }
+        show(FormFactor.Handheld)
+
+        assertThat(shortcutRow()).containsExactlyElementsIn(tvRow).inOrder()
+        dock(false)
+        assertThat(shortcutRow()).containsExactlyElementsIn(tvRow).inOrder()
     }
 }

@@ -25,10 +25,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -44,6 +47,7 @@ import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
+import io.github.magalz.borealis.designsystem.theme.rememberAnimationsRemoved
 import io.github.magalz.borealis.library.R
 
 private val CONTENT_GAP = 16.dp
@@ -52,15 +56,19 @@ private val BUTTON_GAP = 12.dp
 private val PROGRESS_SIZE = 24.dp
 private val PROGRESS_STROKE = 3.dp
 
+// The share of the circle that the still indicator draws, for a wait of unknown length.
+private const val STILL_PROGRESS = 0.75f
+
 /**
  * The Add host screen (UC-008): one Address field, a hint and a note on the port, and Add host and
  * Cancel. It is stateless and draws itself in [BorealisTheme] for [formFactor].
  *
  * The field has focus when the screen opens. On a phone the keyboard opens with the focus. On a TV
  * or handheld it does not, so a remote can move through the screen, and the user opens it with OK
- * on the field. Done submits. While [AddHostUiState.busy] a progress indicator shows and both
- * buttons are disabled. Back is Cancel. The content scrolls when the text is too large for the
- * window (a large font at the largest text size), so the hint and the buttons are never cut off.
+ * on the field. Done submits. While [AddHostUiState.busy] a progress indicator shows, still when
+ * animations are removed, and both buttons are disabled. Back is Cancel. The content scrolls when
+ * the text is too large for the window (a large font at the largest text size), so the hint and the
+ * buttons are never cut off.
  */
 @Composable
 fun AddHostScreen(
@@ -164,13 +172,32 @@ private fun AddHostButtons(
             style = BorealisButtonStyle.Secondary,
             enabled = !busy,
         )
-        if (busy) {
-            val description = stringResource(R.string.addhost_busy)
-            CircularProgressIndicator(
-                Modifier.size(PROGRESS_SIZE).semantics { contentDescription = description },
-                color = LocalBorealisColors.current.accent,
-                strokeWidth = PROGRESS_STROKE,
-            )
+        if (busy) BusyIndicator()
+    }
+}
+
+/**
+ * The indicator of a running add. When animations are removed it is a still arc, and a screen
+ * reader hears the same as for the turning one: busy, with no value to read as a percentage.
+ */
+@Composable
+private fun BusyIndicator() {
+    val description = stringResource(R.string.addhost_busy)
+    val modifier =
+        Modifier.size(PROGRESS_SIZE).semantics {
+            contentDescription = description
+            progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
         }
+    val color = LocalBorealisColors.current.accent
+    if (rememberAnimationsRemoved()) {
+        CircularProgressIndicator(
+            { STILL_PROGRESS },
+            modifier,
+            color = color,
+            strokeWidth = PROGRESS_STROKE,
+            trackColor = Color.Transparent,
+        )
+    } else {
+        CircularProgressIndicator(modifier, color = color, strokeWidth = PROGRESS_STROKE)
     }
 }

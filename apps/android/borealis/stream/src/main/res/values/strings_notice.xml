@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The card that tells the viewer something once over the stream, in one line, for four
+         seconds. -->
+    <string name="stream_notice_bluetooth">Audio is on Bluetooth: sound may lag behind the picture.</string>
+    <!-- %1$s is the layout that the stream asked for: 5.1 or 7.1. -->
+    <string name="stream_notice_stereo_fallback">This output has 2 channels: streaming stereo instead of %1$s.</string>
+    <!-- The touch mode went from Native to Direct: the PC took no touch events. -->
+    <string name="stream_notice_native_touch_refused">This PC does not take touch; using Direct</string>
+</resources>

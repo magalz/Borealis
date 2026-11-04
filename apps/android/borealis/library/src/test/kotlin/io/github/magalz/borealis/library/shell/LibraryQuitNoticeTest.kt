@@ -114,6 +114,28 @@ class LibraryQuitNoticeTest {
     }
 
     @Test
+    fun `the quit of a shared app says it keeps running for another device, as wide as its text`() {
+        launch()
+
+        quitNotice.post(LeaveNotice.KeepsRunning("Desktop"))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText(KEEPS_RUNNING).assertIsDisplayed()
+        composeRule.onNodeWithText("App quit.").assertDoesNotExist()
+        composeRule.assertSnackbarIsAsWideAsItsText(KEEPS_RUNNING)
+    }
+
+    @Test
+    fun `the quit of a shared app the stream has no name for says the app keeps running`() {
+        launch()
+
+        quitNotice.post(LeaveNotice.KeepsRunning(""))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("The app keeps running for another device.").assertIsDisplayed()
+    }
+
+    @Test
     fun `the disconnect notice shows once and not again after the activity is recreated`() {
         launch()
         quitNotice.post(LeaveNotice.Disconnected("Desktop"))
@@ -181,5 +203,6 @@ class LibraryQuitNoticeTest {
 
     private companion object {
         const val DISCONNECTED = "Disconnected. Desktop is still running on the PC."
+        const val KEEPS_RUNNING = "Desktop keeps running for another device."
     }
 }

@@ -31,8 +31,13 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
    port was changed from the default 47989.
 4. The user chooses Add host.
 5. The system adds the host to the Hosts screen and shows the message "`<name>`
-   added. Pair it to see its apps."
-6. The user pairs the host ([UC-001](0001-pair-with-a-host.md)).
+   added. Pair it to see its apps." (Sprint 17b, BORE-7: the message says what
+   the device knew.) "Pair it" is said only for a host that is not paired: when
+   the first poll of a new host says that it is paired already, as a forgotten
+   host that still trusts this device is, the message is "`<name>` added. It is
+   already paired."
+6. The user pairs the host ([UC-001](0001-pair-with-a-host.md)), unless it is
+   paired already.
 
 ## Alternative flows
 
@@ -53,6 +58,18 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
    selected item, which is Add host on this screen. The typed text is kept.
 3. The user goes back to the field, or continues on the rail. The flow rejoins
    the main flow at step 3 when the user returns to the field.
+
+### A3: The device already knows the host (Sprint 17b, BORE-7; branches from step 4)
+
+1. The host that answers is one this device already has, by its id, whatever
+   address it answered at, or the host does not answer and the address is one
+   that a known host was reached at. The system adds no second card for it and
+   shows "`<name>` is already added." For a known host that is paired it shows
+   "`<name>` is already added and paired." Neither says to pair it. The Hosts
+   screen returns, as in step 5.
+2. A different host that answers at the address of a known one is a new host,
+   and step 5 applies.
+3. The use case ends.
 
 ### E1: The address fails a check (branches from step 4)
 
@@ -76,7 +93,8 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 ## Postconditions
 
 - On success: the host is listed on the Hosts screen with its address. It is
-  not paired yet, so its action is Pair.
+  not paired yet, so its action is Pair, unless the host says that it is paired
+  already. A host that the device already knew is listed once.
 - On failure or cancel: the list is unchanged. No secret is stored.
 - Forget removes the host from this device, whatever the host answers. It first
   sends a best-effort `/unpair`. LuminalShine has no such route and answers 404,
@@ -94,6 +112,8 @@ can be paired ([UC-001](0001-pair-with-a-host.md)).
 | UC-008-T5 | Given the user chooses Cancel, when the screen closes, then the Hosts list is unchanged. | UI | exists (Sprint 4, UI) |
 | UC-008-T6 | Given the address field has text on a TV, when the user presses Down, then the focus moves to Add host; when the caret is at the start, Left goes to the rail and the text is kept. | UI | exists (Sprint 5, UI; device round) |
 | UC-008-T7 | Given a host is added by address, when the user chooses Forget, then the text says that the PC may keep trusting this device until it is removed in the LuminalShine Web UI. | UI | exists (Sprint 5, UI; device round) |
+| UC-008-T8 | Given the address of a host that the device already has, by its id or, when the host does not answer, by an address it was reached at, when the user chooses Add host, then the Hosts screen shows "`<name>` is already added.", or "`<name>` is already added and paired." for a paired host, and neither says to pair it; a different host that answers at that address is added. | unit, UI | exists (Sprint 17b): `ComputerHostRepositoryTest`, `AddHostViewModelTest`, `AddHostRouteTest` |
+| UC-008-T9 | Given a new host whose first poll says it is paired, when it is added, then the message is "`<name>` added. It is already paired." and does not say to pair it; for a host that is not paired it stays "`<name>` added. Pair it to see its apps." | unit, UI | exists (Sprint 17b): `ComputerHostRepositoryTest`, `AddHostViewModelTest`, `AddHostRouteTest` |
 
 Partly covered:
 

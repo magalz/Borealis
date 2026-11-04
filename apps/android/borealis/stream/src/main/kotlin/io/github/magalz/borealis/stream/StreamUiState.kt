@@ -123,6 +123,9 @@ enum class OverlayMode {
 enum class TouchMode {
     TRACKPAD,
     DIRECT,
+
+    /** Real touch sent to the PC, as on a touchscreen; it needs a host that supports touch. */
+    NATIVE,
     OFF,
 }
 

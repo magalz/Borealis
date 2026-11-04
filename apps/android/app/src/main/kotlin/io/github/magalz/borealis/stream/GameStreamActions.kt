@@ -83,6 +83,13 @@ internal constructor(
         appScope,
     )
 
+    /**
+     * Asked first by every touch mode change, with the new mode: the activity cancels the finger
+     * the host took when Native ends. False when it dealt with the change itself. The activity sets
+     * it once, before the session that calls [setTouchMode] exists.
+     */
+    internal var touchModeChange: (TouchMode) -> Boolean = { true }
+
     private val hostId: String? = activity.intent.getStringExtra(Game.EXTRA_PC_UUID)
     private var retried = false
     private var quitting = false
@@ -111,8 +118,11 @@ internal constructor(
     /**
      * The chrome takes the input: releases every key held down, the mouse buttons in [mouseButtons]
      * (`MotionEvent.BUTTON_*`, as the activity tracks them) and the touches in progress, so the PC
-     * is not left with a stuck key or button. Gamepad zeroing is the gamepad handler's own
-     * (`GamepadChrome.setCaptured`, called by the activity).
+     * is not left with a stuck key or button. The buttons released here are the primary, secondary
+     * and tertiary ones with their stylus buttons: Back and Forward belong to the activity's
+     * `SideButton`s, which release what the PC has of them, so a bit of either in [mouseButtons] is
+     * ignored. Gamepad zeroing is the gamepad handler's own (`GamepadChrome.setCaptured`, called by
+     * the activity).
      */
     fun releaseHeldInput(mouseButtons: Int) {
         heldKeys.releaseAll { vk ->
@@ -148,6 +158,8 @@ internal constructor(
      * screen and keeps the contexts it has.
      */
     override fun setTouchMode(mode: TouchMode) {
+        // Native ends: the activity cancels the host's finger; a refused Native stays Direct
+        if (!touchModeChange(mode)) return
         val contexts = controls.touchContexts
         contexts.forEach { it?.cancelTouch() }
         val built = controls.buildTouch(mode) ?: return
@@ -186,7 +198,7 @@ internal constructor(
         }
     }
 
-    override fun quitApp(onFailed: () -> Unit) {
+    override fun quitApp(onFailed: (QuitFailure) -> Unit) {
         if (quitting) return
         quitting = true
         // The host ends the stream with the app, possibly before the answer arrives.
@@ -203,18 +215,34 @@ internal constructor(
                     finishActivity()
                 }
                 is QuitResult.Failed -> {
-                    // The stream goes on, so the user can try again.
+                    // A stream that still runs goes on, so the user can try again; the session says
+                    // what follows for one that the host ended with the quit already.
                     quitting = false
                     SessionAudit.quitFailed()
-                    onFailed()
-                    toast(
-                        result.message
-                            ?: activity.getString(LibraryR.string.apps_message_quit_failed)
-                    )
+                    onFailed(failureOf(result))
                 }
             }
         }
     }
+
+    // What the session can do about a quit that did not happen: it chooses, so nothing is shown
+    // before it says so.
+    private fun failureOf(result: QuitResult.Failed) =
+        object : QuitFailure {
+            override val notTheStarter = result.notTheStarter
+
+            override fun show() =
+                toast(
+                    result.message ?: activity.getString(LibraryR.string.apps_message_quit_failed)
+                )
+
+            // The Library behind the stream shows that the app keeps running for the device that
+            // started it, as a Disconnect shows that it keeps running on the PC.
+            override fun leaveKeepingApp(appName: String) {
+                entryPoint().quitNotice().post(LeaveNotice.KeepsRunning(appName))
+                finishActivity()
+            }
+        }
 
     override fun leave() = finishActivity()
 
@@ -229,9 +257,9 @@ internal constructor(
     /**
      * Opens the Library on the launch of this app and finishes while the stream is still in front,
      * so Android does not take it for a start from the background. The Library starts the app
-     * again, through its own apps and conflict flow. Trying again is the user's choice to resume
-     * that app if it runs, so it is remembered for the Library to take with the request: not in the
-     * request itself, which any app could send (host contract 7.6).
+     * again, through its own apps and conflict flow. Trying again is not the user's choice to
+     * resume that app if it runs: the host does not tell whose session runs, so the Library only
+     * starts the app, as it does for a shortcut, and the stream asks when the app runs.
      */
     override fun retry() {
         if (retried) return
@@ -243,10 +271,7 @@ internal constructor(
             when {
                 id == null -> LibraryLaunchRequest.Hosts
                 appId == StreamConfiguration.INVALID_APP_ID -> LibraryLaunchRequest.Apps(id)
-                else -> {
-                    entryPoint().resumeChoice().remember(id, appId)
-                    LibraryLaunchRequest.Launch(id, appId)
-                }
+                else -> LibraryLaunchRequest.Launch(id, appId)
             }
         )
     }
@@ -322,8 +347,6 @@ internal constructor(
                     MouseButtonPacket.BUTTON_RIGHT,
                 (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY) to
                     MouseButtonPacket.BUTTON_MIDDLE,
-                MotionEvent.BUTTON_BACK to MouseButtonPacket.BUTTON_X1,
-                MotionEvent.BUTTON_FORWARD to MouseButtonPacket.BUTTON_X2,
             )
 
         private fun preferences(context: Context) =

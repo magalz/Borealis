@@ -618,6 +618,20 @@ internal class GameFailureTest : GameTestBase() {
     }
 
     @Test
+    fun `a stream that ends in error after a Disconnect is no failure and ends the activity`() {
+        rig.streaming()
+        // A Disconnect does not mark the failure screen as shown, as onStop does.
+        rig.game.stopConnectionThen {}
+        rig.awaitStop()
+
+        rig.game.connectionTerminated(-5)
+        rig.awaitStop()
+
+        assertThat(rig.phase).isNotInstanceOf(StreamPhase.Failed::class.java)
+        assertThat(rig.game.isFinishing).isTrue()
+    }
+
+    @Test
     fun `a stream that ends in error opens no dialog`() {
         rig.streaming()
 

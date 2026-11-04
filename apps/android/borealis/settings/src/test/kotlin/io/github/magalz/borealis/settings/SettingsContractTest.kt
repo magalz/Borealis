@@ -325,8 +325,9 @@ class SettingsContractTest {
          * 38 ported stream settings, the gamepad mouse speed, 2 logging switches, the overlay
          * choice, the background, the 8 settings of the glass and the accessibility group, and the
          * 5 of Sprint 11: font, accent colour, background intensity, card density and text spacing,
-         * and the 1 of Sprint 15: the menu glass in the stream (its background option was dropped).
+         * and the 1 of Sprint 15: the menu glass in the stream (its background option was dropped),
+         * and the 1 of Sprint 17b: the Native touch switch.
          */
-        const val CATALOG_SIZE = 57
+        const val CATALOG_SIZE = 58
     }
 }

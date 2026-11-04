@@ -27,7 +27,8 @@ import org.robolectric.annotation.Config
  * which computers it reports from the services that the platform resolves. [HoldingNsdManager]
  * stands in for the platform and lets the test confirm a start when it chooses.
  *
- * Characterization: these tests pass on the Java class and on its Kotlin conversion.
+ * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
+ * about forgetting a computer (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [HoldingNsdManager::class])
@@ -230,6 +231,25 @@ class NsdManagerDiscoveryAgentCharacterizationTest {
         callback.onServiceUpdated(resolved("Den PC", 47989, "192.168.1.5"))
 
         assertThat(listener.added).hasSize(1)
+        assertThat(agent.getComputerSet()).hasSize(1)
+    }
+
+    @Test
+    fun `a service that is forgotten is reported again when the platform resolves it again`() {
+        val discovery = startAndConfirm()
+        val found = service("Den PC")
+        discovery.onServiceFound(found)
+        val callback = callbacks(found).single()
+        callback.onServiceUpdated(resolved("Den PC", 47989, "192.168.1.5"))
+
+        agent.forget(MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989))
+        callback.onServiceUpdated(resolved("Den PC", 47989, "192.168.1.5"))
+
+        assertThat(listener.added)
+            .containsExactly(
+                MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989),
+                MdnsComputer("Den PC", ip4("192.168.1.5"), null, 47989),
+            )
         assertThat(agent.getComputerSet()).hasSize(1)
     }
 

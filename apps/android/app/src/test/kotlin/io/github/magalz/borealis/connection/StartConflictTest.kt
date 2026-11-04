@@ -206,6 +206,53 @@ class StartConflictTest {
         assertThat(steps()).containsExactly("/applist")
     }
 
+    /**
+     * The user leaves while the question is open, and the answer that comes with it is Quit: the
+     * app of the host (maybe the one of another device) is not ended for a stream that nobody
+     * watches.
+     */
+    @Test
+    fun `a leave while the question is answered with quit ends the start without a quit`() {
+        rig.script.running(OTHER_ID)
+        listener.conflictChoice = ConflictChoice.QUIT_AND_RELAUNCH
+        val connection = rig.connection()
+        listener.onEvent = { if (it.startsWith("launchConflict")) connection.cancelLaunch() }
+
+        rig.start(connection)
+        listener.await("launchConflict")
+        listener.awaitEnded()
+
+        assertThat(steps()).containsExactly("/applist")
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", conflict)
+            .inOrder()
+    }
+
+    /**
+     * The user leaves while the host ends the app that runs: the launch that follows is not made,
+     * and the listener is not told that it starts.
+     */
+    @Test
+    fun `a leave while the quit goes on starts no launch`() {
+        rig.script.running(OTHER_ID)
+        listener.conflictChoice = ConflictChoice.QUIT_AND_RELAUNCH
+        val connection = rig.connection()
+        val answer = rig.host.handler
+        rig.host.handler = { request ->
+            if (request.path == "/cancel") connection.cancelLaunch()
+            answer(request)
+        }
+
+        rig.start(connection)
+        listener.await("launchConflict")
+        listener.awaitEnded()
+
+        assertThat(steps()).containsExactly("/applist", "/cancel").inOrder()
+        assertThat(listener.events)
+            .containsExactly("stageStarting $DESKTOP_NAME", conflict)
+            .inOrder()
+    }
+
     @Test
     fun `an app that ends while the connection waits is no conflict, and the app is launched`() {
         rig.script.running(OTHER_ID)

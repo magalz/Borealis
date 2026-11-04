@@ -25,7 +25,7 @@ accident.
    user holds Select + Start for one second. On a phone, the user pulls the top
    handle down or presses Back. With a keyboard, the user presses
    Ctrl+Alt+Shift+M, and with a mouse the user holds its Back button for one
-   second (A8).
+   second or presses its Back and Forward buttons together (A8).
 2. The system opens the menu over the stream. On a TV, focus starts on Back to
    stream.
 3. The user changes an item. The items are listed in
@@ -153,7 +153,7 @@ for it.
    mouse on or off while the combo is pending, however long Start was held.
 5. After every button has been let go, Start and Select arm the chord again.
 
-### A8: Open the menu from a keyboard or a mouse (Sprint 15; branches from step 1)
+### A8: Open the menu from a keyboard or a mouse (Sprint 15, steps 4 to 6 Sprint 17b; branches from step 1)
 
 1. Ctrl+Alt+Shift+M opens the menu. The system takes the combination before
    the PC sees it, also when the input is not grabbed, and it acts when the
@@ -169,12 +169,33 @@ for it.
    activity stopping ends does not open the menu. The Back that Android makes of
    a right click never opens it, and a right click held for seconds does not
    either.
-4. The first-run hint names the way. With a keyboard or a mouse and no pad it
-   says "Press Ctrl+Alt+Shift+M for the menu", and with Mouse back and forward
-   buttons on "Press Ctrl+Alt+Shift+M or hold the mouse Back button for the
-   menu". A game controller wins over a keyboard and a mouse, and a virtual
-   keyboard, a remote and a touchscreen do not count as them. The hint shows
-   for six seconds, once.
+4. Back and Forward of the mouse, pressed together, open the menu (Sprint 17b,
+   BORE-18). The second press must come within 250 ms of the first, in either
+   order; neither button reaches the PC. It works with Mouse back and forward
+   buttons on or off. The side buttons of some mice, the Logi M650 for one, send
+   a pulse of a few milliseconds, so they cannot be held for a second, and the
+   chord is the way for them. A press that comes up within 25 ms is a pulse: the
+   PC gets it 250 ms after the press, unless the other button joined it by then.
+   With the setting on, a longer press keeps step 3: Back is X1, sent when the
+   button comes up, and Forward is X2, pressed 25 ms after the press, once it is
+   known that the press is no pulse, and released when the button comes up. A
+   button that comes 250 ms after the first one is alone, and the first went to
+   the PC.
+5. With Mouse back and forward buttons off, Android makes a Back key of the
+   Back button of the mouse and of its right button alike, so Borealis cannot
+   tell them apart: the Back of the mouse is a right click for the PC, by
+   design, pressed 25 ms after the press as in step 4, and the Forward of the
+   mouse sends nothing. Back never opens the menu by a hold with the setting
+   off, and Back with Forward still opens it (step 4).
+6. The first-run hint names the way. With a keyboard or a mouse and no pad it
+   says "Press Ctrl+Alt+Shift+M or press the mouse Back and Forward buttons
+   together for the menu", and with Mouse back and forward buttons on "Press
+   Ctrl+Alt+Shift+M, hold the mouse Back button, or press Back and Forward
+   together for the menu". Android cannot tell a mouse that sends pulses before
+   its first side-button press, so both texts name the chord, and only the
+   second, where holding Back opens the menu too, names the hold. A game
+   controller wins over a keyboard and a mouse, and a virtual keyboard, a remote
+   and a touchscreen do not count as them. The hint shows for six seconds, once.
 
 ### A9: The focus in the menu has no lateral movement (Sprint 15; branches from step 3)
 
@@ -285,14 +306,15 @@ row is disabled; it needs the Phase 3 host API and cannot be chosen.
 | UC-004-T34 | Given a snackbar, when it shows, then it is as wide as its text, centred and at most 600 dp, a long message wraps, and a screen reader is told of it. | UI | exists (Sprint 10, UI): `BorealisSnackbarHostTest` |
 | UC-004-T35 | Given the menu is open, when the user chooses Quit, then the Quit popup is a panel in the chrome layer with the question as its heading and the two lines as its body, Cancel focused, a tap outside, B and Back close only the popup and the focus returns to the Quit row, and the menu behind is out of reach. | UI | exists (Sprint 15, UI): `QuitPopupTest`, `StreamDialogBackTest`, `QuitCopyTest` |
 | UC-004-T36 | Given the stream runs, when Ctrl+Alt+Shift+M is pressed, then the menu opens, also with the input not grabbed, and the M does not reach the host; when Ctrl+Alt+Shift+Q is pressed, then the session disconnects. | unit | exists (Sprint 15, unit): `GameSpecialKeysTest` |
-| UC-004-T37 | Given the Back button of the mouse with Mouse back and forward buttons on, when it is held for one second, then the menu opens and nothing goes to the host; a shorter press is X1 sent when the button comes up; a right click never opens the menu. | unit | exists (Sprint 15, unit): `MouseBackHoldTest` |
-| UC-004-T38 | Given a keyboard or a mouse and no pad, when the hint shows, then it names the chord, and the Back button too when the navigation buttons are on; a pad, a virtual keyboard, a remote and a touchscreen do not count. | UI | exists (Sprint 15, UI): `MenuHintTest`, `StreamingLayerHintTest` |
+| UC-004-T37 | Given the Back button of the mouse with Mouse back and forward buttons on, when it is held for one second, then the menu opens and nothing goes to the host; a shorter press is X1 sent when the button comes up (a press within 25 ms is a pulse, T45); a right click never opens the menu. | unit | exists (Sprint 15, unit): `MouseBackHoldTest` |
+| UC-004-T38 | Given a keyboard or a mouse and no pad, when the hint shows, then it names Ctrl+Alt+Shift+M and Back with Forward together, and the hold of the Back button too when the navigation buttons are on ("Press Ctrl+Alt+Shift+M or press the mouse Back and Forward buttons together for the menu"; with the setting on, "Press Ctrl+Alt+Shift+M, hold the mouse Back button, or press Back and Forward together for the menu"); a pad, a virtual keyboard, a remote and a touchscreen do not count. | UI | exists (Sprint 15, UI; texts changed in Sprint 17b): `MenuHintTest`, `StreamingLayerHintTest` |
 | UC-004-T39 | Given Left, Right, Up, Down, OK and A on every row and chip, when the menu is open, then Left and Right do nothing, Up and Down walk the rows and chips in drawing order and stop at the ends, and Quit is reached with Down and OK alone. | UI, unit | exists (Sprint 15): `InGameMenuFocusTest`, `UsbChromeMenuFocusTest`, `SegmentedControlTest` |
 | UC-004-T40 | Given Disconnect, when the user chooses it, then the phase is Disconnecting at once, the screen names the app, it stays up about a second at least and five seconds at most, Back does nothing, the activity finishes once, and the Library shows the Disconnected notice once. | unit, UI | exists (Sprint 15): `StreamSessionTest`, `DisconnectingScreenTest`, `GameStreamActionsLeaveTest`, `BackWhileDisconnectingTest`, `LibraryQuitNoticeTest`, `QuitNoticeTest` |
 | UC-004-T41 | Given a Quit that is under way, when the host ends the stream with -1, then no connectivity test runs, the end is logged at info with the time since the quit, and the screen stays on Quitting; any other code is a network drop. | unit | exists (Sprint 15, unit): `GameQuitEndTest`, `StreamSessionLeaveLogTest`, `QuitLogTest` |
 | UC-004-T42 | Given Stream menu style on Blurred, the transparency, High contrast, Reduce motion, the battery saver and the API level, when the menu opens, then the panel and the Quit popup are glass or solid as A10 says, the copies run only while the menu is open and the activity is started, and the Solid option and API 28 to 30 register no battery saver listener. | UI, unit | exists (Sprint 15): `MenuGlassRulesTest`, `MenuGlassOptionTest`, `MenuGlassCopiesTest`, `MenuGlassDrawTest`, `MenuGlassApi30Test`, `VideoGlassSpecTest`, `VideoGlassFramesTest`, `PixelCopySourceTest`, `StreamAppearanceTest` |
 | UC-004-T43 | Given the glass, when text stands on it, then every text colour of the menu and the popup keeps 4.5:1 on the ring of its halo over the lightest glass, the segmented controls keep 4.5:1 on their solid container, and the focus outline keeps 3:1 with its casing. | UI, tool | exists (Sprint 15): `TextHaloTest`, `MenuGlassHaloTest`, `MenuGlassCasingTest`, `MenuGlassFocusTest`, `FocusOverGlassTest`, `VideoGlassHaloTest` in `design/accessibility/test_contrast.py` |
 | UC-004-T44 | Given the Quit popup over the game, when it opens, then its scrim is the page colour at 35 % over what was there, with the glass, with Transparency Off, with the Solid option and with High contrast alike; its panel is the `surface` colour at 85 % over a white frame whatever tint the viewer chose for the menu, and every text colour keeps 4.5:1 on it; the side panel keeps its own tint. | UI, tool | exists (Sprint 15, owner decision of 2026-10-30): `PopupOverGameTest`, `MenuGlassDrawTest`, `SidePanelTest`, `PopupGlassContrastTest` in `design/accessibility/test_contrast.py` |
+| UC-004-T45 | Given the mouse, with Mouse back and forward buttons on or off, when Back and Forward are pressed within 250 ms of each other in either order, then the menu opens and neither button reaches the host; a button that comes 250 ms after the first is alone and the first went to the host; a press that comes up within 25 ms goes to the host 250 ms after the press unless the other button joined it; with the setting off, the Back of the mouse is the right button of the host, pressed 25 ms after the press, and the Forward sends nothing. | unit | exists (Sprint 17b, unit): `MouseBackHoldTest` |
 
 Sprint 5 built the in-game menu and its logic. A test marked "exists (Sprint 5,
 unit)" runs in the unit-test task, and "exists (Sprint 5, UI)" is a Compose test

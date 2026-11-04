@@ -266,7 +266,7 @@ class GameStreamActionsTest {
     fun `a failed quit shows the failure and keeps streaming`() {
         entryPoint.apps.result = QuitResult.Failed("The host said no")
 
-        actions.quitApp {}
+        actions.quitApp { it.show() }
 
         assertThat(activity.isFinishing).isFalse()
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("The host said no")
@@ -295,7 +295,7 @@ class GameStreamActionsTest {
     fun `a failed quit without a text shows the generic one`() {
         entryPoint.apps.result = QuitResult.Failed(null)
 
-        actions.quitApp {}
+        actions.quitApp { it.show() }
 
         assertThat(activity.isFinishing).isFalse()
         assertThat(ShadowToast.getTextOfLatestToast()).isEqualTo("Failed to quit.")
@@ -372,24 +372,6 @@ class GameStreamActionsTest {
             .isEqualTo(LibraryLaunchRequest.Launch("host-1", 42))
         assertThat(started?.flags?.and(LIBRARY_FLAGS)).isEqualTo(LIBRARY_FLAGS)
         assertThat(target.isFinishing).isTrue()
-    }
-
-    @Test
-    fun `retrying is the choice to resume the app of this stream if it runs`() {
-        val intent = Intent().putExtra(Game.EXTRA_PC_UUID, "host-1").putExtra(Game.EXTRA_APP_ID, 42)
-
-        retryOf(intent)
-
-        assertThat(entryPoint.resumeChoice.take("host-1", 42)).isTrue()
-    }
-
-    @Test
-    fun `retrying without an app or without a host chooses nothing`() {
-        retryOf(Intent().putExtra(Game.EXTRA_PC_UUID, "host-1"))
-        retryOf(Intent().putExtra(Game.EXTRA_APP_ID, 42))
-
-        assertThat(entryPoint.resumeChoice.take("host-1", 0)).isFalse()
-        assertThat(entryPoint.resumeChoice.take("host-1", 42)).isFalse()
     }
 
     @Test
@@ -535,6 +517,32 @@ class GameStreamActionsTest {
         assertThat(builtFor).containsExactly(TouchMode.OFF)
         assertThat(first.cancelled).isEqualTo(1)
         assertThat(second.cancelled).isEqualTo(1)
+        assertThat(touches[0]).isSameInstanceAs(first)
+        assertThat(touches[1]).isSameInstanceAs(second)
+    }
+
+    @Test
+    fun `a new touch mode is told to the activity before the contexts change`() {
+        val told = mutableListOf<String>()
+        actions.touchModeChange = { mode ->
+            told += "$mode cancelled=${first.cancelled} built=${builtFor.size}"
+            true
+        }
+
+        actions.setTouchMode(TouchMode.NATIVE)
+
+        assertThat(told).containsExactly("NATIVE cancelled=0 built=0")
+        assertThat(builtFor).containsExactly(TouchMode.NATIVE)
+    }
+
+    @Test
+    fun `a touch mode that the activity dealt with leaves the contexts as they are`() {
+        actions.touchModeChange = { false }
+
+        actions.setTouchMode(TouchMode.NATIVE)
+
+        assertThat(builtFor).isEmpty()
+        assertThat(first.cancelled).isEqualTo(0)
         assertThat(touches[0]).isSameInstanceAs(first)
         assertThat(touches[1]).isSameInstanceAs(second)
     }

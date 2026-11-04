@@ -27,7 +27,7 @@ class RelativeTouchContextTest {
     }
 
     @Test
-    fun `the timers run on the main looper, whichever thread built the context`() {
+    fun `the release timer runs on the main looper, whichever thread built the context`() {
         val built = AtomicReference<RelativeTouchContext>()
         Thread { built.set(rig.relative()) }
             .apply {
@@ -38,9 +38,11 @@ class RelativeTouchContextTest {
         assertThat(context).isNotNull()
 
         context.start(100, 100)
-        rig.advance(650)
-
+        context.touchUpEvent(100, 100, T0 + 100)
         assertThat(rig.sent()).containsExactly("down LEFT")
+        rig.advance(100)
+
+        assertThat(rig.sent()).containsExactly("down LEFT", "up LEFT").inOrder()
     }
 
     // The deltas
@@ -314,9 +316,23 @@ class RelativeTouchContextTest {
     fun `a finger that takes over as the first starts no drag`() {
         val context = rig.relative()
         context.start(100, 100)
-        context.touchUpEvent(100, 100, T0 + 300) // too slow for a tap, and it removes the timer
+        context.touchUpEvent(100, 100, T0 + 300) // too slow for a tap
 
         context.touchDownEvent(100, 100, T0 + 400, false)
+        rig.advance(1000)
+
+        assertThat(rig.sent()).isEmpty()
+    }
+
+    @Test
+    fun `a finger that takes over as the first starts no drag after a tap either`() {
+        val context = rig.relative()
+        context.start(100, 100)
+        context.touchUpEvent(100, 100, T0 + 100)
+        rig.advance(100)
+        rig.forget()
+
+        context.touchDownEvent(100, 100, T0 + 150, false) // inside the tap time of the lift
         rig.advance(1000)
 
         assertThat(rig.sent()).isEmpty()

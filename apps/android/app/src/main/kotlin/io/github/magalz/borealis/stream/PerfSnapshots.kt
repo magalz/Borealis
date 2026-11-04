@@ -29,10 +29,10 @@ object PerfSnapshots {
 
     /**
      * [rttInfo] is `MoonBridge.getEstimatedRttInfo()`: the RTT in the high half, its variance in
-     * the low.
+     * the low. [audioDelayMs] is the audio delay, null while it is not known.
      */
     @JvmStatic
-    fun from(window: PerfWindow, rttInfo: Long): PerfSnapshot {
+    fun from(window: PerfWindow, rttInfo: Long, audioDelayMs: Int? = null): PerfSnapshot {
         val seconds = window.elapsedMs / MILLIS_PER_SECOND
         val perSecond = { frames: Int -> if (seconds > 0f) frames / seconds else 0f }
         return PerfSnapshot(
@@ -53,6 +53,7 @@ object PerfSnapshots {
                 } else {
                     null
                 },
+            audioDelayMs = audioDelayMs,
         )
     }
 

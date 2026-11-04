@@ -4,6 +4,7 @@ import android.media.MediaCodecInfo.CodecProfileLevel
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration.FormatOption
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -431,6 +432,148 @@ class RendererDecoderChoiceTest : RendererTestBase() {
 
         assertThat(renderer.isAv1Supported()).isFalse()
         assertThat(log.lines()).contains("INFO: No AV1 decoder found")
+    }
+
+    // A decoder that lists its types but throws when asked for their capabilities. H264 has always
+    // taken the first decoder in this case; HEVC and AV1 do the same when nothing else is left.
+
+    private fun buggy(name: String, mime: String) =
+        codec(name) {
+            this.mime = mime
+            brokenCapabilities = true
+        }
+
+    private val buggyHevc = buggy("c2.test.hevc.decoder", "video/hevc")
+    private val buggyStrangeHevc = buggy("vendor.test.hevc.decoder", "video/hevc")
+    private val buggyAv1 = buggy("c2.test.av1.decoder", "video/av01")
+
+    @Test
+    fun `an HEVC decoder that throws for its capabilities is used when it is the only one`() {
+        install(avc, buggyHevc)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isHevcSupported()).isTrue()
+        assertThat(nameAfterSetup(renderer, MoonBridge.VIDEO_FORMAT_H265))
+            .isEqualTo("c2.test.hevc.decoder")
+        assertThat(log.lines()).contains("INFO: Selected HEVC decoder: c2.test.hevc.decoder")
+    }
+
+    @Test
+    fun `an HEVC decoder that throws for its capabilities gives way to one that does not`() {
+        val other = codec("c2.other.hevc.decoder") { mime = "video/hevc" }
+        install(avc, buggyHevc, other)
+
+        renderer()
+
+        assertThat(log.lines()).contains("INFO: Selected HEVC decoder: c2.other.hevc.decoder")
+    }
+
+    @Test
+    fun `the first of several HEVC decoders that throw is the one used`() {
+        install(avc, buggyHevc, buggy("c2.second.hevc.decoder", "video/hevc"))
+
+        renderer()
+
+        assertThat(log.lines()).contains("INFO: Selected HEVC decoder: c2.test.hevc.decoder")
+    }
+
+    @Test
+    fun `HEVC stays unsupported when no decoder is listed for it`() {
+        install(avc)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isHevcSupported()).isFalse()
+        assertThat(log.lines()).contains("INFO: No HEVC decoder found")
+    }
+
+    @Test
+    fun `forcing H264 leaves HEVC out even when its only decoder throws for its capabilities`() {
+        install(avc, buggyHevc)
+
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_H264 })
+
+        assertThat(renderer.isHevcSupported()).isFalse()
+    }
+
+    @Test
+    fun `a decoder that is not whitelisted and throws for its capabilities is not used on its own`() {
+        install(avc, buggyStrangeHevc)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isHevcSupported()).isFalse()
+        assertThat(log.lines()).contains("INFO: No HEVC decoder found")
+    }
+
+    @Test
+    fun `forcing HEVC uses a decoder that is not whitelisted and throws for its capabilities`() {
+        install(avc, buggyStrangeHevc)
+
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_HEVC })
+
+        assertThat(renderer.isHevcSupported()).isTrue()
+    }
+
+    @Test
+    fun `an HEVC decoder that throws for its capabilities does not support Main10 HDR10`() {
+        install(avc, buggyHevc)
+
+        val renderer = renderer(hdr = true)
+
+        assertThat(renderer.isHevcSupported()).isTrue()
+        assertThat(renderer.isHevcMain10Hdr10Supported()).isFalse()
+    }
+
+    @Test
+    fun `forcing AV1 uses a decoder that throws for its capabilities when it is the only one`() {
+        install(avc, buggyAv1)
+
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 })
+
+        assertThat(renderer.isAv1Supported()).isTrue()
+        assertThat(nameAfterSetup(renderer, MoonBridge.VIDEO_FORMAT_AV1_MAIN8))
+            .isEqualTo("c2.test.av1.decoder")
+        assertThat(log.lines()).contains("INFO: Selected AV1 decoder: c2.test.av1.decoder")
+    }
+
+    @Test
+    fun `an AV1 decoder that throws for its capabilities does not support Main10`() {
+        install(avc, buggyAv1)
+
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 })
+
+        assertThat(renderer.isAv1Main10Supported()).isFalse()
+    }
+
+    @Test
+    fun `AV1 is not used unless it is forced even when its only decoder throws`() {
+        install(avc, buggyAv1)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isAv1Supported()).isFalse()
+    }
+
+    @Test
+    fun `the crash text says that the capabilities of a decoder that throws are unreadable`() {
+        install(avc, buggyHevc)
+        ShadowRecordingVideoCodec.register("c2.test.hevc.decoder", inputSize = 64)
+        val renderer = renderer()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H265)).isEqualTo(0)
+
+        val thrown =
+            assertThrows(RuntimeException::class.java) {
+                renderer.submit(DecodeUnit(ByteArray(100) { 1 }, frameNumber = 1))
+            }
+
+        assertThat(thrown.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(thrown.toString().split("\n"))
+            .containsAtLeast(
+                "HEVC Decoder: c2.test.hevc.decoder",
+                "HEVC capabilities: UNREADABLE!",
+            )
     }
 
     // The name of the decoder of the active format

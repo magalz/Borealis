@@ -544,7 +544,7 @@ class Xbox360ControllerTest {
             listOf(
                 0x7FFF.toShort() to 0x4000.toShort(),
                 0x8000.toShort() to 0xFFFF.toShort(),
-                0x00FF.toShort() to 0x0100.toShort(),
+                0x0100.toShort() to 0x0200.toShort(),
                 0x1234.toShort() to 0xABCD.toShort(),
             )
 
@@ -555,11 +555,33 @@ class Xbox360ControllerTest {
             .containsExactly(
                 listOf(0x00, 0x08, 0x00, 0x7F, 0x40, 0x00, 0x00, 0x00),
                 listOf(0x00, 0x08, 0x00, 0x80, 0xFF, 0x00, 0x00, 0x00),
-                listOf(0x00, 0x08, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00),
+                listOf(0x00, 0x08, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00),
                 listOf(0x00, 0x08, 0x00, 0x12, 0xAB, 0x00, 0x00, 0x00),
             )
             .inOrder()
         assertThat(pad.usb.writes.drop(1).map { it.timeoutMs }.toSet()).containsExactly(100)
+    }
+
+    @Test
+    fun `a weak motor stays above zero and a zero motor stays zero`() {
+        val pad = pad()
+        pad.start()
+
+        // A motor below 256 has no high byte: it goes out as 1, and only a real zero as 0.
+        pad.controller.rumble(0x0001, 0x0000)
+        pad.controller.rumble(0x0000, 0x00FF)
+        pad.controller.rumble(0x00FF, 0x0001)
+        pad.controller.rumble(0x0000, 0x0000)
+
+        // The first write is the LED command.
+        assertThat(pad.writtenBytes().drop(1))
+            .containsExactly(
+                listOf(0x00, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00),
+                listOf(0x00, 0x08, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00),
+                listOf(0x00, 0x08, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00),
+                listOf(0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+            )
+            .inOrder()
     }
 
     @Test

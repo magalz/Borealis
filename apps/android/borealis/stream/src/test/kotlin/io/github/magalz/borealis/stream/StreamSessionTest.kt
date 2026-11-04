@@ -463,7 +463,7 @@ class StreamSessionTest {
         val menuOpen = started.state.value.phase
         started.quitApp()
 
-        actions.quitFailed()
+        actions.quitFailed(RecordingQuitFailure())
 
         assertThat(started.state.value.phase).isEqualTo(menuOpen)
     }
@@ -473,7 +473,7 @@ class StreamSessionTest {
         val started = startStreaming()
         val streaming = started.state.value.phase
         started.quitApp()
-        actions.quitFailed()
+        actions.quitFailed(RecordingQuitFailure())
 
         started.quitApp()
 
@@ -570,7 +570,7 @@ class StreamSessionTest {
     fun `a quit that failed lets the next end be a failure`() {
         val started = startStreaming()
         started.quitApp()
-        actions.quitFailed()
+        actions.quitFailed(RecordingQuitFailure())
 
         started.onFailed(aFailure)
 
@@ -583,7 +583,7 @@ class StreamSessionTest {
         started.quitApp()
         started.onFailed(aFailure)
 
-        actions.quitFailed()
+        actions.quitFailed(RecordingQuitFailure())
 
         assertThat(started.state.value.phase).isEqualTo(StreamPhase.Failed(aFailure))
     }

@@ -383,6 +383,7 @@ class PreferenceConfigurationReadTest {
                 "vibrateFallbackToDevice" to false,
                 "vibrateFallbackToDeviceStrength" to 100,
                 "touchscreenTrackpad" to true,
+                "touchscreenNative" to false,
                 "audioConfiguration" to MoonBridge.AudioConfiguration(2, 0x3),
                 "framePacing" to PreferenceConfiguration.FRAME_PACING_MIN_LATENCY,
                 "absoluteMouseMode" to false,

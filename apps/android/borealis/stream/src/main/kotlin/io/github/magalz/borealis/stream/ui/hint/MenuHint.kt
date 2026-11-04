@@ -32,11 +32,12 @@ private val PADDING_HORIZONTAL = 14.dp
 private val PADDING_VERTICAL = 6.dp
 
 /**
- * The line that tells a new user how to open the menu on this device, while [show] is true: the
- * chord when the stream has a keyboard or a mouse and no pad, with the Back button of the mouse too
- * when [mouseNavButtons] says that it opens the menu, else the way of the form factor. It goes
- * after six seconds, or when a panel opens, and then calls [onDismiss] once, so the session
- * remembers that it was seen. It takes no input.
+ * The line that tells a new user how to open the menu on this device, while [show] is true: when
+ * the stream has a keyboard or a mouse and no pad, the chord and Back with Forward of the mouse
+ * together (they work with the mouse navigation buttons on or off), with holding Back too when
+ * [mouseNavButtons] says that it opens the menu; else the way of the form factor. It goes after six
+ * seconds, or when a panel opens, and then calls [onDismiss] once, so the session remembers that it
+ * was seen. It takes no input.
  */
 @Composable
 internal fun MenuHint(

@@ -15,7 +15,8 @@ import kotlinx.coroutines.launch
 /**
  * Shows the notices of [quitNotice] in [snackbarHostState] while this is in the composition, and
  * only while the screen is started: a notice that comes before waits for it. A Quit says "App
- * quit."; a Disconnect says that the app is still running on the PC.
+ * quit."; a Disconnect says that the app is still running on the PC; the Quit of an app that
+ * another device started says that it keeps running for that device.
  */
 @Composable
 internal fun ShowQuitNotice(quitNotice: QuitNotice, snackbarHostState: SnackbarHostState) {
@@ -43,5 +44,11 @@ private fun Resources.text(notice: LeaveNotice): String =
                 getString(R.string.apps_message_disconnected_unknown)
             } else {
                 getString(R.string.apps_message_disconnected, notice.appName)
+            }
+        is LeaveNotice.KeepsRunning ->
+            if (notice.appName.isBlank()) {
+                getString(R.string.apps_message_keeps_running_unknown)
+            } else {
+                getString(R.string.apps_message_keeps_running, notice.appName)
             }
     }

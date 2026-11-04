@@ -112,6 +112,11 @@ class ControllerHandler(
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
 
+    // Whether the last battery report that went to the host for each controller number said that
+    // no battery is present: the host keeps one battery per number, whichever pad it came from, and
+    // the pads on the number come and go. Only the background thread reads and writes it.
+    private val numberHasNoBattery = BooleanArray(MAX_GAMEPADS.toInt())
+
     init {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager =
@@ -243,12 +248,9 @@ class ControllerHandler(
 
         inputDeviceContexts.forEachValue { deviceContext -> deviceContext.destroy() }
 
+        val zeroingStarted = SystemClock.uptimeMillis()
         usbDeviceContexts.forEachValue { deviceContext ->
-            // The host may never send a zero for the motors at the end of the stream
-            deviceContext.device?.let {
-                it.rumble(0, 0)
-                it.rumbleTriggers(0, 0)
-            }
+            deviceContext.device?.let { zeroMotors(it, zeroingStarted) }
             deviceContext.destroy()
         }
 
@@ -256,6 +258,25 @@ class ControllerHandler(
         defaultContext.destroy()
 
         deviceVibrator.cancel()
+    }
+
+    // The host may never send a zero for the motors at the end of the stream. A write to a pad that
+    // does not answer blocks for the timeout of the driver and only logs, and the stop runs on the
+    // main thread: a pad whose motor write took the better part of that gets no trigger write, and
+    // no pad is started once the zeroing has used up its time. The Xbox drivers zero the motors
+    // again when the USB driver service stops them, which the unbind of the activity does.
+    private fun zeroMotors(pad: AbstractController, zeroingStarted: Long) {
+        val started = SystemClock.uptimeMillis()
+        if (started - zeroingStarted >= USB_ZERO_BUDGET_MS) {
+            LimeLog.warning("USB pad ${pad.controllerId} is left to its driver: no time to zero it")
+            return
+        }
+        pad.rumble(0, 0)
+        if (SystemClock.uptimeMillis() - started >= USB_WRITE_STUCK_MS) {
+            LimeLog.warning("USB pad ${pad.controllerId} did not answer the zero of its motors")
+        } else {
+            pad.rumbleTriggers(0, 0)
+        }
     }
 
     fun destroy() {
@@ -291,6 +312,11 @@ class ControllerHandler(
             currentControllers =
                 (currentControllers.toInt() and (1 shl context.controllerNumber.toInt()).inv())
                     .toShort()
+
+            // The PC drops the battery of a controller together with it, so the flag of the number
+            // starts over: the next pad on the number has to tell the host again that it has none
+            val freedNumber = context.controllerNumber.toInt()
+            backgroundThreadHandler.post { numberHasNoBattery[freedNumber] = false }
 
             // The PC drops the controller with the zeroed packet below, so it has no input to
             // release
@@ -1070,25 +1096,33 @@ class ControllerHandler(
                 }
             }
         } else {
-            // From Android S the system says whether the pad has a battery: tell the host once
-            // that it has none, if the pad claimed a battery in its arrival (an external pad, see
-            // sendControllerArrival): the host has nothing to correct for a pad that did not. The
-            // same goes for a device without joystick axes, the touchpad of a pad: it takes the
+            // From Android S the system says whether the pad has a battery: tell the host that its
+            // number has none, once, if the pad claimed a battery in its arrival (an external pad,
+            // see sendControllerArrival): the host has nothing to correct for a pad that did not.
+            // The same goes for a device without joystick axes, the touchpad of a pad: it takes the
             // number of its joystick, which owns the battery. With a single controller pads that
             // claimed one share the number, and the host keeps one battery for it: the pad that
-            // has none stays silent, or it would wipe what the other reports and the poll sends
-            // only a change. Before S we cannot know, and the pad claims no battery.
-            val ownsBattery = claimsBattery(context) && !sharesNumberWithClaimant(context)
+            // has none stays silent while another one on the number has reported a battery, or it
+            // would wipe it and the poll sends only a change. What the host holds is the number's
+            // state, not the pad's: the first pad polled speaks for the number, a pad without a
+            // battery speaks again when the pad that had one leaves, and not when it takes the
+            // number of a pad that said none. Before S we cannot know, and the pad claims no
+            // battery.
+            val speaksForNumber = claimsBattery(context) && !sharesNumberWithBattery(context)
+            val number = context.controllerNumber.toInt()
             if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    ownsBattery &&
-                    context.lastReportedBatteryStatus != BATTERY_STATUS_NOT_PRESENT
+                    speaksForNumber &&
+                    !numberHasNoBattery[number]
             ) {
                 conn.sendControllerBatteryEvent(
-                    context.controllerNumber.toByte(),
+                    number.toByte(),
                     MoonBridge.LI_BATTERY_STATE_NOT_PRESENT,
                     MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN,
                 )
+                numberHasNoBattery[number] = true
+
+                // A battery that comes back with the status it had is a change to the host
                 context.lastReportedBatteryStatus = BATTERY_STATUS_NOT_PRESENT
             }
             return
@@ -1122,6 +1156,7 @@ class ControllerHandler(
 
             conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), state, percentage)
 
+            numberHasNoBattery[context.controllerNumber.toInt()] = false
             context.lastReportedBatteryStatus = currentBatteryStatus
             context.lastReportedBatteryCapacity = currentBatteryCapacity
         }
@@ -1131,8 +1166,10 @@ class ControllerHandler(
     private fun claimsBattery(context: InputDeviceContext) =
         context.external && context.hasJoystickAxes
 
-    // Another pad on the controller number of the context that claimed a battery too
-    private fun sharesNumberWithClaimant(context: InputDeviceContext): Boolean {
+    // Another pad on the controller number of the context that claimed a battery and reported one:
+    // its status is a BatteryState value, from 1; 0 is no report yet, and
+    // BATTERY_STATUS_NOT_PRESENT is the report that none is present
+    private fun sharesNumberWithBattery(context: InputDeviceContext): Boolean {
         fun isOtherOnItsNumber(other: InputDeviceContext) =
             other !== context &&
                 other.assignedControllerNumber &&
@@ -1140,7 +1177,7 @@ class ControllerHandler(
 
         var shared = false
         inputDeviceContexts.forEachValue {
-            if (isOtherOnItsNumber(it) && claimsBattery(it)) {
+            if (isOtherOnItsNumber(it) && claimsBattery(it) && it.lastReportedBatteryStatus > 0) {
                 shared = true
             }
         }
@@ -1402,7 +1439,8 @@ class ControllerHandler(
 
         // In order to properly handle controllers that are split into multiple devices,
         // we must aggregate all controllers with the same controller number into a single
-        // device before we send it.
+        // device before we send it. The buttons are ORed; each trigger and each stick axis takes
+        // the value of larger magnitude, the later device's on a tie.
         inputDeviceContexts.forEachValue { context ->
             if (
                 context.assignedControllerNumber &&
@@ -1410,28 +1448,12 @@ class ControllerHandler(
                     context.mouseEmulationActive == originalContext.mouseEmulationActive
             ) {
                 inputMap = inputMap or context.sentInputMap()
-                leftTrigger =
-                    (leftTrigger.toInt() or
-                            maxByMagnitude(leftTrigger, context.leftTrigger).toInt())
-                        .toByte()
-                rightTrigger =
-                    (rightTrigger.toInt() or
-                            maxByMagnitude(rightTrigger, context.rightTrigger).toInt())
-                        .toByte()
-                leftStickX =
-                    (leftStickX.toInt() or maxByMagnitude(leftStickX, context.leftStickX).toInt())
-                        .toShort()
-                leftStickY =
-                    (leftStickY.toInt() or maxByMagnitude(leftStickY, context.leftStickY).toInt())
-                        .toShort()
-                rightStickX =
-                    (rightStickX.toInt() or
-                            maxByMagnitude(rightStickX, context.rightStickX).toInt())
-                        .toShort()
-                rightStickY =
-                    (rightStickY.toInt() or
-                            maxByMagnitude(rightStickY, context.rightStickY).toInt())
-                        .toShort()
+                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
+                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
+                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
+                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
+                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
+                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
             }
         }
         usbDeviceContexts.forEachValue { context ->
@@ -1441,56 +1463,22 @@ class ControllerHandler(
                     context.mouseEmulationActive == originalContext.mouseEmulationActive
             ) {
                 inputMap = inputMap or context.sentInputMap()
-                leftTrigger =
-                    (leftTrigger.toInt() or
-                            maxByMagnitude(leftTrigger, context.leftTrigger).toInt())
-                        .toByte()
-                rightTrigger =
-                    (rightTrigger.toInt() or
-                            maxByMagnitude(rightTrigger, context.rightTrigger).toInt())
-                        .toByte()
-                leftStickX =
-                    (leftStickX.toInt() or maxByMagnitude(leftStickX, context.leftStickX).toInt())
-                        .toShort()
-                leftStickY =
-                    (leftStickY.toInt() or maxByMagnitude(leftStickY, context.leftStickY).toInt())
-                        .toShort()
-                rightStickX =
-                    (rightStickX.toInt() or
-                            maxByMagnitude(rightStickX, context.rightStickX).toInt())
-                        .toShort()
-                rightStickY =
-                    (rightStickY.toInt() or
-                            maxByMagnitude(rightStickY, context.rightStickY).toInt())
-                        .toShort()
+                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
+                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
+                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
+                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
+                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
+                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
             }
         }
         if (defaultContext.controllerNumber == controllerNumber) {
             inputMap = inputMap or defaultContext.sentInputMap()
-            leftTrigger =
-                (leftTrigger.toInt() or
-                        maxByMagnitude(leftTrigger, defaultContext.leftTrigger).toInt())
-                    .toByte()
-            rightTrigger =
-                (rightTrigger.toInt() or
-                        maxByMagnitude(rightTrigger, defaultContext.rightTrigger).toInt())
-                    .toByte()
-            leftStickX =
-                (leftStickX.toInt() or
-                        maxByMagnitude(leftStickX, defaultContext.leftStickX).toInt())
-                    .toShort()
-            leftStickY =
-                (leftStickY.toInt() or
-                        maxByMagnitude(leftStickY, defaultContext.leftStickY).toInt())
-                    .toShort()
-            rightStickX =
-                (rightStickX.toInt() or
-                        maxByMagnitude(rightStickX, defaultContext.rightStickX).toInt())
-                    .toShort()
-            rightStickY =
-                (rightStickY.toInt() or
-                        maxByMagnitude(rightStickY, defaultContext.rightStickY).toInt())
-                    .toShort()
+            leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
+            rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
+            leftStickX = maxByMagnitude(leftStickX, defaultContext.leftStickX)
+            leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
+            rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
+            rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
         }
 
         if (originalContext.mouseEmulationActive) {
@@ -3594,7 +3582,8 @@ class ControllerHandler(
         @JvmField var lightsSession: LightsManager.LightsSession? = null
         @JvmField var ledArgbValue = 0
 
-        // These are BatteryState values, not Moonlight values, or BATTERY_STATUS_NOT_PRESENT
+        // These are BatteryState values (from 1), not Moonlight values, or
+        // BATTERY_STATUS_NOT_PRESENT; the status is 0 until the first report
         @JvmField var lastReportedBatteryStatus = 0
         @JvmField var lastReportedBatteryCapacity = 0f
 
@@ -4045,6 +4034,18 @@ class ControllerHandler(
         private const val MAX_GAMEPADS: Short = 16 // Limited by bits in activeGamepadMask
 
         private const val BATTERY_RECHECK_INTERVAL_MS = 120 * 1000
+
+        // The bulk writes of the USB drivers give up after 100 ms
+        private const val USB_WRITE_TIMEOUT_MS = 100L
+
+        // A write that took this long got no answer: one that times out can come back some
+        // milliseconds early, and a pad that answers takes a few
+        private const val USB_WRITE_STUCK_MS = USB_WRITE_TIMEOUT_MS / 2
+
+        // The stop starts no USB pad once its zeroing has taken this long: the time of two writes
+        // that time out, so a pad that does not answer does not take the pads after it with it. The
+        // pad started last still makes its writes: the stop takes this time and that pad's.
+        private const val USB_ZERO_BUDGET_MS = 2 * USB_WRITE_TIMEOUT_MS
 
         // Not a BatteryState status: marks a pad that reported that it has no battery
         private const val BATTERY_STATUS_NOT_PRESENT = -1

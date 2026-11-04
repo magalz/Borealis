@@ -317,16 +317,41 @@ class SettingsPhoneTest : PhoneSettingsTestBase() {
     }
 
     @Test
-    fun `Touch is a list of Trackpad and Direct`() {
+    fun `Touch is a list of Trackpad, Direct and Native, and Native says what it does`() {
         showOpen()
 
         row("Touch").performClick()
         composeRule.waitForIdle()
+        sheetOption("Trackpad").assertIsDisplayed()
+        sheetOption("Direct").assertIsDisplayed()
+        sheetOption("Native").assertIsDisplayed()
+        composeRule
+            .onNodeWithText(
+                "Sends real touch to the PC, as on a touchscreen. " +
+                    "Needs a host with touch support."
+            )
+            .assertIsDisplayed()
         sheetOption("Direct").performClick()
         composeRule.waitForIdle()
 
         assertThat(snapshot[Settings.TOUCHSCREEN_TRACKPAD]).isFalse()
+        assertThat(snapshot[Settings.TOUCHSCREEN_NATIVE]).isFalse()
         composeRule.onNodeWithText("Direct").assertExists()
+    }
+
+    @Test
+    fun `choosing Native in the Touch list turns it on and the row shows Native`() {
+        showOpen()
+
+        row("Touch").performClick()
+        composeRule.waitForIdle()
+        sheetOption("Native").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(snapshot[Settings.TOUCHSCREEN_NATIVE]).isTrue()
+        assertThat(snapshot[Settings.TOUCHSCREEN_TRACKPAD])
+            .isEqualTo(Settings.TOUCHSCREEN_TRACKPAD.default)
+        composeRule.onNodeWithText("Native").assertExists()
     }
 
     @Test

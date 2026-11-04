@@ -141,8 +141,21 @@ internal class ShadowRecordingAudioTrack {
         return sizeInShorts
     }
 
+    /**
+     * The timestamp that the test scripted in [AudioPlatform.timestamp], or the error that
+     * `getTimestamp` answers `false` for when the track has none yet.
+     */
+    @Implementation
+    fun native_get_timestamp(longArray: LongArray?): Int {
+        val stamp = AudioPlatform.timestamp ?: return TIMESTAMP_ERROR
+        checkNotNull(longArray)[0] = stamp.framePosition
+        longArray[1] = stamp.nanoTime
+        return 0
+    }
+
     companion object {
         private const val FLAG_LOW_LATENCY = 0x100
+        private const val TIMESTAMP_ERROR = -1
 
         @Implementation
         @JvmStatic
@@ -168,8 +181,8 @@ internal class ShadowRecordingAudioTrack {
  * What a test scripts and reads of [ShadowRecordingAudioTrack]: the calls it recorded, the answers
  * of the hardware, and what the next track does when it is created, started and released.
  *
- * A fresh scenario starts with a 48 kHz output, a minimum buffer of 1 byte and tracks that are
- * created, started and released without a failure.
+ * A fresh scenario starts with a 48 kHz output, a minimum buffer of 1 byte, tracks that are
+ * created, started and released without a failure and no timestamp.
  */
 internal object AudioPlatform {
     private const val FIRST_SESSION = 4_000
@@ -185,6 +198,12 @@ internal object AudioPlatform {
 
     /** The answer of `getMinBufferSize`, as the native query returns it. */
     @Volatile var minBufferSize = 1
+
+    /** The frame that the track presented at a time, or null while it has no timestamp. */
+    data class Timestamp(val framePosition: Long, val nanoTime: Long)
+
+    /** What `AudioTrack.getTimestamp` reads from the track; null makes it answer `false`. */
+    @Volatile var timestamp: Timestamp? = null
 
     /** The result of the native constructor of the track [track]: 0 is success. */
     @Volatile var onSetup: (track: Int) -> Int = { 0 }
@@ -238,6 +257,7 @@ internal object AudioPlatform {
         tracks = 0
         nativeOutputRate = 48_000
         minBufferSize = 1
+        timestamp = null
         onSetup = { 0 }
         onStart = {}
         onPause = {}

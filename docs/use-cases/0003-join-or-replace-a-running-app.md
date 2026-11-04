@@ -8,8 +8,9 @@
 A user starts an app on a host where another device has already started an
 app. The user chooses to join the running session, to quit it and start the
 app again, or to cancel. Every choice is explicit, and Cancel has the focus.
-The one case with no question is the user's own earlier choice to resume that
-app (A3).
+The one case with no question is the user's choice to resume that app from the
+Library (A3). Try again after a dropped stream is not that choice: it asks like
+a Start.
 
 ## Actors
 
@@ -23,8 +24,8 @@ app (A3).
 - The host reports an app that is running. It was started from another device,
   or by this one earlier (Try again after a dropped stream, for example). The
   stream cannot tell a session of this device from one of another: LuminalShine
-  gives a paired client no session id, so it asks, unless the user chose to
-  resume that app (A3).
+  gives a paired client no session id, so it asks, also after Try again, unless
+  the user chose to resume that app from the Library (A3).
 
 ## Main flow
 
@@ -84,24 +85,31 @@ app (A3).
 
 1. These are the user's choice to resume the app that runs: Resume on the
    actions sheet of the app, a tap on the app that the Library shows running,
-   Continue on the Hosts screen, and Try again on the error popup of the stream
-   ([UC-002](0002-start-a-stream.md), E5). A Start, a pinned shortcut and a TV
-   poster are not, even for the app that runs.
+   and Continue on the Hosts screen. A Start, a pinned shortcut, a TV poster and
+   Try again on the error popup of the stream ([UC-002](0002-start-a-stream.md),
+   E5) are not, even for the app that runs: they ask (Sprint 17b, BORE-4).
 2. When the stream finds that same app running, it joins it without a question.
    The system writes LAUNCH_CONFLICT with the choice "join", outcome success and
    `entry=chosen`. The log says "running app joined on the user's choice" and
    names no app.
 3. Another app found running always asks, whatever the user chose.
-4. The choice of Try again stays in memory, for the one request that the
-   Library handles next, and not in the intent that the stream sends: the
+4. Try again asks. After the stream dropped, the Library starts the app again
+   like a shortcut: the request carries no choice to resume, and when the host
+   reports a running app the Conflict dialog asks "An app is already running"
+   (Join, Quit and relaunch, Cancel). No intent carries the choice either: the
    Library is exported, so any app could otherwise make this client resume with
    no choice of the user ([host contract, section 7.6](../host-contract/luminalshine.md)).
-   A Library that stops before it handled that request drops the choice.
+   Sprint 17b removed the memory that held the choice of Try again
+   (`ResumeChoice`), which nothing read once Try again asked. With nothing
+   running, Try again starts the app as before.
 5. Remaining risk: nothing tells a session of this device from one of another.
    When another device restarted the app that the Library shows running, Resume
    joins it without a question. LuminalShine gives a paired client no session
    id; the host proposal is the discussion
    [NortheBridge/luminalshine#221](https://github.com/NortheBridge/luminalshine/discussions/221).
+   When the host can say whose session runs, Try again may join the session of
+   this device without asking and keep asking for another's: BORE-40, in the
+   Backlog.
 
 ### E1: The host still reports the app running (branches from step 3 or 1)
 
@@ -131,7 +139,7 @@ app (A3).
 - On Cancel: the host is unchanged.
 - In every case LAUNCH_CONFLICT holds the detail `choice=<join|quit|cancel>`,
   the id of the running app and `entry=<asked|chosen>`: `asked` when the user
-  answered the dialog, `chosen` when the user's earlier choice to resume joined
+  answered the dialog, `chosen` when the user's choice to resume joined
   without one (always `choice=join`). It does not hold the app name. The audit
   viewer titles the entry "An app was already running on the PC".
 
@@ -151,17 +159,19 @@ app (A3).
 | UC-003-T10 | Given the running app is not Desktop (a game, an app whose title only contains "Desktop", or an unknown app), when the dialog opens, then the warning says that quitting closes the app and that its unsaved progress is lost. | UI | exists (Sprint 9, UI) |
 | UC-003-T11 | Given the user did not choose to resume and `/serverinfo` shows the app that the start asked for running, when the start reads it, then the dialog asks at once, with no second read of `/serverinfo`, and LAUNCH_CONFLICT records the answer with `entry=asked`. | unit | exists (Sprint 15, unit): `StartSameAppTest`, `LaunchConflictsTest`, `LaunchAuditTest` |
 | UC-003-T12 | Given the user did not choose to resume and the host refuses the launch because the app runs, when the start resolves it, then the dialog asks, and Cancel changes nothing on the host. | unit | exists (Sprint 15, unit): `StartSameAppTest`, `LaunchConflictsTest` |
-| UC-003-T13 | Given the user chose Resume, Continue or Try again for the app that runs, when the start finds it running on either path, then it joins without asking and LAUNCH_CONFLICT records `choice=join` with `entry=chosen`, once also after a restart. | unit | exists (Sprint 15, unit): `StartSameAppTest`, `LaunchConflictsTest`, `LaunchAuditTest` |
+| UC-003-T13 | Given the user chose Resume or Continue, or tapped the app that runs, when the start finds it running on either path, then it joins without asking and LAUNCH_CONFLICT records `choice=join` with `entry=chosen`, once also after a restart. | unit | exists (Sprint 15, unit): `StartSameAppTest`, `LaunchConflictsTest`, `LaunchAuditTest` |
 | UC-003-T14 | Given the user chose Resume for an app and another app runs, when the start finds it, then the dialog asks. | unit | exists (Sprint 15, unit): `StartSameAppTest`, `LaunchConflictsTest` |
-| UC-003-T15 | Given Resume, a tap on the running app, Continue and Try again, then each says that the user chose to resume; given a Start, Quit and start, a shortcut or a TV poster for the running app, then none does, and the choice of Try again is used once and is dropped when the Library is left. | unit | exists (Sprint 15, unit): `AppsViewModelResumeTest`, `HostsViewModelTest`, `ResumeChoiceTest`, `LibraryActivityRequestTest`, `GameStreamLauncherTest` |
+| UC-003-T15 | Given Resume, a tap on the running app and Continue, then each says that the user chose to resume; given a Start, Quit and start, a shortcut, a TV poster or Try again for the running app, then none does. | unit | exists (Sprint 15, unit; Try again changed in Sprint 17b): `AppsViewModelResumeTest`, `HostsViewModelTest`, `LibraryActivityRequestTest`, `GameStreamLauncherTest` |
 | UC-003-T16 | Given the dialog is open, when the user taps outside the panel, presses Back or presses gamepad B, then the answer is Cancel; a tap in the panel answers nothing. | UI | exists (Sprint 15, UI): `ConflictDialogTest`, `StreamDialogBackTest`, `StreamDialogTest` |
 | UC-003-T17 | Given the dialog over the background, when the host blurs it, then no scrim dims the background, it is held still and the panel is the glass tint; on API 28 to 30 the scrim and the solid panel stay. | UI | exists (Sprint 15, UI): `DialogOverBackgroundTest`, `DialogOverBackgroundApi30Test` |
+| UC-003-T18 | Given the stream dropped for an app that the host still reports running, when the user chooses Try again, then the launch request carries no choice to resume and the Conflict dialog asks; given nothing runs, then the app starts as before. | unit | exists (Sprint 17b, unit): `AppsViewModelResumeTest`, `LibraryActivityRequestTest`, `StartSameAppTest` |
 
 Tests marked "exists (Sprint 2, unit)" cover the launch logic. Tests marked
 "exists (Sprint 5, UI)" or "exists (Sprint 9, UI)" are Compose tests of the
 Conflict dialog in `:borealis:stream`; `ConflictDialogTest` holds them.
-UC-003-T11 to T17 are Sprint 15 rows (issue #101 and the dialog of #103). The
-unit tests of the connection run on the `app` rig (`StartSameAppTest`).
+UC-003-T11 to T17 are Sprint 15 rows (issue #101 and the dialog of #103);
+UC-003-T18 is a Sprint 17b row (BORE-4). The unit tests of the connection run
+on the `app` rig (`StartSameAppTest`).
 
 Before Sprint 15, a second device for the same app joined the running session
 with no question. On LuminalShine, the race that makes a same-app `/launch`
@@ -232,11 +242,11 @@ session to `/serverinfo` (a launch id, or "opened by you") is the discussion
   same choices. Since Sprint 15 it is a `StreamDialog`, and the lines of its
   warning are `QuitCopy` of the design system, the one text that the actions
   sheet of the Library, the Quit popup of the stream and this dialog share. The
-  choice to resume travels as `StreamRequest.resumeChosen`, the `ResumeChoice`
-  of the Library for Try again, the launch extra `ResumeChosen` and
-  `StreamConfiguration.resumeChosen`.
+  choice to resume (Resume, a tap on the app that runs, Continue) travels as
+  `StreamRequest.resumeChosen`, the launch extra `ResumeChosen` and
+  `StreamConfiguration.resumeChosen`; Try again sets none of them.
 - Existing tests: `LaunchConflictsTest`, `DifferentAppStartTest`,
   `ConflictDialogTest`, `StreamSessionTest`, and from Sprint 15
   `StartSameAppTest`, `LaunchAuditTest`, `AppsViewModelResumeTest`,
-  `ResumeChoiceTest`, `LibraryActivityRequestTest`, `StreamDialogTest`,
+  `LibraryActivityRequestTest`, `StreamDialogTest`,
   `StreamDialogBackTest`, `DialogOverBackgroundTest`, `QuitCopyTest`.

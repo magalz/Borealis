@@ -30,6 +30,7 @@ internal fun javaValues(c: PreferenceConfiguration): Map<Setting<*>, Any> =
         Settings.GAMEPAD_MOTION_SENSORS to c.gamepadMotionSensors,
         Settings.GAMEPAD_MOTION_FALLBACK to c.gamepadMotionSensorsFallbackToDevice,
         Settings.TOUCHSCREEN_TRACKPAD to c.touchscreenTrackpad,
+        Settings.TOUCHSCREEN_NATIVE to c.touchscreenNative,
         Settings.MOUSE_NAV_BUTTONS to c.mouseNavButtons,
         Settings.ABSOLUTE_MOUSE_MODE to c.absoluteMouseMode,
         Settings.SHOW_ONSCREEN_CONTROLS to c.onscreenController,

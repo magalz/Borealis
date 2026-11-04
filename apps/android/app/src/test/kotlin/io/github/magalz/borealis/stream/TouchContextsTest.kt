@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream
 
 import android.app.Application
+import android.preference.PreferenceManager
 import android.view.View
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
@@ -16,6 +17,7 @@ import com.limelight.binding.input.touch.twoFingers
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
+import io.github.magalz.borealis.settings.catalog.Settings
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -27,8 +29,11 @@ class TouchContextsTest {
     private val connection = NvConnection(context, null, 0, "test", null, null, null)
     private val view = View(context)
 
-    private fun prefs(trackpad: Boolean) =
-        PreferenceConfiguration().apply { touchscreenTrackpad = trackpad }
+    private fun prefs(trackpad: Boolean, nativeTouch: Boolean = false) =
+        PreferenceConfiguration().apply {
+            touchscreenTrackpad = trackpad
+            touchscreenNative = nativeTouch
+        }
 
     @Test
     fun `the trackpad is relative, one context per touch`() {
@@ -103,9 +108,38 @@ class TouchContextsTest {
     }
 
     @Test
-    fun `the settings start with the trackpad or with direct touch`() {
+    fun `without Native the settings start with the trackpad or with direct touch`() {
         assertThat(TouchContexts.initialMode(prefs(true))).isEqualTo(TouchMode.TRACKPAD)
         assertThat(TouchContexts.initialMode(prefs(false))).isEqualTo(TouchMode.DIRECT)
+    }
+
+    @Test
+    fun `the settings start with Native when it is on, whichever way the trackpad switch is`() {
+        assertThat(TouchContexts.initialMode(prefs(true, nativeTouch = true)))
+            .isEqualTo(TouchMode.NATIVE)
+        assertThat(TouchContexts.initialMode(prefs(false, nativeTouch = true)))
+            .isEqualTo(TouchMode.NATIVE)
+    }
+
+    @Test
+    @Config(shadows = [ShadowRecordingBridge::class])
+    @Suppress("DEPRECATION")
+    fun `an install that only stores the old touch key starts as before, and the new key wins`() {
+        val stored = PreferenceManager.getDefaultSharedPreferences(context)
+        stored.edit().clear().commit()
+        fun startMode() =
+            TouchContexts.initialMode(PreferenceConfiguration.readPreferences(context))
+
+        assertThat(startMode()).isEqualTo(TouchMode.TRACKPAD)
+
+        stored.edit().putBoolean(Settings.TOUCHSCREEN_TRACKPAD.key, false).commit()
+        assertThat(startMode()).isEqualTo(TouchMode.DIRECT)
+
+        stored.edit().putBoolean(Settings.TOUCHSCREEN_TRACKPAD.key, true).commit()
+        assertThat(startMode()).isEqualTo(TouchMode.TRACKPAD)
+
+        stored.edit().putBoolean(Settings.TOUCHSCREEN_NATIVE.key, true).commit()
+        assertThat(startMode()).isEqualTo(TouchMode.NATIVE)
     }
 
     @Test
@@ -134,6 +168,8 @@ class TouchContextsTest {
 
         assertThat(TouchContexts.mode(starting, prefs(true))).isEqualTo(TouchMode.TRACKPAD)
         assertThat(TouchContexts.mode(starting, prefs(false))).isEqualTo(TouchMode.DIRECT)
+        assertThat(TouchContexts.mode(starting, prefs(true, nativeTouch = true)))
+            .isEqualTo(TouchMode.NATIVE)
     }
 
     @Test

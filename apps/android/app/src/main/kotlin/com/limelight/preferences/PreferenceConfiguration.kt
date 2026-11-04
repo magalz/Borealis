@@ -56,6 +56,7 @@ class PreferenceConfiguration {
     @JvmField var vibrateFallbackToDevice = false
     @JvmField var vibrateFallbackToDeviceStrength = 0
     @JvmField var touchscreenTrackpad = false
+    @JvmField var touchscreenNative = false
     @JvmField var audioConfiguration: MoonBridge.AudioConfiguration? = null
     @JvmField var framePacing = 0
     @JvmField var absoluteMouseMode = false

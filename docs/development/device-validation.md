@@ -1509,6 +1509,8 @@ Two corrections from the round are applied below:
 - The trackpad drag is a press and hold of about 650 ms without moving, then a move
   (`DRAG_TIME_THRESHOLD` in `RelativeTouchContext.kt`). It is not a double tap and hold.
 
+Superseded in Sprint 17b: see 3.33, step 14 (double tap and hold).
+
 Steps:
 
 1. Update in place (S22, TV).
@@ -1523,7 +1525,6 @@ Steps:
 3. Touch, trackpad mode (S22).
    - This is the default. Expected: tap, two-finger scroll and drag work. A drag is a
      press and hold without moving for about 650 ms, then a move. Check the pointer speed.
-   - Superseded in Sprint 17b: see 3.33, step 14 (double tap and hold).
 4. On-screen controller (S22).
    - Expected: shown in the stream. A, B, X, Y (the sign-extension case: the host sees Y),
      the D-pad in 8 directions, both sticks (move, centre, click), LT and RT, LB and RB,

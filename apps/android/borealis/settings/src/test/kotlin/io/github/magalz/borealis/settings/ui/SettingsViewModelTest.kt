@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 
+@Suppress("LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
     @get:Rule val main = MainDispatcherRule()
@@ -248,16 +249,89 @@ class SettingsViewModelTest {
             .inOrder()
     }
 
+    private fun SettingsViewModel.touchChoice(): String =
+        SettingsItem.TOUCH.selectedChoiceKey(uiState.value.snapshot)
+
     @Test
-    fun `Touch stores the trackpad switch`() = runTest {
+    fun `choosing Direct stores the trackpad switch off, then turns Native off`() = runTest {
         val viewModel = viewModel()
 
         viewModel.onChoiceSelected(SettingsItem.TOUCH, FixedChoices.TOUCH_DIRECT)
         advanceUntilIdle()
 
-        assertThat(repository.writes).containsExactly(Write(Settings.TOUCHSCREEN_TRACKPAD, false))
-        assertThat(SettingsItem.TOUCH.selectedChoiceKey(viewModel.uiState.value.snapshot))
-            .isEqualTo(FixedChoices.TOUCH_DIRECT)
+        assertThat(repository.writes)
+            .containsExactly(
+                Write(Settings.TOUCHSCREEN_TRACKPAD, false),
+                Write(Settings.TOUCHSCREEN_NATIVE, false),
+            )
+            .inOrder()
+        assertThat(viewModel.touchChoice()).isEqualTo(FixedChoices.TOUCH_DIRECT)
+    }
+
+    @Test
+    fun `choosing Trackpad stores the trackpad switch on, then turns Native off`() = runTest {
+        stored(Settings.TOUCHSCREEN_TRACKPAD to false)
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(SettingsItem.TOUCH, FixedChoices.TOUCH_TRACKPAD)
+        advanceUntilIdle()
+
+        assertThat(repository.writes)
+            .containsExactly(
+                Write(Settings.TOUCHSCREEN_TRACKPAD, true),
+                Write(Settings.TOUCHSCREEN_NATIVE, false),
+            )
+            .inOrder()
+        assertThat(viewModel.touchChoice()).isEqualTo(FixedChoices.TOUCH_TRACKPAD)
+    }
+
+    @Test
+    fun `choosing Native turns Native on and leaves the trackpad switch as it was`() = runTest {
+        stored(Settings.TOUCHSCREEN_TRACKPAD to false)
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(SettingsItem.TOUCH, FixedChoices.TOUCH_NATIVE)
+        advanceUntilIdle()
+
+        assertThat(repository.writes).containsExactly(Write(Settings.TOUCHSCREEN_NATIVE, true))
+        assertThat(viewModel.uiState.value.snapshot[Settings.TOUCHSCREEN_TRACKPAD]).isFalse()
+        assertThat(viewModel.touchChoice()).isEqualTo(FixedChoices.TOUCH_NATIVE)
+    }
+
+    @Test
+    fun `Native wins over the trackpad switch in the list, whichever way that switch is`() =
+        runTest {
+            for (trackpad in listOf(true, false)) {
+                stored(
+                    Settings.TOUCHSCREEN_TRACKPAD to trackpad,
+                    Settings.TOUCHSCREEN_NATIVE to true,
+                )
+
+                assertThat(viewModel().touchChoice()).isEqualTo(FixedChoices.TOUCH_NATIVE)
+            }
+        }
+
+    @Test
+    fun `an install that only has the trackpad switch shows Trackpad or Direct as before`() =
+        runTest {
+            assertThat(viewModel().touchChoice()).isEqualTo(FixedChoices.TOUCH_TRACKPAD)
+
+            stored(Settings.TOUCHSCREEN_TRACKPAD to false)
+
+            assertThat(viewModel().touchChoice()).isEqualTo(FixedChoices.TOUCH_DIRECT)
+        }
+
+    @Test
+    fun `leaving Native for Direct shows Direct, with both switches off`() = runTest {
+        stored(Settings.TOUCHSCREEN_TRACKPAD to true, Settings.TOUCHSCREEN_NATIVE to true)
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(SettingsItem.TOUCH, FixedChoices.TOUCH_DIRECT)
+        advanceUntilIdle()
+
+        assertThat(viewModel.touchChoice()).isEqualTo(FixedChoices.TOUCH_DIRECT)
+        assertThat(viewModel.uiState.value.snapshot[Settings.TOUCHSCREEN_NATIVE]).isFalse()
+        assertThat(viewModel.uiState.value.snapshot[Settings.TOUCHSCREEN_TRACKPAD]).isFalse()
     }
 
     @Test

@@ -17,10 +17,17 @@ object TouchContexts {
     private const val REFERENCE_WIDTH = 1280
     private const val REFERENCE_HEIGHT = 720
 
-    /** The mode the user's settings start with. */
+    /**
+     * The mode the user's settings start with: Native while its key is on, else Trackpad or Direct
+     * as the older trackpad key says.
+     */
     @JvmStatic
     fun initialMode(prefs: PreferenceConfiguration): TouchMode =
-        if (prefs.touchscreenTrackpad) TouchMode.TRACKPAD else TouchMode.DIRECT
+        when {
+            prefs.touchscreenNative -> TouchMode.NATIVE
+            prefs.touchscreenTrackpad -> TouchMode.TRACKPAD
+            else -> TouchMode.DIRECT
+        }
 
     /**
      * The contexts for [mode], one per supported touch; null for [TouchMode.OFF], which has none:

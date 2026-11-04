@@ -507,15 +507,16 @@ enum class SettingsItem(
 
 /**
  * The key of the entry that the list of this [SettingsItem.CHOICE] item shows as chosen, for
- * [snapshot]. Touch is a switch in the catalog and a two-entry list here.
+ * [snapshot]. Touch is two switches in the catalog and a three-entry list here: Native wins while
+ * its switch is on, else the trackpad switch says Trackpad or Direct.
  */
 fun SettingsItem.selectedChoiceKey(snapshot: SettingsSnapshot): String =
     when (val stored = setting) {
         Settings.TOUCHSCREEN_TRACKPAD ->
-            if (snapshot[Settings.TOUCHSCREEN_TRACKPAD]) {
-                FixedChoices.TOUCH_TRACKPAD
-            } else {
-                FixedChoices.TOUCH_DIRECT
+            when {
+                snapshot[Settings.TOUCHSCREEN_NATIVE] -> FixedChoices.TOUCH_NATIVE
+                snapshot[Settings.TOUCHSCREEN_TRACKPAD] -> FixedChoices.TOUCH_TRACKPAD
+                else -> FixedChoices.TOUCH_DIRECT
             }
         // A stored value that no choice has is drawn as the default, so the list shows that one.
         is StringSetting -> LookLists.of(stored)?.shownId(snapshot[stored]) ?: snapshot[stored]

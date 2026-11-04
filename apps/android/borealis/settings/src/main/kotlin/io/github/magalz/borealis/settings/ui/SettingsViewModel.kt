@@ -99,11 +99,18 @@ internal constructor(
         if (!isChangeable(item) || key !in offeredKeys(item)) return
         viewModelScope.launch {
             when (val setting = item.setting) {
-                Settings.TOUCHSCREEN_TRACKPAD ->
-                    repository.set(
-                        Settings.TOUCHSCREEN_TRACKPAD,
-                        key == FixedChoices.TOUCH_TRACKPAD,
-                    )
+                Settings.TOUCHSCREEN_TRACKPAD -> {
+                    // Native has a key of its own and leaves the trackpad switch as it was.
+                    // Trackpad and Direct store that switch first and turn Native off after it,
+                    // so that the list never shows a mode in between.
+                    if (key != FixedChoices.TOUCH_NATIVE) {
+                        repository.set(
+                            Settings.TOUCHSCREEN_TRACKPAD,
+                            key == FixedChoices.TOUCH_TRACKPAD,
+                        )
+                    }
+                    repository.set(Settings.TOUCHSCREEN_NATIVE, key == FixedChoices.TOUCH_NATIVE)
+                }
                 Settings.RESOLUTION,
                 Settings.FRAME_RATE -> {
                     repository.set(setting as StringSetting, key)

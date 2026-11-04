@@ -157,6 +157,18 @@ class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
     }
 
     @Test
+    @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
+    fun `the Touch sheet on a TV fits`() {
+        showLargest(FormFactor.Tv, SettingsGroupId.INPUT)
+        composeRule.onNodeWithText("Touch").performClick()
+        composeRule.waitForIdle()
+        // The sheet has its three entries, and the Native one has its whole summary.
+        composeRule.onNodeWithText(NATIVE_SUMMARY).assertExists()
+
+        assertFits()
+    }
+
+    @Test
     @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
     fun `the sections of the settings on a phone fit`() {
         showLargest(FormFactor.Phone, SettingsGroupId.STREAM)
@@ -174,6 +186,8 @@ class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
         fun cases(): List<FitCase> = fitCases()
 
         private const val SYSTEM_SCALE = 1.3f
+        private const val NATIVE_SUMMARY =
+            "Sends real touch to the PC, as on a touchscreen. Needs a host with touch support."
         private const val AUDIO_EFFECTS_SUMMARY =
             "Lets the device's equalizer and sound effects change the stream's sound. " +
                 "Uses a slower audio path, which adds latency."

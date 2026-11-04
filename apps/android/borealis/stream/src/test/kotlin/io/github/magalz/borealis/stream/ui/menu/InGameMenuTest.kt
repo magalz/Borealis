@@ -42,6 +42,7 @@ import io.github.magalz.borealis.stream.keys.KeyChord
 import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.aSessionInfo
@@ -214,7 +215,7 @@ class InGameMenuTest {
     }
 
     @Test
-    @Config(qualifiers = PHONE)
+    @Config(qualifiers = PHONE_LANDSCAPE)
     fun `a phone offers the touch modes and marks the current one`() {
         val fixture = menu(FormFactor.Phone, touchMode = TouchMode.DIRECT)
 

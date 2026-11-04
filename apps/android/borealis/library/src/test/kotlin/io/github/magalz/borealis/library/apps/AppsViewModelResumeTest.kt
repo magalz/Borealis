@@ -83,7 +83,7 @@ class AppsViewModelResumeTest {
     }
 
     @Test
-    fun `a launch request of a shortcut or Try again for the running app is not the choice`() =
+    fun `a launch from a shortcut or Try again for the running app is not the user's choice`() =
         runTest {
             repository.emit(snapshot(desktop, steam, running = desktop))
             subscribe(viewModel.uiState)

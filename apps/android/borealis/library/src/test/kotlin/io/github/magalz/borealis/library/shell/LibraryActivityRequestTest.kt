@@ -142,7 +142,7 @@ class LibraryActivityRequestTest {
     }
 
     @Test
-    fun `a Launch request of a shortcut or Try again for the app that runs is not the choice`() {
+    fun `a Launch request of a shortcut or Try again for a running app is not the user's choice`() {
         apps.emit(deskApps(running = RunningApp(1, "Hades II")))
 
         launch(LibraryLaunchRequest.Launch("desk", 1))

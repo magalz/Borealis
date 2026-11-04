@@ -23,7 +23,8 @@ private const val REFUSED_LINE = "the host takes no touch events, the touch mode
  * A host that does not take touch events (the answer is not supported, as when `native_pen_touch`
  * is off): the first touch that it refuses puts the session in the Direct mode for the rest of the
  * stream, tells the viewer once and goes on through the Direct touch contexts, so the finger that
- * was refused is not lost.
+ * was refused is not lost. Native picked again from the menu is Direct again, with the notice and
+ * without asking the host.
  */
 internal class NativeTouchRefusedTest : MotionTestBase() {
     @get:Rule val log = RecordingLog()
@@ -258,7 +259,7 @@ internal class NativeTouchRefusedTest : MotionTestBase() {
     // ----- For the rest of the stream -----
 
     @Test
-    fun `Native picked again after the refusal asks the host nothing more, and the touch is Direct`() {
+    fun `Native picked again after the refusal leaves the session in Direct and tells the viewer again`() {
         hostWithoutTouch()
         streaming()
         native()
@@ -267,19 +268,60 @@ internal class NativeTouchRefusedTest : MotionTestBase() {
         notices()
         idle(100)
 
-        // The menu has the Native the viewer picked; the host's answer holds for the stream.
+        // The menu shows Direct, whatever the viewer picks; the host's answer holds for the stream.
         native()
-        assertThat(touchMode()).isEqualTo(TouchMode.NATIVE)
+
+        assertThat(touchMode()).isEqualTo(TouchMode.DIRECT)
+        assertThat(notices()).containsExactly(StreamNotice.NativeTouchRefused)
+        assertThat(asked()).isEqualTo(1)
+        assertThat(refusalLines()).hasSize(1)
+    }
+
+    @Test
+    fun `after Native picked again the touch is Direct, and the host is asked nothing more`() {
+        hostWithoutTouch()
+        streaming()
+        native()
+        touch(streamView, down())
+        touch(streamView, up())
+        notices()
+        idle(100)
+        native()
+        notices()
         val before = mouseCalls().size
+
         touch(streamView, down(at = TIME + 1000))
         touch(streamView, up(at = TIME + 1050))
 
         assertThat(asked()).isEqualTo(1)
         assertThat(notices()).isEmpty()
-        assertThat(refusalLines()).hasSize(1)
         assertThat(mouseCalls().drop(before))
             .containsExactly(position(100, 50), press(left))
             .inOrder()
+    }
+
+    @Test
+    fun `Native picked again after another mode is Direct with the notice each time, and Trackpad stays Trackpad`() {
+        hostWithoutTouch()
+        streaming()
+        native()
+        touch(streamView, down())
+        touch(streamView, up())
+        notices()
+
+        rig.session.setTouchMode(TouchMode.TRACKPAD)
+        assertThat(touchMode()).isEqualTo(TouchMode.TRACKPAD)
+        assertThat(notices()).isEmpty()
+
+        native()
+        assertThat(touchMode()).isEqualTo(TouchMode.DIRECT)
+        assertThat(notices()).containsExactly(StreamNotice.NativeTouchRefused)
+
+        native()
+        assertThat(touchMode()).isEqualTo(TouchMode.DIRECT)
+        assertThat(notices()).containsExactly(StreamNotice.NativeTouchRefused)
+        assertThat(asked()).isEqualTo(1)
+        assertThat(refusalLines()).hasSize(1)
     }
 
     private companion object {

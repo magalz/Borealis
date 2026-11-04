@@ -1523,6 +1523,7 @@ Steps:
 3. Touch, trackpad mode (S22).
    - This is the default. Expected: tap, two-finger scroll and drag work. A drag is a
      press and hold without moving for about 650 ms, then a move. Check the pointer speed.
+   - Superseded in Sprint 17b: see 3.33, step 14 (double tap and hold).
 4. On-screen controller (S22).
    - Expected: shown in the stream. A, B, X, Y (the sign-extension case: the host sees Y),
      the D-pad in 8 directions, both sticks (move, centre, click), LT and RT, LB and RB,
@@ -1953,6 +1954,7 @@ are the plan; the total is what the stopwatch shows.
     left click, a long press is a right click, two fingers scroll and a drag moves the pointer. A
     long press followed by a move selects text on the PC instead of dragging (section 18, finding 3;
     3.26, step 2).
+  - Superseded in Sprint 17b: see 3.33, step 14 (double tap and hold).
 - **A11. On-screen controller (S22, 36 to 38).**
   - Settings, On-screen controls, Show on-screen controls on (off by default; the group is on the
     phone only). Play 2 minutes with it: A, B, X, Y, the D-pad, both sticks, the triggers, the

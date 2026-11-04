@@ -2758,6 +2758,16 @@ class Game :
                 val eventX = (event.getX(actionIndex) + xOffset).toInt()
                 val eventY = (event.getY(actionIndex) + yOffset).toInt()
 
+                // BOREALIS: the Native touch mode sends every finger to the host as a touch event,
+                // the third one too, and the code below takes what the host refuses. A tap of
+                // three fingers that opens the keyboard is theirs: a finger that went to the host
+                // does not reach it (stream)
+                if (
+                    touchMode == TouchMode.NATIVE && view != null && trySendTouchEvent(view, event)
+                ) {
+                    return true
+                }
+
                 // Special handling for 3 finger gesture
                 if (
                     event.actionMasked == MotionEvent.ACTION_POINTER_DOWN &&
@@ -2772,16 +2782,6 @@ class Game :
                         touchContextEntry(aTouchContext).cancelTouch()
                     }
 
-                    return true
-                }
-
-                // BOREALIS: the Native touch mode sends the fingers to the host as touch events,
-                // and the contexts below take what the host refuses. The three-finger tap that
-                // opens the keyboard is theirs: a finger that went to the host does not reach it
-                // (stream)
-                if (
-                    touchMode == TouchMode.NATIVE && view != null && trySendTouchEvent(view, event)
-                ) {
                     return true
                 }
 

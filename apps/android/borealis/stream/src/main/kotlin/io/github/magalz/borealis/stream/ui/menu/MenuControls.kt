@@ -156,7 +156,7 @@ private fun touchLabel(mode: TouchMode) =
     when (mode) {
         TouchMode.TRACKPAD -> R.string.stream_menu_touch_trackpad
         TouchMode.DIRECT -> R.string.stream_menu_touch_direct
-        TouchMode.NATIVE -> R.string.stream_menu_off
+        TouchMode.NATIVE -> R.string.stream_menu_touch_native
         TouchMode.OFF -> R.string.stream_menu_off
     }
 

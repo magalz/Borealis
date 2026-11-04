@@ -50,8 +50,10 @@ object TouchContexts {
                     )
                 }
             }
-            TouchMode.DIRECT -> Array(COUNT) { AbsoluteTouchContext(connection, it, streamView) }
-            TouchMode.NATIVE -> null
+            // Native touch has the contexts of direct touch: the stream falls back to them when the
+            // host takes no touch
+            TouchMode.DIRECT,
+            TouchMode.NATIVE -> Array(COUNT) { AbsoluteTouchContext(connection, it, streamView) }
             TouchMode.OFF -> null
         }
 

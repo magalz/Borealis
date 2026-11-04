@@ -466,6 +466,34 @@ class ManagerHostsCharacterizationTest {
     }
 
     @Test
+    @Config(sdk = [ANDROID_13])
+    fun `a start of polling that runs with a restart after a removal leaves one jmDNS thread`() {
+        rig.start()
+        jmdnsAgent().holdUnresolvedService()
+        try {
+            withRetryStall { stall ->
+                rig.binder.startPolling(Updates())
+                stall.awaitReached()
+
+                // Polling starts again while the old thread is slow to let go of the resolver, and
+                // a removal restarts discovery on another thread in the meantime.
+                val start = callUntilItEndsOrWaits { rig.binder.startPolling(Updates()) }
+                rig.binder.removeComputer(saved(UUID_1))
+                stall.release()
+                start.join(WAIT_MS)
+
+                assertThat(start.isAlive).isFalse()
+                assertThat(awaitDiscoveryThreads(1)).hasSize(1)
+                rig.binder.stopPolling()
+                assertThat(awaitDiscoveryThreads(0)).isEmpty()
+            }
+        } finally {
+            // A thread that nothing holds any more would keep the resolver open for the next test.
+            liveThreads(DISCOVERY_THREAD).forEach { it.interrupt() }
+        }
+    }
+
+    @Test
     fun `invalidating a host makes its state unknown and tells nobody`() {
         val host = reachable(UUID_1)
         val other = reachable(UUID_2)

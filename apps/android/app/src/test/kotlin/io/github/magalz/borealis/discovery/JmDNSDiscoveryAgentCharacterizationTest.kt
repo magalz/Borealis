@@ -49,6 +49,9 @@ class JmDNSDiscoveryAgentCharacterizationTest {
     fun stopEveryAgent() {
         agent.stopDiscovery()
         started.forEach { it.stopDiscovery() }
+        // A thread that no agent holds any more is ended too: left alone it keeps its reference to
+        // the resolver, and the next test finds the resolver open.
+        discoveryThreads().forEach { it.interrupt() }
         awaitThreads(0)
     }
 
@@ -378,6 +381,26 @@ class JmDNSDiscoveryAgentCharacterizationTest {
             awaitUntil("the new thread to give up on the old one and to sleep") {
                 discoveryThreads().any { it !== old && it.isSleeping() }
             }
+        }
+    }
+
+    @Test
+    fun `two starts at once leave one discovery thread and no orphan`() {
+        agent.holdUnresolvedService()
+        withRetryStall { stall ->
+            agent.startDiscovery(INTERVAL_MS)
+            stall.awaitReached()
+
+            // One start is under way while the old thread is slow to let go, and another one comes.
+            val first = callUntilItEndsOrWaits { agent.startDiscovery(INTERVAL_MS) }
+            agent.startDiscovery(INTERVAL_MS)
+            stall.release()
+            first.join(WAIT_MS)
+
+            assertThat(first.isAlive).isFalse()
+            assertThat(awaitThreads(1)).hasSize(1)
+            agent.stopDiscovery()
+            assertThat(awaitThreads(0)).isEmpty()
         }
     }
 

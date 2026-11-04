@@ -11,6 +11,7 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import com.limelight.nvstream.mdns.JmDNSDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsComputer
 import io.github.magalz.borealis.testing.ANDROID_13
 import io.github.magalz.borealis.testing.ANDROID_14
@@ -30,7 +31,8 @@ import org.robolectric.annotation.Config
  * the client bound. The platform is Robolectric's `NsdManager`, which confirms a discovery at once.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
- * ones about forgetting a host (Sprint 17b, BORE-6).
+ * ones about forgetting a host and the ones about an unbind or a destroy while the jmDNS thread is
+ * slow to let go of the resolver (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class DiscoveryServiceCharacterizationTest {
@@ -54,6 +56,13 @@ class DiscoveryServiceCharacterizationTest {
             Thread.sleep(POLL_MS)
         }
         return discoveryThreads()
+    }
+
+    /** The jmDNS agent that the service made: it is private to the service, so this reads it. */
+    private fun jmdnsAgent(): JmDNSDiscoveryAgent {
+        val field = DiscoveryService::class.java.getDeclaredField("discoveryAgent")
+        field.isAccessible = true
+        return field.get(service) as JmDNSDiscoveryAgent
     }
 
     private fun foundService(name: String) =
@@ -309,6 +318,39 @@ class DiscoveryServiceCharacterizationTest {
         // Ends the thread when the destroy did not, so that it does not outlive the test.
         service.onUnbind(Intent())
         assertThat(left).isEmpty()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_13])
+    fun `before Android 14 unbinding does not wait for a jmDNS thread that is slow to let go`() {
+        jmdnsAgent().holdUnresolvedService()
+        withRetryStall {
+            binder.startDiscovery(INTERVAL_MS)
+            it.awaitReached()
+
+            val unbind = callUntilItEndsOrWaits { service.onUnbind(Intent()) }
+
+            // The stall holds the thread, so it is alive: the unbind ended without it.
+            assertThat(unbind.state).isEqualTo(Thread.State.TERMINATED)
+            assertThat(discoveryThreads()).hasSize(1)
+        }
+        assertThat(awaitThreads(0)).isEmpty()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_13])
+    fun `before Android 14 destroying the service does not wait for a jmDNS thread that is slow to let go`() {
+        jmdnsAgent().holdUnresolvedService()
+        withRetryStall {
+            binder.startDiscovery(INTERVAL_MS)
+            it.awaitReached()
+
+            val destroy = callUntilItEndsOrWaits { service.onDestroy() }
+
+            assertThat(destroy.state).isEqualTo(Thread.State.TERMINATED)
+            assertThat(discoveryThreads()).hasSize(1)
+        }
+        assertThat(awaitThreads(0)).isEmpty()
     }
 
     private companion object {

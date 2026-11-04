@@ -32,8 +32,8 @@ import org.robolectric.RobolectricTestRunner
  * packet leaves the test.
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
- * about forgetting a computer and the ones about a restart that waits for the old thread to let go
- * of the resolver (Sprint 17b, BORE-6).
+ * about forgetting a computer and the ones about a stop or a restart while the old thread is slow
+ * to let go of the resolver (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class JmDNSDiscoveryAgentCharacterizationTest {
@@ -49,6 +49,9 @@ class JmDNSDiscoveryAgentCharacterizationTest {
     fun stopEveryAgent() {
         agent.stopDiscovery()
         started.forEach { it.stopDiscovery() }
+        // A thread that no agent holds any more is ended too: left alone it keeps its reference to
+        // the resolver, and the next test finds the resolver open.
+        discoveryThreads().forEach { it.interrupt() }
         awaitThreads(0)
     }
 
@@ -67,9 +70,7 @@ class JmDNSDiscoveryAgentCharacterizationTest {
     /** Waits until each thread is in its sleep, which is after it referenced the resolver. */
     private fun awaitSleeping(threads: List<Thread>) {
         val deadline = System.nanoTime() + WAIT_NANOS
-        while (
-            threads.any { it.state != Thread.State.TIMED_WAITING } && System.nanoTime() < deadline
-        ) {
+        while (threads.any { !it.isSleeping() } && System.nanoTime() < deadline) {
             Thread.sleep(POLL_MS)
         }
         assertThat(threads.map { it.state }).doesNotContain(Thread.State.NEW)
@@ -117,48 +118,9 @@ class JmDNSDiscoveryAgentCharacterizationTest {
         assertWithMessage("never: $what").that(condition()).isTrue()
     }
 
-    private fun Thread.isSleeping() = state == Thread.State.TIMED_WAITING
-
-    /** Whether the thread is parked inside `stopDiscovery`, as a wait for the old thread is. */
-    private fun Thread.waitsInStop() =
-        (state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING) &&
-            stackTrace.any { it.methodName == "stopDiscovery" }
-
-    /**
-     * Holds the first thread that logs a retry of a service, with its reference to the resolver
-     * taken, until [release]: a thread that is slow to let go after it is interrupted. The
-     * interrupt that comes while it is held is kept for the thread to see when it goes on, as the
-     * discovery thread does with the one that stops it.
-     */
-    private class RetryStall : Handler() {
-        private val taken = AtomicBoolean(false)
-        private val reached = CountDownLatch(1)
-        private val released = CountDownLatch(1)
-
-        override fun publish(record: LogRecord) {
-            if (record.message != RETRY_LINE || !taken.compareAndSet(false, true)) return
-            reached.countDown()
-            var interrupted = false
-            while (released.count > 0) {
-                try {
-                    released.await()
-                } catch (e: InterruptedException) {
-                    interrupted = true
-                }
-            }
-            if (interrupted) Thread.currentThread().interrupt()
-        }
-
-        fun awaitReached() {
-            assertThat(reached.await(WAIT_NANOS, TimeUnit.NANOSECONDS)).isTrue()
-        }
-
-        fun release() = released.countDown()
-
-        override fun flush() = Unit
-
-        override fun close() = release()
-    }
+    /** Whether the thread is in the sleep of its loop, and not in a wait for the old thread. */
+    private fun Thread.isSleeping() =
+        state == Thread.State.TIMED_WAITING && stackTrace.any { it.methodName.startsWith("sleep") }
 
     /** What a resolved service holds. */
     private class MdnsInfo(
@@ -340,23 +302,17 @@ class JmDNSDiscoveryAgentCharacterizationTest {
 
     @Test
     fun `a restart reopens the resolver, however slowly the old thread lets go`() {
-        agent.serviceAdded(FakeServiceEvent(FakeJmDns(), serviceInfo("Den PC", 47989)))
-        val stall = RetryStall()
-        val logger = Logger.getLogger(LIME_LOG)
-        logger.addHandler(stall)
-        try {
+        agent.holdUnresolvedService()
+        withRetryStall { stall ->
             agent.startDiscovery(INTERVAL_MS)
             stall.awaitReached()
             val old = discoveryThreads().single()
             val before = JmmDNS.Factory.getInstance()
 
-            val restart = thread { agent.startDiscovery(INTERVAL_MS) }
-            // The old thread lets go when the stall ends. The restart either waits for that, or it
-            // goes on and the new thread takes its reference with the old one still held: the
-            // second is the case that leaves the resolver open and its cache unreported.
-            awaitUntil("a restart that waits for the old thread, or a new thread that runs") {
-                restart.waitsInStop() || discoveryThreads().any { it !== old && it.isSleeping() }
-            }
+            val restart = callUntilItEndsOrWaits { agent.startDiscovery(INTERVAL_MS) }
+            // The old thread lets go when the stall ends. The new thread takes its reference after
+            // that, and not before: a reference taken while the old one is held leaves the
+            // resolver open and its cache unreported.
             stall.release()
             restart.join(WAIT_MS)
 
@@ -365,29 +321,86 @@ class JmDNSDiscoveryAgentCharacterizationTest {
             assertThat(current).isNotSameInstanceAs(old)
             awaitSleeping(listOf(current))
             assertThat(JmmDNS.Factory.getInstance()).isNotSameInstanceAs(before)
-        } finally {
-            stall.release()
-            logger.removeHandler(stall)
         }
     }
 
     @Test
-    fun `stopping discovery gives up on a thread that does not let go`() {
-        agent.serviceAdded(FakeServiceEvent(FakeJmDns(), serviceInfo("Den PC", 47989)))
-        val stall = RetryStall()
-        val logger = Logger.getLogger(LIME_LOG)
-        logger.addHandler(stall)
-        try {
+    fun `a rebind right after an unbind reopens the resolver, however slowly the old thread lets go`() {
+        agent.holdUnresolvedService()
+        withRetryStall { stall ->
+            agent.startDiscovery(INTERVAL_MS)
+            stall.awaitReached()
+            val old = discoveryThreads().single()
+            val before = JmmDNS.Factory.getInstance()
+
+            // Neither call waits for the old thread: the stall holds it until they both returned.
+            agent.stopDiscovery()
+            agent.startDiscovery(INTERVAL_MS)
+            // The new thread either waits for the old one to let go, or it took its reference.
+            awaitUntil("the new thread to wait for the old one, or to sleep") {
+                discoveryThreads().any { it !== old && it.state == Thread.State.TIMED_WAITING }
+            }
+            stall.release()
+
+            val current = awaitThreads(1).single()
+            assertThat(current).isNotSameInstanceAs(old)
+            awaitSleeping(listOf(current))
+            assertWithMessage("the resolver was closed and opened again")
+                .that(JmmDNS.Factory.getInstance())
+                .isNotSameInstanceAs(before)
+        }
+    }
+
+    @Test
+    fun `stopping discovery does not wait for a thread that is slow to let go`() {
+        agent.holdUnresolvedService()
+        withRetryStall {
+            agent.startDiscovery(INTERVAL_MS)
+            it.awaitReached()
+            val old = discoveryThreads().single()
+
+            val stop = callUntilItEndsOrWaits { agent.stopDiscovery() }
+
+            // The stall holds the old thread, so it is alive: the stop ended without it.
+            assertThat(stop.state).isEqualTo(Thread.State.TERMINATED)
+            assertThat(old.isAlive).isTrue()
+        }
+    }
+
+    @Test
+    fun `a restart gives up on a thread that does not let go`() {
+        agent.holdUnresolvedService()
+        withRetryStall {
+            agent.startDiscovery(INTERVAL_MS)
+            it.awaitReached()
+            val old = discoveryThreads().single()
+
+            agent.startDiscovery(INTERVAL_MS)
+
+            // The stall is never released: the new thread goes on without the old one's release.
+            awaitUntil("the new thread to give up on the old one and to sleep") {
+                discoveryThreads().any { it !== old && it.isSleeping() }
+            }
+        }
+    }
+
+    @Test
+    fun `two starts at once leave one discovery thread and no orphan`() {
+        agent.holdUnresolvedService()
+        withRetryStall { stall ->
             agent.startDiscovery(INTERVAL_MS)
             stall.awaitReached()
 
-            val stop = thread { agent.stopDiscovery() }
-            stop.join(WAIT_MS)
-
-            assertThat(stop.isAlive).isFalse()
-        } finally {
+            // One start is under way while the old thread is slow to let go, and another one comes.
+            val first = callUntilItEndsOrWaits { agent.startDiscovery(INTERVAL_MS) }
+            agent.startDiscovery(INTERVAL_MS)
             stall.release()
-            logger.removeHandler(stall)
+            first.join(WAIT_MS)
+
+            assertThat(first.isAlive).isFalse()
+            assertThat(awaitThreads(1)).hasSize(1)
+            agent.stopDiscovery()
+            assertThat(awaitThreads(0)).isEmpty()
         }
     }
 
@@ -435,12 +448,93 @@ class JmDNSDiscoveryAgentCharacterizationTest {
 
     private companion object {
         const val THREAD_NAME = "mDNS Discovery Thread"
-        const val LIME_LOG = "com.limelight.LimeLog"
-        const val RETRY_LINE = "mDNS: Retrying service resolution for machine: Den PC"
         const val INTERVAL_MS = 60_000
         const val POLL_MS = 10L
         const val WAIT_MS = 5_000L
         const val WAIT_NANOS = 5_000_000_000L
         const val SETTLE_MS = 200L
     }
+}
+
+/** The logger of `LimeLog`, which the discovery thread writes to. */
+private const val LIME_LOG = "com.limelight.LimeLog"
+
+/** What the discovery thread logs when it retries "Den PC", a service that did not resolve yet. */
+private const val RETRY_LINE = "mDNS: Retrying service resolution for machine: Den PC"
+
+private const val STALL_WAIT_SECONDS = 5L
+private const val CALL_POLL_MS = 10L
+
+/** How many samples in a row show a call waiting before it counts as waiting. */
+private const val WAITING_SAMPLES = 3
+
+/** Makes the agent hold "Den PC" as a service that did not resolve yet: its thread retries it. */
+internal fun JmDNSDiscoveryAgent.holdUnresolvedService() =
+    serviceAdded(FakeServiceEvent(FakeJmDns(), serviceInfo("Den PC", 47989)))
+
+/**
+ * Holds the first discovery thread that logs a retry of a service, with its reference to the
+ * resolver taken, until [release]: a thread that is slow to let go after it is interrupted. The
+ * interrupt that comes while it is held is kept for the thread to see when it goes on, as the
+ * discovery thread does with the one that stops it.
+ */
+internal class RetryStall : Handler() {
+    private val taken = AtomicBoolean(false)
+    private val reached = CountDownLatch(1)
+    private val released = CountDownLatch(1)
+
+    override fun publish(record: LogRecord) {
+        if (record.message != RETRY_LINE || !taken.compareAndSet(false, true)) return
+        reached.countDown()
+        var interrupted = false
+        while (released.count > 0) {
+            try {
+                released.await()
+            } catch (e: InterruptedException) {
+                interrupted = true
+            }
+        }
+        if (interrupted) Thread.currentThread().interrupt()
+    }
+
+    fun awaitReached() {
+        assertThat(reached.await(STALL_WAIT_SECONDS, TimeUnit.SECONDS)).isTrue()
+    }
+
+    fun release() = released.countDown()
+
+    override fun flush() = Unit
+
+    override fun close() = release()
+}
+
+/** Runs [block] with a [RetryStall] on the log, and lets the thread go when it ends. */
+internal fun <T> withRetryStall(block: (RetryStall) -> T): T {
+    val stall = RetryStall()
+    val logger = Logger.getLogger(LIME_LOG)
+    logger.addHandler(stall)
+    try {
+        return block(stall)
+    } finally {
+        stall.release()
+        logger.removeHandler(stall)
+    }
+}
+
+/**
+ * Runs [call] on a thread of its own, as the main thread or an IO thread of the app would, and
+ * waits until that thread has ended or waits (parked, or blocked on a lock). A call that waits for
+ * another thread is seen waiting, so a test does not depend on how long the wait lasts. A wait that
+ * a call has for a moment, on a lock or a class that it loads, is not taken for the wait for
+ * another thread: the thread has to be seen waiting a few samples in a row. Returns the thread.
+ */
+internal fun callUntilItEndsOrWaits(call: () -> Unit): Thread {
+    val caller = thread { call() }
+    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(STALL_WAIT_SECONDS)
+    var waiting = 0
+    while (caller.isAlive && waiting < WAITING_SAMPLES && System.nanoTime() < deadline) {
+        Thread.sleep(CALL_POLL_MS)
+        waiting = if (caller.state == Thread.State.RUNNABLE) 0 else waiting + 1
+    }
+    return caller
 }

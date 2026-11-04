@@ -46,8 +46,11 @@ class DiscoveryService : Service() {
                     )
                     .map { it.address }
             for (computer in discoveryAgent.getComputerSet()) {
-                val discovered = listOfNotNull(computer.localAddress, computer.ipv6Address)
-                if (discovered.any { it.hostAddress in addresses }) {
+                val discovered =
+                    listOfNotNull(computer.localAddress, computer.ipv6Address).mapNotNull {
+                        it.hostAddress
+                    }
+                if (discovered.any { it in addresses }) {
                     discoveryAgent.forget(computer)
                 }
             }
@@ -87,7 +90,8 @@ class DiscoveryService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onUnbind(intent: Intent?): Boolean {
-        // Stop any discovery session
+        // Stop any discovery session. This runs on the main thread: stopping does not wait for the
+        // discovery thread to end.
         discoveryAgent.stopDiscovery()
 
         // Unbind the listener

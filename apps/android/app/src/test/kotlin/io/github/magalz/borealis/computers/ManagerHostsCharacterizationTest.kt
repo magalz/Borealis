@@ -1,16 +1,23 @@
 package io.github.magalz.borealis.computers
 
+import android.content.Intent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.computers.ComputerManagerService
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager
+import com.limelight.nvstream.mdns.JmDNSDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsComputer
 import com.limelight.nvstream.mdns.MdnsDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsDiscoveryListener
 import io.github.magalz.borealis.crypto.TestIdentities
+import io.github.magalz.borealis.discovery.NoMdnsNetwork
+import io.github.magalz.borealis.discovery.callUntilItEndsOrWaits
+import io.github.magalz.borealis.discovery.holdUnresolvedService
+import io.github.magalz.borealis.discovery.withRetryStall
 import io.github.magalz.borealis.nvhttp.HostReply
+import io.github.magalz.borealis.testing.ANDROID_13
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
@@ -21,6 +28,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * The hosts that the inherited `ComputerManagerService` keeps: how one is added (it is polled
@@ -32,12 +40,15 @@ import org.robolectric.RobolectricTestRunner
  * about a host that is handed over as online and does not answer (S12-16), which pins the fixed
  * behaviour: a host is added when a poll answered, not because it was handed over as online, and
  * the ones about a removed host that mDNS announces again, which restart discovery while polling,
- * and the one about a removal that races the end of polling (Sprint 17b, BORE-6).
+ * the one about a removal that races the end of polling, and the ones about an unbind and a start
+ * of polling while the jmDNS thread of the discovery service is slow to let go of the resolver
+ * (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerHostsCharacterizationTest {
-    @get:Rule(order = 0) val log = LimeLogCapture()
-    @get:Rule(order = 1) val rig = ManagerRule()
+    @get:Rule(order = 0) val network = NoMdnsNetwork()
+    @get:Rule(order = 1) val log = LimeLogCapture()
+    @get:Rule(order = 2) val rig = ManagerRule()
 
     private fun reachable(uuid: String, name: String = "DEN-PC") = rig.reachable(uuid, name)
 
@@ -418,6 +429,71 @@ class ManagerHostsCharacterizationTest {
     }
 
     @Test
+    @Config(sdk = [ANDROID_13])
+    fun `ending polling does not wait for a jmDNS thread that is slow to let go`() {
+        rig.start()
+        jmdnsAgent().holdUnresolvedService()
+        withRetryStall {
+            rig.binder.startPolling(Updates())
+            it.awaitReached()
+
+            val unbind = callUntilItEndsOrWaits { rig.service.onUnbind(Intent()) }
+
+            // The stall holds the thread, so it is alive: the unbind ended without it.
+            assertThat(unbind.state).isEqualTo(Thread.State.TERMINATED)
+            assertThat(liveThreads(DISCOVERY_THREAD)).hasSize(1)
+        }
+        assertThat(awaitDiscoveryThreads(0)).isEmpty()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_13])
+    fun `ending polling does not wait for a removal that restarts discovery`() {
+        rig.start()
+        jmdnsAgent().holdUnresolvedService()
+        withRetryStall {
+            rig.binder.startPolling(Updates())
+            it.awaitReached()
+
+            // The removal restarts discovery under the lock that the unbind takes.
+            val removal = callUntilItEndsOrWaits { rig.binder.removeComputer(saved(UUID_1)) }
+            val unbind = callUntilItEndsOrWaits { rig.service.onUnbind(Intent()) }
+
+            assertThat(unbind.state).isEqualTo(Thread.State.TERMINATED)
+            assertThat(removal.state).isEqualTo(Thread.State.TERMINATED)
+        }
+        assertThat(awaitDiscoveryThreads(0)).isEmpty()
+    }
+
+    @Test
+    @Config(sdk = [ANDROID_13])
+    fun `a start of polling that runs with a restart after a removal leaves one jmDNS thread`() {
+        rig.start()
+        jmdnsAgent().holdUnresolvedService()
+        try {
+            withRetryStall { stall ->
+                rig.binder.startPolling(Updates())
+                stall.awaitReached()
+
+                // Polling starts again while the old thread is slow to let go of the resolver, and
+                // a removal restarts discovery on another thread in the meantime.
+                val start = callUntilItEndsOrWaits { rig.binder.startPolling(Updates()) }
+                rig.binder.removeComputer(saved(UUID_1))
+                stall.release()
+                start.join(WAIT_MS)
+
+                assertThat(start.isAlive).isFalse()
+                assertThat(awaitDiscoveryThreads(1)).hasSize(1)
+                rig.binder.stopPolling()
+                assertThat(awaitDiscoveryThreads(0)).isEmpty()
+            }
+        } finally {
+            // A thread that nothing holds any more would keep the resolver open for the next test.
+            liveThreads(DISCOVERY_THREAD).forEach { it.interrupt() }
+        }
+    }
+
+    @Test
     fun `invalidating a host makes its state unknown and tells nobody`() {
         val host = reachable(UUID_1)
         val other = reachable(UUID_2)
@@ -502,16 +578,39 @@ class ManagerHostsCharacterizationTest {
     private fun recordDiscovery(
         agent: RecordingDiscoveryAgent = RecordingDiscoveryAgent()
     ): RecordingDiscoveryAgent {
+        val discovery = discoveryService()
+        val agentField = DiscoveryService::class.java.getDeclaredField("discoveryAgent")
+        agentField.isAccessible = true
+        (agentField.get(discovery) as MdnsDiscoveryAgent).close()
+        return agent.also { agentField.set(discovery, it) }
+    }
+
+    /**
+     * The discovery service that the manager bound: the manager holds its binder, which holds it.
+     */
+    private fun discoveryService(): DiscoveryService {
         val managerField = ComputerManagerService::class.java.getDeclaredField("discoveryBinder")
         managerField.isAccessible = true
         val binder = checkNotNull(managerField.get(rig.service))
         val outerField = binder.javaClass.getDeclaredField("this\$0")
         outerField.isAccessible = true
-        val discovery = outerField.get(binder) as DiscoveryService
+        return outerField.get(binder) as DiscoveryService
+    }
+
+    /** The jmDNS agent of the discovery service, which is the agent before Android 14. */
+    private fun jmdnsAgent(): JmDNSDiscoveryAgent {
         val agentField = DiscoveryService::class.java.getDeclaredField("discoveryAgent")
         agentField.isAccessible = true
-        (agentField.get(discovery) as MdnsDiscoveryAgent).close()
-        return agent.also { agentField.set(discovery, it) }
+        return agentField.get(discoveryService()) as JmDNSDiscoveryAgent
+    }
+
+    /** Waits until [count] discovery threads are alive, or for as long as a test waits. */
+    private fun awaitDiscoveryThreads(count: Int): List<Thread> {
+        val deadline = System.nanoTime() + DISCOVERY_WAIT_NANOS
+        while (liveThreads(DISCOVERY_THREAD).size != count && System.nanoTime() < deadline) {
+            Thread.sleep(DISCOVERY_POLL_MS)
+        }
+        return liveThreads(DISCOVERY_THREAD)
     }
 
     /**
@@ -542,5 +641,8 @@ class ManagerHostsCharacterizationTest {
         const val UUID_1 = "00000000-0000-0000-0000-0000000000a1"
         const val UUID_2 = "00000000-0000-0000-0000-0000000000a2"
         const val SETTLE_MS = 500L
+        const val DISCOVERY_THREAD = "mDNS Discovery Thread"
+        const val DISCOVERY_POLL_MS = 10L
+        const val DISCOVERY_WAIT_NANOS = 5_000_000_000L
     }
 }

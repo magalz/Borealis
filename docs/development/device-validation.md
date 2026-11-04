@@ -6509,9 +6509,9 @@ ran, `recorded` for a read-only step, and `known` where a backlog card covers th
 | 4 Header after a Disconnect | S22 | pass | "Desktop running" from the first Library frame, about 1.8 s after the Disconnect, to 25 s. Never "Nothing running". |
 | 5 Add host texts | S22 | partly | Empty, already added, and already added and paired: pass. The misspelled name and the auto-correct: findings 2 and 3. Paired, forgotten and added again: not run (finding 1, BORE-50). A host never paired: not reachable. The keyboard was recorded. |
 | 6 Forget, stay on Hosts | S22 | partly | Pass for an unpaired host: it came back as "Found on this network" with no restart, and discovery stopped on leaving Hosts. A paired host: not run (finding 1). |
-| 7 Back from Apps | S22 | pass (owner) | The screen fades with no shrink, with the swipe and with Reduce motion on. A cancelled swipe shows blank frames, which the owner accepted. |
+| 7 Back from Apps | S22 | pass (owner) | The screen fades with the swipe and does not shrink; with Reduce motion on it is one cut, with no fade. A cancelled swipe shows blank frames, which the owner accepted. |
 | 8 Reduce motion indicators | S22 | pass (owner) | Both indicators stand still with Reduce motion on and move with it off. The owner checked what TalkBack reads (block C.1). |
-| 9 Apps screen at 2.6 | S22 | pass (owner) | At 1.04 (system font 0.8, Borealis text 130 %) the title and "Desktop running" fit. The owner checked 2.6 (block A.1). |
+| 9 Apps screen at 2.6 | S22 | pass (owner) | At 1.04 (system font 0.8, Borealis text 130 %) the title and "Nothing running" fit. The owner checked 2.6 (block A.1). |
 | 10 Audio effects summary | S22 | pass (owner) | The summary is exact and fits at 1.04. The owner checked 2.6 (block A.2). |
 | 11 Sample vibration | S22 | pass | A 60 ms pulse when the switch turns on, when the fallback turns on, and when the slider is released. Off gives no pulse. |
 | 12 Stream keyboard in split screen with a pad | S22 | pass (owner) | Block D.1. |
@@ -6525,7 +6525,7 @@ ran, `recorded` for a read-only step, and `known` where a backlog card covers th
 | 20 On-screen controller, rotation, picture-in-picture | S22 | pass (owner) | Block F.5. |
 | 21 Chord key with a keyboard | S22, TV | pass (owner) | Block E.3. |
 | 22 Menu hint with a keyboard and a mouse | S22 | pass (owner) | Block E.2. |
-| 23 Audio delay line with a Bluetooth output | S22 | pass (owner) for "(Bluetooth)"; value: BORE-52 | "(Bluetooth)" showed when the owner connected the Bluetooth output (block G.1). The measured value read "0 ms" with the PC silent, so the three stages were not seen (finding 4). |
+| 23 Audio delay line with a Bluetooth output | S22 | pass (owner) for "(Bluetooth)"; value: BORE-52 | "(Bluetooth)" showed when the owner connected a Bluetooth output on purpose during the hands-free part, and the owner's block G passed. The hands-free reads, with the PC silent, showed "0 ms" (finding 4). |
 | 24 TV Apps and Bitrate at 2.6 | TV | pass (owner) | Block B.1. At 1.3 the Bitrate value "Automatic (10 Mbps)" wraps to two lines, and is not cut. |
 | 25 TV Audio effects summary at 2.6 | TV | pass (owner) | Block B.2. |
 | 26 TV focus after the host Options sheet | TV | partly | Back, Details then Close, and Forget then Cancel return the focus to the card. Wake: not run (it needs an offline host). The scroll-away check: not run (it needs a third host or larger text). |
@@ -6542,9 +6542,9 @@ ran, `recorded` for a read-only step, and `known` where a backlog card covers th
 | 37 TalkBack on the menu segments | owner | pass (owner) | Block C.3. |
 | 38 TalkBack on the Library | owner | recorded | Block C.4. The owner's TalkBack reads the app name, the actions and the state (read R6 of section 23 above). |
 | 39 Sample vibration strength | owner | recorded | Block I.1. The owner reported every block as passed and asked for no change: the strength stays (100 % is amplitude 127). |
-| 40 Ultimate 2 Home button held | owner | recorded | Block D. The owner reported the block as passed; whether the PC got Win+Tab was not recorded. |
+| 40 Ultimate 2 Home button held | owner | recorded | Block D.3. The owner reported the block as passed; whether the PC got Win+Tab was not recorded. |
 | 41 Alt+Tab with a keyboard | S22 | recorded, BORE-47 | The first Alt+Tab opened the PC's Alt menu, and the second one worked (read R3 above). |
-| 42 End | S22, TV | partly | The TV is asleep (`KEYCODE_SLEEP`), and every stream is quit. The S22 was not sent home (Settings was in front), and it is now on wireless adb only. See "Left on the devices". |
+| 42 End | S22, TV | partly | At the end of the hands-free part the TV was asleep (`KEYCODE_SLEEP`) and every stream was quit; the S22 was not sent home (Settings was in front). The owner's blocks came after; see "Left on the devices". |
 
 #### Findings and their cards
 
@@ -6594,11 +6594,12 @@ brings touch back, and whether the keyboard still reaches the PC.
 #### Notes on the round
 
 - During the hands-free checks, other apps came to the front on the S22, and touches that the automation did not
-  send landed on the phone. The automation checked before each tap that Borealis was in front. One dump and one
-  menu capture showed another app's screen; both were deleted at once.
+  send landed on the phone. The automation checked before each tap that Borealis was in front. One dump showed
+  another app's screen, and one menu capture kept a readable piece of the PC screen; both were deleted at once.
 - One touch reached the PC in Native mode: LuminalShine logged the creation of a virtual touch input device. It
   was not a controlled test. Step 17 rests on the owner's block F.3.
-- During the S22 checks, a Bluetooth output connected and left on its own. The automation did not touch Bluetooth.
+- During the S22 checks, the owner connected a Bluetooth output on purpose to test the overlay. The automation did
+  not touch Bluetooth.
 
 #### Not run
 
@@ -6609,6 +6610,9 @@ brings touch back, and whether the keyboard still reaches the PC.
 - The JmDNS path of BORE-6 below Android 14: no device of the round runs below 14. Unit tests cover it.
 
 #### Left on the devices
+
+At the end of the hands-free part, before the owner's blocks (which used both devices; for block E the main session
+cleared only the `menu_hint_shown` key on both, so the hint shows again):
 
 - Borealis settings: the S22 preferences hold `borealis_touchscreen_native=false`, which is the default in effect.
   The TV's hidden-apps file holds an empty set for the Desktop host, where it held an empty map. A Desktop launch

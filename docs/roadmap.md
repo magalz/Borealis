@@ -1929,7 +1929,7 @@ Backlog column, and none is scheduled.
   to the next card (section 23, finding 5).
 - **BORE-52, found in the round: the audio delay reads "0 ms" with a silent PC.** The three stages of the Audio delay
   line need sound on the PC (section 23, finding 4).
-- **BORE-53, found in the round, low: some notices stay on screen longer than needed** (section 23, finding 6).
+- **BORE-53, found in the round, low: the stream's notices leave the screen too soon** (section 23, finding 6).
 
 ### Sprint 18: refactor of the converted code
 

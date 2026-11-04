@@ -2753,14 +2753,14 @@ Set-up, and put back at the end:
       first;
     - a long two-finger hold gives no click;
     - a first finger resting still, then a quick tap of a second finger: a right click in both orders;
-    - move the pointer, keep the first finger down, and tap a second finger: a right click, even with 1 or
-      2 px of jitter (a pre-existing 5-unit scroll may come with it);
+    - move the pointer, keep the first finger down, and tap a second finger that lifts first: a right click,
+      even with 1 or 2 px of jitter (a pre-existing 5-unit scroll may come with it);
     - the second finger slides 20 px or more while the first stays and lifts first: no click;
     - a first finger scrolls 20 px or more while a second finger taps: no click.
 
     Known, for BORE-44 (backlog): a new finger at index 0 after the first lifted restarts the shared time, and
     a second-finger tap during a double-tap drag still right-clicks unless the dragging finger moved 20 px or
-    more.
+    more. After a pointer move, the order in which the first finger lifts first gives no click.
 16. S22, the Touch row in Settings and the Touch sheet (BORE-29). Expected: Trackpad, Direct, Native and Off
     are offered, and Native has its purpose line, "Sends real touch to the PC, as on a touchscreen. Needs a
     host with touch support." The sheet and its four segments fit at the largest text. Start a stream in
@@ -2830,7 +2830,10 @@ Set-up, and put back at the end:
 36. Owner, on the PC, with the S22 in Native (BORE-29, BORE-30): set `native_pen_touch` to off for this step, and on
     again after it (step 42). Start a stream in Native. Expected: the notice "This PC does not take touch; using
     Direct", once, and the Touch row of the menu shows Direct. Also: a finger held when the menu opens is released
-    on the PC, and choosing Native again after a refusal shows Direct and the notice again.
+    on the PC, and choosing Native again after a refusal shows Direct and the notice again, once the first notice
+    has gone. The notice stays for about 4 s; a re-pick while it is still up shows no second card, by design of
+    `StreamSession.notify`, which drops a notice equal to the one showing. Record whether the refusal state
+    survives a recreated Game screen (ledger note, one more ask).
 37. Owner, TalkBack on the S22 menu segments (BORE-15). Each segment is read with its selected state, and the active
     one is marked. The phone tree cannot be dumped in landscape, so the owner checks it.
 38. Owner, TalkBack on the Library: the app cards read the app name, the double-tap and tap actions and the state,

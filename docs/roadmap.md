@@ -1548,7 +1548,7 @@ results are in
   ships it as its MultiTouch mode, and LuminalShine accepts native pen and touch by default
   (`native_pen_touch`). Direct mode sends mouse input today; the parked path would send the touch to
   the host as a touch event.
-  Sprint 17b: done in the phase (BORE-29, BORE-30): a new touch mode, Native, sends real touch to the host, and Direct is unchanged. When the host refuses touch, the notice "This PC does not take touch; using Direct" shows and the mode goes to Direct. The phase also releases a finger held when the menu opens, and a choice of Native again after a refusal shows Direct and the notice again. The round checks it (3.33, steps 16 to 19 and 36).
+  Sprint 17b: done in the phase (BORE-29, BORE-30): a new touch mode, Native, sends real touch to the host, and Direct is unchanged. When the host refuses touch, the notice "This PC does not take touch; using Direct" shows and the mode goes to Direct. The phase also releases a finger held when the menu opens, and a choice of Native again after a refusal shows Direct and the notice again once the first notice has gone (a re-pick while it is still up shows no second card, by design of `StreamSession.notify`). The round checks it (3.33, steps 16 to 19 and 36).
 - **Alt+Tab.** With Alt held, the first Tab is lost, and Windows opens its Alt menu. The main build
   (`ded969bdb`, Sprint 12 code) does the same, so it is not from Sprint 13.
   Sprint 17b: recorded. Research card BORE-47 (backlog). The raw key log on the S22 showed that the phone's window manager takes the Tab as a gesture (section 23, R3).

@@ -66,7 +66,8 @@ class MenuGlassHaloTest {
 
     private fun SemanticsNode.hasHalo() = BackdropTextHalo in config && config[BackdropTextHalo]
 
-    private val segmentLabels = listOf("Trackpad", "Direct", "Off", "Off", "Compact", "Detailed")
+    private val segmentLabels =
+        listOf("Trackpad", "Direct", "Native", "Off", "Off", "Compact", "Detailed")
 
     // The halo
 

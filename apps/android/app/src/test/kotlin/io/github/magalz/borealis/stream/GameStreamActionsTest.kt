@@ -522,6 +522,32 @@ class GameStreamActionsTest {
     }
 
     @Test
+    fun `a new touch mode is told to the activity before the contexts change`() {
+        val told = mutableListOf<String>()
+        actions.touchModeChange = { mode ->
+            told += "$mode cancelled=${first.cancelled} built=${builtFor.size}"
+            true
+        }
+
+        actions.setTouchMode(TouchMode.NATIVE)
+
+        assertThat(told).containsExactly("NATIVE cancelled=0 built=0")
+        assertThat(builtFor).containsExactly(TouchMode.NATIVE)
+    }
+
+    @Test
+    fun `a touch mode that the activity dealt with leaves the contexts as they are`() {
+        actions.touchModeChange = { false }
+
+        actions.setTouchMode(TouchMode.NATIVE)
+
+        assertThat(builtFor).isEmpty()
+        assertThat(first.cancelled).isEqualTo(0)
+        assertThat(touches[0]).isSameInstanceAs(first)
+        assertThat(touches[1]).isSameInstanceAs(second)
+    }
+
+    @Test
     fun `the Android keyboard opens after the panel closes, on the focused stream view`() {
         actions.openSystemKeyboard()
 

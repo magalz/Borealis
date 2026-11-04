@@ -292,7 +292,7 @@ internal class NativeTouchTest : MotionTestBase() {
     }
 
     @Test
-    fun `a finger that the host took and that is still down when the chrome takes the input is cancelled on the host`() {
+    fun `a finger the host took, still down when the chrome takes the input, is cancelled on the host`() {
         streaming()
         native()
         touch(streamView, finger(MotionEvent.ACTION_DOWN, 160f, 90f))

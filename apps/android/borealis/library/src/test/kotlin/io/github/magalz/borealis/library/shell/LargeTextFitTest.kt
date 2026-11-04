@@ -132,8 +132,9 @@ class LargeTextFitTest(private val case: FitCase) {
     }
 
     /**
-     * The combined font scale of 2.6 is held at Normal, the spacing that was measured there (Wider
-     * is drawn as Wide from 2.0, and Wide above a combined 2.0 has not been measured).
+     * The combined font scale of 2.6 is held at Normal, the spacing that fits there. Wider is drawn
+     * as Wide from 2.0, and at 2.6 Wide still runs past the screen in 3 of its 16 runs (a TV in
+     * Luciole and in Andika, a phone in Andika; measured once on 2026-11-04, not fixed).
      */
     private fun assumeNormalSpacing() = assumeTrue(case.spacing == TextSpacing.Normal)
 

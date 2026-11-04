@@ -51,6 +51,7 @@ object TouchContexts {
                 }
             }
             TouchMode.DIRECT -> Array(COUNT) { AbsoluteTouchContext(connection, it, streamView) }
+            TouchMode.NATIVE -> null
             TouchMode.OFF -> null
         }
 

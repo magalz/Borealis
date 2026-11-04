@@ -123,6 +123,7 @@ enum class OverlayMode {
 enum class TouchMode {
     TRACKPAD,
     DIRECT,
+    NATIVE,
     OFF,
 }
 

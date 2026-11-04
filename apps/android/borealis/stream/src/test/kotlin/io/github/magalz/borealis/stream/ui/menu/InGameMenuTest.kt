@@ -219,11 +219,13 @@ class InGameMenuTest {
         val fixture = menu(FormFactor.Phone, touchMode = TouchMode.DIRECT)
 
         text("Direct").assertIsSelected()
+        text("Native").assertIsNotSelected()
         text("Trackpad").performClick()
+        text("Native").performClick()
         composeRule.onAllNodesWithText("Off")[0].performClick()
 
         assertThat(fixture.intents.calls)
-            .containsExactly("setTouchMode TRACKPAD", "setTouchMode OFF")
+            .containsExactly("setTouchMode TRACKPAD", "setTouchMode NATIVE", "setTouchMode OFF")
             .inOrder()
     }
 
@@ -759,7 +761,7 @@ class InGameMenuTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `OK on the Touch row cycles Trackpad, Direct, Off and back to Trackpad`() {
+    fun `OK on the Touch row cycles Trackpad, Direct, Native, Off and back to Trackpad`() {
         // A phone with a keyboard or a gamepad attached: the keys reach the row.
         val fixture =
             composeRule.showMenu(
@@ -771,11 +773,18 @@ class InGameMenuTest {
         pressOk("Touch")
         fixture.reflect { it.copy(touchMode = TouchMode.DIRECT) }
         pressOk("Touch")
+        fixture.reflect { it.copy(touchMode = TouchMode.NATIVE) }
+        pressOk("Touch")
         fixture.reflect { it.copy(touchMode = TouchMode.OFF) }
         pressOk("Touch")
 
         assertThat(fixture.intents.calls)
-            .containsExactly("setTouchMode DIRECT", "setTouchMode OFF", "setTouchMode TRACKPAD")
+            .containsExactly(
+                "setTouchMode DIRECT",
+                "setTouchMode NATIVE",
+                "setTouchMode OFF",
+                "setTouchMode TRACKPAD",
+            )
             .inOrder()
     }
 
@@ -856,7 +865,7 @@ class InGameMenuTest {
     fun `on a phone the active segment of an option row is its own selected radio button`() {
         menu(FormFactor.Phone, overlay = OverlayMode.COMPACT, touchMode = TouchMode.DIRECT)
 
-        assertSegments("Touch", selected = "Direct", "Trackpad", "Off")
+        assertSegments("Touch", selected = "Direct", "Trackpad", "Native", "Off")
         assertSegments("Overlay", selected = "Compact", "Off", "Detailed")
     }
 }

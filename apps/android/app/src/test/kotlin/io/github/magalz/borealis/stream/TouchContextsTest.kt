@@ -88,6 +88,16 @@ class TouchContextsTest {
     }
 
     @Test
+    fun `native touch has the direct contexts, which a host without touch support falls back to`() {
+        val contexts = TouchContexts.build(TouchMode.NATIVE, connection, view, prefs(true))
+
+        assertThat(contexts).isNotNull()
+        assertThat(contexts!!.map { it::class.java })
+            .containsExactly(AbsoluteTouchContext::class.java, AbsoluteTouchContext::class.java)
+        assertThat(contexts.map { it.actionIndex }).containsExactly(0, 1).inOrder()
+    }
+
+    @Test
     fun `a switch off has no contexts, the activity ignores the touchscreen`() {
         assertThat(TouchContexts.build(TouchMode.OFF, connection, view, prefs(true))).isNull()
     }

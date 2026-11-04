@@ -286,6 +286,41 @@ class ComputerHostRepositoryTest {
             .isEqualTo(AddHostResult.Unreachable)
     }
 
+    // The service swallows the failed lookup of the poll, so the add only learns that nothing
+    // answered. `.invalid` never resolves (RFC 6761), so no lookup depends on the network.
+    @Test
+    fun `a host name that does not resolve is an invalid address, a typo and not a firewall`() =
+        runTest {
+            val repository = repository()
+            binder.onAdd = { false }
+
+            assertThat(repository.addHost(HostAddress("magalz-dekstop.invalid")))
+                .isEqualTo(AddHostResult.InvalidAddress)
+        }
+
+    @Test
+    fun `a host name that resolves but does not answer is unreachable`() = runTest {
+        val repository = repository()
+        binder.onAdd = { false }
+
+        assertThat(repository.addHost(HostAddress("localhost")))
+            .isEqualTo(AddHostResult.Unreachable)
+    }
+
+    @Test
+    fun `a known host at a name that no longer resolves is still already added`() = runTest {
+        binder.computers["desk"] =
+            details(uuid = "desk", name = "Desk PC", address = "desk.invalid")
+                .reported(state = ComputerDetails.State.OFFLINE, pairState = PairState.PAIRED)
+        val repository = repository()
+        collectHosts(repository)
+        binder.onAdd = { false }
+
+        val result = repository.addHost(HostAddress("desk.invalid"))
+
+        assertThat(result).isEqualTo(AddHostResult.AlreadyAdded("desk", "Desk PC", paired = true))
+    }
+
     @Test
     fun `a private address on another subnet that does not answer is the wrong subnet`() = runTest {
         val repository = repository()

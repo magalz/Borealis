@@ -18,6 +18,8 @@ import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogTag
 import java.io.IOException
+import java.net.InetAddress
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -77,9 +79,7 @@ constructor(
                 }
                 // A known host that does not answer is still a host that was added.
                 knownAtAddress != null -> knownAtAddress
-                withContext(io) { subnet.isWrongSiteLocalAddress(host) } ->
-                    AddHostResult.WrongSubnet
-                else -> AddHostResult.Unreachable
+                else -> withContext(io) { unanswered(host) }
             }
         } catch (e: IllegalArgumentException) {
             // OkHttp throws this when the host name does not canonicalize to a valid name.
@@ -88,6 +88,31 @@ constructor(
         } catch (e: IOException) {
             // The service could not be bound: the host cannot be reached through it.
             BorealisLog.w(LogTag.HOST, "host not added", "error" to e.javaClass.simpleName)
+            AddHostResult.Unreachable
+        }
+    }
+
+    /**
+     * What a host that did not answer is. The service swallows the failed lookup of its poll, so
+     * the name is looked up here, only now that the add failed; a name that does not resolve is a
+     * typo, not a closed port. The subnet check gets the address that the lookup found, so the name
+     * is looked up once. Blocks: call it off the main thread.
+     */
+    private fun unanswered(host: String): AddHostResult {
+        val target =
+            try {
+                InetAddress.getByName(host)
+            } catch (e: UnknownHostException) {
+                BorealisLog.w(
+                    LogTag.HOST,
+                    "host name not resolved",
+                    "error" to e.javaClass.simpleName,
+                )
+                return AddHostResult.InvalidAddress
+            }
+        return if (subnet.isWrongSiteLocalAddress(target.hostAddress)) {
+            AddHostResult.WrongSubnet
+        } else {
             AddHostResult.Unreachable
         }
     }

@@ -77,7 +77,8 @@ private val ERROR_ROOM = 6.dp
  * danger-ink with an [error], whose message is under the field in danger-ink, inside the glass. The
  * label floats up inside the glass. The keyboard action is Done: it calls [onDone] if there is one
  * and then does what Done does by default, which is to hide the keyboard and clear focus.
- * [keyboardType] picks the keyboard layout, such as Uri for a host address.
+ * [keyboardType] picks the keyboard layout, such as Uri for a host address, which also asks the
+ * keyboard for no auto-correct.
  *
  * [modifier] is on the outside of the field, glass included, with the keyboard on focus and
  * without: a margin of the caller is outside the glass, and the focus requester and the focus
@@ -306,6 +307,17 @@ private fun wrapperKey(event: KeyEvent, startEditing: () -> Unit, onDone: () -> 
         else -> false
     }
 
+private fun keyboardOptions(keyboardType: KeyboardType) =
+    KeyboardOptions(
+        keyboardType = keyboardType,
+        // Auto-correct rewrites host names, so a Uri field asks for none.
+        autoCorrectEnabled = keyboardType != KeyboardType.Uri,
+        imeAction = ImeAction.Done,
+        // The keyboard opens as the field gains the focus. A field that must not do it never has
+        // the focus until it is edited, so the wrapper decides.
+        showKeyboardOnFocus = true,
+    )
+
 /**
  * The field on its glass surface. It is a filled [TextField] with no container, outline or
  * indicator of its own, and the glass, with the outline on it, is drawn here round the field and
@@ -355,14 +367,7 @@ private fun TextFieldBody(
                 lineLimits = TextFieldLineLimits.SingleLine,
                 shape = shape,
                 inputTransformation = content.transformation,
-                keyboardOptions =
-                    KeyboardOptions(
-                        keyboardType = content.keyboardType,
-                        imeAction = ImeAction.Done,
-                        // The keyboard opens as the field gains the focus. A field that must not do
-                        // it never has the focus until it is edited, so the wrapper decides.
-                        showKeyboardOnFocus = true,
-                    ),
+                keyboardOptions = keyboardOptions(content.keyboardType),
                 onKeyboardAction = onKeyboardAction,
                 interactionSource = source,
                 colors =

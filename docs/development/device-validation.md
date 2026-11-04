@@ -2764,9 +2764,9 @@ Set-up, and put back at the end:
     Known, for BORE-44 (backlog): a new finger at index 0 after the first lifted restarts the shared time, and
     a second-finger tap during a double-tap drag still right-clicks unless the dragging finger moved 20 px or
     more. After a pointer move, the order in which the first finger lifts first gives no click.
-16. S22, the Touch row in Settings and the Touch sheet (BORE-29). Expected: Trackpad, Direct, Native and Off
-    are offered, and Native has its purpose line, "Sends real touch to the PC, as on a touchscreen. Needs a
-    host with touch support." The sheet and its four segments fit at the largest text. Start a stream in
+16. S22, the Touch row in Settings and the Touch sheet (BORE-29). Expected: Trackpad, Direct and Native are
+    offered (Off is only in the in-game menu), and Native has its purpose line, "Sends real touch to the PC, as
+    on a touchscreen. Needs a host with touch support." The sheet fits at the largest text. Start a stream in
     Native: it starts in Native.
 17. S22, Native touch on the PC (BORE-30). On a page or a text editor of the PC, check a tap, a long press, a
     drag and a scroll. Expected: each reaches the PC as touch, as on a touchscreen. A three-finger tap in

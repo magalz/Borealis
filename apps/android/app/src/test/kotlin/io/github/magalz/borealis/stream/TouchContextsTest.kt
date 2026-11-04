@@ -9,8 +9,10 @@ import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.T0
 import com.limelight.binding.input.touch.TouchRig
 import com.limelight.binding.input.touch.liftFirstOfTwoFingers
+import com.limelight.binding.input.touch.moveTo
 import com.limelight.binding.input.touch.setPointerCount
 import com.limelight.binding.input.touch.start
+import com.limelight.binding.input.touch.twoFingers
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
@@ -55,6 +57,24 @@ class TouchContextsTest {
         rig.advance(2000)
 
         assertThat(rig.sent()).containsExactly("down RIGHT", "up RIGHT").inOrder()
+    }
+
+    @Test
+    @Config(shadows = [ShadowRecordingBridge::class])
+    fun `the trackpad contexts share the movement of both fingers, so a second finger that slid is no click`() {
+        val rig = TouchRig()
+        val (first, second) =
+            TouchContexts.build(TouchMode.TRACKPAD, rig.connection, rig.view, rig.prefs)!!.map {
+                it as RelativeTouchContext
+            }
+        twoFingers(first, second)
+        second.moveTo(325, 100, T0 + 40)
+
+        liftFirstOfTwoFingers(first, second, T0 + 100, secondX = 325)
+        first.touchUpEvent(325, 100, T0 + 120)
+        rig.advance(2000)
+
+        assertThat(rig.sent()).isEmpty()
     }
 
     @Test

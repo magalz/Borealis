@@ -22,21 +22,30 @@ private const val BUTTON_RELEASE_DELAY = 100L
 /**
  * What the two touch contexts of the trackpad share about a two-finger tap, which neither sees
  * alone: when the first finger lifts first, its context decides at the last lift and never sees the
- * second finger go down. The tap time runs from the second finger's down in both lift orders.
- * `TouchContexts` builds one for the contexts of a stream.
+ * second finger go down or slide, and the context of the second finger never sees the first one
+ * slide. The tap time runs from the second finger's down in both lift orders, and a move of either
+ * finger past the tap distance since then is no tap. `TouchContexts` builds one for the contexts of
+ * a stream.
  */
 class TwoFingerTap {
     private var secondFingerDownTime: Long? = null
+    private var moved = false
 
-    /** The second finger went down at [eventTime]: the tap time of the two fingers starts. */
+    /** The second finger went down at [eventTime]: the tap of the two fingers starts. */
     fun secondFingerDown(eventTime: Long) {
         secondFingerDownTime = eventTime
+        moved = false
     }
 
-    /** Whether [eventTime] is still within the tap time of the second finger's down. */
-    fun isWithinTapTime(eventTime: Long): Boolean {
+    /** A finger moved past the tap distance since the second one landed: no tap, whoever lifts. */
+    fun fingerMoved() {
+        moved = true
+    }
+
+    /** Whether a lift at [eventTime] ends a tap of the two fingers: in time, no finger moved. */
+    fun isTapAt(eventTime: Long): Boolean {
         val downTime = secondFingerDownTime ?: return false
-        return eventTime - downTime <= TAP_TIME_THRESHOLD
+        return !moved && eventTime - downTime <= TAP_TIME_THRESHOLD
     }
 }
 
@@ -51,7 +60,7 @@ class RelativeTouchContext(
     private val referenceHeight: Int,
     private val targetView: View,
     private val prefConfig: PreferenceConfiguration,
-    private val twoFingerTap: TwoFingerTap = TwoFingerTap(),
+    private val twoFingerTap: TwoFingerTap,
 ) : TouchContext {
     private var lastTouchX = 0
     private var lastTouchY = 0
@@ -63,6 +72,13 @@ class RelativeTouchContext(
     private var confirmedDrag = false
     private var confirmedScroll = false
     private var distanceMoved = 0.0
+
+    // Where the first finger was when the second one landed and how far it walked since. Its move
+    // before that is confirmedMove, which does not count for the two-finger tap; its jitter after
+    // the landing does not either, only a move past the tap box or distance (twoFingerTap).
+    private var landingX = 0
+    private var landingY = 0
+    private var distanceSinceLanding = 0.0
     private var xFactor = 0.0
     private var yFactor = 0.0
     private var pointerCount = 0
@@ -126,9 +142,10 @@ class RelativeTouchContext(
         isTapMotion() && eventTime - originalTouchTime <= TAP_TIME_THRESHOLD
 
     // The touch of a finger of two, ended at eventTime, is a tap of the two fingers: it runs from
-    // the second finger's down, whichever finger lifts first (twoFingerTap).
+    // the second finger's down, whichever finger lifts first, and neither finger moved past the tap
+    // distance (twoFingerTap).
     private fun isTwoFingerTapTouch(eventTime: Long): Boolean =
-        isTapMotion() && twoFingerTap.isWithinTapTime(eventTime)
+        isTapMotion() && twoFingerTap.isTapAt(eventTime)
 
     private fun isTap(eventTime: Long): Boolean {
         // If this input wasn't the last finger down, do not report
@@ -179,9 +196,11 @@ class RelativeTouchContext(
             twoFingerTapPending = false
             distanceMoved = 0.0
 
-            // The second finger starts the tap time of the two fingers
+            // The second finger starts the tap time of the two fingers. At index 0 it is the first
+            // finger of this context: its move counts from where it landed.
             if (pointerCount == 2) {
                 twoFingerTap.secondFingerDown(eventTime)
+                markLanding()
             }
 
             // Only the first finger of a gesture drags, and only right after a tap
@@ -263,11 +282,47 @@ class RelativeTouchContext(
         handler.removeCallbacks(dragTimerRunnable)
     }
 
+    // The second finger landed: the move of the finger of this context counts from here.
+    private fun markLanding() {
+        landingX = lastTouchX
+        landingY = lastTouchY
+        distanceSinceLanding = 0.0
+    }
+
+    // This context follows the first of two fingers: the second finger's context judges its own
+    // moves, and the first finger's moves count from the landing (checkForTwoFingerMove).
+    private val isFirstFingerOfTwo: Boolean
+        get() = actionIndex == 0 && pointerCount == 2
+
+    // The first finger moved past the tap box or the tap distance since the second one landed: no
+    // two-finger tap.
+    private fun checkForTwoFingerMove(eventX: Int, eventY: Int) {
+        if (!isFirstFingerOfTwo) {
+            return
+        }
+
+        distanceSinceLanding +=
+            sqrt((eventX - lastTouchX).toDouble().pow(2) + (eventY - lastTouchY).toDouble().pow(2))
+        if (
+            abs(eventX - landingX) > TAP_MOVEMENT_THRESHOLD ||
+                abs(eventY - landingY) > TAP_MOVEMENT_THRESHOLD ||
+                distanceSinceLanding >= TAP_DISTANCE_THRESHOLD
+        ) {
+            twoFingerTap.fingerMoved()
+        }
+    }
+
     private fun confirmMove() {
         if (secondPress) {
             startDrag()
         } else {
             confirmedMove = true
+
+            // The move of the first of two fingers is judged from the landing of the second, not
+            // from the touch down of the first (checkForTwoFingerMove)
+            if (!isFirstFingerOfTwo) {
+                twoFingerTap.fingerMoved()
+            }
         }
     }
 
@@ -306,6 +361,7 @@ class RelativeTouchContext(
         if (eventX != lastTouchX || eventY != lastTouchY) {
             checkForConfirmedMove(eventX, eventY)
             checkForConfirmedScroll()
+            checkForTwoFingerMove(eventX, eventY)
 
             // We only send moves and drags for the primary touch point
             if (actionIndex == 0) {
@@ -384,6 +440,7 @@ class RelativeTouchContext(
         if (pointerCount > this.pointerCount) {
             twoFingerTapPending = false
             clearSecondPress()
+            markLanding()
         }
         this.pointerCount = pointerCount
 

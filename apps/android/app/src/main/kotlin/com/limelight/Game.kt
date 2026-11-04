@@ -210,6 +210,10 @@ class Game :
     internal var startedOnBluetooth = false
         private set
 
+    // BOREALIS: the audio goes to a Bluetooth output now. The route listener sets it on the main
+    // thread; the perf sink reads it on the video thread (audio)
+    @Volatile private var audioOnBluetooth = false
+
     // BOREALIS: where the audio goes; while the stream runs it tells when that moves to a Bluetooth
     // output (audio)
     private lateinit var audioOutputs: AudioOutputs
@@ -641,6 +645,7 @@ class Game :
         audioOutputs = AudioOutputs(applicationContext)
         val audioOutput = audioOutputs.current()
         startedOnBluetooth = audioOutput.bluetooth
+        audioOnBluetooth = startedOnBluetooth
         val config =
             StreamConfiguration.Builder()
                 .setResolution(prefConfig.width, prefConfig.height)
@@ -764,7 +769,10 @@ class Game :
         // the gamepad mouse follow the session (stream)
         controllerHandler.setMenuChordListener(streamSession::openMenu)
         controllerHandler.setChromeKeySink(chromeHost::dispatchUsbPadKey)
-        decoderRenderer.setPerfSink(streamSession::onPerf)
+        // BOREALIS: each snapshot says whether the audio goes out over Bluetooth (audio)
+        decoderRenderer.setPerfSink {
+            streamSession.onPerf(it.copy(audioBluetooth = audioOnBluetooth))
+        }
         audioRenderer = AndroidAudioRenderer(this, prefConfig.enableAudioFx)
         decoderRenderer.setAudioDelaySource(audioRenderer::audioDelayMs)
         PerfGate.bind(lifecycleScope, streamSession, decoderRenderer::setPerfEnabled)
@@ -1066,17 +1074,19 @@ class Game :
     // time the sound moves to a Bluetooth output. Called once, on the main thread, when the
     // connection is up and the stop has not run: the card of a notice waits for the stream on
     // screen, so nothing is lost by giving the notices before the first frame. The listener reads
-    // the session when it runs, and a stop closes it (audio)
+    // the session when it runs, and a stop closes it. It also keeps audioOnBluetooth, which the
+    // snapshots of the overlay carry (audio)
     private fun announceAudio() {
         stereoFallback?.let {
             streamSession.notify(StreamNotice.StereoFallback(surroundLayout(it)))
         }
         if (startedOnBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
-        var onBluetooth = startedOnBluetooth
         audioOutputs.onChange { output ->
             if (stopRan) return@onChange
-            if (output.bluetooth && !onBluetooth) streamSession.notify(StreamNotice.BluetoothOutput)
-            onBluetooth = output.bluetooth
+            if (output.bluetooth && !audioOnBluetooth) {
+                streamSession.notify(StreamNotice.BluetoothOutput)
+            }
+            audioOnBluetooth = output.bluetooth
         }
     }
 

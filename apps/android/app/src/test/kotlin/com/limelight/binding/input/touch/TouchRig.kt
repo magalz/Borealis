@@ -44,8 +44,22 @@ internal class TouchRig(width: Int = HD_WIDTH, height: Int = HD_HEIGHT) {
     /** Lets [millis] of the main looper's time pass, running the timers that fall due. */
     fun advance(millis: Long) = ShadowLooper.idleMainLooper(millis, TimeUnit.MILLISECONDS)
 
+    // The contexts of a rig share one two-finger tap, as TouchContexts builds the ones of a stream.
+    private val twoFingerTap = TwoFingerTap()
+
     fun relative(actionIndex: Int = 0) =
-        RelativeTouchContext(connection, actionIndex, HD_WIDTH, HD_HEIGHT, view, prefs)
+        RelativeTouchContext(
+            connection,
+            actionIndex,
+            HD_WIDTH,
+            HD_HEIGHT,
+            view,
+            prefs,
+            twoFingerTap,
+        )
+
+    /** The two contexts of the trackpad, the first finger's and the second finger's. */
+    fun twoContexts() = relative(0) to relative(1)
 
     fun absolute(actionIndex: Int = 0) = AbsoluteTouchContext(connection, actionIndex, view)
 
@@ -114,15 +128,18 @@ internal fun twoFingers(first: RelativeTouchContext, second: RelativeTouchContex
 
 /**
  * The first finger of [twoFingers] lifts, as `Game` handles it: the lift, the new pointer count for
- * all the contexts, and the second finger, which is at (300, 100), taking the place of the first (a
- * touch down that is not a new finger, so the time of the first touch stays).
+ * all the contexts, and the second finger, which is at ([secondX], [secondY]), (300, 100) where it
+ * landed, taking the place of the first (a touch down that is not a new finger, so the time of the
+ * first touch stays).
  */
 internal fun liftFirstOfTwoFingers(
     first: RelativeTouchContext,
     second: RelativeTouchContext,
     time: Long,
+    secondX: Int = 300,
+    secondY: Int = 100,
 ) {
     first.touchUpEvent(100, 100, time)
     setPointerCount(1, first, second)
-    assertThat(first.touchDownEvent(300, 100, time, false)).isTrue()
+    assertThat(first.touchDownEvent(secondX, secondY, time, false)).isTrue()
 }

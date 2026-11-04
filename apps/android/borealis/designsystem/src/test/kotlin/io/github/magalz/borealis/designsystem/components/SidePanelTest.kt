@@ -25,8 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSize
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.junit.Rule
 import org.junit.Test
@@ -108,6 +110,76 @@ class SidePanelTest {
         assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(360f)
     }
 
+    // The menu's Touch row has four segments of 48dp at least; at the largest text they need more
+    // than 52% of a 640dp phone, so on a phone the panel grows with the font scale.
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE)
+    fun `a phone panel at the default text size is 52 percent of a 640dp parent`() {
+        composeRule.setContent { Specimen() }
+
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(332.8f)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE, fontScale = 1.15f)
+    fun `a phone panel grows in proportion to the font scale`() {
+        composeRule.setContent { Specimen() }
+
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(332.8f * 1.15f)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE, fontScale = SYSTEM_SCALE)
+    fun `a phone panel at the largest text size is two thirds of a 640dp parent`() {
+        composeRule.setContent { Specimen(BorealisLook(textSize = TextSize.Largest)) }
+
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(640f * 2 / 3)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE, fontScale = 2f)
+    fun `a phone panel at a font scale of 2 is two thirds of a 640dp parent at most`() {
+        composeRule.setContent { Specimen() }
+
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(640f * 2 / 3)
+    }
+
+    @Test
+    @Config(qualifiers = "w1280dp-h720dp-xhdpi", fontScale = SYSTEM_SCALE)
+    fun `the 360dp cap of a phone panel grows with the font scale`() {
+        composeRule.setContent { Specimen(BorealisLook(textSize = TextSize.Largest)) }
+
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(360f * 1.69f)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE, fontScale = 0.85f)
+    fun `a phone panel is never narrower for a small font scale`() {
+        composeRule.setContent { Specimen() }
+
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(332.8f)
+    }
+
+    @Test
+    @Config(qualifiers = PHONE_LANDSCAPE, fontScale = SYSTEM_SCALE)
+    fun `a handheld panel keeps its width at the largest text size`() {
+        composeRule.setContent {
+            Specimen(BorealisLook(textSize = TextSize.Largest), FormFactor.Handheld)
+        }
+
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(332.8f)
+    }
+
+    @Test
+    @Config(qualifiers = "w1280dp-h720dp-xhdpi", fontScale = SYSTEM_SCALE)
+    fun `a TV panel keeps its width at the largest text size`() {
+        composeRule.setContent {
+            Specimen(BorealisLook(textSize = TextSize.Largest), FormFactor.Tv)
+        }
+
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(360f)
+    }
+
     @Test
     @Config(qualifiers = PHONE)
     fun `the panel sits at the right edge with the surface colour`() {
@@ -147,8 +219,12 @@ class SidePanelTest {
         }
 
     @Composable
-    private fun Specimen(extra: @Composable () -> Unit = {}) {
-        BorealisTheme(FormFactor.Phone) {
+    private fun Specimen(
+        look: BorealisLook = BorealisLook(),
+        formFactor: FormFactor = FormFactor.Phone,
+        extra: @Composable () -> Unit = {},
+    ) {
+        BorealisTheme(formFactor, look) {
             Box(Modifier.fillMaxSize().testTag(FRAME).background(BorealisTokens.Color.Page)) {
                 SidePanel(onDismiss = { dismissed++ }) {
                     Text("Inside")
@@ -163,6 +239,9 @@ class SidePanelTest {
         const val FRAME = "frame"
         const val CONTENT = "content"
         const val PHONE = "w360dp-h640dp-xhdpi"
+        const val PHONE_LANDSCAPE = "w640dp-h360dp-land-xhdpi"
+        // The Text size setting at 130 percent over this system scale is a font scale of 1.69.
+        const val SYSTEM_SCALE = 1.3f
         const val WIDTH_TOLERANCE = 0.5f
     }
 }

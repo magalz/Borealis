@@ -1313,9 +1313,10 @@ the client side, and none of its findings is a Sprint 16 regression.
 
 Sprint 17a: done, merged as [#122](https://github.com/magalz/Borealis/pull/122) on 2026-11-02 (`e538ed99c`). Sprint 17b:
 built in the phase branch `phase/s17b-general-fixes`, in the draft pull request
-[#125](https://github.com/magalz/Borealis/pull/125); its device round is still to run
-([section 3.33](development/device-validation.md#333-sprint-17b-checks) is the runbook, and the reads are in
-[section 23](development/device-validation.md#23-results-sprint-17b)). Owner decision of 2026-10-28, later the same day; see the
+[#125](https://github.com/magalz/Borealis/pull/125). Its device round ran on 2026-11-04 and passed; the phase pull
+request waits for the owner's merge. The runbook is [section 3.33](development/device-validation.md#333-sprint-17b-checks),
+and the reads, the round's results, the findings and the items not run are in
+[section 23](development/device-validation.md#23-results-sprint-17b). Owner decision of 2026-10-28, later the same day; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
 
 On 2026-11-02, after Sprint 16, the owner split the sprint in two, run one after the other, each
@@ -1921,6 +1922,14 @@ Backlog column, and none is scheduled.
   of the in-game menu's Touch row at the default size. With 3-button navigation the menu panel also loses the
   end inset of the system bar (up to 48 dp), which narrows it; the S22 round records the Touch row there
   (3.33, step 18).
+- **BORE-50, found in the round: "already paired" cannot be reached with LuminalShine.** A forgotten host that is added
+  again comes back "Not paired", because LuminalShine 26.11.0 reports its pairing state only over HTTPS. The owner
+  decides between a reworded message and a pairing over HTTPS on re-add (section 23, finding 1).
+- **BORE-51, found in the round: the TV focus after Hide or Forget goes to the rail item "Hosts".** The focus should go
+  to the next card (section 23, finding 5).
+- **BORE-52, found in the round: the audio delay reads "0 ms" with a silent PC.** The three stages of the Audio delay
+  line need sound on the PC (section 23, finding 4).
+- **BORE-53, found in the round, low: some notices stay on screen longer than needed** (section 23, finding 6).
 
 ### Sprint 18: refactor of the converted code
 

@@ -23,6 +23,7 @@ import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamNotice
 import io.github.magalz.borealis.stream.StreamNotice.BluetoothOutput
+import io.github.magalz.borealis.stream.StreamNotice.NativeTouchRefused
 import io.github.magalz.borealis.stream.StreamNotice.StereoFallback
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.SurroundLayout
@@ -52,6 +53,7 @@ class StreamNoticeCardTest {
     private val bluetooth = "Audio is on Bluetooth: sound may lag behind the picture."
     private val stereo71 = "This output has 2 channels: streaming stereo instead of 7.1."
     private val stereo51 = "This output has 2 channels: streaming stereo instead of 5.1."
+    private val nativeTouchRefused = "This PC does not take touch; using Direct"
 
     // The streaming layer as the chrome draws it, with the notice that the test gives it.
     private var notice by mutableStateOf<StreamNotice?>(null)
@@ -105,6 +107,15 @@ class StreamNoticeCardTest {
 
         composeRule.onNodeWithText(stereo51).assertIsDisplayed()
         composeRule.onNodeWithText(stereo71).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the card says that the PC takes no touch and that the stream uses Direct`() {
+        notice = NativeTouchRefused
+
+        showLayer()
+
+        composeRule.onNodeWithText(nativeTouchRefused).assertIsDisplayed()
     }
 
     @Test

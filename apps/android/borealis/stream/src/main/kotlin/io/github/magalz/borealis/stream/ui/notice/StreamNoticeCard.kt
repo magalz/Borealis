@@ -96,6 +96,7 @@ private fun noticeText(notice: StreamNotice): String =
         StreamNotice.BluetoothOutput -> stringResource(R.string.stream_notice_bluetooth)
         is StreamNotice.StereoFallback ->
             stringResource(R.string.stream_notice_stereo_fallback, notice.asked.label())
+        StreamNotice.NativeTouchRefused -> ""
     }
 
 private fun SurroundLayout.label() =

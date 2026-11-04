@@ -26,7 +26,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalFormFactor
 private val MAX_WIDTH = 360.dp
 private val BORDER_WIDTH = 1.dp
 private const val WIDTH_FRACTION = 0.52f
-private const val PHONE_MAX_FRACTION = 2f / 3f
+private const val PHONE_MAX_FRACTION = 3f / 4f
 
 /**
  * The alpha of the page colour that dims what is behind a panel or a popup over the stream: lighter
@@ -44,12 +44,12 @@ const val STREAM_SCRIM_ALPHA = 0.35f
  *
  * On a phone the panel grows with the text: when the font scale of the composition (the system's
  * and the Text size setting, as `LocalDensity` holds them) is above 1, both limits above are
- * multiplied by it, up to two thirds of the parent. What the width has to hold is text that does
- * not wrap, such as the segments of an option row (the in-game menu's Touch row has four, each 48dp
- * wide at least), and that text grows with the font scale while the padding and the touch size stay
- * in dp. So the panel grows with the font scale, whatever the rows in it measure. Two thirds leaves
- * a third of the stream visible. At a font scale of 1 or less, on a TV and on a handheld, the width
- * is the one above.
+ * multiplied by it, up to three quarters of the parent. What the width has to hold is text that
+ * does not wrap, such as the segments of an option row (the in-game menu's Touch row has four), and
+ * that text grows with the font scale while the padding and the 48dp touch size stay in dp. Three
+ * quarters is what that row needs at the largest text size on a 640dp phone, with every font and
+ * text spacing, and it leaves a quarter of the stream visible. At a font scale of 1 or less, on a
+ * TV and on a handheld, the width is the one above.
  *
  * The panel has a hairline on its left edge only. The scrim is the page colour at 35%, lighter than
  * the dialog scrim so the stream stays visible.

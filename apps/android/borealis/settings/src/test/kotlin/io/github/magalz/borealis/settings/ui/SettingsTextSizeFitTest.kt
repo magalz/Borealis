@@ -44,6 +44,12 @@ class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
         composeRule.assertNoClippedText()
     }
 
+    /** The row of Audio effects with its whole summary is on the screen, so the fit covers it. */
+    private fun assertAudioEffectsShown() {
+        row("Audio effects").assertExists()
+        composeRule.onNodeWithText(AUDIO_EFFECTS_SUMMARY).assertExists()
+    }
+
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
     fun `Stream settings on a TV fit`() {
@@ -113,6 +119,35 @@ class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
 
     @Test
     @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
+    fun `Audio settings on a TV fit`() {
+        showLargest(FormFactor.Tv, SettingsGroupId.AUDIO)
+        assertAudioEffectsShown()
+
+        assertFits()
+    }
+
+    @Test
+    @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
+    fun `Audio settings on a handheld fit`() {
+        showLargest(FormFactor.Handheld, SettingsGroupId.AUDIO)
+        assertAudioEffectsShown()
+
+        assertFits()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE, fontScale = SYSTEM_SCALE)
+    fun `the Audio section on a phone fits`() {
+        showLargest(FormFactor.Phone, SettingsGroupId.STREAM)
+        composeRule.onAllNodesWithText("AUDIO")[0].performScrollTo().performClick()
+        composeRule.waitForIdle()
+        assertAudioEffectsShown()
+
+        assertFits()
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = SYSTEM_SCALE)
     fun `a choice sheet on a TV fits`() {
         showLargest(FormFactor.Tv, SettingsGroupId.STREAM)
         composeRule.onNodeWithText("Frame pacing").performClick()
@@ -139,5 +174,8 @@ class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
         fun cases(): List<FitCase> = fitCases()
 
         private const val SYSTEM_SCALE = 1.3f
+        private const val AUDIO_EFFECTS_SUMMARY =
+            "Lets the device's equalizer and sound effects change the stream's sound. " +
+                "Uses a slower audio path, which adds latency."
     }
 }

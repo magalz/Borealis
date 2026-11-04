@@ -22,6 +22,9 @@ import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,14 +36,16 @@ import org.robolectric.annotation.Config
  * resizes to 200 percent without loss of content). Every text must fit where it is, or the
  * component grows: none runs past its width, is cut off at the bottom or ends in an ellipsis. The
  * Text spacing of the runs is Normal, Wide or Wider, and the look draws the level that the font
- * scale lets it (ADR 0058, decision 4), so none fails.
+ * scale lets it (ADR 0058, decision 4), so none fails. The rows of the settings also fit at the
+ * Text size Largest over the system font of 2.0, a combined font scale of 2.6, at Normal.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(fontScale = SCALE)
-class LargeTextFitTest(case: FitCase) {
+class LargeTextFitTest(private val case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
     private val look = BorealisLook(font = case.font, textSpacing = case.spacing)
+    private val largest = look.copy(textSize = TextSize.Largest)
 
     @Test
     @Config(qualifiers = TV)
@@ -66,6 +71,20 @@ class LargeTextFitTest(case: FitCase) {
     @Test
     @Config(qualifiers = TV)
     fun `the rows of the settings on a TV fit`() = assertFits(FormFactor.Tv) { SettingsRows() }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun `the rows of the settings on a phone fit at the largest text size`() {
+        assumeNormalSpacing()
+        assertFits(FormFactor.Phone, largest) { SettingsRows() }
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun `the rows of the settings on a TV fit at the largest text size`() {
+        assumeNormalSpacing()
+        assertFits(FormFactor.Tv, largest) { SettingsRows() }
+    }
 
     @Test
     @Config(qualifiers = PHONE)
@@ -109,7 +128,17 @@ class LargeTextFitTest(case: FitCase) {
         composeRule.assertNoClippedText()
     }
 
-    private fun assertFits(formFactor: FormFactor, content: @Composable () -> Unit) {
+    /**
+     * The combined font scale of 2.6 is held at Normal, the spacing that fits there. Wider is drawn
+     * as Wide from 2.0, and Wide above 2.0 is not measured here.
+     */
+    private fun assumeNormalSpacing() = assumeTrue(case.spacing == TextSpacing.Normal)
+
+    private fun assertFits(
+        formFactor: FormFactor,
+        look: BorealisLook = this.look,
+        content: @Composable () -> Unit,
+    ) {
         composeRule.setContent { BorealisTheme(formFactor, look) { OnPage { content() } } }
         composeRule.waitForIdle()
 

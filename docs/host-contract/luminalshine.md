@@ -1263,18 +1263,23 @@ host raises these messages:
   touch events) Borealis sends touch events to the host: `LI_TOUCH_EVENT_DOWN`, `MOVE`,
   `UP` and `CANCEL` for every finger, with the pointer id, the position in the stream view,
   the pressure, the contact area and the rotation (`LiSendTouchEvent`), and
-  `LI_TOUCH_EVENT_CANCEL_ALL` when Android cancels the gesture. The third finger goes to
-  the host as well, so in Native a three-finger tap is the PC's and does not open the
-  keyboard ([UC-005](../use-cases/0005-type-with-the-on-screen-keyboard.md)). The mode
-  needs feature bit `0x01` above. A host that does not set it makes moonlight-common-c
-  answer `LI_ERR_UNSUPPORTED` without sending anything
+  `LI_TOUCH_EVENT_CANCEL_ALL` when Android cancels the gesture. A finger that the host took
+  is also cancelled on the host with `LI_TOUCH_EVENT_CANCEL_ALL`, once, when the chrome takes
+  the input (the menu, a dialog, the keyboard) and when the user leaves Native, because the
+  up of that finger then goes to the chrome and the PC would keep the contact pressed. The
+  third finger goes to the host as well, so in Native a three-finger tap is the PC's and
+  does not open the keyboard
+  ([UC-005](../use-cases/0005-type-with-the-on-screen-keyboard.md)). The mode needs feature
+  bit `0x01` above. A host that does not set it makes moonlight-common-c answer
+  `LI_ERR_UNSUPPORTED` without sending anything
   (`core/third_party/moonlight-common-c/src/InputStream.c:1339-1341`). Borealis then goes to
   Direct for the rest of that stream, because what a host supports does not change during a
   stream: the touch mode of the session becomes Direct, the notice "This PC does not take
-  touch; using Direct" shows, and `Borealis.INPUT` logs one line at info (`Game.trySendTouchEvent`,
-  `Game.fallBackToDirectTouch` in `:app`). The host does not advertise the `mouse` setting
-  (the item on `mouse = disabled` below), so Native on such a host sends the fingers and the
-  host drops them; Borealis cannot tell.
+  touch; using Direct" shows, and `Borealis.INPUT` logs one line at info
+  (`Game.trySendTouchEvent`, `Game.fallBackToDirectTouch` in `:app`). Picking Native again
+  after the refusal asks the host nothing: the mode stays Direct and the notice shows again.
+  The host does not advertise the `mouse` setting (the item on `mouse = disabled` below), so
+  Native on such a host sends the fingers and the host drops them; Borealis cannot tell.
 - **Changed in 26.10.0** (verified in source at `dba21a9e`; the `src/` lines of this
   item are at that revision, and 26.10.1 keeps the same driver package): the Windows
   host no longer uses ViGEmBus. It drives Nonary's `libvirtualgamepad` UMDF/VHF driver,

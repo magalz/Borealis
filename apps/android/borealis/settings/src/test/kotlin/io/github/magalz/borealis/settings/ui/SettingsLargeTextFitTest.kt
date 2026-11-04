@@ -30,8 +30,9 @@ import org.robolectric.annotation.Config
  * offers (WCAG 1.4.4: text resizes to 200 percent without loss of content). Every text must fit
  * where it is, or the pane scrolls: none runs past its width, is cut off at the bottom or ends in
  * an ellipsis. The Text spacing of the runs is Normal, Wide or Wider, and the look draws the level
- * that the font scale lets it (ADR 0058, decision 4), so none fails. The Audio settings also fit at
- * the Text size Largest over the system font of 2.0, a combined font scale of 2.6, at Normal.
+ * that the font scale lets it (ADR 0058, decision 4), so none fails. The Audio settings, and the
+ * Stream ones on a TV, also fit at the Text size Largest over the system font of 2.0, a combined
+ * font scale of 2.6, at Normal.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBase() {
@@ -69,6 +70,17 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     @Config(qualifiers = TV, fontScale = SCALE)
     fun `Stream settings on a TV fit`() {
         showSettings(FormFactor.Tv, SettingsGroupId.STREAM)
+
+        assertFits()
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = SCALE)
+    fun `Stream settings on a TV fit at the largest text size`() {
+        assumeNormalSpacing()
+        showSettings(FormFactor.Tv, SettingsGroupId.STREAM, largest)
+        // The Bitrate slider is the row that ran out of height in the components rig at 2.6.
+        row("Bitrate").assertExists()
 
         assertFits()
     }

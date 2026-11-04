@@ -130,18 +130,18 @@ class SidePanelTest {
 
     @Test
     @Config(qualifiers = PHONE_LANDSCAPE, fontScale = SYSTEM_SCALE)
-    fun `a phone panel at the largest text size is two thirds of a 640dp parent`() {
+    fun `a phone panel at the largest text size is three quarters of a 640dp parent`() {
         composeRule.setContent { Specimen(BorealisLook(textSize = TextSize.Largest)) }
 
-        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(640f * 2 / 3)
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(640f * 3 / 4)
     }
 
     @Test
     @Config(qualifiers = PHONE_LANDSCAPE, fontScale = 2f)
-    fun `a phone panel at a font scale of 2 is two thirds of a 640dp parent at most`() {
+    fun `a phone panel at a font scale of 2 is three quarters of a 640dp parent at most`() {
         composeRule.setContent { Specimen() }
 
-        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(640f * 2 / 3)
+        assertThat(contentWidth()).isWithin(WIDTH_TOLERANCE).of(640f * 3 / 4)
     }
 
     @Test

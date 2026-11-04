@@ -87,7 +87,8 @@ class DiscoveryService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onUnbind(intent: Intent?): Boolean {
-        // Stop any discovery session
+        // Stop any discovery session. This runs on the main thread: stopping does not wait for the
+        // discovery thread to end.
         discoveryAgent.stopDiscovery()
 
         // Unbind the listener

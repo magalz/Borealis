@@ -54,8 +54,11 @@ class ComputerManagerService : Service() {
     private val activePolls = AtomicInteger(0)
     @Volatile private var pollingActive = false
 
-    // The stop of discovery that ends polling, and the restart that follows a removal, never run
-    // together: a restart that read pollingActive before the stop would start discovery after it.
+    // pollingActive and the call into discovery that follows it are one step: the start that begins
+    // polling, the stop that ends it and the restart that follows a removal never run together, so
+    // a restart that read pollingActive before the stop cannot start discovery after it. This does
+    // not keep two discovery threads apart: the discovery agent does that itself. Nothing under the
+    // lock waits for a discovery thread, so the unbind on the main thread never waits behind it.
     private val discoveryLock = Any()
     private val defaultNetworkLock: Lock = ReentrantLock()
 
@@ -249,14 +252,16 @@ class ComputerManagerService : Service() {
             // the two fields below first, so a failed start left the service polling.)
             val discovery = checkNotNull(discoveryBinder) { "The discovery service is not bound" }
 
-            // Polling is active
-            pollingActive = true
+            synchronized(discoveryLock) {
+                // Polling is active
+                pollingActive = true
 
-            // Set the listener
-            this@ComputerManagerService.listener = listener
+                // Set the listener
+                this@ComputerManagerService.listener = listener
 
-            // Start mDNS autodiscovery too
-            discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
+                // Start mDNS autodiscovery too
+                discovery.startDiscovery(MDNS_QUERY_PERIOD_MS)
+            }
 
             synchronized(pollingTuples) {
                 for (tuple in pollingTuples) {
@@ -619,8 +624,8 @@ class ComputerManagerService : Service() {
             discovery?.forget(computer)
 
             // The platform reports a found service once, so while polling discovery starts over.
-            // Under the lock of the unbind, so that the restart is never after the stop that ends
-            // polling.
+            // Under the lock of the start and of the unbind, so that the restart is never after
+            // the stop that ends polling and never in the middle of the start that begins it.
             if (discovery != null) {
                 synchronized(discoveryLock) {
                     if (pollingActive) {

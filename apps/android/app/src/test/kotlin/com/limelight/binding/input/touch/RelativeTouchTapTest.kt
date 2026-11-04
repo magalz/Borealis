@@ -649,6 +649,48 @@ class RelativeTouchTapTest {
         assertThat(rig.sent()).containsExactly("sendMouseMove(50, 0)")
     }
 
+    // A first finger that did not leave the tap box before the second one landed is judged by its
+    // own movement since the landing too: what it walked before does not add up to it.
+
+    @Test
+    fun `a first finger that drifted before the second one landed and jitters after it keeps the right click`() {
+        val (first, second) = rig.twoContexts()
+        first.start(100, 100)
+        first.moveTo(110, 100, T0 + 10)
+        first.moveTo(100, 100, T0 + 20)
+        first.moveTo(102, 100, T0 + 30) // 22 px walked, 2 px from the origin of its touch
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 40, true)).isTrue()
+
+        first.moveTo(100, 100, T0 + 60)
+        first.moveTo(102, 100, T0 + 70) // 26 px walked, 4 px since the landing
+        secondLiftsFirst(first, second, firstX = 102, firstY = 100)
+
+        assertThat(rig.sent())
+            .containsExactly(
+                "sendMouseMove(10, 0)",
+                "sendMouseMove(-10, 0)",
+                "sendMouseMove(2, 0)",
+                "down RIGHT",
+                "up RIGHT",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a first finger that drifted 15 px before the second one landed and slides 21 px after it is no click`() {
+        val (first, second) = rig.twoContexts()
+        first.start(100, 100)
+        first.moveTo(115, 100, T0 + 30)
+        setPointerCount(2, first, second)
+        assertThat(second.touchDownEvent(300, 100, T0 + 40, true)).isTrue()
+
+        first.moveTo(136, 100, T0 + 60)
+        secondLiftsFirst(first, second, firstX = 136, firstY = 100)
+
+        assertThat(rig.sent()).containsExactly("sendMouseMove(15, 0)")
+    }
+
     // The new finger at index 0 is the one the first context follows from its down: a move of a few
     // px of it counts from where it landed, not from where the old finger rests.
     @Test

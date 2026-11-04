@@ -153,6 +153,10 @@ class Game :
     private val touchContextMap = arrayOfNulls<TouchContext>(2)
     private var threeFingerDownTime = 0L
 
+    // BOREALIS: true once the host refused a touch event; its answer holds for the whole stream
+    // (stream)
+    private var nativeTouchRefused = false
+
     // STYLUS_DOWN_DEAD_ZONE_DELAY, STYLUS_DOWN_DEAD_ZONE_RADIUS, STYLUS_UP_DEAD_ZONE_DELAY,
     // STYLUS_UP_DEAD_ZONE_RADIUS and THREE_FINGER_TAP_THRESHOLD are in the companion object.
 
@@ -2385,16 +2389,36 @@ class Game :
         ) != MoonBridge.LI_ERR_UNSUPPORTED
     }
 
-    // Nothing calls it since the Java commented out the call in handleMotionEvent; the owner keeps
-    // the native touch path.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount", "UnusedPrivateFunction")
+    // BOREALIS: sends the fingers to the host as touch events (the Native touch mode). False when
+    // the touch contexts take the event: it is no touch of a finger, the host refused it before
+    // (nativeTouchRefused) or refuses it now, which puts the session in Direct (stream)
     private fun trySendTouchEvent(view: View, event: MotionEvent): Boolean {
         val eventType = getLiTouchTypeFromEvent(event)
-        if (eventType < 0) {
+        if (nativeTouchRefused || eventType < 0) {
             return false
         }
 
+        val taken = sendTouchEvents(view, event, eventType)
+        if (!taken) {
+            fallBackToDirectTouch()
+        }
+        return taken
+    }
+
+    // BOREALIS: the host takes no touch events (LI_ERR_UNSUPPORTED). What a host supports does not
+    // change during a stream, so the session goes to Direct for the rest of it, where the pen
+    // events ask the host again each time (stream)
+    private fun fallBackToDirectTouch() {
+        nativeTouchRefused = true
+        BorealisLog.i(LogTag.INPUT, "the host takes no touch events, the touch mode is direct")
+        streamSession.setTouchMode(TouchMode.DIRECT)
+        streamSession.notify(StreamNotice.NativeTouchRefused)
+    }
+
+    // True when the host took the event, false when it answered that touch is not supported.
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("ReturnCount")
+    private fun sendTouchEvents(view: View, event: MotionEvent, eventType: Byte): Boolean {
         if (event.actionMasked == MotionEvent.ACTION_MOVE) {
             // Move events may impact all active pointers
             for (i in 0 until event.pointerCount) {
@@ -2427,7 +2451,6 @@ class Game :
     @Suppress(
         "ComplexCondition",
         "CyclomaticComplexMethod",
-        "ForbiddenComment",
         "LongMethod",
         "NestedBlockDepth",
         "ReturnCount",
@@ -2752,14 +2775,15 @@ class Game :
                     return true
                 }
 
-                // TODO: Re-enable native touch when have a better solution for handling
-                // cancelled touches from Android gestures and 3 finger taps to activate
-                // the software keyboard.
-                /*if (touchMode == TouchMode.DIRECT && trySendTouchEvent(view, event)) {
-                    // If this host supports touch events and absolute touch is enabled,
-                    // send it directly as a touch event.
-                    return true;
-                }*/
+                // BOREALIS: the Native touch mode sends the fingers to the host as touch events,
+                // and the contexts below take what the host refuses. The three-finger tap that
+                // opens the keyboard is theirs: a finger that went to the host does not reach it
+                // (stream)
+                if (
+                    touchMode == TouchMode.NATIVE && view != null && trySendTouchEvent(view, event)
+                ) {
+                    return true
+                }
 
                 val context = getTouchContext(actionIndex)
                 if (context == null) {

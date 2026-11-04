@@ -196,20 +196,15 @@ internal class NativeTouchRefusedTest : MotionTestBase() {
         // The menu has the Native the viewer picked; the host's answer holds for the stream.
         native()
         assertThat(touchMode()).isEqualTo(TouchMode.NATIVE)
+        val before = mouseCalls().size
         touch(streamView, down(at = TIME + 1000))
         touch(streamView, up(at = TIME + 1050))
 
         assertThat(asked()).isEqualTo(1)
         assertThat(notices()).isEmpty()
         assertThat(refusalLines()).hasSize(1)
-        assertThat(mouseCalls())
-            .containsExactly(
-                position(100, 50),
-                press(left),
-                release(left),
-                position(100, 50),
-                press(left),
-            )
+        assertThat(mouseCalls().drop(before))
+            .containsExactly(position(100, 50), press(left))
             .inOrder()
     }
 

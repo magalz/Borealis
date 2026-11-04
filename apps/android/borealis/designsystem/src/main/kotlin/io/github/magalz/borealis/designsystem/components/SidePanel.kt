@@ -48,8 +48,8 @@ const val STREAM_SCRIM_ALPHA = 0.35f
  * does not wrap, such as the segments of an option row (the in-game menu's Touch row has four), and
  * that text grows with the font scale while the padding and the 48dp touch size stay in dp. Three
  * quarters is what that row needs at the largest text size on a 640dp phone, with every font and
- * text spacing, and it leaves a quarter of the stream visible. At a font scale of 1 or less, on a
- * TV and on a handheld, the width is the one above.
+ * text spacing, and it leaves a quarter of the stream visible. On a phone at a font scale of 1 or
+ * less the width is the one above, and on a TV and a handheld it is the one above at every scale.
  *
  * The panel has a hairline on its left edge only. The scrim is the page colour at 35%, lighter than
  * the dialog scrim so the stream stays visible.

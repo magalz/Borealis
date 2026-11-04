@@ -167,6 +167,8 @@
     <string name="settings_choice_overlay_detailed">Detailed</string>
     <string name="settings_choice_touch_trackpad">Trackpad</string>
     <string name="settings_choice_touch_direct">Direct</string>
+    <string name="settings_choice_touch_native">Native</string>
+    <string name="settings_choice_touch_native_summary">Sends real touch to the PC, as on a touchscreen. Needs a host with touch support.</string>
     <string name="settings_choice_scroll_none">None</string>
     <string name="settings_choice_scroll_none_summary">Both sticks move the mouse</string>
     <string name="settings_choice_scroll_right">Right stick</string>

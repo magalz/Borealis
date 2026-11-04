@@ -21,13 +21,19 @@ class FixedChoice(
 
 /** The lists of the settings screen whose entries are the same on every device. */
 object FixedChoices {
-    /** The stored value of Touch for a trackpad ([Settings.TOUCHSCREEN_TRACKPAD] is on). */
+    /**
+     * The value of Touch for a trackpad ([Settings.TOUCHSCREEN_TRACKPAD] is on and
+     * [Settings.TOUCHSCREEN_NATIVE] is off).
+     */
     const val TOUCH_TRACKPAD = "trackpad"
 
-    /** The stored value of Touch for a direct touch ([Settings.TOUCHSCREEN_TRACKPAD] is off). */
+    /**
+     * The value of Touch for a direct touch ([Settings.TOUCHSCREEN_TRACKPAD] is off and
+     * [Settings.TOUCHSCREEN_NATIVE] is off).
+     */
     const val TOUCH_DIRECT = "direct"
 
-    /** The stored value of Touch for a native touch ([Settings.TOUCHSCREEN_NATIVE] is on). */
+    /** The value of Touch for a native touch ([Settings.TOUCHSCREEN_NATIVE] is on). */
     const val TOUCH_NATIVE = "native"
 
     /** Frame pacing. */
@@ -246,6 +252,11 @@ object FixedChoices {
         listOf(
             FixedChoice(TOUCH_TRACKPAD, R.string.settings_choice_touch_trackpad),
             FixedChoice(TOUCH_DIRECT, R.string.settings_choice_touch_direct),
+            FixedChoice(
+                TOUCH_NATIVE,
+                R.string.settings_choice_touch_native,
+                R.string.settings_choice_touch_native_summary,
+            ),
         )
 
     /** Analog scrolling. */

@@ -95,7 +95,9 @@ object Settings {
 
     // Input
 
-    /** Touch acts as a trackpad (on) or as a direct touch (off). */
+    /**
+     * Touch acts as a trackpad (on) or as a direct touch (off), while [TOUCHSCREEN_NATIVE] is off.
+     */
     val TOUCHSCREEN_TRACKPAD = BooleanSetting("checkbox_touchscreen_trackpad", default = true)
 
     /**
@@ -479,6 +481,7 @@ object Settings {
             GAMEPAD_MOTION_SENSORS,
             GAMEPAD_MOTION_FALLBACK,
             TOUCHSCREEN_TRACKPAD,
+            TOUCHSCREEN_NATIVE,
             MOUSE_NAV_BUTTONS,
             ABSOLUTE_MOUSE_MODE,
             SHOW_ONSCREEN_CONTROLS,

@@ -134,8 +134,8 @@ From Sprint 17b the work of Borealis is tracked in itsaplan, the project `ignis-
 
 ## Lessons from Sprint 17b
 
-- **CI on the draft phase pull request is the full gate.** Sprint 17b ran the full Android gate, the Core checks,
-  the screenshot and design jobs, and the Roborazzi verify on GitHub Actions, on the draft phase pull request. The
+- **CI on the draft phase pull request is the full gate.** Sprint 17b ran the full Android gate, the Core job, the
+  screenshot job and the Docs job, and the Roborazzi verify on GitHub Actions, on the draft phase pull request. The
   tasks and their reviewers ran only the checks of what they touched, and no integration gate ran on the machine.
   One push goes per merge wave, about 30 minutes apart. Before BORE-38, a new push cancelled the run in progress;
   now a new run is queued, and the main session cancels an out-of-date run by hand. When a wave has two
@@ -151,8 +151,7 @@ From Sprint 17b the work of Borealis is tracked in itsaplan, the project `ignis-
   lanes and one for the Controls lane. Each had its own integration branch cut from the phase branch, its own
   implementers and reviewers, and no shared files. The sessions were started fresh from a turn the owner typed, with
   a self-contained prompt, and not forked from the orchestrator. The main session merged each integration branch
-  into the phase after its own merge review of the whole integration diff, and ran no gate on the sessions' work
-  itself. The phase branch was touched only by the main session.
+  into the phase after its own merge review, and ran no integration gate on the machine. The phase branch was touched only by the main session.
 - **Contracts before parallel tasks.** When tasks share an interface, the interface is written in the plan and in
   the briefs before the wave starts. The Native touch mode was the example: the setting, the menu segment and the
   send path (N1a, N1b and N2) shared a mode name, a refusal notice and a host rule. The notice text and the purpose

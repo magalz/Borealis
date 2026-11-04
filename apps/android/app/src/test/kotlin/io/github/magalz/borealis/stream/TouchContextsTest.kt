@@ -9,11 +9,10 @@ import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.T0
 import com.limelight.binding.input.touch.TouchRig
+import com.limelight.binding.input.touch.TwoFingerTap
 import com.limelight.binding.input.touch.liftFirstOfTwoFingers
-import com.limelight.binding.input.touch.moveTo
 import com.limelight.binding.input.touch.setPointerCount
 import com.limelight.binding.input.touch.start
-import com.limelight.binding.input.touch.twoFingers
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
@@ -22,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
 class TouchContextsTest {
@@ -65,21 +65,15 @@ class TouchContextsTest {
     }
 
     @Test
-    @Config(shadows = [ShadowRecordingBridge::class])
-    fun `the trackpad contexts share the movement of both fingers, so a second finger that slid is no click`() {
-        val rig = TouchRig()
-        val (first, second) =
-            TouchContexts.build(TouchMode.TRACKPAD, rig.connection, rig.view, rig.prefs)!!.map {
-                it as RelativeTouchContext
-            }
-        twoFingers(first, second)
-        second.moveTo(325, 100, T0 + 40)
+    fun `the trackpad contexts hold one two-finger tap, so the movement of either finger reaches both`() {
+        val contexts = TouchContexts.build(TouchMode.TRACKPAD, connection, view, prefs(false))!!
 
-        liftFirstOfTwoFingers(first, second, T0 + 100, secondX = 325)
-        first.touchUpEvent(325, 100, T0 + 120)
-        rig.advance(2000)
+        // Seen through a gesture, an unshared tap never clicks at all (the test above); the
+        // movement that it holds for both fingers only shows in which instance each context has.
+        val taps = contexts.map { ReflectionHelpers.getField<TwoFingerTap>(it, "twoFingerTap") }
 
-        assertThat(rig.sent()).isEmpty()
+        assertThat(taps).hasSize(2)
+        assertThat(taps[1]).isSameInstanceAs(taps[0])
     }
 
     @Test

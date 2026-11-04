@@ -51,7 +51,7 @@ object Shortcuts {
     val sendKeys: List<NamedChord> =
         listOf(altTab, winTab, win, ctrlShiftEsc, altF4, winD, winG, esc, winAltB)
 
-    /** The shortcut row of the in-stream keyboard. */
+    /** The shortcut row of the keyboard on a TV or a handheld; a phone shows [keyboardRowPhone]. */
     val keyboardRow: List<NamedChord> =
         listOf(altTab, winTab, win, ctrlShiftEsc, altF4, winD, esc, f11)
 

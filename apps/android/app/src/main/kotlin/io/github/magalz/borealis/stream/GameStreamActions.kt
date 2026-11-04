@@ -118,8 +118,11 @@ internal constructor(
     /**
      * The chrome takes the input: releases every key held down, the mouse buttons in [mouseButtons]
      * (`MotionEvent.BUTTON_*`, as the activity tracks them) and the touches in progress, so the PC
-     * is not left with a stuck key or button. Gamepad zeroing is the gamepad handler's own
-     * (`GamepadChrome.setCaptured`, called by the activity).
+     * is not left with a stuck key or button. The buttons released here are the primary, secondary
+     * and tertiary ones with their stylus buttons: Back and Forward belong to the activity's
+     * `SideButton`s, which release what the PC has of them, so a bit of either in [mouseButtons] is
+     * ignored. Gamepad zeroing is the gamepad handler's own (`GamepadChrome.setCaptured`, called by
+     * the activity).
      */
     fun releaseHeldInput(mouseButtons: Int) {
         heldKeys.releaseAll { vk ->
@@ -344,8 +347,6 @@ internal constructor(
                     MouseButtonPacket.BUTTON_RIGHT,
                 (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY) to
                     MouseButtonPacket.BUTTON_MIDDLE,
-                MotionEvent.BUTTON_BACK to MouseButtonPacket.BUTTON_X1,
-                MotionEvent.BUTTON_FORWARD to MouseButtonPacket.BUTTON_X2,
             )
 
         private fun preferences(context: Context) =

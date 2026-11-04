@@ -2959,8 +2959,11 @@ class Game :
         ) {
             conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
         }
-        // The side buttons: the PC has Forward down once it has been down for SIDE_PULSE_MS, and
-        // Back sent nothing yet, since it waits to see whether it is held
+        // The side buttons, which cancelSideButtons lets go of if the PC has them down. With "Mouse
+        // back and forward buttons" on, the PC has Forward (X2) down once it has been down for
+        // SIDE_PULSE_MS, and Back (X1) sent nothing yet, since it waits to see whether it is held.
+        // With it off, the PC has the right button down once Back has been down for SIDE_PULSE_MS,
+        // and Forward sends nothing
         cancelSideButtons()
         lastButtonState = 0
     }

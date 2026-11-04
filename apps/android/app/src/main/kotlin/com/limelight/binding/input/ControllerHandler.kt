@@ -313,8 +313,8 @@ class ControllerHandler(
                 (currentControllers.toInt() and (1 shl context.controllerNumber.toInt()).inv())
                     .toShort()
 
-            // The PC drops the controller with the zeroed packet below, and its battery with it:
-            // the next pad on the number has to tell the host again that it has none
+            // The PC drops the battery of a controller together with it, so the flag of the number
+            // starts over: the next pad on the number has to tell the host again that it has none
             val freedNumber = context.controllerNumber.toInt()
             backgroundThreadHandler.post { numberHasNoBattery[freedNumber] = false }
 

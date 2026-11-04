@@ -1116,7 +1116,7 @@ Items, with what each became:
   Send keys, OK, Right, OK, then Down to Quit. The round checks it on the devices.
 - **Second device during a launch.** Found in the Sprint 14 device round (2026-10-28). Done in #101: a
   start that finds an app running asks on both paths, the `/serverinfo` path and the 400 path, unless the
-  user chose Resume, Continue or Try again for that app. The audit trail records `entry=asked` or
+  user chose Resume, Continue or Try again for that app (from Sprint 17b Try again asks too, BORE-4). The audit trail records `entry=asked` or
   `entry=chosen`. A pinned shortcut or a TV poster for a running app asks now. One risk stays: if another
   device restarted the app that the Library shows running, Resume enters it without asking, because the
   host gives a paired client no session id. The host proposal is

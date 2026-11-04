@@ -9,5 +9,5 @@ class SettingsActions(
     val onChoiceSelected: (SettingsItem, String) -> Unit,
     val onSliderChanged: (SettingsItem, Int) -> Unit,
     val onResetLayout: () -> Unit,
-    val onSliderReleased: (SettingsItem, Int) -> Unit = { _, _ -> },
+    val onSliderReleased: (SettingsItem, Int) -> Unit,
 )

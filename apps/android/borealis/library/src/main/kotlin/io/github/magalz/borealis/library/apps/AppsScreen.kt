@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -68,14 +69,23 @@ private val SNACKBAR_PADDING = 16.dp
 private val LOADER_SIZE = 64.dp
 
 /**
+ * Above this font scale, which the text size and the system font make together (WCAG 1.4.4 asks for
+ * 2.0 without loss), the title stops sharing its row with the controls: a long host name at 2.6
+ * needs the whole width, and beside a button or two icons it took the height of the screen.
+ */
+private const val STACKED_HEADER_FONT_SCALE = 2f
+
+/**
  * The apps of one host as a grid of covers: [AppsUiState.items] in order, the running app first. A
  * tap or OK runs [onAppSelected]; a long press, holding OK or X runs [onActions]. The actions and
  * details of [AppsUiState] open as a sheet and a dialog over the grid, and Back closes them before
  * anything else. A phone has a top bar with a back arrow, which calls [onBack], and the toggle for
  * hidden apps; a TV or handheld has a header with the toggle as a button and no back arrow, because
- * the system Back there is handled by the navigation of the shell. When the last of these windows
- * closes, the tile of the app they were for has the focus again ([RestoreOpenerFocus]). Messages go
- * through [snackbarHostState]. Provides its own theme for [formFactor].
+ * the system Back there is handled by the navigation of the shell. Above a font scale of 2.0 the
+ * title takes the whole width: under the bar of a phone, above the toggle of a TV or handheld
+ * ([STACKED_HEADER_FONT_SCALE]). When the last of these windows closes, the tile of the app they
+ * were for has the focus again ([RestoreOpenerFocus]). Messages go through [snackbarHostState].
+ * Provides its own theme for [formFactor].
  */
 @Composable
 fun AppsScreen(
@@ -100,6 +110,7 @@ fun AppsScreen(
         LaunchedEffect(windowAppId) { if (windowAppId != null) openerId = windowAppId }
         val opener = openerId.takeIf { formFactor != FormFactor.Phone }
         val openerFocus = remember { FocusRequester() }
+        val stacked = LocalDensity.current.fontScale > STACKED_HEADER_FONT_SCALE
         Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Column(Modifier.fillMaxSize()) {
                 if (formFactor == FormFactor.Phone) {
@@ -108,10 +119,14 @@ fun AppsScreen(
                         stringResource(R.string.apps_back),
                         actions = { ShowHiddenToggle(state, onToggleShowHidden) },
                     ) {
-                        Title(state)
+                        if (!stacked) Title(state)
+                    }
+                    if (stacked) {
+                        val gutter = LocalBorealisSpacing.current.gutter
+                        Title(state, Modifier.padding(horizontal = gutter))
                     }
                 } else {
-                    Header(state, onToggleShowHidden)
+                    Header(state, stacked, onToggleShowHidden)
                 }
                 Content(
                     state,
@@ -172,19 +187,31 @@ private fun ShowHiddenToggle(state: AppsUiState, onToggleShowHidden: () -> Unit)
     }
 }
 
+/** The toggle of the header of a TV or handheld, as a button: a phone has [ShowHiddenToggle]. */
 @Composable
-private fun Header(state: AppsUiState, onToggleShowHidden: () -> Unit) {
+private fun ShowHiddenButton(state: AppsUiState, onToggleShowHidden: () -> Unit) {
+    BorealisButton(
+        stringResource(toggleLabel(state)),
+        onToggleShowHidden,
+        style = BorealisButtonStyle.Secondary,
+    )
+}
+
+/** The header of a TV or handheld; [stacked] puts the toggle under the title. */
+@Composable
+private fun Header(state: AppsUiState, stacked: Boolean, onToggleShowHidden: () -> Unit) {
     val gutter = LocalBorealisSpacing.current.gutter
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = gutter, vertical = ROW_GAP),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Title(state, Modifier.weight(1f))
-        BorealisButton(
-            stringResource(toggleLabel(state)),
-            onToggleShowHidden,
-            style = BorealisButtonStyle.Secondary,
-        )
+    val padding = Modifier.fillMaxWidth().padding(horizontal = gutter, vertical = ROW_GAP)
+    if (stacked) {
+        Column(padding, verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
+            Title(state)
+            ShowHiddenButton(state, onToggleShowHidden)
+        }
+    } else {
+        Row(padding, verticalAlignment = Alignment.CenterVertically) {
+            Title(state, Modifier.weight(1f))
+            ShowHiddenButton(state, onToggleShowHidden)
+        }
     }
 }
 

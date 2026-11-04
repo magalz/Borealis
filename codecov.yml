@@ -4,6 +4,10 @@
 codecov:
   branch: main
 
+# The self-hosted instance has no Slack app configured; the notifier fails
+# with "Invalid URL 'None/notify'" on every upload.
+slack_app: false
+
 coverage:
   precision: 2
   round: down

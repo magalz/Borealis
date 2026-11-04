@@ -13,6 +13,7 @@ import org.robolectric.annotation.Config
  * (25 px) and of the time (250 ms), the release 100 ms later, and the pending release that a second
  * tap replaces.
  */
+@Suppress("LargeClass")
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowRecordingBridge::class])
 class RelativeTouchTapTest {

@@ -24,8 +24,8 @@ private const val BUTTON_RELEASE_DELAY = 100L
  * alone: when the first finger lifts first, its context decides at the last lift and never sees the
  * second finger go down or slide, and the context of the second finger never sees the first one
  * slide. The tap time runs from the second finger's down in both lift orders, and a move of either
- * finger past the tap distance since then, or a scroll, is no tap. `TouchContexts` builds one for
- * the contexts of a stream.
+ * finger past the tap distance since then is no tap. `TouchContexts` builds one for the contexts of
+ * a stream.
  */
 class TwoFingerTap {
     private var secondFingerDownTime: Long? = null
@@ -37,7 +37,7 @@ class TwoFingerTap {
         moved = false
     }
 
-    /** A finger moved past the tap distance or scrolls: no tap, whichever finger lifts first. */
+    /** A finger moved past the tap distance since the second one landed: no tap, whoever lifts. */
     fun fingerMoved() {
         moved = true
     }
@@ -72,6 +72,13 @@ class RelativeTouchContext(
     private var confirmedDrag = false
     private var confirmedScroll = false
     private var distanceMoved = 0.0
+
+    // Where the first finger was when the second one landed and how far it walked since. Its move
+    // before that is confirmedMove, which does not count for the two-finger tap; its jitter after
+    // the landing does not either, only a move past the tap box or distance (twoFingerTap).
+    private var landingX = 0
+    private var landingY = 0
+    private var distanceSinceLanding = 0.0
     private var xFactor = 0.0
     private var yFactor = 0.0
     private var pointerCount = 0
@@ -189,9 +196,11 @@ class RelativeTouchContext(
             twoFingerTapPending = false
             distanceMoved = 0.0
 
-            // The second finger starts the tap time of the two fingers
+            // The second finger starts the tap time of the two fingers. At index 0 it is the first
+            // finger of this context: its move counts from where it landed.
             if (pointerCount == 2) {
                 twoFingerTap.secondFingerDown(eventTime)
+                markLanding()
             }
 
             // Only the first finger of a gesture drags, and only right after a tap
@@ -273,6 +282,31 @@ class RelativeTouchContext(
         handler.removeCallbacks(dragTimerRunnable)
     }
 
+    // The second finger landed: the move of the finger of this context counts from here.
+    private fun markLanding() {
+        landingX = lastTouchX
+        landingY = lastTouchY
+        distanceSinceLanding = 0.0
+    }
+
+    // The first finger moved past the tap box or the tap distance since the second one landed: no
+    // two-finger tap. The second finger is judged by its own context (checkForConfirmedMove).
+    private fun checkForTwoFingerMove(eventX: Int, eventY: Int) {
+        if (actionIndex != 0 || pointerCount != 2) {
+            return
+        }
+
+        distanceSinceLanding +=
+            sqrt((eventX - lastTouchX).toDouble().pow(2) + (eventY - lastTouchY).toDouble().pow(2))
+        if (
+            abs(eventX - landingX) > TAP_MOVEMENT_THRESHOLD ||
+                abs(eventY - landingY) > TAP_MOVEMENT_THRESHOLD ||
+                distanceSinceLanding >= TAP_DISTANCE_THRESHOLD
+        ) {
+            twoFingerTap.fingerMoved()
+        }
+    }
+
     private fun confirmMove() {
         if (secondPress) {
             startDrag()
@@ -317,6 +351,7 @@ class RelativeTouchContext(
         if (eventX != lastTouchX || eventY != lastTouchY) {
             checkForConfirmedMove(eventX, eventY)
             checkForConfirmedScroll()
+            checkForTwoFingerMove(eventX, eventY)
 
             // We only send moves and drags for the primary touch point
             if (actionIndex == 0) {
@@ -343,10 +378,6 @@ class RelativeTouchContext(
                     // A move along x alone, or a y delta that scaled to zero, scrolls nothing
                     if (confirmedScroll && deltaY != 0) {
                         conn.sendMouseHighResScroll((deltaY * SCROLL_SPEED_FACTOR).toShort())
-
-                        // A scroll is no tap, also for a finger that left the tap box before the
-                        // second one landed (its move was confirmed then, confirmMove)
-                        twoFingerTap.fingerMoved()
                     }
                 } else {
                     if (prefConfig.absoluteMouseMode) {
@@ -399,6 +430,7 @@ class RelativeTouchContext(
         if (pointerCount > this.pointerCount) {
             twoFingerTapPending = false
             clearSecondPress()
+            markLanding()
         }
         this.pointerCount = pointerCount
 

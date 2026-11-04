@@ -57,8 +57,7 @@ sealed interface AddHostResult {
      * true when its first poll says it is paired already, as a forgotten host that still trusts
      * this device is.
      */
-    data class Added(val hostId: String, val name: String, val paired: Boolean = false) :
-        AddHostResult
+    data class Added(val hostId: String, val name: String, val paired: Boolean) : AddHostResult
 
     /**
      * This device already knew the host: by its id when it answered, or by the address it was

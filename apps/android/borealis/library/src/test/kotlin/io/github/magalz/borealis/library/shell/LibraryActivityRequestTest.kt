@@ -142,17 +142,7 @@ class LibraryActivityRequestTest {
     }
 
     @Test
-    fun `a Launch request from Try again for the app that runs is not the user's choice`() {
-        apps.emit(deskApps(running = RunningApp(1, "Hades II")))
-
-        launch(LibraryLaunchRequest.Launch("desk", 1))
-
-        assertThat(streams.requests)
-            .containsExactly(StreamRequest("desk", 1, "Hades II", hdrSupported = false))
-    }
-
-    @Test
-    fun `a Launch request of a shortcut for the app that runs is not the user's choice`() {
+    fun `a Launch request of a shortcut or Try again for a running app is not the user's choice`() {
         apps.emit(deskApps(running = RunningApp(1, "Hades II")))
 
         launch(LibraryLaunchRequest.Launch("desk", 1))

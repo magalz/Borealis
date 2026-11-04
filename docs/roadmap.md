@@ -1702,7 +1702,7 @@ facts of both items and added the third item and the open decision. See the
 - **The cost of the stop on stuck USB pads.** From Sprint 16 (U3, the merge review of #108). To zero
   the motors at stream end, `ControllerHandler.stop()` makes up to two bulk writes of 100 ms each for
   every USB pad that does not answer. This is new with the U3 fix.
-  Sprint 17b: done in the phase (BORE-25, PH3): the motors are zeroed off the calling thread, and a pad that failed a write is skipped. Follow-ups are in the backlog (BORE-42). Only unit tests cover it so far (3.33, step 33).
+  Sprint 17b: done in the phase (BORE-25, PH3): the stop still runs on the main thread, but it is bounded: a pad whose motor write takes 50 ms or more gets no trigger write, and no pad is started once the zeroing has used 200 ms (about 300 ms at worst). Off-thread zeroing was rejected, since the activity's destroy ends the background thread right after the stop. Follow-ups are in the backlog (BORE-42). Only unit tests cover it so far (3.33, step 33).
 
 #### Video and the stream screens
 

@@ -15,6 +15,8 @@ import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
+import io.github.magalz.borealis.designsystem.theme.TextSize
+import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.library.addhost.AddHostError
 import io.github.magalz.borealis.library.addhost.AddHostScreen
 import io.github.magalz.borealis.library.addhost.AddHostUiState
@@ -28,6 +30,7 @@ import io.github.magalz.borealis.library.pairing.PairingUiState
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,13 +42,16 @@ import org.robolectric.annotation.Config
  * text resizes to 200 percent without loss of content). Every text must fit where it is, or the
  * screen scrolls: none runs past its width, is cut off at the bottom or ends in an ellipsis. The
  * Text spacing of the runs is Normal, Wide or Wider, and the look draws the level that the font
- * scale lets it (ADR 0058, decision 4), so none fails.
+ * scale lets it (ADR 0058, decision 4), so none fails. The Apps screen of a host with a long name
+ * also fits at the Text size Largest over the system font of 2.0, a combined font scale of 2.6, at
+ * Normal.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-class LargeTextFitTest(case: FitCase) {
+class LargeTextFitTest(private val case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 
     private val look = BorealisLook(font = case.font, textSpacing = case.spacing)
+    private val largest = look.copy(textSize = TextSize.Largest)
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SCALE)
@@ -76,6 +82,20 @@ class LargeTextFitTest(case: FitCase) {
     @Config(qualifiers = TV, fontScale = SCALE)
     fun `Apps on a TV fit with a long host name`() =
         assertFits(FormFactor.Tv) { Apps(it, LONG_HOST_NAME) }
+
+    @Test
+    @Config(qualifiers = PHONE, fontScale = SCALE)
+    fun `Apps on a phone fit with a long host name at the largest text size`() {
+        assumeNormalSpacing()
+        assertFits(FormFactor.Phone, look = largest) { Apps(it, LONG_HOST_NAME) }
+    }
+
+    @Test
+    @Config(qualifiers = TV, fontScale = SCALE)
+    fun `Apps on a TV fit with a long host name at the largest text size`() {
+        assumeNormalSpacing()
+        assertFits(FormFactor.Tv, look = largest) { Apps(it, LONG_HOST_NAME) }
+    }
 
     @Test
     @Config(qualifiers = PHONE, fontScale = SCALE)
@@ -111,12 +131,19 @@ class LargeTextFitTest(case: FitCase) {
         composeRule.assertNoClippedText()
     }
 
+    /**
+     * The combined font scale of 2.6 is held at Normal, the spacing that was measured there (Wider
+     * is drawn as Wide from 2.0, and Wide above a combined 2.0 has not been measured).
+     */
+    private fun assumeNormalSpacing() = assumeTrue(case.spacing == TextSpacing.Normal)
+
     private fun assertFits(
         formFactor: FormFactor,
         selected: RailSelection = RailSelection.Hosts,
+        look: BorealisLook = this.look,
         screen: @Composable (FormFactor) -> Unit,
     ) {
-        show(formFactor, selected, screen)
+        show(formFactor, selected, look, screen)
 
         composeRule.assertNoClippedText()
     }
@@ -124,6 +151,7 @@ class LargeTextFitTest(case: FitCase) {
     private fun show(
         formFactor: FormFactor,
         selected: RailSelection,
+        look: BorealisLook = this.look,
         screen: @Composable (FormFactor) -> Unit,
     ) {
         composeRule.setContent {

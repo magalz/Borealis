@@ -13,6 +13,7 @@ import io.github.magalz.borealis.crypto.TestIdentities
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -30,8 +31,8 @@ import org.robolectric.RobolectricTestRunner
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the one
  * about a host that is handed over as online and does not answer (S12-16), which pins the fixed
  * behaviour: a host is added when a poll answered, not because it was handed over as online, and
- * the ones about a removed host that mDNS announces again, which restart discovery while polling
- * (Sprint 17b, BORE-6).
+ * the ones about a removed host that mDNS announces again, which restart discovery while polling,
+ * and the one about a removal that races the end of polling (Sprint 17b, BORE-6).
  */
 @RunWith(RobolectricTestRunner::class)
 class ManagerHostsCharacterizationTest {
@@ -380,6 +381,43 @@ class ManagerHostsCharacterizationTest {
     }
 
     @Test
+    fun `a removal that races the end of polling leaves no discovery running`() {
+        val host = reachable(UUID_1)
+        rig.seed(saved(UUID_1, "ONE", manual = host.address))
+        rig.start()
+        val atStop = rig.gate()
+        val letGo = rig.gate()
+        val first = AtomicBoolean(true)
+        // The stop of the restart is slow: it waits here, as one that joins a thread would
+        val discovery =
+            recordDiscovery(
+                RecordingDiscoveryAgent {
+                    if (first.getAndSet(false)) {
+                        atStop.countDown()
+                        letGo.await()
+                    }
+                }
+            )
+        rig.binder.startPolling(Updates())
+        val removal = thread { rig.binder.removeComputer(saved(UUID_1)) }
+        assertThat(atStop.await(WAIT_MS, TimeUnit.MILLISECONDS)).isTrue()
+
+        val unbind = thread { rig.binder.stopPolling() }
+        // The unbind is done, or it waits for the restart to end: a lock that it cannot take is a
+        // blocked thread. Either way the restart goes on when this lets it.
+        awaitUntil("the unbind to end or to wait for the removal") {
+            unbind.state == Thread.State.TERMINATED || unbind.state == Thread.State.BLOCKED
+        }
+        letGo.countDown()
+        removal.join(WAIT_MS)
+        unbind.join(WAIT_MS)
+
+        assertThat(removal.isAlive).isFalse()
+        assertThat(unbind.isAlive).isFalse()
+        assertThat(discovery.calls.last()).isEqualTo("stop")
+    }
+
+    @Test
     fun `invalidating a host makes its state unknown and tells nobody`() {
         val host = reachable(UUID_1)
         val other = reachable(UUID_2)
@@ -461,7 +499,9 @@ class ManagerHostsCharacterizationTest {
      * discovery service, the binder holds its service, and nothing hands out the agent: this reads
      * the fields.
      */
-    private fun recordDiscovery(): RecordingDiscoveryAgent {
+    private fun recordDiscovery(
+        agent: RecordingDiscoveryAgent = RecordingDiscoveryAgent()
+    ): RecordingDiscoveryAgent {
         val managerField = ComputerManagerService::class.java.getDeclaredField("discoveryBinder")
         managerField.isAccessible = true
         val binder = checkNotNull(managerField.get(rig.service))
@@ -471,11 +511,14 @@ class ManagerHostsCharacterizationTest {
         val agentField = DiscoveryService::class.java.getDeclaredField("discoveryAgent")
         agentField.isAccessible = true
         (agentField.get(discovery) as MdnsDiscoveryAgent).close()
-        return RecordingDiscoveryAgent().also { agentField.set(discovery, it) }
+        return agent.also { agentField.set(discovery, it) }
     }
 
-    /** An agent that finds nothing and remembers what it was asked: "start <period>" or "stop". */
-    private class RecordingDiscoveryAgent :
+    /**
+     * An agent that finds nothing and remembers what it was asked: "start <period>" or "stop".
+     * [afterStop] runs after each stop is recorded, on the thread that asked.
+     */
+    private class RecordingDiscoveryAgent(private val afterStop: () -> Unit = {}) :
         MdnsDiscoveryAgent(
             object : MdnsDiscoveryListener {
                 override fun notifyComputerAdded(computer: MdnsComputer) = Unit
@@ -491,6 +534,7 @@ class ManagerHostsCharacterizationTest {
 
         override fun stopDiscovery() {
             calls += "stop"
+            afterStop()
         }
     }
 

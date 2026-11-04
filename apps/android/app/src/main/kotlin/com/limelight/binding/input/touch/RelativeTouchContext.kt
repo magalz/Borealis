@@ -289,10 +289,15 @@ class RelativeTouchContext(
         distanceSinceLanding = 0.0
     }
 
+    // This context follows the first of two fingers: the second finger's context judges its own
+    // moves, and the first finger's moves count from the landing (checkForTwoFingerMove).
+    private val isFirstFingerOfTwo: Boolean
+        get() = actionIndex == 0 && pointerCount == 2
+
     // The first finger moved past the tap box or the tap distance since the second one landed: no
-    // two-finger tap. The second finger is judged by its own context (checkForConfirmedMove).
+    // two-finger tap.
     private fun checkForTwoFingerMove(eventX: Int, eventY: Int) {
-        if (actionIndex != 0 || pointerCount != 2) {
+        if (!isFirstFingerOfTwo) {
             return
         }
 
@@ -312,7 +317,12 @@ class RelativeTouchContext(
             startDrag()
         } else {
             confirmedMove = true
-            twoFingerTap.fingerMoved()
+
+            // The move of the first of two fingers is judged from the landing of the second, not
+            // from the touch down of the first (checkForTwoFingerMove)
+            if (!isFirstFingerOfTwo) {
+                twoFingerTap.fingerMoved()
+            }
         }
     }
 

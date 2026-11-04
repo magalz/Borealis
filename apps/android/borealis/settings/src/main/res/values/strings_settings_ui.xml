@@ -84,7 +84,7 @@
     <string name="settings_audio_channels_title">Channels</string>
     <string name="settings_host_audio_title">Play audio on the PC</string>
     <string name="settings_audio_fx_title">Audio effects</string>
-    <string name="settings_audio_fx_summary">Let system audio effects work while you stream. This can add latency.</string>
+    <string name="settings_audio_fx_summary">Lets the device\'s equalizer and sound effects change the stream\'s sound. Uses a slower audio path, which adds latency.</string>
 
     <!-- Rows: Advanced -->
     <string name="settings_sops_title">Optimise game settings</string>
@@ -167,6 +167,8 @@
     <string name="settings_choice_overlay_detailed">Detailed</string>
     <string name="settings_choice_touch_trackpad">Trackpad</string>
     <string name="settings_choice_touch_direct">Direct</string>
+    <string name="settings_choice_touch_native">Native</string>
+    <string name="settings_choice_touch_native_summary">Sends real touch to the PC, as on a touchscreen. Needs a host with touch support.</string>
     <string name="settings_choice_scroll_none">None</string>
     <string name="settings_choice_scroll_none_summary">Both sticks move the mouse</string>
     <string name="settings_choice_scroll_right">Right stick</string>

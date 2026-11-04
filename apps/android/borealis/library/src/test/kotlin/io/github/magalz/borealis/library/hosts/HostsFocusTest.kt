@@ -1,20 +1,30 @@
 package io.github.magalz.borealis.library.hosts
 
+import android.view.View
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
@@ -38,8 +48,16 @@ class HostsFocusTest {
 
     private val state = mutableStateOf(withHosts)
     private val selected = mutableListOf<String>()
+    private val woken = mutableListOf<String>()
+    private var window: View? = null
     private val aardvark =
         HostItemUiState("aard", "Aardvark", Reachability.ONLINE, true, null, HostAction.OPEN)
+    /** More hosts than the grid composes at once, so the cards past the window are not in it. */
+    private val manyHosts =
+        (0 until 30).map { n ->
+            val id = "h${n.toString().padStart(2, '0')}"
+            HostItemUiState(id, "Host $id", Reachability.ONLINE, true, null, HostAction.OPEN)
+        }
 
     @Test
     fun `a host that appears before the focused card does not take the focus`() {
@@ -136,30 +154,157 @@ class HostsFocusTest {
         assertThat(selected).isEmpty()
     }
 
+    @Test
+    fun `Back from the options gives the focus back to the card that opened them`() {
+        show()
+        composeRule.onNodeWithTag("host:living").requestFocus()
+        openOptions("host:living")
+        resetWindowFocus()
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Details").assertDoesNotExist()
+        composeRule.onNodeWithTag("host:living").assertIsFocused()
+    }
+
+    @Test
+    fun `an option that keeps the screen gives the focus back to the card that opened the options`() {
+        show()
+        composeRule.onNodeWithTag("host:living").requestFocus()
+        openOptions("host:living")
+        resetWindowFocus()
+
+        composeRule.onNodeWithText("Wake").performClick()
+        composeRule.waitForIdle()
+
+        assertThat(woken).containsExactly("living")
+        composeRule.onNodeWithTag("host:living").assertIsFocused()
+    }
+
+    @Test
+    fun `closing the details gives the focus back to the card that opened the options`() {
+        show()
+        composeRule.onNodeWithTag("host:living").requestFocus()
+        openOptions("host:living")
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Close").assertIsDisplayed()
+        resetWindowFocus()
+
+        composeRule.onNodeWithText("Close").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Close").assertDoesNotExist()
+        composeRule.onNodeWithTag("host:living").assertIsFocused()
+    }
+
+    @Test
+    fun `cancelling the Forget confirmation gives the focus back to the card that opened the options`() {
+        show()
+        composeRule.onNodeWithTag("host:living").requestFocus()
+        openOptions("host:living")
+        composeRule.onNodeWithText("Forget").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Cancel").assertIsFocused()
+        resetWindowFocus()
+
+        composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Cancel").assertDoesNotExist()
+        composeRule.onNodeWithTag("host:living").assertIsFocused()
+    }
+
+    @Test
+    fun `closing the options after the grid dropped the opener card leaves the screen usable`() {
+        state.value = withHostsNoContinue.copy(items = manyHosts)
+        show()
+        composeRule.onNodeWithTag("host:h04").requestFocus()
+        openOptions("host:h04")
+        resetWindowFocus()
+        // The grid composes only what is in view, and keeps a card that has the focus: the reset
+        // gave it to the first card, so the opener, which carries the requester, leaves the grid.
+        composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(manyHosts.size)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:h04").assertDoesNotExist()
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Details").assertDoesNotExist()
+        val last = "host:h${manyHosts.size - 1}"
+        composeRule.onNodeWithTag(last).requestFocus()
+        composeRule.onNodeWithTag(last).assertIsFocused()
+    }
+
+    @Test
+    fun `a card that once opened the options does not take the focus when the screen comes back`() {
+        val restoration = StateRestorationTester(composeRule)
+        var inputMode: InputModeManager? = null
+        restoration.setContent {
+            inputMode = LocalInputModeManager.current
+            Screen()
+        }
+        composeRule.runOnIdle { checkNotNull(inputMode).requestInputMode(InputMode.Keyboard) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:living").requestFocus()
+        openOptions("host:living")
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("host:living").performKeyInput { pressKey(Key.DirectionUp) }
+        composeRule.onNodeWithTag("continue:desk").assertIsFocused()
+
+        restoration.emulateSavedInstanceStateRestore()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("continue:desk").assertIsFocused()
+    }
+
     private fun focusedTag(): String? =
         composeRule.onAllNodes(isFocused()).fetchSemanticsNodes().firstNotNullOfOrNull {
             it.config.getOrNull(SemanticsProperties.TestTag)
         }
 
+    /** X on a focused card opens the options of its host. */
+    private fun openOptions(tag: String) {
+        composeRule.onNodeWithTag(tag).performKeyInput { pressKey(Key.ButtonX) }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
+    }
+
+    /**
+     * What a window that opens over the screen can do to the one under it (Sprint 14 UAT, U11):
+     * Android takes the focus from its view and gives it back, and Compose then puts the focus on
+     * the first element and not on the one that had it. The dialogs of Robolectric leave the focus
+     * alone, so the test does what the device did.
+     */
+    private fun resetWindowFocus() {
+        composeRule.runOnUiThread { checkNotNull(window).clearFocus() }
+        composeRule.waitForIdle()
+    }
+
+    @Composable
+    private fun Screen() {
+        window = LocalView.current
+        HostsScreen(
+            state = state.value,
+            formFactor = FormFactor.Tv,
+            snackbarHostState = SnackbarHostState(),
+            onHostSelected = { selected += it },
+            onContinue = {},
+            onWake = { woken += it },
+            onForget = {},
+            onDetails = { state.value = state.value.copy(details = DETAILS) },
+            onDetailsDismissed = { state.value = state.value.copy(details = null) },
+            onAddHost = {},
+            onSettings = {},
+        )
+    }
+
     /** [withRail] draws the shell's rail: it is what has focus while the hosts load. */
     private fun show(withRail: Boolean = false) {
         composeRule.setContentInKeyboardMode {
-            val screen =
-                @Composable {
-                    HostsScreen(
-                        state = state.value,
-                        formFactor = FormFactor.Tv,
-                        snackbarHostState = SnackbarHostState(),
-                        onHostSelected = { selected += it },
-                        onContinue = {},
-                        onWake = {},
-                        onForget = {},
-                        onDetails = {},
-                        onDetailsDismissed = {},
-                        onAddHost = {},
-                        onSettings = {},
-                    )
-                }
             if (withRail) {
                 LibraryScaffold(
                     FormFactor.Tv,
@@ -167,15 +312,16 @@ class HostsFocusTest {
                     actions = RailActions({}, {}, {}),
                     backgroundStyle = BackgroundStyle.Off,
                 ) {
-                    screen()
+                    Screen()
                 }
             } else {
-                screen()
+                Screen()
             }
         }
     }
 
     private companion object {
         const val HOLD_MILLIS = 1_200L
+        const val DETAILS = "Windows 11, 4 GB of video memory"
     }
 }

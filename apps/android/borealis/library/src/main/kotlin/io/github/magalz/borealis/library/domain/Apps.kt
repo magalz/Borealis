@@ -45,10 +45,11 @@ data class StreamRequest(
     val appName: String?,
     val hdrSupported: Boolean,
     /**
-     * True only when the user chose to resume the app: Resume or Continue on an app that the
-     * Library showed running, or Try again on the stream error screen. The stream then joins that
-     * app without asking if it runs. A start, a pinned shortcut, a TV program and every other way
-     * in leave it false, and the stream asks.
+     * True only when the user chose to resume the app: Resume on an app that the Library showed
+     * running, a tap on it, or Continue on the Hosts screen. The stream then joins that app without
+     * asking if it runs. A start, a pinned shortcut, a TV program, Try again on the stream error
+     * screen and every other way in leave it false, and the stream asks: the host does not say
+     * whose session runs, and Try again no longer joins (host contract 7.6).
      */
     val resumeChosen: Boolean = false,
 )

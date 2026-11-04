@@ -25,7 +25,8 @@ class FakeHostRepository : HostRepository {
     val wokenHostIds = mutableListOf<String>()
     val forgottenHostIds = mutableListOf<String>()
 
-    var addHostResult: AddHostResult = AddHostResult.Added(hostId = "new-host", name = "New PC")
+    var addHostResult: AddHostResult =
+        AddHostResult.Added(hostId = "new-host", name = "New PC", paired = false)
     var wakeResult: WakeResult = WakeResult.SENT
     var detailsResult: String? = null
 

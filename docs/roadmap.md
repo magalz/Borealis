@@ -7,8 +7,10 @@ How the roadmap is used:
 
 - The order on this page is the plan. Items are taken in this order unless
   the owner changes it.
-- Each item that enters a sprint gets a GitHub issue.
-- The phase pull request closes those issues.
+- Each task that enters a sprint gets an itsaplan card, a subtask of the sprint's Phase card (from
+  Sprint 17b; GitHub issues before it).
+- The phase pull request closes those cards with `Fixes BORE-N` lines (see
+  [orchestration, itsaplan](development/orchestration.md#itsaplan)).
 - This page is updated when a sprint is planned or merged.
 
 ## Done
@@ -1114,7 +1116,7 @@ Items, with what each became:
   Send keys, OK, Right, OK, then Down to Quit. The round checks it on the devices.
 - **Second device during a launch.** Found in the Sprint 14 device round (2026-10-28). Done in #101: a
   start that finds an app running asks on both paths, the `/serverinfo` path and the 400 path, unless the
-  user chose Resume, Continue or Try again for that app. The audit trail records `entry=asked` or
+  user chose Resume, Continue or Try again for that app (from Sprint 17b Try again asks too, BORE-4). The audit trail records `entry=asked` or
   `entry=chosen`. A pinned shortcut or a TV poster for a running app asks now. One risk stays: if another
   device restarted the app that the Library shows running, Resume enters it without asking, because the
   host gives a paired client no session id. The host proposal is
@@ -1309,8 +1311,12 @@ the client side, and none of its findings is a Sprint 16 regression.
 
 ### Sprint 17: general fixes
 
-Sprint 17a: done, merged as [#122](https://github.com/magalz/Borealis/pull/122) on 2026-11-02 (`e538ed99c`). Sprint 17b
-planned. Owner decision of 2026-10-28, later the same day; see the
+Sprint 17a: done, merged as [#122](https://github.com/magalz/Borealis/pull/122) on 2026-11-02 (`e538ed99c`). Sprint 17b:
+built in the phase branch `phase/s17b-general-fixes`, in the draft pull request
+[#125](https://github.com/magalz/Borealis/pull/125). Its device round ran on 2026-11-04 and passed; the phase pull
+request waits for the owner's merge. The runbook is [section 3.33](development/device-validation.md#333-sprint-17b-checks),
+and the reads, the round's results, the findings and the items not run are in
+[section 23](development/device-validation.md#23-results-sprint-17b). Owner decision of 2026-10-28, later the same day; see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28).
 
 On 2026-11-02, after Sprint 16, the owner split the sprint in two, run one after the other, each
@@ -1425,8 +1431,10 @@ the TV: the same audio runs, not a Sprint 16 regression
 - **The start burst of the S22 audio.** From the Sprint 17a round (2026-11-02): at the start of a stream the
   S22 drops about ten packets of 5 ms, with a pending peak of 105 to 135 ms
   ([section 22](development/device-validation.md#22-results-sprint-17a), finding 1). It is not a regression.
+  Sprint 17b: A1 (BORE-31) is canceled: a start window only moved the burst, so the question is research (BORE-33, backlog). The A/B table is in [section 23](development/device-validation.md#23-results-sprint-17b).
 - **"(Bluetooth)" on the Audio delay line.** From the Sprint 17a round (2026-11-02): the owner asked for
   "(Bluetooth)" next to the Audio delay line when the output is Bluetooth.
+  Sprint 17b: done in the phase (BORE-19). The round checks it ([3.33](development/device-validation.md#333-sprint-17b-checks), step 23).
 
 #### Library and Settings
 
@@ -1442,9 +1450,11 @@ Moved here from Sprint 15 (owner, 2026-10-28), unless an item says otherwise.
   the follow-up on the S22. The Sprint 14 round did not measure it: in B6 of
   [section 19](development/device-validation.md#19-results-sprint-14) the owner pinned the
   shortcut and said that it works, but the tap with Borealis not running was not reported.
+  Sprint 17b: done in the phase (BORE-3): the launch waits for the host's first poll. The round checks a cold tap (3.33, steps 2 and 31). In the backlog: BORE-35 (a TV shortcut opens Hosts and starts nothing) and BORE-36 (a tap during the wait leaves the launch pending).
 - **Back from Apps to Hosts plays a shrinking animation.** Found by the owner in the Sprint 12 round
   (2026-10-24), on the TV and the phone. The other screens of the Library fade (`FadingNavHost` in
   `LibraryNavHost.kt`). Find where the shrink comes from, and make this back like the others.
+  Sprint 17b: done in the phase (BORE-8): the Back from Apps to Hosts fades. A cancelled swipe may show a few blank frames, which the owner accepted. The round checks it (3.33, steps 7 and 28).
 - **A forgotten host is not found again until the app restarts.** Found by the owner in the
   Sprint 12 round (2026-10-24). After Forget, the host does not come back as "Found on this network" until
   the app is closed and opened again. Check whether discovery skips a host it already reported, in
@@ -1453,10 +1463,12 @@ Moved here from Sprint 15 (owner, 2026-10-28), unless an item says otherwise.
   Sprint 14 UAT saw it again on the TV: in B1 of
   [device-validation section 19](development/device-validation.md#19-results-sprint-14)
   the host came back only after the app was killed.
+  Sprint 17b: done in the phase (BORE-6): a forgotten host is found again while Hosts polls. The round checks it on the S22 and the TV (3.33, steps 6 and 29). No device below Android 14 is at hand, so the JmDNS path of Android 9 to 13 is not checked.
 - **A refresh button on Hosts.** After Forget, the Hosts list does not update until the app is
   restarted. The owner wants a refresh button on Hosts. The owner had put it after SecOps
   (Sprint 19), or post-MVP. Moved here from the backlog, with the forgotten-host item above (owner,
   2026-10-28). The fix above may make it unneeded; the owner decides.
+  Sprint 17b: no button in this sprint. The forgotten-host fix comes first, and the owner decides again after the device round.
 - **Add host says "Pair it" for a host that is already paired, and does not say that the host is
   already added.** Found in the Sprint 12 round (2026-10-24); the owner put it in Sprint 15, and
   moved it here. `shell_host_added` shows for any added host. Word it by the host's pairing state.
@@ -1469,6 +1481,7 @@ Moved here from Sprint 15 (owner, 2026-10-28), unless an item says otherwise.
   may ignore it), and whether another input type is possible. Host names must still be typeable. See
   B2 and finding U6 in
   [device-validation section 19](development/device-validation.md#19-results-sprint-14).
+  Sprint 17b: done in the phase (BORE-7): the message names the host's state (added, already added, already paired). The address field keeps `KeyboardType.Uri`; the round checks the keyboard on the S22 and the TV (3.33, steps 5 and 30).
 - **TV focus after the host Options sheet.** Moved to Sprint 15 from item (d) of the Sprint 14 block
   of the backlog, and from there to this sprint (owner, 2026-10-28). After the sheet (Details and
   Forget) was closed with Back over the Apps screen, no node had focus, and the D-pad did nothing
@@ -1476,6 +1489,7 @@ Moved here from Sprint 15 (owner, 2026-10-28), unless an item says otherwise.
   sheet open in B1 and B4. It is Library code, not Sprint 14. See
   [device-validation section 19](development/device-validation.md#19-results-sprint-14),
   finding U11.
+  Sprint 17b: done in the phase (BORE-9) for the host Options sheet; the app sheet is BORE-34. The round checks both on the TV (3.33, steps 26 and 27).
 - **The "Audio effects" text.** Moved to Sprint 15 from item (d) of the Sprint 14 block of the
   backlog, and from there to this sprint (owner, 2026-10-28). The setting reads "Let system audio
   effects work while you stream. This can add latency." (`settings_audio_fx_summary` in
@@ -1485,16 +1499,19 @@ Moved here from Sprint 15 (owner, 2026-10-28), unless an item says otherwise.
   (`enableAudioFx && lowLatency`). See
   [device-validation section 19](development/device-validation.md#19-results-sprint-14),
   finding U4.
+  Sprint 17b: done in the phase (BORE-11): the summary says what the setting does and what it costs. The round checks the row on both devices (3.33, steps 10 and 25).
 - **A sample vibration.** Moved to Sprint 15 from item (d) of the Sprint 14 block of the backlog,
   and from there to this sprint (owner, 2026-10-28). When a vibration option is turned on in
   Settings, give a short sample vibration, so that its effect can be felt. See
   [device-validation section 19](development/device-validation.md#19-results-sprint-14),
   finding U9.
+  Sprint 17b: done in the phase (BORE-12): a short pulse of about 60 ms when a vibration switch turns on, and when the strength slider is released, on a device with a vibrator. The round checks it, and the owner decides the strength (3.33, steps 11 and 39).
 - **Indeterminate progress indicators of Add host and Privacy ignore Reduce motion.**
   `AddHostScreen` and `PrivacyPane` draw Material's indicators, which do not ask
   `rememberAnimationsRemoved`. This is the Add host and Privacy part of the Sprint 15 item of the
   same name; the Quitting screen part stays in
   [Sprint 15](#sprint-15-the-stream-screens-and-glass), which redoes that screen.
+  Sprint 17b: done in the phase (BORE-10): both indicators follow Reduce motion. The round checks it (3.33, step 8).
 
 - **The orphan DataStore key of the dropped stream option.** From Sprint 15 (owner, 2026-10-30). The key
   `borealis_stream_background` of the option "Background before and after the stream", which the UAT dropped,
@@ -1503,13 +1520,16 @@ Moved here from Sprint 15 (owner, 2026-10-28), unless an item says otherwise.
   [privacy policy](policies/privacy-and-logging.md) says it stays until the app data is cleared. No release
   has had the option, so only debug builds of Sprint 15 hold one. Decide in the triage: keep it, since it is a
   stable id with nothing personal, or remove it with one DataStore edit.
+  Sprint 17b: kept, as the plan of the sprint decided. Nothing reads the key.
 - **The "Nothing running" header after a Disconnect.** From the Sprint 17a round (2026-11-02): the app page
   header said "Nothing running" right after a Disconnect, while the Library notice said that the app was still
   running on the PC ([section 22](development/device-validation.md#22-results-sprint-17a), finding 6).
+  Sprint 17b: done in the phase (BORE-5): an unknown host's header says "Checking…", and a known running app is still named. The round did not reproduce the report (R5, [section 23](development/device-validation.md#23-results-sprint-17b)); the round checks the header from the first frame (3.33, step 4).
 - **Try again joins an app that another device started, without asking.** From the Sprint 17a round
   (2026-11-02): after "Desktop stopped", Try again joined the Desktop that another device had started. Product
   question: should Try again ask first? ([section 22](development/device-validation.md#22-results-sprint-17a),
   finding 5).
+  Sprint 17b: done in the phase (BORE-4): Try again asks with the dialog "An app is already running" when the host reports a running app. A Library tap on a running app still joins it. Backlog BORE-40 (Feature) restores joining without the question once the owner's host change lands. The round checks it (3.33, step 3).
 
 #### Input
 
@@ -1521,6 +1541,7 @@ results are in
 - **Trackpad drag.** In trackpad mode, the default, a drag is a press and hold without moving for
   about 650 ms, then a move (`RelativeTouchContext.kt`, `DRAG_TIME_THRESHOLD`). The owner expected
   the usual double tap and hold, which does not start a drag.
+  Sprint 17b: done in the phase (BORE-20). The 650 ms long-press drag is removed: a double tap and hold drags. The round checks it (3.33, step 14).
 - **Direct touch.** A long press and a move select text on the PC instead of dragging, as they do on
   a phone. The owner found it hard to reproduce on a desktop. Sprint 14 kept the native touch path
   of `Game` (`trySendTouchEvent`, `sendTouchEventForPointer` and `MoonBridge.sendTouchEvent`),
@@ -1528,14 +1549,17 @@ results are in
   ships it as its MultiTouch mode, and LuminalShine accepts native pen and touch by default
   (`native_pen_touch`). Direct mode sends mouse input today; the parked path would send the touch to
   the host as a touch event.
+  Sprint 17b: done in the phase (BORE-29, BORE-30): a new touch mode, Native, sends real touch to the host, and Direct is unchanged. When the host refuses touch, the notice "This PC does not take touch; using Direct" shows and the mode goes to Direct. The phase also releases a finger held when the menu opens, and a choice of Native again after a refusal shows Direct and the notice again once the first notice has gone (a re-pick while it is still up shows no second card, by design of `StreamSession.notify`). The round checks it (3.33, steps 16 to 19 and 36).
 - **Alt+Tab.** With Alt held, the first Tab is lost, and Windows opens its Alt menu. The main build
   (`ded969bdb`, Sprint 12 code) does the same, so it is not from Sprint 13.
+  Sprint 17b: recorded. Research card BORE-47 (backlog). The raw key log on the S22 showed that the phone's window manager takes the Tab as a gesture (section 23, R3).
 - **Ultimate 2, Home held.** The PC acts as if Win+Tab was pressed. The app sends the Guide button
   while the pad's Home button is held, and nothing in the input code maps it to Win+Tab. Probably
   Windows' own long press of the Xbox button; to verify on the host. In the
   [VHF gamepad round](development/device-validation.md#vhf-gamepad-round-2026-10-28) of
   2026-10-28, on the S22, Home short and held passed (owner). The Win+Tab check against
   Windows' Task View on purpose is still to do.
+  Sprint 17b: recorded, with no code. The owner's host check is round step 40 (3.33).
 
 - **The side Back button of the owner's mouse arrives as a right click.** Found by the owner in the Sprint 15
   UAT (2026-10-30), where it made the Back hold of the mouse fail (U7); it is not known whether "Mouse back and
@@ -1544,6 +1568,7 @@ results are in
   `BUTTON_BACK`, and only that opens the menu after 1 s (Sprint 15, #102); a short press goes to the PC on
   release. A raw capture of the events of that mouse is needed first: the source, the key code and the button
   state of a press of the side button, with the setting on and off. The fix follows, with a test first.
+  Sprint 17b: done in the phase (BORE-18, K3): Back and Forward together, within 250 ms, open the menu, and neither reaches the PC. A pulse waits the window before it is sent. Normal mice keep the 1 s Back hold. Backlog BORE-41: wait only for mice seen sending pulses. The round checks it (3.33, step 35).
 
 - **The gaps of the two-finger trackpad tap.** From Sprint 16 (G-M7, the reviews of #109). Sprint 16
   made a two-finger tap a right click whichever finger lifts first (`RelativeTouchContext`), and
@@ -1555,16 +1580,20 @@ results are in
   its down, so a second finger that lands more than about 150 ms later clicks only in the other
   order. Closing the first two needs state that the contexts share, in `TouchContexts.kt` or
   `Game.kt`.
+  Sprint 17b: done in the phase (BORE-21, BORE-22): one window for both lift orders, and the state that the touch contexts share. The edge cases that remain are in the backlog (BORE-44). The round checks the cases (3.33, step 15).
 - **The key that arms a chord sends its up without a down.** From Sprint 16 (G-K3, the merge review
   of #110). Sprint 16 eats the ups of the keys that a waiting chord ate, but the key that arms the
   chord (Z, Q, C or M) still sends its up without a down when the modifiers are released first.
+  Sprint 17b: done in the phase (BORE-16, K1). The round checks it (3.33, step 21).
 - **The on-screen controller still reads the preferences at each rebuild.** From Sprint 16 (O11, the
   reviews of #109). `VirtualController.refreshLayout` reads the whole preferences, with their
   migration writes, at every rebuild (a rotation, picture-in-picture). Dropping that read needs
   `Game` to pass its `prefConfig` to `VirtualController`.
+  Sprint 17b: done in the phase (BORE-17, K2): `Game` passes its `prefConfig`. The round checks the layout across a rotation (3.33, step 20).
 - **The Back hold of a mouse with instant side buttons.** From the Sprint 17a round (2026-11-02): the side
   buttons of the owner's Logi M650 send pulses of 6.6 and 8 ms, so a hold cannot be seen. The Back hold needs
   another trigger for such mice ([section 22](development/device-validation.md#22-results-sprint-17a), finding 3).
+  Sprint 17b: the Back and Forward chord replaces the hold for such mice (BORE-18, K3). The owner checks the M650 (3.33, step 35).
 
 #### Pads
 
@@ -1600,6 +1629,7 @@ facts of both items and added the third item and the open decision. See the
   Controller for the Pro 3.
   Still to check: whether Android reports a battery for the Pro 3 over Bluetooth (`dumpsys input` or
   a log line); the round used its receiver only. See A6, C5 and finding U7.
+  Sprint 17b: R2 (section 23) answers the open question: Android reports no battery for the Pro 3 over Bluetooth in Switch mode. PH2 (BORE-24) keeps the battery state per controller number. The owner checks the pad battery (3.33, step 34).
 - **Pad gyro.** The gyro of the 8BitDo Pro 3 works on Windows (Steam's controller test), but neither
   Android device exposes it to the app: the Streamer sees the pad through the USB receiver as a
   plain HID gamepad (no sensor in `dumpsys input`), and the S22 sees it in the pad's 8BitDo
@@ -1611,6 +1641,7 @@ facts of both items and added the third item and the open decision. See the
   on what the client reports (see the open decision below). In the VHF round neither pad had a
   sensor on Android (the Ultimate 2 on both devices, the Pro 3 on its receiver on the S22), so no
   motion could reach the host.
+  Sprint 17b: R2 (section 23) shows that Android exposes no sensor of the Pro 3 on either device, so no gyro reaches the host from Android. No code in this sprint.
 - **Rumble for pads in D-input or Switch mode.** Found in the VHF gamepad round (2026-10-28); the
   owner sent it to this sprint the same day. Pads in D-input or Switch mode get no rumble on
   Android: the S22 and TV kernels have no `NINTENDO_FF`, the TV has no `XPAD_FF`, and the 8BitDo
@@ -1622,6 +1653,7 @@ facts of both items and added the third item and the open decision. See the
   (`2DC8:6012`), the way it handles XInput today. Also check why the XInput receiver (`2DC8:310B`)
   is not usable outside Borealis on the TV (the `xpad` device match on that kernel). The kernel
   facts are in [device-validation section 19](development/device-validation.md#vhf-gamepad-round-2026-10-28).
+  Sprint 17b: the R2 read (section 23) shows that rumble for the Switch Pro receiver needs the userspace driver, which is larger than size M: BORE-45 (feature, backlog), owner decision of 2026-11-04. The 8BitDo D-input receiver is not covered by BORE-45.
 - **Open owner decision: a Nintendo pad whose sensors Android exposes.** Recorded on 2026-10-28
   from the VHF gamepad round; the owner has not decided. Sprint 16 moved here the Sprint 13 entry
   C18 ("any non-PlayStation pad with a sensor manager is reported as UNKNOWN"), which is the second
@@ -1644,6 +1676,7 @@ facts of both items and added the third item and the open decision. See the
   So, with the current client, a Nintendo pad with a sensor becomes a DualShock 4. A Switch Pro
   Controller needs the client to report the Nintendo type, or the host's `gamepad` setting (global
   or per client) set to `switch_pro`.
+  Sprint 17b: the R2 read (section 23) shows that Android exposes no sensor of the Pro 3 on either device, so this question does not arise for these pads. Research card BORE-46 (backlog) keeps it open, and the owner has not decided it.
 
 - **DualSense adaptive triggers.** From Sprint 16 (the owner-approved triage, 2026-10-30). A host
   of 26.10 sends adaptive triggers (control message `0x5503`) for a DualSense, and Borealis drops
@@ -1651,21 +1684,26 @@ facts of both items and added the third item and the open decision. See the
   ([contract, sections 12 and 13](host-contract/luminalshine.md#13-input)). It matters only when the
   host makes a DualSense, which it does through its `gamepad` setting `dualsense` (see "Pad battery"
   above).
+  Sprint 17b: recorded, with no code, as the plan of the sprint decided.
 - **Battery gaps of pads without a battery.** From Sprint 16 (C20, the merge review of #108); the old
   code behaves the same. With multi-controller off, a pad without a battery that told the host
   "not present" before a pad with a battery joined its number does not tell it again after that pad
   leaves. And two pads without a battery that share a number from before the first poll never send
   "not present".
+  Sprint 17b: done (BORE-24, PH2). The state is kept per controller number, which covers both cases: a number freed by a pad with a battery, and two pads without a battery on one number, where the first one polled speaks for the number. BORE-43 (backlog, found by the agent): a stray battery poll after destroy can mark a freed number.
 - **The fused trigger of pads that share a number.** From Sprint 16 (C6, the merge review of #108).
   Sprint 16 compares triggers as unsigned bytes, but when two pads share a controller number the
   trigger sent is the bitwise OR of their values, not the larger one.
+  Sprint 17b: done in the phase (BORE-23, PH1): the larger value is sent. The owner checks it (3.33, step 33).
 - **Weak rumble on the USB drivers.** From Sprint 16 (C21, the merge review of #108). Sprint 16 keeps
   a weak motor above zero in `ControllerHandler`, but the USB drivers still shift the motor values
   down, by 8 bits in `driver/Xbox360Controller.kt` and by 9 bits in `driver/XboxOneController.kt`,
   so a motor below 256 (Xbox 360) or 512 (Xbox One) still sends 0 to a USB pad.
+  Sprint 17b: done in the phase (BORE-26, PD1). The sign of the Xbox One shift is a separate backlog item, BORE-39. The owner checks it on USB pads (3.33, step 33).
 - **The cost of the stop on stuck USB pads.** From Sprint 16 (U3, the merge review of #108). To zero
   the motors at stream end, `ControllerHandler.stop()` makes up to two bulk writes of 100 ms each for
   every USB pad that does not answer. This is new with the U3 fix.
+  Sprint 17b: done in the phase (BORE-25, PH3): the stop still runs on the main thread, but it is bounded: a pad whose motor write takes 50 ms or more gets no trigger write, and no pad is started once the zeroing has used 200 ms (about 300 ms at worst). Off-thread zeroing was rejected, since the activity's destroy ends the background thread right after the stop. Follow-ups are in the backlog (BORE-42). Only unit tests cover it so far (3.33, step 33).
 
 #### Video and the stream screens
 
@@ -1811,34 +1849,87 @@ Moved here from Sprint 15 or from the backlog (owner, 2026-10-28), as each item 
   above a combined 2.0 has not been measured, only Normal was. See
   [accessibility, text spacing](ux/accessibility.md#text-spacing-known-limitations).
   Moved here from the backlog.
+  Sprint 17b: the Apps screen and the TV Settings row fit at a combined 2.6 (BORE-27, BORE-28). Wide at 2.6 still
+  overflows in 3 of 16 unit runs (TV Luciole and Andika, phone Andika), and handheld was not tested at 2.6. The
+  "1 of 70" case of the components was a rig artifact: the rig now scrolls as the real panes do. The round checks it
+  (3.33, steps 9, 24 and 25).
 - **Segments and keyboard keys still lift when focused.** `SegmentedControl` and `KeyboardKey` use
   `liftedWhenFocused`, so the merged tree lists the focused one last. Robolectric cannot see
   TalkBack's traversal links: check it with TalkBack on a device in this sprint.
+  Sprint 17b: done in the phase (BORE-14, LX2): the lifted items keep their reading order (`traversalIndex`). The round checks it with TalkBack (3.33, step 13).
 - **A UAT note:** "Fn 123" wraps on narrow phones at the default look.
+  Sprint 17b: recorded, by design; no code.
 - **A touch handheld with only `KEYBOARD | DPAD`.** From the Sprint 9 device round
   (2026-10-19), moved here from the backlog. A touch handheld whose built-in controls report only
   `KEYBOARD | DPAD`, with no GAMEPAD source, now gets the phone layout. This is rare;
   watch for it.
+  Sprint 17b: recorded, with no code. Watch for it.
 - **The Esc row of the stream keyboard in a narrow window.** From the Sprint 9 device round
   (2026-10-19), moved here from the backlog. On a narrow window with a pad (a phone in split
   screen), the stream keyboard covers the stream but keeps the TV shortcut row, where Esc is the 7th
   of 8 chips. `StreamKeyboard.kt` picks the Esc-first row by `docked`, not by width (owner,
   2026-10-20: backlog).
+  Sprint 17b: done in the phase (BORE-13, LX3): the Esc-first row is chosen by form factor. The round checks it (3.33, step 12).
 - **The halo and the tint-only glass have not been seen on API 28 to 30.** From the Sprint 10
   reviews and its device round (2026-10-21), moved here from the backlog. No device is available;
   the tests draw them with Robolectric. The check needs a device.
+  Sprint 17b: recorded. No device is at hand for API 28 to 30, so there is no code and no check in the round.
 
 - **The focus casing and the halo of the popups over the video.** From Sprint 15 (the known limits). With
   Thicker focus outline, 0.5 dp of the casing of the focus outline is cut by the scroll clip of the side panel
   at its edges (the ring and 1 dp of casing stay whole, and 3:1 holds), and the faint tail of the 3 dp halo is
   cut at the 2 dp bleed of the content layer on the title and body of the popups. A design-system layout change
   would remove both. The second is cosmetic.
+  Sprint 17b: recorded as cosmetic, with no code.
 - **The segments report no selected state.** From the Sprint 17a round (2026-11-02): every segment of the
   in-game menu reports `selected=false`, so TalkBack probably cannot tell the active one
   ([section 22](development/device-validation.md#22-results-sprint-17a), finding 4).
+  Sprint 17b: the segment node reports `checked=true` for the active segment (the read of 2026-11-03 on the TV); the Sprint 17a read was of the text child. BORE-15 pins the state with a test. The owner's TalkBack check is round step 37 (3.33).
 - **The app cards have no text in the accessibility tree.** From the Sprint 17a round (2026-11-02): the cards of
   the host's app page have no text in the accessibility tree, which the automation of the round found
   ([section 22](development/device-validation.md#22-results-sprint-17a), finding 8).
+  Sprint 17b: no code. The owner's TalkBack reads the names of the app cards (2026-11-04), so the card text is not needed (3.33, step 38).
+
+#### Found in Sprint 17b (backlog)
+
+The cards of the backlog that Sprint 17b found or moved out of the sprint. Each one is in itsaplan, in the
+Backlog column, and none is scheduled.
+
+- **BORE-33, research: why the S22 audio queue fills at the first sound of a stream.** The table of the A/B in
+  [section 23](development/device-validation.md#23-results-sprint-17b), R4. The options are a pre-roll of
+  silence, a fixed 150 ms start, and a one-step trim.
+- **BORE-35, found by the agent: a TV shortcut opens Hosts and starts nothing** (with a running host that
+  answers). Found in the device read R6 and the pinned-shortcut card.
+- **BORE-36, found by the agent: a tap during the shortcut wait leaves the launch pending.**
+- **BORE-37, found by the agent: a flaky case of `RendererRecoveryTest`.** Found in the gate of the Screens lane.
+- **BORE-39, found by the agent: the Xbox One motor shift sign-extends a motor value of 0x8000 and above.** The
+  shift is inherited code. Check it against the GIP rumble packet before changing the shift.
+- **BORE-40, feature: Try again joins without the question** when the host reports a running app, once the
+  owner's host change lands (see the Try again item above).
+- **BORE-41, found by the agent: the Back and Forward chord waits only on mice seen sending pulses.** Today a
+  short side-button press of any mouse is delayed by 25 ms, and the owner accepted that in the K3 decision.
+- **BORE-42: USB stop follow-ups of PH3.** The write timeout copies the drivers' `RUMBLE_TIMEOUT_MS` with no
+  link; the drivers still zero their motors at unbind; a stuck pad is found by elapsed time only.
+- **BORE-43: a battery poll after destroy can mark a freed controller number** (PH2).
+- **BORE-44, found by the agent: two-finger tap edge cases.** They need a per-finger identity: the lift-order
+  asymmetry after a pointer move, the index-0 restart, and a second-finger tap during a double-tap drag.
+- **BORE-45, feature: a userspace USB driver for the Switch Pro receiver** (`057E:2009`: rumble, and maybe gyro and
+  battery). Owner decision of 2026-11-04, after the R2 read.
+- **BORE-46, research: the Nintendo pad type when Android exposes its sensors.** The R2 read found that the two
+  devices expose no Nintendo sensor, so the question stays open for other devices and kernels.
+- **BORE-47, found by the agent, research: Alt+Tab with a keyboard on the S22** (R3, section 23).
+- **BORE-48, found by the agent: the insets of a narrow split-screen window.** A 360 dp window cuts the Off segment
+  of the in-game menu's Touch row at the default size. With 3-button navigation the menu panel also loses the
+  end inset of the system bar (up to 48 dp), which narrows it; the S22 round records the Touch row there
+  (3.33, step 18).
+- **BORE-50, found in the round: "already paired" cannot be reached with LuminalShine.** A forgotten host that is added
+  again comes back "Not paired", because LuminalShine 26.11.0 reports its pairing state only over HTTPS. The owner
+  decides between a reworded message and a pairing over HTTPS on re-add (section 23, finding 1).
+- **BORE-51, found in the round: the TV focus after Hide or Forget goes to the rail item "Hosts".** The focus should go
+  to the next card (section 23, finding 5).
+- **BORE-52, found in the round: the audio delay reads "0 ms" with a silent PC.** The three stages of the Audio delay
+  line need sound on the PC (section 23, finding 4).
+- **BORE-53, found in the round, low: the stream's notices leave the screen too soon** (section 23, finding 6).
 
 ### Sprint 18: refactor of the converted code
 

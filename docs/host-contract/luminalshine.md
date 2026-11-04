@@ -717,7 +717,7 @@ revisions, so their references did not move. The codes and messages are those of
 | --- | --- | --- | --- | --- |
 | 400 | `Missing a required launch parameter` | launch `src/nvhttp.cpp:2848` | A required query parameter is missing | No retry; client bug |
 | 400 | `Missing a required resume parameter` | resume `src/nvhttp.cpp:3299` | As above | No retry; client bug |
-| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2859` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice and asks on that path too, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel, unless the user chose Resume, Continue or Try again for that same app earlier, and then Borealis joins it (section 7.6). `/cancel` is never called without a choice of the user (section 7.6) |
+| 400 | `An app is already running on this host` | launch `src/nvhttp.cpp:2859` | `/launch` was called while an app runs | No retry of `/launch`. Moonlight's `startApp` already resumes or quits first when `/serverinfo` shows a running app (`borealis@2f321dc77:apps/android/app/src/main/java/com/limelight/nvstream/NvConnection.java:395-430`; Borealis turned the quit into a user choice and asks on that path too, section 7.6); the 400 arrives when another device's launch started after that read. Borealis then re-reads `/serverinfo` for up to 3 s: `currentgame` 0 launches again once, otherwise the user chooses Join (`/resume`), Quit and relaunch (`/cancel`, then `/launch`) or Cancel, unless the user chose Resume or Continue, or tapped the app that the Library showed running, for that same app, and then Borealis joins it (section 7.6; Try again asks). `/cancel` is never called without a choice of the user (section 7.6) |
 | 409 | `Another client launch is already pending; retry the connection.` | launch `src/nvhttp.cpp:2874-2875`, `2896-2897`, `3200-3201`; resume `3308-3309`, `3324-3325`, `3538-3539` | A previous `/launch` or `/resume` has not been claimed by an RTSP connection yet; the pending launch expires after `ping_timeout` (`src/rtsp.cpp:606`) | Retry with backoff for up to about 12 s in total (for example 1, 2, 3, 5 s), then show the host message. Do not call `/cancel`: it would also cancel another client's pending launch (`src/rtsp.cpp:1132-1136`) |
 | 503 | `The previous stream is still restoring the display; retry the connection.` | launch `src/nvhttp.cpp:2888-2889`; resume `3317-3318` | The host waited 8 s (`acquire_launch(8s)`, `src/nvhttp.cpp:2884`, `3313`) for the previous session's cleanup and gave up | Retry, 2 to 3 attempts with 2 to 5 s delays (each attempt can itself take 8 s), then show the message |
 | 503 | `GPU/display stack is not ready; retry after recovery or reboot the host.` | launch `src/nvhttp.cpp:3011-3012`; resume `3374-3375` | The D3D11 health probe failed | Limited retries (for example 2 with 5 s delay), then tell the user to restart the host or its GPU driver |
@@ -799,28 +799,35 @@ it, is gone (issue #101):
   host. A different app that runs always asks, even when the Library never saw it. The
   code is `NvConnection.askAboutRunning` and `NvConnection.resolveConflict` in `:app`, with
   `LaunchConflicts.askAbout` and `LaunchConflicts.resolve` in `:borealis:host`.
-- **The user's earlier choice.** The stream joins the running app with no question when
-  the user chose Resume or Continue for it in the Library, tapped the tile of an app that
-  the Library showed running (the same choice), or chose Try again on the error popup of a
-  stream. A Resume, a Continue or a tap reaches the stream as a launch extra,
-  `Game.EXTRA_RESUME_CHOSEN`. Try again does not travel in an extra: the Library is
-  exported, so any app could send an extra and make this client resume what runs with no
-  choice of the user. It travels in the process: the stream remembers it, and the Library
-  takes it once when it handles the next launch request (`ResumeChoice`), for the host and
-  the app of that request only. A pinned shortcut or a TV poster for a running app is not a
-  choice: it asks.
+- **The user's choice to resume.** The stream joins the running app with no question when
+  the user chose Resume or Continue for it in the Library, or tapped the tile of an app that
+  the Library showed running (the same choice). A Resume, a Continue or a tap reaches the
+  stream as a launch extra, `Game.EXTRA_RESUME_CHOSEN`. Nothing else is that choice. **Try
+  again on the error popup of a stream asks (Sprint 17b, BORE-4):** after "Desktop stopped"
+  it used to join the app that another device had started, with no question, because the
+  host does not say whose session runs. Now the Library starts the app again as it does for
+  a shortcut, with no choice in the request, and when the host reports a running app the
+  Conflict dialog asks. Try again does not travel in an extra, in the intent that opens the
+  Library or in memory: the Library is exported, so any app could send an extra and make
+  this client resume what runs with no choice of the user, and the memory that held the
+  choice of Try again (`ResumeChoice`) is gone, because nothing read it once Try again
+  asked. A pinned shortcut or a TV poster for a running app is not a choice either: it asks.
+  BORE-40 (Backlog) joins the session of this device without a question after Try again
+  when the host tells sessions apart, and keeps asking about another device's.
 - **A restart does not ask again.** The single restart of the start after an RTSP error -1
   that follows an accepted same-app `/resume` (section 7.3) goes straight in and never
   quits another app.
 - **The audit trail.** The `LAUNCH_CONFLICT` event reads
   `choice=<join|quit|cancel> running_app=<id> entry=<asked|chosen>`: `entry=asked` for each
-  answer of the dialog, `entry=chosen` for a Join that the user's earlier choice made, with
+  answer of the dialog, `entry=chosen` for a Join that the user's choice to resume made, with
   no dialog (`LaunchAudit`). The log line for that case is `running app joined on the
   user's choice` (`Borealis.LAUNCH`).
 - **The risk that stays.** The Library knows that an app runs, not whose session it is. If
-  another device restarted the app that the Library showed running, Resume or Continue
-  enters it without asking: the user chose Resume for what the Library showed. Only a
-  session marker from the host closes that gap (P6, section 20; discussion #221).
+  another device restarted the app that the Library showed running, Resume, Continue or a
+  tap on its tile enters it without asking: the user chose to resume what the Library
+  showed. Try again is not in this gap since Sprint 17b: it asks. Only a session marker
+  from the host closes the gap, and lets Try again join without a question (P6, section 20;
+  discussion #221; BORE-40).
 
 **Client behaviour (Sprint 15): the user's own Quit ends in `-1`.** `/cancel` stops the
 sessions first and ends the app afterwards: `session::stop` sets the session to STOPPING
@@ -1251,6 +1258,28 @@ host raises these messages:
   default true at `src/config.cpp:893`); `0x02` controller touch events (set
   unless the gamepad emulation mode is `x360`; **changed in 26.10.0**, see the item
   below).
+- **Native touch (Sprint 17b, BORE-29 and BORE-30).** In the Native touch mode (the
+  third entry of the Touch row, after Trackpad and Direct; Trackpad and Direct send no
+  touch events) Borealis sends touch events to the host: `LI_TOUCH_EVENT_DOWN`, `MOVE`,
+  `UP` and `CANCEL` for every finger, with the pointer id, the position in the stream view,
+  the pressure, the contact area and the rotation (`LiSendTouchEvent`), and
+  `LI_TOUCH_EVENT_CANCEL_ALL` when Android cancels the gesture. A finger that the host took
+  is also cancelled on the host with `LI_TOUCH_EVENT_CANCEL_ALL`, once, when the chrome takes
+  the input (the menu, a dialog, the keyboard) and when the user leaves Native, because the
+  up of that finger then goes to the chrome and the PC would keep the contact pressed. The
+  third finger goes to the host as well, so in Native a three-finger tap is the PC's and
+  does not open the keyboard
+  ([UC-005](../use-cases/0005-type-with-the-on-screen-keyboard.md)). The mode needs feature
+  bit `0x01` above. A host that does not set it makes moonlight-common-c answer
+  `LI_ERR_UNSUPPORTED` without sending anything
+  (`core/third_party/moonlight-common-c/src/InputStream.c:1339-1341`). Borealis then goes to
+  Direct for the rest of that stream, because what a host supports does not change during a
+  stream: the touch mode of the session becomes Direct, the notice "This PC does not take
+  touch; using Direct" shows, and `Borealis.INPUT` logs one line at info
+  (`Game.trySendTouchEvent`, `Game.fallBackToDirectTouch` in `:app`). Picking Native again
+  after the refusal asks the host nothing: the mode stays Direct and the notice shows again.
+  The host does not advertise the `mouse` setting (the item on `mouse = disabled` below), so
+  Native on such a host sends the fingers and the host drops them; Borealis cannot tell.
 - **Changed in 26.10.0** (verified in source at `dba21a9e`; the `src/` lines of this
   item are at that revision, and 26.10.1 keeps the same driver package): the Windows
   host no longer uses ViGEmBus. It drives Nonary's `libvirtualgamepad` UMDF/VHF driver,
@@ -1525,8 +1554,9 @@ Moonlight Android 12.2 client already does the right thing the item says so.
    without asking. Borealis asks when `/serverinfo` shows a running app and when the 400
    `An app is already running` row arrives: Join, Quit and relaunch (or Quit and start), or
    Cancel. It asks for the same app too, because nothing tells this device's session from
-   another device's, and it asks no more only when the user chose Resume, Continue or Try
-   again for that app (sections 7.5 and 7.6).
+   another device's, and it asks no more only when the user chose Resume or Continue, or
+   tapped the app that the Library showed running, for that app. Try again asks (sections
+   7.5 and 7.6).
 9. **Send the same native mode in `/launch` and in ANNOUNCE.** `mode=WxHxFPS`
    must equal `clientViewportWd`, `clientViewportHt` and `maxFPS`, otherwise
    the host rebuilds the virtual display (section 7.4). Moonlight Android sets

@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.device.OscLayoutReset
+import io.github.magalz.borealis.settings.device.VibrationSample
 import io.github.magalz.borealis.settings.options.DisabledReason
 import io.github.magalz.borealis.settings.options.FrameRateChoice
 import io.github.magalz.borealis.settings.options.ResolutionChoice
@@ -27,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 
+@Suppress("LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
     @get:Rule val main = MainDispatcherRule()
@@ -36,12 +38,16 @@ class SettingsViewModelTest {
     private val facts = FakeDeviceFactsSource()
     private var resets = 0
 
+    /** The pulses that the screen asked for, as the duration in ms and the strength in percent. */
+    private val pulses = mutableListOf<Pair<Long, Int>>()
+
     private fun TestScope.viewModel(): SettingsViewModel =
         SettingsViewModel(
                 repository,
                 options,
                 facts,
                 OscLayoutReset { resets++ },
+                VibrationSample { durationMs, strength -> pulses += durationMs to strength },
                 UnconfinedTestDispatcher(testScheduler),
             )
             .also {
@@ -158,6 +164,70 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `turning on the vibration fallback plays one pulse at the strength that is stored`() =
+        runTest {
+            stored(Settings.VIBRATE_FALLBACK_STRENGTH to 150)
+            val viewModel = viewModel()
+
+            viewModel.onSwitchChanged(SettingsItem.VIBRATE_FALLBACK, true)
+            advanceUntilIdle()
+
+            assertThat(pulses).containsExactly(60L to 150)
+        }
+
+    @Test
+    fun `turning on the vibration of the on-screen controls plays one pulse at the default strength`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.onSwitchChanged(SettingsItem.OSC_VIBRATE, true)
+            advanceUntilIdle()
+
+            assertThat(pulses).containsExactly(60L to 100)
+        }
+
+    @Test
+    fun `turning a vibration switch off plays nothing`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSwitchChanged(SettingsItem.VIBRATE_FALLBACK, false)
+        viewModel.onSwitchChanged(SettingsItem.OSC_VIBRATE, false)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
+        assertThat(repository.writes)
+            .containsExactly(
+                Write(Settings.VIBRATE_FALLBACK, false),
+                Write(Settings.VIBRATE_OSC, false),
+            )
+    }
+
+    @Test
+    fun `turning on a switch that is not a vibration plays nothing`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSwitchChanged(SettingsItem.STRETCH_VIDEO, true)
+        viewModel.onSwitchChanged(SettingsItem.SHOW_ON_SCREEN_CONTROLS, true)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
+    }
+
+    @Test
+    fun `a vibration switch that the device does not offer plays nothing`() = runTest {
+        options.rowStates[Settings.VIBRATE_FALLBACK] = RowState.Hidden
+        options.rowStates[Settings.VIBRATE_OSC] =
+            RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.SHOW_ONSCREEN_CONTROLS)
+        val viewModel = viewModel()
+
+        viewModel.onSwitchChanged(SettingsItem.VIBRATE_FALLBACK, true)
+        viewModel.onSwitchChanged(SettingsItem.OSC_VIBRATE, true)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
+    }
+
+    @Test
     fun `the lists store the key of the chosen entry`() = runTest {
         val viewModel = viewModel()
 
@@ -179,16 +249,89 @@ class SettingsViewModelTest {
             .inOrder()
     }
 
+    private fun SettingsViewModel.touchChoice(): String =
+        SettingsItem.TOUCH.selectedChoiceKey(uiState.value.snapshot)
+
     @Test
-    fun `Touch stores the trackpad switch`() = runTest {
+    fun `choosing Direct stores the trackpad switch off, then turns Native off`() = runTest {
         val viewModel = viewModel()
 
         viewModel.onChoiceSelected(SettingsItem.TOUCH, FixedChoices.TOUCH_DIRECT)
         advanceUntilIdle()
 
-        assertThat(repository.writes).containsExactly(Write(Settings.TOUCHSCREEN_TRACKPAD, false))
-        assertThat(SettingsItem.TOUCH.selectedChoiceKey(viewModel.uiState.value.snapshot))
-            .isEqualTo(FixedChoices.TOUCH_DIRECT)
+        assertThat(repository.writes)
+            .containsExactly(
+                Write(Settings.TOUCHSCREEN_TRACKPAD, false),
+                Write(Settings.TOUCHSCREEN_NATIVE, false),
+            )
+            .inOrder()
+        assertThat(viewModel.touchChoice()).isEqualTo(FixedChoices.TOUCH_DIRECT)
+    }
+
+    @Test
+    fun `choosing Trackpad stores the trackpad switch on, then turns Native off`() = runTest {
+        stored(Settings.TOUCHSCREEN_TRACKPAD to false)
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(SettingsItem.TOUCH, FixedChoices.TOUCH_TRACKPAD)
+        advanceUntilIdle()
+
+        assertThat(repository.writes)
+            .containsExactly(
+                Write(Settings.TOUCHSCREEN_TRACKPAD, true),
+                Write(Settings.TOUCHSCREEN_NATIVE, false),
+            )
+            .inOrder()
+        assertThat(viewModel.touchChoice()).isEqualTo(FixedChoices.TOUCH_TRACKPAD)
+    }
+
+    @Test
+    fun `choosing Native turns Native on and leaves the trackpad switch as it was`() = runTest {
+        stored(Settings.TOUCHSCREEN_TRACKPAD to false)
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(SettingsItem.TOUCH, FixedChoices.TOUCH_NATIVE)
+        advanceUntilIdle()
+
+        assertThat(repository.writes).containsExactly(Write(Settings.TOUCHSCREEN_NATIVE, true))
+        assertThat(viewModel.uiState.value.snapshot[Settings.TOUCHSCREEN_TRACKPAD]).isFalse()
+        assertThat(viewModel.touchChoice()).isEqualTo(FixedChoices.TOUCH_NATIVE)
+    }
+
+    @Test
+    fun `Native wins over the trackpad switch in the list, whichever way that switch is`() =
+        runTest {
+            for (trackpad in listOf(true, false)) {
+                stored(
+                    Settings.TOUCHSCREEN_TRACKPAD to trackpad,
+                    Settings.TOUCHSCREEN_NATIVE to true,
+                )
+
+                assertThat(viewModel().touchChoice()).isEqualTo(FixedChoices.TOUCH_NATIVE)
+            }
+        }
+
+    @Test
+    fun `an install that only has the trackpad switch shows Trackpad or Direct as before`() =
+        runTest {
+            assertThat(viewModel().touchChoice()).isEqualTo(FixedChoices.TOUCH_TRACKPAD)
+
+            stored(Settings.TOUCHSCREEN_TRACKPAD to false)
+
+            assertThat(viewModel().touchChoice()).isEqualTo(FixedChoices.TOUCH_DIRECT)
+        }
+
+    @Test
+    fun `leaving Native for Direct shows Direct, with both switches off`() = runTest {
+        stored(Settings.TOUCHSCREEN_TRACKPAD to true, Settings.TOUCHSCREEN_NATIVE to true)
+        val viewModel = viewModel()
+
+        viewModel.onChoiceSelected(SettingsItem.TOUCH, FixedChoices.TOUCH_DIRECT)
+        advanceUntilIdle()
+
+        assertThat(viewModel.touchChoice()).isEqualTo(FixedChoices.TOUCH_DIRECT)
+        assertThat(viewModel.uiState.value.snapshot[Settings.TOUCHSCREEN_NATIVE]).isFalse()
+        assertThat(viewModel.uiState.value.snapshot[Settings.TOUCHSCREEN_TRACKPAD]).isFalse()
     }
 
     @Test
@@ -474,6 +617,55 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `releasing the Vibration strength slider plays one pulse at the value that it reached`() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+            advanceUntilIdle()
+
+            assertThat(pulses).containsExactly(60L to 150)
+        }
+
+    @Test
+    fun `a value out of the range of the Vibration strength slider is kept in it`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 500)
+        advanceUntilIdle()
+
+        assertThat(pulses).containsExactly(60L to 200)
+    }
+
+    @Test
+    fun `releasing another slider plays nothing`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onSliderReleased(SettingsItem.DEADZONE, 12)
+        viewModel.onSliderReleased(SettingsItem.OSC_OPACITY, 40)
+        viewModel.onSliderReleased(SettingsItem.BITRATE, 12_500)
+        advanceUntilIdle()
+
+        assertThat(pulses).isEmpty()
+    }
+
+    @Test
+    fun `releasing the Vibration strength slider while its row is disabled or hidden plays nothing`() =
+        runTest {
+            options.rowStates[Settings.VIBRATE_FALLBACK_STRENGTH] =
+                RowState.Disabled(DisabledReason.DEPENDS_ON_SETTING, Settings.VIBRATE_FALLBACK)
+            val disabled = viewModel()
+            disabled.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+
+            options.rowStates[Settings.VIBRATE_FALLBACK_STRENGTH] = RowState.Hidden
+            val hidden = viewModel()
+            hidden.onSliderReleased(SettingsItem.VIBRATION_STRENGTH, 150)
+            advanceUntilIdle()
+
+            assertThat(pulses).isEmpty()
+        }
+
+    @Test
     fun `turning on Unlock all frame rates changes the frame rate list at once`() = runTest {
         val viewModel = viewModel()
         assertThat(viewModel.uiState.value.frameRateChoices.map { it.fps })
@@ -615,6 +807,7 @@ class SettingsViewModelTest {
                     resetThread[0] = Thread.currentThread()
                     done.countDown()
                 },
+                VibrationSample { _, _ -> },
             )
 
         viewModel.onResetLayout()

@@ -56,6 +56,7 @@ class PreferenceConfiguration {
     @JvmField var vibrateFallbackToDevice = false
     @JvmField var vibrateFallbackToDeviceStrength = 0
     @JvmField var touchscreenTrackpad = false
+    @JvmField var touchscreenNative = false
     @JvmField var audioConfiguration: MoonBridge.AudioConfiguration? = null
     @JvmField var framePacing = 0
     @JvmField var absoluteMouseMode = false
@@ -103,6 +104,7 @@ class PreferenceConfiguration {
             "seekbar_vibrate_fallback_strength"
         private const val FLIP_FACE_BUTTONS_PREF_STRING = "checkbox_flip_face_buttons"
         private const val TOUCHSCREEN_TRACKPAD_PREF_STRING = "checkbox_touchscreen_trackpad"
+        private const val TOUCHSCREEN_NATIVE_PREF_STRING = "borealis_touchscreen_native"
         private const val LATENCY_TOAST_PREF_STRING = "checkbox_enable_post_stream_toast"
         private const val FRAME_PACING_PREF_STRING = "frame_pacing"
         private const val ABSOLUTE_MOUSE_MODE_PREF_STRING = "checkbox_absolute_mouse_mode"
@@ -144,6 +146,7 @@ class PreferenceConfiguration {
         private const val DEFAULT_VIBRATE_FALLBACK_STRENGTH = 100
         private const val DEFAULT_FLIP_FACE_BUTTONS = false
         private const val DEFAULT_TOUCHSCREEN_TRACKPAD = true
+        private const val DEFAULT_TOUCHSCREEN_NATIVE = false
         private const val DEFAULT_AUDIO_CONFIG = "2" // Stereo
         private const val DEFAULT_LATENCY_TOAST = false
         private const val DEFAULT_FRAME_PACING = "latency"
@@ -550,6 +553,8 @@ class PreferenceConfiguration {
                 prefs.getBoolean(FLIP_FACE_BUTTONS_PREF_STRING, DEFAULT_FLIP_FACE_BUTTONS)
             config.touchscreenTrackpad =
                 prefs.getBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, DEFAULT_TOUCHSCREEN_TRACKPAD)
+            config.touchscreenNative =
+                prefs.getBoolean(TOUCHSCREEN_NATIVE_PREF_STRING, DEFAULT_TOUCHSCREEN_NATIVE)
             config.enableLatencyToast =
                 prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.absoluteMouseMode =

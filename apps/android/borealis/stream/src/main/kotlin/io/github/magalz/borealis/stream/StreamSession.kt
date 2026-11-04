@@ -522,6 +522,9 @@ sealed interface StreamNotice {
 
     /** The sound output has two channels, so the stream is stereo where [asked] was requested. */
     data class StereoFallback(val asked: SurroundLayout) : StreamNotice
+
+    /** The host takes no touch events, so the touch mode went from Native to Direct. */
+    data object NativeTouchRefused : StreamNotice
 }
 
 /** The surround layouts that a stream can ask for, which a stereo output cannot play. */

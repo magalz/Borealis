@@ -18,9 +18,11 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.settleWindows
+import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
+import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import java.io.File
 import org.junit.Rule
 import org.junit.Test
@@ -98,6 +100,24 @@ class PrivacyScreenshotTest {
 
     @Test
     @Config(qualifiers = TV)
+    fun privacyTvExportingWithReduceMotion() {
+        // The bar is a still one: a frame that is the same at every run.
+        composeRule.setContentInKeyboardMode {
+            Page(FormFactor.Tv, BorealisLook(reduceMotion = ReduceMotion.On)) {
+                PrivacyContent(
+                    PrivacyUiState(exporting = true),
+                    SnackbarHostState(),
+                    actions,
+                    Modifier.width(640.dp),
+                )
+            }
+        }
+
+        shoot("privacy_tv_exporting-reduce-motion")
+    }
+
+    @Test
+    @Config(qualifiers = TV)
     fun privacyTvSaved() {
         composeRule.setContentInKeyboardMode {
             Page(FormFactor.Tv) {
@@ -131,8 +151,12 @@ class PrivacyScreenshotTest {
     }
 
     @Composable
-    private fun Page(formFactor: FormFactor, content: @Composable () -> Unit) {
-        BorealisTheme(formFactor) {
+    private fun Page(
+        formFactor: FormFactor,
+        look: BorealisLook = BorealisLook(),
+        content: @Composable () -> Unit,
+    ) {
+        BorealisTheme(formFactor, look) {
             Box(
                 Modifier.fillMaxSize()
                     .background(LocalBorealisColors.current.page)

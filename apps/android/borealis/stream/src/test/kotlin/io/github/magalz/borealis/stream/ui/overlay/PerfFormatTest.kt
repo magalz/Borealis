@@ -92,6 +92,36 @@ class PerfFormatTest {
     }
 
     @Test
+    fun `the audio delay says Bluetooth when the audio goes out over Bluetooth`() {
+        val perf = aPerf().copy(audioDelayMs = 235, audioBluetooth = true)
+
+        assertThat(format.detailed(perf, info).last()).isEqualTo("Audio delay 235 ms (Bluetooth)")
+    }
+
+    @Test
+    fun `the audio delay says Bluetooth too while it is not measured yet`() {
+        val perf = aPerf().copy(audioDelayMs = null, audioBluetooth = true)
+
+        assertThat(format.detailed(perf, info).last()).isEqualTo("Audio delay — (Bluetooth)")
+    }
+
+    @Test
+    fun `only the audio delay line changes with Bluetooth`() {
+        val plain = format.detailed(aPerf().copy(audioDelayMs = 235), info)
+        val bluetooth =
+            format.detailed(aPerf().copy(audioDelayMs = 235, audioBluetooth = true), info)
+
+        assertThat(bluetooth.dropLast(1)).isEqualTo(plain.dropLast(1))
+        assertThat(plain.last()).isEqualTo("Audio delay 235 ms")
+    }
+
+    @Test
+    fun `the compact line does not say Bluetooth`() {
+        assertThat(format.compact(aPerf().copy(audioBluetooth = true), info))
+            .isEqualTo(format.compact(aPerf(), info))
+    }
+
+    @Test
     fun `the detailed overlay shows a dash for a decode time the decoder did not report`() {
         val lines = format.detailed(aPerf().copy(decodeMs = null), info)
 

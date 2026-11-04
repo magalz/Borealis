@@ -15,7 +15,9 @@ env:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A new push waits for the run in progress, so long phase runs finish; GitHub keeps only the
+  # newest pending run, and an outdated one is cancelled by hand.
+  cancel-in-progress: false
 
 jobs:
   changes:

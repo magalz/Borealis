@@ -4,6 +4,7 @@ import android.view.View
 import com.limelight.binding.input.touch.AbsoluteTouchContext
 import com.limelight.binding.input.touch.RelativeTouchContext
 import com.limelight.binding.input.touch.TouchContext
+import com.limelight.binding.input.touch.TwoFingerTap
 import com.limelight.nvstream.NvConnection
 import com.limelight.preferences.PreferenceConfiguration
 
@@ -16,10 +17,17 @@ object TouchContexts {
     private const val REFERENCE_WIDTH = 1280
     private const val REFERENCE_HEIGHT = 720
 
-    /** The mode the user's settings start with. */
+    /**
+     * The mode the user's settings start with: Native while its key is on, else Trackpad or Direct
+     * as the older trackpad key says.
+     */
     @JvmStatic
     fun initialMode(prefs: PreferenceConfiguration): TouchMode =
-        if (prefs.touchscreenTrackpad) TouchMode.TRACKPAD else TouchMode.DIRECT
+        when {
+            prefs.touchscreenNative -> TouchMode.NATIVE
+            prefs.touchscreenTrackpad -> TouchMode.TRACKPAD
+            else -> TouchMode.DIRECT
+        }
 
     /**
      * The contexts for [mode], one per supported touch; null for [TouchMode.OFF], which has none:
@@ -33,7 +41,10 @@ object TouchContexts {
         prefs: PreferenceConfiguration,
     ): Array<TouchContext>? =
         when (mode) {
-            TouchMode.TRACKPAD ->
+            TouchMode.TRACKPAD -> {
+                // The contexts share one two-finger tap: the one that decides it needs the time and
+                // the movement of both fingers
+                val twoFingerTap = TwoFingerTap()
                 Array(COUNT) {
                     RelativeTouchContext(
                         connection,
@@ -42,9 +53,14 @@ object TouchContexts {
                         REFERENCE_HEIGHT,
                         streamView,
                         prefs,
+                        twoFingerTap,
                     )
                 }
-            TouchMode.DIRECT -> Array(COUNT) { AbsoluteTouchContext(connection, it, streamView) }
+            }
+            // Native touch has the contexts of direct touch: the stream falls back to them when the
+            // host takes no touch
+            TouchMode.DIRECT,
+            TouchMode.NATIVE -> Array(COUNT) { AbsoluteTouchContext(connection, it, streamView) }
             TouchMode.OFF -> null
         }
 

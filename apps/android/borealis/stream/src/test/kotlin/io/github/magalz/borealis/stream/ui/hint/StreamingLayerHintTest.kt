@@ -19,15 +19,17 @@ import org.robolectric.annotation.Config
 
 /**
  * The first-run hint as the streaming layer draws it: the mouse navigation buttons setting of the
- * phase reaches the hint, so a stream played with a mouse names the Back hold when it is on.
+ * phase reaches the hint, so a stream played with a mouse names the Back hold when it is on, and
+ * Back with Forward together either way.
  */
 @RunWith(AndroidJUnit4::class)
 class StreamingLayerHintTest {
     @get:Rule val composeRule = createComposeRule()
 
-    private val chordHint = "Press Ctrl+Alt+Shift+M for the menu"
+    private val chordHint =
+        "Press Ctrl+Alt+Shift+M or press the mouse Back and Forward buttons together for the menu"
     private val chordAndBackHint =
-        "Press Ctrl+Alt+Shift+M or hold the mouse Back button for the menu"
+        "Press Ctrl+Alt+Shift+M, hold the mouse Back button, or press Back and Forward together for the menu"
 
     private fun layerWithMouse(mouseNavButtons: Boolean) {
         connect(
@@ -54,7 +56,7 @@ class StreamingLayerHintTest {
 
     @Test
     @Config(qualifiers = PHONE)
-    fun `the stream hint names the chord alone when the navigation buttons are off`() {
+    fun `the stream hint leaves out the Back hold when the navigation buttons are off`() {
         layerWithMouse(mouseNavButtons = false)
 
         composeRule.onNodeWithText(chordHint).assertIsDisplayed()

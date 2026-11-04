@@ -156,5 +156,6 @@ private fun SliderItemRow(
         enabled = enabled,
         disabledNote = note,
         keyStep = spec.keyStep.toFloat(),
+        onValueChangeFinished = { actions.onSliderReleased(item, it.roundToInt()) },
     )
 }

@@ -155,7 +155,7 @@ object VirtualControllerConfigurationLoader {
         RightAnalogStick(controller, context)
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    // The caller reads the configuration once for the whole build and passes it in.
+    // The caller passes in the configuration, which the stream already holds: no settings are read.
     @Suppress("LongMethod")
     @JvmStatic
     fun createDefaultLayout(

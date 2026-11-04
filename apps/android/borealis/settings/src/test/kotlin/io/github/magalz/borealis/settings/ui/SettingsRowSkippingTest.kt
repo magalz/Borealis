@@ -32,7 +32,7 @@ class SettingsRowSkippingTest {
     private var value by mutableStateOf(RowValue(checked = false))
     private var stringReads = 0
 
-    private val actions = SettingsActions({ _, _ -> }, { _, _ -> }, { _, _ -> }, {})
+    private val actions = SettingsActions({ _, _ -> }, { _, _ -> }, { _, _ -> }, {}, { _, _ -> })
     private val requests = RowRequests({}, {})
 
     @Test

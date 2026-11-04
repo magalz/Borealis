@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.mdns.JmDNSDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsComputer
 import com.limelight.nvstream.mdns.MdnsDiscoveryAgent
@@ -29,6 +30,31 @@ class DiscoveryService : Service() {
         }
 
         fun getComputerSet(): List<MdnsComputer> = discoveryAgent.getComputerSet()
+
+        // Drops the computers of a host that was removed, so that discovery announces them again.
+        // The agent knows a computer by its service name, which is not the name that the host
+        // reports, so a computer belongs to the host when one of its addresses is one of the
+        // host's.
+        fun forget(host: ComputerDetails) {
+            val addresses =
+                listOfNotNull(
+                        host.localAddress,
+                        host.ipv6Address,
+                        host.manualAddress,
+                        host.remoteAddress,
+                        host.activeAddress,
+                    )
+                    .map { it.address }
+            for (computer in discoveryAgent.getComputerSet()) {
+                val discovered =
+                    listOfNotNull(computer.localAddress, computer.ipv6Address).mapNotNull {
+                        it.hostAddress
+                    }
+                if (discovered.any { it in addresses }) {
+                    discoveryAgent.forget(computer)
+                }
+            }
+        }
     }
 
     override fun onCreate() {
@@ -64,7 +90,8 @@ class DiscoveryService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onUnbind(intent: Intent?): Boolean {
-        // Stop any discovery session
+        // Stop any discovery session. This runs on the main thread: stopping does not wait for the
+        // discovery thread to end.
         discoveryAgent.stopDiscovery()
 
         // Unbind the listener

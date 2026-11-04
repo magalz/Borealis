@@ -69,8 +69,8 @@ internal object LaunchAudit {
     }
 
     /**
-     * The user chose Resume, Continue or Try again for the app that runs, so the stream joined it
-     * without asking.
+     * The user chose to resume the app that runs (Resume, Continue or a tap on it in the Library;
+     * Try again asks), so the stream joined it without asking (host contract 7.6).
      */
     fun resumeChosen(host: String?, runningAppId: Int) {
         BorealisAudit.record(

@@ -227,7 +227,7 @@ Events:
   `asked` is the user's answer to the question about the running app, on the `/serverinfo`
   path and on the path of a refused launch. `chosen` is a join that the user's earlier choice
   made with no question (`choice=join`, outcome success): Resume, a tap on the app that runs
-  or Continue in the Library, or Try again on the error popup. The detail holds the id of the
+  or Continue in the Library (Try again on the error popup asks). The detail holds the id of the
   running app and never its name;
   a start restarted after an RTSP failure that followed an accepted `/resume`
   is recorded as `LAUNCH_RETRY` with `reason=rtsp_after_resume`, so one tap can

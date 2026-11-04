@@ -272,48 +272,71 @@ class CombiningCharacterizationTest {
     }
 
     @Test
-    fun `the strongest of two stick values is ORed into the packet, so the sum of bits can differ from both`() {
-        // 1000 then -3000: the second is stronger, and the packet holds 1000 OR -3000, not -3000.
+    fun `the stronger of two stick values is sent as it is, not the bits of both`() {
+        // Left X and right X: the later pad is the stronger, and 1000 OR -3000 is -2072, 500 OR
+        // 4000 is 4084. Left Y and right Y: the earlier pad is the stronger.
         val (first, _) =
             twoPads(
                 mapOf(
                     "leftStickX" to 1000.toShort(),
                     "leftStickY" to (-3000).toShort(),
-                    "rightStickX" to 1000.toShort(),
-                    "rightStickY" to (-1000).toShort(),
+                    "rightStickX" to 500.toShort(),
+                    "rightStickY" to (-4000).toShort(),
                 ),
                 mapOf(
                     "leftStickX" to (-3000).toShort(),
                     "leftStickY" to 1000.toShort(),
-                    "rightStickX" to (-1000).toShort(),
-                    "rightStickY" to 1000.toShort(),
+                    "rightStickX" to 4000.toShort(),
+                    "rightStickY" to 500.toShort(),
                 ),
             )
 
-        val sent = first.send()
-
-        assertThat(sent.leftStickX).isEqualTo(-2072)
-        // The other order gives the stronger value back: it is the first that is ORed in.
-        assertThat(sent.leftStickY).isEqualTo(-3000)
-        // Equal strength takes the later pad's value, ORed with the earlier one.
-        assertThat(sent.rightStickX).isEqualTo(-8)
-        assertThat(sent.rightStickY).isEqualTo(-1000 or 1000)
+        assertThat(first.send())
+            .isEqualTo(
+                Sent(
+                    1,
+                    1,
+                    0,
+                    leftStickX = -3000,
+                    leftStickY = -3000,
+                    rightStickX = 4000,
+                    rightStickY = -4000,
+                )
+            )
     }
 
     @Test
-    fun `the strongest of two triggers is ORed the same way`() {
+    fun `two sticks of the same strength send the value of the later pad as it is`() {
         val (first, _) =
             twoPads(
-                mapOf("leftTrigger" to 1.toByte(), "rightTrigger" to (-1).toByte()),
-                mapOf("leftTrigger" to 2.toByte(), "rightTrigger" to 127.toByte()),
+                mapOf("rightStickX" to 1000.toShort(), "rightStickY" to (-1000).toShort()),
+                mapOf("rightStickX" to (-1000).toShort(), "rightStickY" to 1000.toShort()),
             )
 
-        val sent = first.send()
+        // 1000 OR -1000 is -8
+        assertThat(first.send()).isEqualTo(Sent(1, 1, 0, rightStickX = -1000, rightStickY = 1000))
+    }
 
-        // 1 then 2: 1 OR 2.
-        assertThat(sent.leftTrigger).isEqualTo(3)
-        // -1 is 255 as an unsigned byte, the strongest of the two; the OR is -1 as well.
-        assertThat(sent.rightTrigger).isEqualTo(-1)
+    @Test
+    fun `the stronger of two triggers is sent as it is, not the bits of both`() {
+        val (first, second) =
+            twoPads(
+                mapOf("leftTrigger" to 1.toByte(), "rightTrigger" to 127.toByte()),
+                mapOf("leftTrigger" to 2.toByte(), "rightTrigger" to 128.toByte()),
+            )
+
+        // The later pad is the stronger on both triggers. 1 and 2 are 3 as bits, and 127 and 128
+        // are -1; 128 is the stronger of the two as an unsigned byte.
+        assertThat(first.send())
+            .isEqualTo(Sent(1, 1, 0, leftTrigger = 2, rightTrigger = 128.toByte().toInt()))
+
+        // The same values with the pads the other way round: the earlier pad is the stronger.
+        first.set("leftTrigger", 2.toByte())
+        first.set("rightTrigger", 128.toByte())
+        second.set("leftTrigger", 1.toByte())
+        second.set("rightTrigger", 127.toByte())
+        assertThat(first.send())
+            .isEqualTo(Sent(1, 1, 0, leftTrigger = 2, rightTrigger = 128.toByte().toInt()))
     }
 
     @Test
@@ -321,14 +344,13 @@ class CombiningCharacterizationTest {
         val (first, _) =
             twoPads(mapOf("leftStickX" to 32767.toShort()), mapOf("leftStickX" to Short.MIN_VALUE))
 
-        assertThat(first.send().leftStickX).isEqualTo(-1)
+        assertThat(first.send().leftStickX).isEqualTo(Short.MIN_VALUE.toInt())
     }
 
     @Test
     fun `triggers are compared as unsigned bytes, so one past half beats one below it`() {
         // Left: 153 (0.6 of the travel) first, 114 (0.45) second. Right: 65 first, 193 second. As
-        // signed bytes the pad with the lower magnitude won, and the packet held the other one
-        // ORed with it: -5 on the left and 65 on the right.
+        // signed bytes the pad with the lower magnitude won on both triggers.
         val (first, _) =
             twoPads(
                 mapOf("leftTrigger" to 153.toByte(), "rightTrigger" to 65.toByte()),
@@ -342,7 +364,7 @@ class CombiningCharacterizationTest {
     }
 
     @Test
-    fun `two system pads, a USB pad and the on-screen controller on one number are ORed in that order`() {
+    fun `two system pads, a USB pad and the on-screen controller on one number make one packet`() {
         rig.addPad(
             7,
             controllerNumber = 0,
@@ -384,12 +406,12 @@ class CombiningCharacterizationTest {
                     controller = 0,
                     activeMask = 1,
                     buttons = A_FLAG or B_FLAG or X_FLAG or Y_FLAG,
-                    leftTrigger = 127,
-                    rightTrigger = 119,
-                    leftStickX = 3070,
-                    leftStickY = -1,
-                    rightStickX = -1,
-                    rightStickY = -49,
+                    leftTrigger = 68,
+                    rightTrigger = 66,
+                    leftStickX = 3016,
+                    leftStickY = 2687,
+                    rightStickX = 3298,
+                    rightStickY = 3712,
                 )
             )
     }

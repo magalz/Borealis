@@ -1,5 +1,8 @@
 package io.github.magalz.borealis.library.shell
 
+import androidx.activity.BackEventCompat
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +37,11 @@ import org.robolectric.annotation.Config
  *
  * The window of a test is white. Hosts is a red page and Add host a blue square in the corner, so a
  * pixel says which of the two is drawn and how much.
+ *
+ * A screen without a Back handler of its own (Apps, in the app) is left through the Back of the
+ * NavHost itself, and while a Back gesture is under way Navigation plays another transition for it,
+ * the predictive pop, whose default shrinks the screen that is left. The Back tests therefore go
+ * through the [OnBackPressedDispatcher], as the system does, and not through `popBackStack`.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = PHONE)
@@ -41,11 +49,14 @@ class FadingNavHostTest {
     @get:Rule val composeRule = createComposeRule()
 
     private lateinit var navController: NavHostController
+    private lateinit var backDispatcher: OnBackPressedDispatcher
 
     private fun show(look: BorealisLook = BorealisLook()) {
         composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             navController = rememberNavController()
+            backDispatcher =
+                checkNotNull(LocalOnBackPressedDispatcherOwner.current).onBackPressedDispatcher
             CompositionLocalProvider(LocalBorealisLook provides look) {
                 FadingNavHost(navController) {
                     composable<Hosts> { Box(Modifier.fillMaxSize().background(Color.Red)) }
@@ -58,6 +69,39 @@ class FadingNavHostTest {
 
     private fun pixel(x: Int, y: Int): Color =
         composeRule.onRoot().captureToImage().toPixelMap()[x, y]
+
+    private fun showAddHost() {
+        composeRule.runOnIdle { navController.navigate(AddHost) }
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+    }
+
+    /**
+     * The system starts a Back gesture, and the finger has gone [progress] of the way. Navigation
+     * follows the finger and not the clock, so this waits until the preview shows, and the preview
+     * then stays as it is.
+     */
+    private fun dragBack(progress: Float) {
+        systemBack {
+            dispatchOnBackStarted(backEvent(0f))
+            dispatchOnBackProgressed(backEvent(progress))
+        }
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+    }
+
+    /** What the system tells the app about Back, on the UI thread. */
+    private fun systemBack(events: OnBackPressedDispatcher.() -> Unit) {
+        composeRule.runOnIdle { backDispatcher.events() }
+        // The clock does not take the events in until the UI thread has been idle once.
+        composeRule.waitForIdle()
+    }
+
+    private fun backEvent(progress: Float) =
+        BackEventCompat(
+            touchX = TOUCH_PX,
+            touchY = TOUCH_PX,
+            progress = progress,
+            swipeEdge = BackEventCompat.EDGE_LEFT,
+        )
 
     @Test
     fun `the screen that is left is not drawn after the first frame, and the next fades in`() {
@@ -94,6 +138,80 @@ class FadingNavHostTest {
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
 
         assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isLessThan(DONE)
+    }
+
+    @Test
+    fun `the Back key leaves the screen at once, and the one before fades in`() {
+        show()
+        showAddHost()
+
+        systemBack { onBackPressed() }
+        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+
+        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isGreaterThan(OPAQUE_WHITE)
+        assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isGreaterThan(BEGUN)
+
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+
+        assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isLessThan(DONE)
+    }
+
+    @Test
+    fun `the preview of a Back gesture does not shrink the screen that is left`() {
+        show()
+        showAddHost()
+
+        dragBack(progress = 0.5f)
+
+        // The preview is under way: the red page is coming in with the finger.
+        assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isLessThan(OPAQUE_WHITE)
+        // The blue square is gone: shrunk, it would still cover this pixel.
+        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isGreaterThan(OPAQUE_WHITE)
+    }
+
+    @Test
+    fun `a Back gesture that goes through leaves the screen at once, and the one before fades in`() {
+        show()
+        showAddHost()
+        dragBack(progress = 0.5f)
+
+        systemBack { onBackPressed() }
+        composeRule.mainClock.advanceTimeBy(TWO_FRAMES_MILLIS)
+
+        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isGreaterThan(OPAQUE_WHITE)
+
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+
+        assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isLessThan(DONE)
+        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isGreaterThan(OPAQUE_WHITE)
+    }
+
+    @Test
+    fun `a Back gesture that is let go leaves the screen as it was`() {
+        show()
+        showAddHost()
+        dragBack(progress = 0.5f)
+
+        systemBack { dispatchOnBackCancelled() }
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+
+        // The blue square is drawn in full, alone: the window is as big as the square.
+        val shot = composeRule.onRoot().captureToImage().toPixelMap()
+        assertThat(shot.width).isEqualTo(SQUARE_PX)
+        assertThat(shot[IN_SQUARE_PX, IN_SQUARE_PX].red).isLessThan(DONE)
+    }
+
+    @Test
+    fun `with Reduce motion On a Back gesture shows the screen before at once too`() {
+        show(BorealisLook(reduceMotion = ReduceMotion.On))
+        showAddHost()
+        dragBack(progress = 0.5f)
+
+        systemBack { onBackPressed() }
+        composeRule.mainClock.advanceTimeBy(FOUR_FRAMES_MILLIS)
+
+        assertThat(pixel(OUTSIDE_PX, OUTSIDE_PX).green).isLessThan(DONE)
+        assertThat(pixel(IN_SQUARE_PX, IN_SQUARE_PX).red).isGreaterThan(OPAQUE_WHITE)
     }
 
     @Test
@@ -149,6 +267,7 @@ class FadingNavHostTest {
         const val SQUARE_PX = 100
         const val IN_SQUARE_PX = 40
         const val OUTSIDE_PX = 300
+        const val TOUCH_PX = 10f
         const val SETTLE_MILLIS = 400L
         const val TWO_FRAMES_MILLIS = 32L
         const val FOUR_FRAMES_MILLIS = 64L

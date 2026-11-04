@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="shell_host_added">%1$s added. Pair it to see its apps.</string>
+    <string name="shell_host_added_paired">%1$s added. It is already paired.</string>
+    <string name="shell_host_already_added">%1$s is already added.</string>
+    <string name="shell_host_already_added_and_paired">%1$s is already added and paired.</string>
     <string name="shell_host_unavailable">This host is no longer available.</string>
     <!-- The name of the app, in the footer of the rail. -->
     <string name="shell_rail_name">Borealis</string>

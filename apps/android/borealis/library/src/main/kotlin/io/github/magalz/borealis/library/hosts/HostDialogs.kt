@@ -2,6 +2,12 @@ package io.github.magalz.borealis.library.hosts
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.ActionSheet
 import io.github.magalz.borealis.designsystem.components.ActionSheetAction
@@ -63,6 +69,31 @@ internal fun HostsDialogs(
         }
     state.details?.let { details ->
         DetailsDialog(details, onDetailsDismissed)
+    }
+}
+
+/**
+ * Asks for [focus], the requester of the card of [openerId], once the last window that the options
+ * opened over the screen has closed: the options, the Forget confirmation or the details. On the TV
+ * the focus was lost after Back (Sprint 14 UAT, U11); the tests assume that the window took it from
+ * the screen and that Compose gave it back to the first card, not to the one that had it. Nothing
+ * happens when that host is already gone, and nothing when the screen starts with a window already
+ * open: that is not a close. After Forget the removal is asynchronous (the ViewModel launches it),
+ * so the host may still be in [hosts] when the confirmation closes, and its card, about to go, asks
+ * for the focus. A card that the grid does not compose (many hosts, scrolled away while a window
+ * was open) has no node for [focus]: Compose logs it and answers false, so nothing fails.
+ */
+@Composable
+internal fun RestoreOpenerFocus(
+    open: Boolean,
+    openerId: String?,
+    hosts: List<HostItemUiState>,
+    focus: FocusRequester,
+) {
+    var wasOpen by remember { mutableStateOf(open) }
+    LaunchedEffect(open) {
+        if (wasOpen && !open && hosts.any { it.id == openerId }) focus.requestFocus()
+        wasOpen = open
     }
 }
 

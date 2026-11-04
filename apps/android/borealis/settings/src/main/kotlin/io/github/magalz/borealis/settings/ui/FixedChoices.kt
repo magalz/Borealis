@@ -27,6 +27,9 @@ object FixedChoices {
     /** The stored value of Touch for a direct touch ([Settings.TOUCHSCREEN_TRACKPAD] is off). */
     const val TOUCH_DIRECT = "direct"
 
+    /** The stored value of Touch for a native touch ([Settings.TOUCHSCREEN_NATIVE] is on). */
+    const val TOUCH_NATIVE = "native"
+
     /** Frame pacing. */
     val FRAME_PACING =
         listOf(

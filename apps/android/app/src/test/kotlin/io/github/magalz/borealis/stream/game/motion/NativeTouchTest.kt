@@ -38,6 +38,10 @@ internal class NativeTouchTest : MotionTestBase() {
             build()
         }
 
+    // Three fingers; the action is for the pointer [index].
+    private fun threeFingers(action: Int, index: Int, at: Long = TIME) =
+        fingerEvent(action, listOf(80f to 45f, 160f to 90f, 240f to 135f), index) { eventTime = at }
+
     /** A touch event as it reached the native library, read from the arguments of the call. */
     private class TouchCall(private val args: List<Any?>) {
         val type: Int
@@ -222,6 +226,55 @@ internal class NativeTouchTest : MotionTestBase() {
         assertThat(sent().map { it.name }).containsExactly("sendTouchEvent")
     }
 
+    // ----- Three fingers -----
+
+    @Test
+    fun `a third finger that goes down is a touch down of that finger, not a gesture of three fingers`() {
+        streaming()
+        native()
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 80f, 45f))
+        touch(streamView, twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1))
+        forgetSent()
+
+        assertThat(touch(streamView, threeFingers(MotionEvent.ACTION_POINTER_DOWN, 2))).isTrue()
+
+        assertThat(sent().map { it.name }).containsExactly("sendTouchEvent")
+        val down = touches(1).single()
+        assertThat(down.type).isEqualTo(MoonBridge.LI_TOUCH_EVENT_DOWN.toInt())
+        assertThat(down.pointerId).isEqualTo(2)
+        assertThat(down.x).isWithin(EPSILON).of(0.75f)
+        assertThat(down.y).isWithin(EPSILON).of(0.75f)
+    }
+
+    @Test
+    fun `a gesture of three fingers reaches the host whole, no finger moves or lifts without having gone down`() {
+        streaming()
+        native()
+
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 80f, 45f))
+        touch(streamView, twoFingers(MotionEvent.ACTION_POINTER_DOWN, 1))
+        touch(streamView, threeFingers(MotionEvent.ACTION_POINTER_DOWN, 2, TIME + 10))
+        touch(streamView, threeFingers(MotionEvent.ACTION_MOVE, 0, TIME + 20))
+        touch(streamView, threeFingers(MotionEvent.ACTION_POINTER_UP, 2, TIME + 30))
+        touch(streamView, twoFingers(MotionEvent.ACTION_POINTER_UP, 1))
+        touch(streamView, finger(MotionEvent.ACTION_UP, 80f, 45f, TIME + 40))
+
+        assertThat(touches().map { it.type to it.pointerId })
+            .containsExactly(
+                DOWN to 0,
+                DOWN to 1,
+                DOWN to 2,
+                MOVE to 0,
+                MOVE to 1,
+                MOVE to 2,
+                UP to 2,
+                UP to 1,
+                UP to 0,
+            )
+            .inOrder()
+        assertThat(sent().map { it.name }.toSet()).containsExactly("sendTouchEvent")
+    }
+
     // ----- The other modes -----
 
     @Test
@@ -245,5 +298,8 @@ internal class NativeTouchTest : MotionTestBase() {
     private companion object {
         const val TIME = 10_000L
         const val EPSILON = 1e-6f
+        val DOWN = MoonBridge.LI_TOUCH_EVENT_DOWN.toInt()
+        val MOVE = MoonBridge.LI_TOUCH_EVENT_MOVE.toInt()
+        val UP = MoonBridge.LI_TOUCH_EVENT_UP.toInt()
     }
 }

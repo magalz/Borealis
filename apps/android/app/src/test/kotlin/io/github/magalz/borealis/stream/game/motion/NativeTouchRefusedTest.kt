@@ -8,6 +8,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import io.github.magalz.borealis.library.RecordingLog
 import io.github.magalz.borealis.logging.LogLevel
+import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamNotice
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.TouchMode
@@ -148,6 +149,37 @@ internal class NativeTouchRefusedTest : MotionTestBase() {
         assertThat(touchMode()).isEqualTo(TouchMode.DIRECT)
         assertThat(notices()).containsExactly(StreamNotice.NativeTouchRefused)
         assertThat(refusalLines()).hasSize(1)
+    }
+
+    @Test
+    fun `after the refusal a tap of three fingers opens the keyboard, as in Direct`() {
+        hostWithoutTouch()
+        streaming()
+        native()
+        touch(streamView, down())
+        val three = listOf(10f to 10f, 20f to 20f, 30f to 30f)
+
+        assertThat(
+                touch(
+                    streamView,
+                    fingerEvent(MotionEvent.ACTION_POINTER_DOWN, three, index = 2) {
+                        eventTime = TIME + 100
+                    },
+                )
+            )
+            .isTrue()
+        assertThat(
+                touch(
+                    streamView,
+                    fingerEvent(MotionEvent.ACTION_UP, listOf(30f to 30f)) {
+                        eventTime = TIME + 200
+                    },
+                )
+            )
+            .isTrue()
+
+        assertThat((rig.phase as StreamPhase.Streaming).panel).isEqualTo(Panel.KEYBOARD)
+        assertThat(asked()).isEqualTo(1)
     }
 
     // ----- Only a refusal is a refusal -----

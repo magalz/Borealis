@@ -46,8 +46,11 @@ class DiscoveryService : Service() {
                     )
                     .map { it.address }
             for (computer in discoveryAgent.getComputerSet()) {
-                val discovered = listOfNotNull(computer.localAddress, computer.ipv6Address)
-                if (discovered.any { it.hostAddress in addresses }) {
+                val discovered =
+                    listOfNotNull(computer.localAddress, computer.ipv6Address).mapNotNull {
+                        it.hostAddress
+                    }
+                if (discovered.any { it in addresses }) {
                     discoveryAgent.forget(computer)
                 }
             }

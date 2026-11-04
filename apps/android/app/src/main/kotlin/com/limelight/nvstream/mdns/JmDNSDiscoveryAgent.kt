@@ -206,10 +206,9 @@ class JmDNSDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener) :
         private const val SERVICE_INFO_TIMEOUT_MS = 500L
 
         // The longest that a discovery thread waits for the one before it to let go of the
-        // resolver. That one ends as soon as the interrupt cuts its sleep or its resolver call
-        // (jmDNS
-        // keeps the interrupt), so this only bounds a thread that something holds up. No caller
-        // sees the wait.
+        // resolver. That one ends as soon as the interrupt cuts its sleep or its resolver call, as
+        // jmDNS keeps the interrupt, so this only bounds a thread that something holds up. No
+        // caller sees the wait.
         private const val RESOLVER_RELEASE_TIMEOUT_MS = 2_000L
 
         // The resolver factory's instance member has a static lifetime which

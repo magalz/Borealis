@@ -1683,6 +1683,7 @@ facts of both items and added the third item and the open decision. See the
   ([contract, sections 12 and 13](host-contract/luminalshine.md#13-input)). It matters only when the
   host makes a DualSense, which it does through its `gamepad` setting `dualsense` (see "Pad battery"
   above).
+  Sprint 17b: recorded, with no code, as the plan of the sprint decided.
 - **Battery gaps of pads without a battery.** From Sprint 16 (C20, the merge review of #108); the old
   code behaves the same. With multi-controller off, a pad without a battery that told the host
   "not present" before a pad with a battery joined its number does not tell it again after that pad
@@ -1847,11 +1848,16 @@ Moved here from Sprint 15 or from the backlog (owner, 2026-10-28), as each item 
   above a combined 2.0 has not been measured, only Normal was. See
   [accessibility, text spacing](ux/accessibility.md#text-spacing-known-limitations).
   Moved here from the backlog.
+  Sprint 17b: the Apps screen and the TV Settings row fit at a combined 2.6 (BORE-27, BORE-28). Wide at 2.6 still
+  overflows in 3 of 16 unit runs (TV Luciole and Andika, phone Andika), and handheld was not tested at 2.6. The
+  "1 of 70" case of the components was a rig artifact: the rig now scrolls as the real panes do. The round checks it
+  (3.33, steps 9, 24 and 25).
 - **Segments and keyboard keys still lift when focused.** `SegmentedControl` and `KeyboardKey` use
   `liftedWhenFocused`, so the merged tree lists the focused one last. Robolectric cannot see
   TalkBack's traversal links: check it with TalkBack on a device in this sprint.
   Sprint 17b: done in the phase (BORE-14, LX2): the lifted items keep their reading order (`traversalIndex`). The round checks it with TalkBack (3.33, step 13).
 - **A UAT note:** "Fn 123" wraps on narrow phones at the default look.
+  Sprint 17b: recorded, by design; no code.
 - **A touch handheld with only `KEYBOARD | DPAD`.** From the Sprint 9 device round
   (2026-10-19), moved here from the backlog. A touch handheld whose built-in controls report only
   `KEYBOARD | DPAD`, with no GAMEPAD source, now gets the phone layout. This is rare;

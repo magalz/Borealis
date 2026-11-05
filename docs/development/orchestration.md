@@ -51,7 +51,7 @@ From Sprint 17b the work of Borealis is tracked in the itsaplan project `ignis-d
 - **Scratch area.** The session scratch area lives under `%TEMP%`, and the owner's monthly cleanup wipes `%TEMP%`; it was also wiped once during a run (2026-10-20), so nothing there is a record. Keep results in the repository or in the report. Never run a recursive delete on a folder that holds links or junctions.
 - **Mutation tests.** To test a mutation of the code, an agent uses `git worktree add --detach` under `D:\Repos\Borealis-worktrees\zz-<name>`, and removes it with `git worktree remove --force`.
 - **Gradle file locks can leave a worktree folder behind.** On Windows a Gradle daemon or an IDE can hold a file open, so `git worktree remove --force` may fail or leave the folder. Such a folder is reported by its exact path, not deleted.
-- **Several builds at once.** Tasks build on the same machine in parallel. If a daemon dies for lack of memory, wait and run the command again; never kill processes. On the KSP error "different roots", run the task again with `--rerun`.
+- **Several builds at once.** Tasks build on the same machine in parallel. If a daemon dies for lack of memory, wait and run the command again; never kill another build's processes to free memory. On the KSP error "different roots", run the task again with `--rerun`.
 
 ## Lessons from Sprint 13
 

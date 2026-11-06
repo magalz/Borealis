@@ -160,7 +160,7 @@ class LaunchRequestTest {
     }
 
     @Test
-    fun `a stream configuration that turns continuous audio on adds it to a LuminalShine host`() {
+    fun `a LuminalShine launch and resume carry no continuousAudio in their query`() {
         val host = host()
         answerLaunch(host)
         answerLaunch(host, verb = "resume", body = "<resume>1</resume>")
@@ -173,7 +173,7 @@ class LaunchRequestTest {
         val query =
             "?appid=12&mode=1920x1080x60&additionalStates=1&sops=1" +
                 "&rikey=00010F107F8081A5ABCDEFFEFF09905A&rikeyid=-5&localAudioPlayMode=0" +
-                "&surroundAudioInfo=196610&continuousAudio=1&remoteControllersBitmap=0" +
+                "&surroundAudioInfo=196610&remoteControllersBitmap=0" +
                 "&gcmap=0&gcpersist=0&corever=1"
         assertThat(targets).containsExactly("/launch$query", "/resume$query").inOrder()
     }

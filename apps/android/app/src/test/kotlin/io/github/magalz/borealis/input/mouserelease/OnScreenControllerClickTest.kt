@@ -124,7 +124,7 @@ class OnScreenControllerClickTest {
     }
 
     @Test
-    fun `a USB pad that holds nothing ends the mouse while the on-screen controller holds B and lets the right button go once`() {
+    fun `a USB pad that holds nothing ends the mouse while the on-screen controller holds B`() {
         oscHolds(b)
         val pad = usbPadInMouseMode()
         pad.report(0, leftStickX = 0.5f)
@@ -181,7 +181,7 @@ class OnScreenControllerClickTest {
     }
 
     @Test
-    fun `a click the pad sent for the on-screen controller goes up with the mouse mode after the on-screen controller let A go`() {
+    fun `a click the pad sent for the on-screen controller goes up with the mouse mode after its A went up`() {
         oscHolds(a)
         val pad = usbPadInMouseMode()
         pad.report(0, leftStickX = 0.5f)

@@ -67,7 +67,7 @@ class SharedNumberMouseOffTest {
     }
 
     @Test
-    fun `a pad that holds nothing ends the mouse while the on-screen controller holds A and lets the left button go once`() {
+    fun `a pad that holds nothing ends the mouse while the on-screen controller holds A and sends one up`() {
         rig.handler.reportOscState(a, 0, 0, 0, 0, 0, 0)
         // The pad sends its state with what the on-screen controller holds in it
         first.report(0, leftStickX = 0.5f)

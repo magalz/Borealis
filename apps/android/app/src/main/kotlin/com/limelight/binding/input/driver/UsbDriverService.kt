@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbManager
 import android.os.Binder
 import android.os.Build
@@ -159,46 +160,41 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount")
     private fun handleUsbDeviceState(device: UsbDevice) {
         // Are we able to operate it?
         if (shouldClaimDevice(device, prefConfig.bindAllUsb)) {
-            val manager = checkNotNull(usbManager)
+            val connection = openGrantedDevice(device)
+            if (connection != null) {
+                val controller = controllerFor(device, connection, nextDeviceId++, this)
 
-            // Do we have permission yet?
-            if (!manager.hasPermission(device)) {
-                // BOREALIS: ask once the stream shows a picture
-                permissionRequests.request(device.deviceName, device)
-                return
-            }
-
-            // Open the device
-            val connection = manager.openDevice(device)
-            if (connection == null) {
-                LimeLog.warning("Unable to open USB device: " + device.deviceName)
-                return
-            }
-
-            val controller: AbstractController =
-                if (XboxOneController.canClaimDevice(device)) {
-                    XboxOneController(device, connection, nextDeviceId++, this)
-                } else if (Xbox360Controller.canClaimDevice(device)) {
-                    Xbox360Controller(device, connection, nextDeviceId++, this)
+                // Start the controller
+                if (controller.start()) {
+                    // Add this controller to the list
+                    controllers.add(controller)
                 } else {
-                    // shouldClaimDevice() accepted the device, so this is the wireless dongle
-                    Xbox360WirelessDongle(device, connection, nextDeviceId++, this)
+                    connection.close()
                 }
-
-            // Start the controller
-            if (!controller.start()) {
-                connection.close()
-                return
             }
-
-            // Add this controller to the list
-            controllers.add(controller)
         }
+    }
+
+    /** The open connection to [device], or null when it has no permission yet or does not open. */
+    private fun openGrantedDevice(device: UsbDevice): UsbDeviceConnection? {
+        val manager = checkNotNull(usbManager)
+
+        // Do we have permission yet?
+        if (!manager.hasPermission(device)) {
+            // BOREALIS: ask once the stream shows a picture
+            permissionRequests.request(device.deviceName, device)
+            return null
+        }
+
+        // Open the device
+        val connection = manager.openDevice(device)
+        if (connection == null) {
+            LimeLog.warning("Unable to open USB device: " + device.deviceName)
+        }
+        return connection
     }
 
     // BOREALIS: moved out of handleUsbDeviceState() so that UsbPermissionRequests can call it later
@@ -328,6 +324,21 @@ class UsbDriverService : Service(), UsbDriverListener {
 
         // How long an attached device waits for the kernel to bring up its input stack.
         private const val ATTACH_DELAY_MS = 1000L
+
+        private fun controllerFor(
+            device: UsbDevice,
+            connection: UsbDeviceConnection,
+            deviceId: Int,
+            listener: UsbDriverListener,
+        ): AbstractController =
+            if (XboxOneController.canClaimDevice(device)) {
+                XboxOneController(device, connection, deviceId, listener)
+            } else if (Xbox360Controller.canClaimDevice(device)) {
+                Xbox360Controller(device, connection, deviceId, listener)
+            } else {
+                // shouldClaimDevice() accepted the device, so this is the wireless dongle
+                Xbox360WirelessDongle(device, connection, deviceId, listener)
+            }
 
         @JvmStatic
         fun isRecognizedInputDevice(device: UsbDevice): Boolean {

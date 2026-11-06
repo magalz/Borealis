@@ -325,6 +325,9 @@ class UsbDriverService : Service(), UsbDriverListener {
         // How long an attached device waits for the kernel to bring up its input stack.
         private const val ATTACH_DELAY_MS = 1000L
 
+        // The kernels whose xpad driver does not set the Xbox 360 wireless LEDs (before 4.2).
+        private val KERNELS_BEFORE_4_2 = listOf("2.", "3.", "4.0.", "4.1.")
+
         private fun controllerFor(
             device: UsbDevice,
             connection: UsbDeviceConnection,
@@ -369,23 +372,14 @@ class UsbDriverService : Service(), UsbDriverListener {
             }
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition")
         @JvmStatic
         fun kernelSupportsXbox360W(): Boolean {
             // Check if this kernel is 4.2+ to see if the xpad driver sets Xbox 360 wireless LEDs
             // https://github.com/torvalds/linux/commit/75b7f05d2798ee3a1cc5bbdd54acd0e318a80396
             val kernelVersion = System.getProperty("os.version")
-            if (kernelVersion != null) {
-                if (
-                    kernelVersion.startsWith("2.") ||
-                        kernelVersion.startsWith("3.") ||
-                        kernelVersion.startsWith("4.0.") ||
-                        kernelVersion.startsWith("4.1.")
-                ) {
-                    // Even if LED devices are present, the driver won't set the initial LED state.
-                    return false
-                }
+            if (kernelVersion != null && KERNELS_BEFORE_4_2.any { kernelVersion.startsWith(it) }) {
+                // Even if LED devices are present, the driver won't set the initial LED state.
+                return false
             }
 
             // We know we have a kernel that should set Xbox 360 wireless LEDs, but we still don't
@@ -397,19 +391,31 @@ class UsbDriverService : Service(), UsbDriverListener {
             return true
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition")
         @JvmStatic
         fun shouldClaimDevice(device: UsbDevice, claimAllAvailable: Boolean): Boolean {
-            return ((!kernelSupportsXboxOne() ||
-                !isRecognizedInputDevice(device) ||
-                claimAllAvailable) && XboxOneController.canClaimDevice(device)) ||
-                ((!isRecognizedInputDevice(device) || claimAllAvailable) &&
-                    Xbox360Controller.canClaimDevice(device)) ||
-                // We must not call isRecognizedInputDevice() because wireless controllers don't
-                // share the same product ID as the dongle
-                ((!kernelSupportsXbox360W() || claimAllAvailable) &&
-                    Xbox360WirelessDongle.canClaimDevice(device))
+            return claimsXboxOne(device, claimAllAvailable) ||
+                claimsXbox360(device, claimAllAvailable) ||
+                claimsWirelessDongle(device, claimAllAvailable)
         }
+
+        // Whether the app may take a pad that Android can drive by itself: Android does not
+        // recognize it, or the setting claims every device.
+        private fun mayTakeFromAndroid(device: UsbDevice, claimAllAvailable: Boolean) =
+            !isRecognizedInputDevice(device) || claimAllAvailable
+
+        // The kernel check comes first: it logs the kernel version on every decision.
+        private fun claimsXboxOne(device: UsbDevice, claimAllAvailable: Boolean) =
+            (!kernelSupportsXboxOne() || mayTakeFromAndroid(device, claimAllAvailable)) &&
+                XboxOneController.canClaimDevice(device)
+
+        private fun claimsXbox360(device: UsbDevice, claimAllAvailable: Boolean) =
+            mayTakeFromAndroid(device, claimAllAvailable) &&
+                Xbox360Controller.canClaimDevice(device)
+
+        // We must not call isRecognizedInputDevice() because wireless controllers don't
+        // share the same product ID as the dongle
+        private fun claimsWirelessDongle(device: UsbDevice, claimAllAvailable: Boolean) =
+            (!kernelSupportsXbox360W() || claimAllAvailable) &&
+                Xbox360WirelessDongle.canClaimDevice(device)
     }
 }

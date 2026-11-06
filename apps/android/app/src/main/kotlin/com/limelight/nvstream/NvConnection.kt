@@ -66,10 +66,12 @@ import org.xmlpull.v1.XmlPullParserException
 // BOREALIS: typed failure causes (host.failure)
 // BOREALIS: LuminalShine launch retries (host.launch)
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-// The stack traces that the Java prints to stderr and the RuntimeException that wraps the cause of
-// a missing AES provider stay as they were: PrintStackTrace and TooGenericExceptionThrown are
-// suppressed for that. The constructor has the seven parameters of the Java.
+// Converted as is from the inherited Java; the rest is for later sprints:
+// - TooManyFunctions, LargeClass and LongParameterList: the class waits for its split, and until
+//   then the constructor has the seven parameters of the Java (Sprint 18d backlog).
+// - PrintStackTrace and TooGenericExceptionThrown: the stack traces that the Java prints to stderr
+//   and the RuntimeException that wraps the cause of a missing AES provider stay as they were
+//   (Sprint 18c backlog).
 @Suppress("TooManyFunctions", "LargeClass", "LongParameterList")
 open class NvConnection(
     // Context parameters

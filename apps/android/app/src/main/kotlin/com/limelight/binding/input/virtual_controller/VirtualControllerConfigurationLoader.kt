@@ -122,12 +122,47 @@ object VirtualControllerConfigurationLoader {
     private fun createRightStick(controller: VirtualController, context: Context): AnalogStick =
         RightAnalogStick(controller, context)
 
-    // The controller and the context that every button of the default layout is made with.
+    // The elements of the default layout, in groups. Each group helper adds its elements in the
+    // order they have in the layout, and its places are the grid scaled to the height of the
+    // screen.
+    // NOTE: Some of these screenScale() expressions seem like they can be combined into a single
+    // call. Due to floating point rounding, this isn't actually possible.
     private class DefaultLayout(
         private val controller: VirtualController,
         private val context: Context,
+        private val config: PreferenceConfiguration,
     ) {
-        fun digitalButton(elementId: Int, keyShort: Int, layer: Int, text: String): DigitalButton {
+        private val screen = context.resources.displayMetrics
+
+        private val height = screen.heightPixels
+
+        // Displace controls on the right by this amount of pixels to account for different aspect
+        // ratios
+        private val rightDisplacement =
+            screen.widthPixels - screen.heightPixels * ASPECT_WIDTH / ASPECT_HEIGHT
+
+        fun addElements() {
+            if (!config.onlyL3R3) {
+                addDigitalPad()
+                addFaceButtons()
+                addTriggersAndBumpers()
+                addSticks()
+                addBackAndStart()
+            } else {
+                addStickClicks()
+            }
+
+            if (config.showGuideButton) {
+                addGuide()
+            }
+        }
+
+        private fun digitalButton(
+            elementId: Int,
+            keyShort: Int,
+            layer: Int,
+            text: String,
+        ): DigitalButton {
             val button = DigitalButton(controller, elementId, layer, context)
             button.setText(text)
 
@@ -149,31 +184,8 @@ object VirtualControllerConfigurationLoader {
 
             return button
         }
-    }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    // The caller passes in the configuration, which the stream already holds: no settings are read.
-    @Suppress("LongMethod")
-    @JvmStatic
-    fun createDefaultLayout(
-        controller: VirtualController,
-        context: Context,
-        config: PreferenceConfiguration,
-    ) {
-        val layout = DefaultLayout(controller, context)
-        val screen = context.resources.displayMetrics
-
-        // Displace controls on the right by this amount of pixels to account for different aspect
-        // ratios
-        val rightDisplacement =
-            screen.widthPixels - screen.heightPixels * ASPECT_WIDTH / ASPECT_HEIGHT
-
-        val height = screen.heightPixels
-
-        // NOTE: Some of these screenScale() expressions seem like they can be combined
-        // into a single call. Due to floating point rounding, this isn't actually possible.
-
-        if (!config.onlyL3R3) {
+        private fun addDigitalPad() {
             controller.addElement(
                 createDigitalPad(controller, context),
                 screenScale(DPAD_BASE_X, height),
@@ -181,9 +193,11 @@ object VirtualControllerConfigurationLoader {
                 screenScale(DPAD_SIZE, height),
                 screenScale(DPAD_SIZE, height),
             )
+        }
 
+        private fun addFaceButtons() {
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_A,
                     if (!config.flipFaceButtons) ControllerPacket.A_FLAG
                     else ControllerPacket.B_FLAG,
@@ -197,7 +211,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_B,
                     if (config.flipFaceButtons) ControllerPacket.A_FLAG
                     else ControllerPacket.B_FLAG,
@@ -211,7 +225,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_X,
                     if (!config.flipFaceButtons) ControllerPacket.X_FLAG
                     else ControllerPacket.Y_FLAG,
@@ -225,7 +239,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_Y,
                     if (config.flipFaceButtons) ControllerPacket.X_FLAG
                     else ControllerPacket.Y_FLAG,
@@ -237,7 +251,9 @@ object VirtualControllerConfigurationLoader {
                 screenScale(BUTTON_SIZE, height),
                 screenScale(BUTTON_SIZE, height),
             )
+        }
 
+        private fun addTriggersAndBumpers() {
             controller.addElement(
                 createLeftTrigger(1, "LT", controller, context),
                 screenScale(TRIGGER_L_BASE_X, height),
@@ -255,12 +271,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                layout.digitalButton(
-                    VirtualControllerElement.EID_LB,
-                    ControllerPacket.LB_FLAG,
-                    1,
-                    "LB",
-                ),
+                digitalButton(VirtualControllerElement.EID_LB, ControllerPacket.LB_FLAG, 1, "LB"),
                 screenScale(TRIGGER_L_BASE_X + TRIGGER_DISTANCE, height),
                 screenScale(TRIGGER_BASE_Y, height),
                 screenScale(TRIGGER_WIDTH, height),
@@ -268,18 +279,15 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                layout.digitalButton(
-                    VirtualControllerElement.EID_RB,
-                    ControllerPacket.RB_FLAG,
-                    1,
-                    "RB",
-                ),
+                digitalButton(VirtualControllerElement.EID_RB, ControllerPacket.RB_FLAG, 1, "RB"),
                 screenScale(TRIGGER_R_BASE_X, height) + rightDisplacement,
                 screenScale(TRIGGER_BASE_Y, height),
                 screenScale(TRIGGER_WIDTH, height),
                 screenScale(TRIGGER_HEIGHT, height),
             )
+        }
 
+        private fun addSticks() {
             controller.addElement(
                 createLeftStick(controller, context),
                 screenScale(ANALOG_L_BASE_X, height),
@@ -295,9 +303,11 @@ object VirtualControllerConfigurationLoader {
                 screenScale(ANALOG_SIZE, height),
                 screenScale(ANALOG_SIZE, height),
             )
+        }
 
+        private fun addBackAndStart() {
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_BACK,
                     ControllerPacket.BACK_FLAG,
                     2,
@@ -310,7 +320,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_START,
                     ControllerPacket.PLAY_FLAG,
                     START_LAYER,
@@ -321,9 +331,11 @@ object VirtualControllerConfigurationLoader {
                 screenScale(START_BACK_WIDTH, height),
                 screenScale(START_BACK_HEIGHT, height),
             )
-        } else {
+        }
+
+        private fun addStickClicks() {
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_LSB,
                     ControllerPacket.LS_CLK_FLAG,
                     1,
@@ -336,7 +348,7 @@ object VirtualControllerConfigurationLoader {
             )
 
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_RSB,
                     ControllerPacket.RS_CLK_FLAG,
                     1,
@@ -349,9 +361,9 @@ object VirtualControllerConfigurationLoader {
             )
         }
 
-        if (config.showGuideButton) {
+        private fun addGuide() {
             controller.addElement(
-                layout.digitalButton(
+                digitalButton(
                     VirtualControllerElement.EID_GDB,
                     ControllerPacket.SPECIAL_BUTTON_FLAG,
                     1,
@@ -363,6 +375,16 @@ object VirtualControllerConfigurationLoader {
                 screenScale(START_BACK_HEIGHT, height),
             )
         }
+    }
+
+    // The caller passes in the configuration, which the stream already holds: no settings are read.
+    @JvmStatic
+    fun createDefaultLayout(
+        controller: VirtualController,
+        context: Context,
+        config: PreferenceConfiguration,
+    ) {
+        DefaultLayout(controller, context, config).addElements()
 
         controller.setOpacity(config.oscOpacity)
     }

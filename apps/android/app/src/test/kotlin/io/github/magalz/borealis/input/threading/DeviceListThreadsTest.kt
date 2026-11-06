@@ -1,14 +1,13 @@
 package io.github.magalz.borealis.input.threading
 
 import com.google.common.truth.Truth.assertThat
-import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.input.ControllerHandlerRig
+import io.github.magalz.borealis.input.HeldReader
 import io.github.magalz.borealis.input.devices.ContextView
 import io.github.magalz.borealis.input.feedback.RecordingUsbController
+import io.github.magalz.borealis.input.usbPad
 import io.github.magalz.borealis.testing.addInputDeviceContext
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,68 +35,13 @@ class DeviceListThreadsTest {
     private fun systemPad(id: Int): Any =
         handler.addInputDeviceContext(id, mapOf("assignedControllerNumber" to true))
 
-    /** A pad of the USB driver that has sent its first input, which gives it a number. */
-    private fun usbPad(id: Int): RecordingUsbController =
-        RecordingUsbController(id, handler).also {
-            handler.deviceAdded(it)
-            it.report(ControllerPacket.A_FLAG)
-        }
-
-    /**
-     * A host callback that runs on a thread of its own, as the native connection thread runs them.
-     * The thread is held when it starts its second step through the pads.
-     */
-    private inner class HeldReader(read: () -> Unit) {
-        private val held = CountDownLatch(1)
-        private val letGo = CountDownLatch(1)
-        private val steps = AtomicInteger()
-        @Volatile private var failure: Throwable? = null
-        private val thread =
-            Thread(
-                {
-                    try {
-                        read()
-                    } catch (e: Throwable) {
-                        failure = e
-                    }
-                },
-                "host-callbacks",
-            )
-
-        init {
-            handler.deviceListStep = Runnable {
-                if (Thread.currentThread() === thread && steps.incrementAndGet() == 2) {
-                    held.countDown()
-                    check(letGo.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-                        "The reader was not let go"
-                    }
-                }
-            }
-        }
-
-        fun holdInSecondStep() {
-            thread.start()
-            check(held.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-                "The reader did not reach its second step"
-            }
-        }
-
-        /** Lets the reader go on, waits for its end, and returns what it threw, if anything. */
-        fun finish(): Throwable? {
-            letGo.countDown()
-            thread.join(TimeUnit.SECONDS.toMillis(WAIT_SECONDS))
-            check(!thread.isAlive) { "The reader did not end" }
-            return failure
-        }
-    }
-
     private fun leftTriggerOf(pad: Any) = ContextView(pad).short("leftTriggerMotor")
 
     @Test
     fun `a host callback partway through the pads still reaches the ones that stay when the first leaves`() {
         val pads = (1..3).map(::systemPad)
-        val reader = HeldReader { handler.handleRumbleTriggers(0, LEFT, RIGHT) }
-        reader.holdInSecondStep()
+        val reader = HeldReader(handler) { handler.handleRumbleTriggers(0, LEFT, RIGHT) }
+        reader.hold()
 
         handler.onInputDeviceRemoved(1)
         assertThat(handler.isMouseEmulationOnAnyPad).isFalse()
@@ -109,8 +53,8 @@ class DeviceListThreadsTest {
     @Test
     fun `a host callback partway through the pads finds no hole when the pads after it leave`() {
         (1..3).forEach(::systemPad)
-        val reader = HeldReader { handler.handleRumbleTriggers(0, LEFT, RIGHT) }
-        reader.holdInSecondStep()
+        val reader = HeldReader(handler) { handler.handleRumbleTriggers(0, LEFT, RIGHT) }
+        reader.hold()
 
         handler.onInputDeviceRemoved(2)
         handler.onInputDeviceRemoved(3)
@@ -121,9 +65,9 @@ class DeviceListThreadsTest {
 
     @Test
     fun `a host callback partway through the USB pads still reaches the ones that stay when the first leaves`() {
-        val pads = (1..3).map(::usbPad)
-        val reader = HeldReader { handler.handleRumbleTriggers(0, LEFT, RIGHT) }
-        reader.holdInSecondStep()
+        val pads = (1..3).map(handler::usbPad)
+        val reader = HeldReader(handler) { handler.handleRumbleTriggers(0, LEFT, RIGHT) }
+        reader.hold()
 
         handler.deviceRemoved(pads[0])
         assertThat(handler.hasUsbPad()).isTrue()

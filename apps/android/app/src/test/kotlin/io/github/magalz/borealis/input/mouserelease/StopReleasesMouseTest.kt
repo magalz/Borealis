@@ -160,10 +160,14 @@ private class StillHeldPad(id: Int, listener: UsbDriverListener, private val hel
         // Nothing is held open.
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) = report()
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
+        report()
+        return true
+    }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         // The motors are written first.
+        return true
     }
 
     fun report() {

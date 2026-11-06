@@ -12,7 +12,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * Two pads on one controller number (multiple controllers are off), both in mouse mode, send the
  * click of their fused state: each one's last state holds what the other holds. A pad that leaves
- * lets go of what it holds itself, and only what no other pad on its number holds.
+ * lets go of the buttons its mouse path pressed, unless another pad in mouse mode on its number
+ * holds them. The on-screen controller is a gamepad, so it does not keep a click down.
  */
 @RunWith(RobolectricTestRunner::class)
 class SharedNumberLeavesTest {
@@ -68,7 +69,7 @@ class SharedNumberLeavesTest {
     }
 
     @Test
-    fun `a pad that holds nothing leaves while the on-screen controller holds A and sends nothing`() {
+    fun `a pad that holds nothing leaves while the on-screen controller holds A and lets the left button go once`() {
         rig.handler.reportOscState(a, 0, 0, 0, 0, 0, 0)
         // The pad sends its state with what the on-screen controller holds in it
         first.report(0, leftStickX = 0.5f)
@@ -77,7 +78,12 @@ class SharedNumberLeavesTest {
 
         rig.handler.deviceRemoved(first)
 
-        assertThat(rig.connection.buttonEvents()).isEqualTo(before)
+        assertThat(rig.connection.buttonEvents().drop(before.size)).containsExactly("up 1")
+
+        // The on-screen controller is a gamepad, not a mouse: its release is no mouse event
+        rig.handler.reportOscState(0, 0, 0, 0, 0, 0, 0)
+
+        assertThat(rig.connection.buttonEvents().drop(before.size)).containsExactly("up 1")
     }
 
     @Test

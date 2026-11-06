@@ -6,14 +6,8 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.crypto.AndroidCryptoProvider
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.io.File
-import java.security.KeyFactory
-import java.security.PrivateKey
-import java.security.Signature
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
 import java.security.interfaces.RSAPrivateCrtKey
 import java.security.interfaces.RSAPublicKey
-import java.security.spec.PKCS8EncodedKeySpec
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -36,37 +30,6 @@ class AndroidCryptoProviderKeyFirstCharacterizationTest {
     private val certFile = File(context.filesDir, "client.crt")
     private val keyFile = File(context.filesDir, "client.key")
 
-    private fun parse(pem: ByteArray): X509Certificate =
-        CertificateFactory.getInstance("X.509").generateCertificate(pem.inputStream())
-            as X509Certificate
-
-    private fun privateKeyOf(pkcs8: ByteArray): RSAPrivateCrtKey =
-        KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(pkcs8))
-            as RSAPrivateCrtKey
-
-    private fun writeIdentity(identity: TestIdentity) {
-        certFile.writeBytes(identity.pem)
-        keyFile.writeBytes(identity.keyPair.private.encoded)
-    }
-
-    private fun assertSamePair(certificate: X509Certificate, key: PrivateKey) {
-        val signed =
-            Signature.getInstance("SHA256withRSA")
-                .apply {
-                    initSign(key)
-                    update(byteArrayOf(1, 2, 3))
-                }
-                .sign()
-        val verified =
-            Signature.getInstance("SHA256withRSA")
-                .apply {
-                    initVerify(certificate.publicKey)
-                    update(byteArrayOf(1, 2, 3))
-                }
-                .verify(signed)
-        assertThat(verified).isTrue()
-    }
-
     @Test
     fun `the first use of the key generates and saves an identity and logs each step`() {
         LimeLogCapture().start().use { log ->
@@ -85,7 +48,7 @@ class AndroidCryptoProviderKeyFirstCharacterizationTest {
             assertThat(certFile.readText(Charsets.US_ASCII)).doesNotContain("\r")
             assertThat(provider.pemEncodedClientCertificate).isEqualTo(certFile.readBytes())
             assertSamePair(checkNotNull(provider.clientCertificate), key)
-            assertThat(parse(certFile.readBytes()).encoded)
+            assertThat(parseCertificate(certFile.readBytes()).encoded)
                 .isEqualTo(provider.clientCertificate?.encoded)
         }
     }
@@ -93,7 +56,7 @@ class AndroidCryptoProviderKeyFirstCharacterizationTest {
     @Test
     fun `a key that another writer saved loads unchanged, with its certificate, and logs nothing`() {
         val identity = TestIdentities.clientRsa
-        writeIdentity(identity)
+        writeIdentity(certFile, keyFile, identity)
 
         LimeLogCapture().start().use { log ->
             val provider = AndroidCryptoProvider(context)
@@ -125,7 +88,7 @@ class AndroidCryptoProviderKeyFirstCharacterizationTest {
 
     @Test
     fun `a missing key file makes a whole new identity when the key is asked for first`() {
-        writeIdentity(TestIdentities.clientRsa)
+        writeIdentity(certFile, keyFile, TestIdentities.clientRsa)
         keyFile.delete()
 
         val provider = AndroidCryptoProvider(context)
@@ -140,7 +103,7 @@ class AndroidCryptoProviderKeyFirstCharacterizationTest {
 
     @Test
     fun `a corrupt certificate file makes a whole new identity when the key is asked for first`() {
-        writeIdentity(TestIdentities.clientRsa)
+        writeIdentity(certFile, keyFile, TestIdentities.clientRsa)
         certFile.writeText("this is not a certificate")
 
         val log = LimeLogCapture().start()
@@ -151,14 +114,14 @@ class AndroidCryptoProviderKeyFirstCharacterizationTest {
         assertThat(log.entries.first()).isEqualTo(Level.WARNING to "Corrupted certificate")
         assertThat(key.encoded).isNotEqualTo(TestIdentities.clientRsa.keyPair.private.encoded)
         assertThat(key.encoded).isEqualTo(keyFile.readBytes())
-        assertThat(parse(certFile.readBytes()).encoded)
+        assertThat(parseCertificate(certFile.readBytes()).encoded)
             .isEqualTo(provider.clientCertificate?.encoded)
         assertSamePair(checkNotNull(provider.clientCertificate), key)
     }
 
     @Test
     fun `a corrupt key file makes a whole new identity when the key is asked for first`() {
-        writeIdentity(TestIdentities.clientRsa)
+        writeIdentity(certFile, keyFile, TestIdentities.clientRsa)
         keyFile.writeText("this is not a key")
 
         val log = LimeLogCapture().start()

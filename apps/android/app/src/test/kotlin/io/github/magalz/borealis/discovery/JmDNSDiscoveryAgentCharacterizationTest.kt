@@ -7,6 +7,9 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.mdns.JmDNSDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsComputer
+import io.github.magalz.borealis.discovery.jmdns.awaitUntil
+import io.github.magalz.borealis.discovery.jmdns.discoveryThreads
+import io.github.magalz.borealis.discovery.jmdns.isSleeping
 import io.github.magalz.borealis.testing.LimeLogCapture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -54,9 +57,6 @@ class JmDNSDiscoveryAgentCharacterizationTest {
         discoveryThreads().forEach { it.interrupt() }
         awaitThreads(0)
     }
-
-    private fun discoveryThreads(): List<Thread> =
-        Thread.getAllStackTraces().keys.filter { it.name == THREAD_NAME && it.isAlive }
 
     /** Waits until the number of live discovery threads is [count], and returns the threads. */
     private fun awaitThreads(count: Int): List<Thread> {
@@ -108,19 +108,6 @@ class JmDNSDiscoveryAgentCharacterizationTest {
         val dns = FakeJmDns(known.associate { (name, info) -> name to info.toServiceInfo(name) })
         return dns to FakeServiceEvent(dns, serviceInfo(known.first().first, 0))
     }
-
-    /** Waits until [condition] holds, and fails if it does not within the wait. */
-    private fun awaitUntil(what: String, condition: () -> Boolean) {
-        val deadline = System.nanoTime() + WAIT_NANOS
-        while (!condition() && System.nanoTime() < deadline) {
-            Thread.sleep(POLL_MS)
-        }
-        assertWithMessage("never: $what").that(condition()).isTrue()
-    }
-
-    /** Whether the thread is in the sleep of its loop, and not in a wait for the old thread. */
-    private fun Thread.isSleeping() =
-        state == Thread.State.TIMED_WAITING && stackTrace.any { it.methodName.startsWith("sleep") }
 
     /** What a resolved service holds. */
     private class MdnsInfo(
@@ -447,7 +434,6 @@ class JmDNSDiscoveryAgentCharacterizationTest {
     }
 
     private companion object {
-        const val THREAD_NAME = "mDNS Discovery Thread"
         const val INTERVAL_MS = 60_000
         const val POLL_MS = 10L
         const val WAIT_MS = 5_000L

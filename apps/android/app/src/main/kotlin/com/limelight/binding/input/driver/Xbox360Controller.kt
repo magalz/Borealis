@@ -101,21 +101,14 @@ class Xbox360Controller(
         return true
     }
 
-    // The high byte of a motor, but never 0 for a motor that is not zero, so a weak rumble is not
-    // lost and only a real zero stops the motor.
-    private fun motorByte(motor: Short): Byte {
-        val byte = (motor.toInt() shr MOTOR_BYTE_SHIFT).toByte()
-        return if (byte.toInt() == 0 && motor.toInt() != 0) 1 else byte
-    }
-
     override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
         val data =
             byteArrayOf(
                 0x00,
                 RUMBLE_REPORT_SIZE,
                 0x00,
-                motorByte(lowFreqMotor),
-                motorByte(highFreqMotor),
+                motorByte(lowFreqMotor, MOTOR_BYTE_SHIFT),
+                motorByte(highFreqMotor, MOTOR_BYTE_SHIFT),
                 0x00,
                 0x00,
                 0x00,

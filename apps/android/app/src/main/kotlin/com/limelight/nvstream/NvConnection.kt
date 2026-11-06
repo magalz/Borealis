@@ -479,14 +479,6 @@ open class NvConnection(
             gateway == null || gateway.isAnyLocalAddress
         }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "ReturnCount",
-        "ThrowsCount",
-    )
     @Throws(XmlPullParserException::class, IOException::class)
     private fun startApp(): Boolean {
         val h =
@@ -498,28 +490,53 @@ open class NvConnection(
                 checkNotNull(cryptoProvider),
             )
 
+        val serverInfo = readServerInfo(h)
+        if (!acceptServer(h, serverInfo)) {
+            return false
+        }
+
+        val streamConfig = checkNotNull(context.streamConfig)
+        if (!negotiateStream(h, serverInfo, streamConfig)) {
+            return false
+        }
+
+        //
+        // Video stream format will be decided during the RTSP handshake
+        //
+
+        return launchOrResume(h, serverInfo, streamConfig)
+    }
+
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun readServerInfo(h: NvHTTP): String {
         val serverInfo: String =
             try {
                 // BOREALIS: retry a timed-out /serverinfo (host.launch)
                 collisions.readServerInfo(ServerInfoReader { h.getServerInfo(true) })
             } catch (e: IOException) {
-                // BOREALIS: the HTTP fallback after a mismatch can fail too; the mismatch is the
-                // cause (host.failure)
-                if (h.sawCertificateMismatch()) {
-                    throw CertificateMismatchException(e)
-                }
-                throw e
+                serverInfoFailed(h, e)
             } catch (e: XmlPullParserException) {
-                if (h.sawCertificateMismatch()) {
-                    throw CertificateMismatchException(e)
-                }
-                throw e
+                serverInfoFailed(h, e)
             }
         // BOREALIS: the fallback to HTTP would only say "not paired" (host.failure)
         if (h.sawCertificateMismatch()) {
             throw CertificateMismatchException(null)
         }
+        return serverInfo
+    }
 
+    // BOREALIS: the HTTP fallback after a mismatch can fail too; the mismatch is the cause
+    // (host.failure)
+    private fun serverInfoFailed(h: NvHTTP, e: Exception): Nothing {
+        if (h.sawCertificateMismatch()) {
+            throw CertificateMismatchException(e)
+        }
+        throw e
+    }
+
+    /** Takes in what /serverinfo says of the host; false when the host cannot be streamed from. */
+    @Throws(XmlPullParserException::class, IOException::class)
+    private fun acceptServer(h: NvHTTP, serverInfo: String): Boolean {
         context.serverAppVersion = h.getServerVersion(serverInfo)
         if (context.serverAppVersion == null) {
             context.listener.displayMessage("Server version malformed")
@@ -538,8 +555,19 @@ open class NvConnection(
         }
 
         context.serverCodecModeSupport = h.getServerCodecModeSupport(serverInfo).toInt()
+        return true
+    }
 
-        val streamConfig = checkNotNull(context.streamConfig)
+    /**
+     * Decides on the negotiated stream parameters now: HDR, the resolution, the connection type and
+     * the packet size. False when the resolution cannot be streamed.
+     */
+    @Throws(XmlPullParserException::class, IOException::class)
+    private fun negotiateStream(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
         context.negotiatedHdr =
             (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0
         if ((context.serverCodecModeSupport and HDR_CODEC_MODES) == 0 && context.negotiatedHdr) {
@@ -549,42 +577,8 @@ open class NvConnection(
             context.negotiatedHdr = false
         }
 
-        //
-        // Decide on negotiated stream parameters now
-        //
-
-        // Check for a supported stream resolution
-        if (
-            (streamConfig.width > MAX_H264_SIDE || streamConfig.height > MAX_H264_SIDE) &&
-                (h.getServerCodecModeSupport(serverInfo) and CODEC_MODE_ABOVE_4K) == 0L &&
-                context.isNvidiaServerSoftware
-        ) {
-            context.listener.displayMessage(
-                "Your host PC does not support streaming at resolutions above 4K."
-            )
+        if (!negotiateResolution(h, serverInfo, streamConfig)) {
             return false
-        } else if (
-            (streamConfig.width > MAX_H264_SIDE || streamConfig.height > MAX_H264_SIDE) &&
-                (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_H264.inv()) ==
-                    0
-        ) {
-            context.listener.displayMessage(
-                "Your streaming device must support HEVC or AV1 to stream at resolutions above 4K."
-            )
-            return false
-        } else if (streamConfig.height >= HEIGHT_4K && !h.supports4K(serverInfo)) {
-            // Client wants 4K but the server can't do it
-            context.listener.displayTransientMessage(
-                "You must update GeForce Experience to stream in 4K. The stream will be 1080p."
-            )
-
-            // Lower resolution to 1080p
-            context.negotiatedWidth = WIDTH_1080P
-            context.negotiatedHeight = HEIGHT_1080P
-        } else {
-            // Take what the client wanted
-            context.negotiatedWidth = streamConfig.width
-            context.negotiatedHeight = streamConfig.height
         }
 
         // We will perform some connection type detection if the caller asked for it
@@ -600,106 +594,182 @@ open class NvConnection(
             context.negotiatedRemoteStreaming = streamConfig.remote
             context.negotiatedPacketSize = streamConfig.maxPacketSize
         }
+        return true
+    }
 
-        //
-        // Video stream format will be decided during the RTSP handshake
-        //
-
-        val configuredApp = checkNotNull(streamConfig.app)
-        var app: NvApp = configuredApp
-
-        // If the client did not provide an exact app ID, do a lookup with the applist
-        if (!configuredApp.isInitialized) {
-            LimeLog.info(
-                "Using deprecated app lookup method - " +
-                    "Please specify an app ID in your StreamConfiguration instead"
-            )
-            val found = h.getAppByName(configuredApp.appName)
-            if (found == null) {
+    // Check for a supported stream resolution
+    @Throws(XmlPullParserException::class, IOException::class)
+    private fun negotiateResolution(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
+        val above4k = streamConfig.width > MAX_H264_SIDE || streamConfig.height > MAX_H264_SIDE
+        return when {
+            above4k &&
+                (h.getServerCodecModeSupport(serverInfo) and CODEC_MODE_ABOVE_4K) == 0L &&
+                context.isNvidiaServerSoftware -> {
                 context.listener.displayMessage(
-                    "The app " + configuredApp.appName + " is not in GFE app list"
+                    "Your host PC does not support streaming at resolutions above 4K."
                 )
-                return false
+                false
             }
-            app = found
+            above4k &&
+                (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_H264.inv()) ==
+                    0 -> {
+                context.listener.displayMessage(
+                    "Your streaming device must support HEVC or AV1 to stream at resolutions above 4K."
+                )
+                false
+            }
+            streamConfig.height >= HEIGHT_4K && !h.supports4K(serverInfo) -> {
+                // Client wants 4K but the server can't do it
+                context.listener.displayTransientMessage(
+                    "You must update GeForce Experience to stream in 4K. The stream will be 1080p."
+                )
+
+                // Lower resolution to 1080p
+                context.negotiatedWidth = WIDTH_1080P
+                context.negotiatedHeight = HEIGHT_1080P
+                true
+            }
+            else -> {
+                // Take what the client wanted
+                context.negotiatedWidth = streamConfig.width
+                context.negotiatedHeight = streamConfig.height
+                true
+            }
         }
+    }
+
+    /** Finds the app to start, then resumes it when it runs and launches it when it does not. */
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun launchOrResume(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
+        val app = lookUpApp(h, checkNotNull(streamConfig.app)) ?: return false
         appToStart = app // BOREALIS: launch and ask with the id that was found
 
         // If there's a game running, resume it
-        if (h.getCurrentGame(serverInfo) != 0) {
-            // BOREALIS: kept outside the try so the fallback launch is not handled as a resume
-            // error
-            var resumed = LaunchOutcome.SUCCEEDED
-            try {
-                if (h.getCurrentGame(serverInfo) == app.appId) {
-                    // BOREALIS: nothing tells this session from another device's: ask, unless the
-                    // user chose Resume or Continue for this app (host contract 7.6). A restart
-                    // went through that already
-                    val restart = collisions.isRestart()
-                    if (!restart && !streamConfig.resumeChosen) {
-                        return askAboutRunning(h, context, app.appId)
-                    }
-                    if (!restart) {
-                        conflicts.joinedByChoice(
-                            checkNotNull(context.serverAddress).address,
-                            app.appId,
-                        )
-                    }
-                    // BOREALIS: wait while the host is busy; retries, cancellation and the no-app
-                    // fallback
-                    resumed =
-                        if (collisions.settleBeforeResume()) {
-                            launchWithRetry(h, "resume", app.appId)
-                        } else {
-                            LaunchOutcome.CANCELLED
-                        }
-                    if (resumed == LaunchOutcome.CANCELLED) { // BOREALIS
-                        return false
-                    }
-                    // BOREALIS: was !h.launchApp(context, "resume", ...)
-                    if (resumed == LaunchOutcome.FAILED) {
-                        context.listener.displayMessage("Failed to resume existing session")
-                        return false
-                    }
-                } else {
-                    // BOREALIS: ask before quitting another device's app; a restart never quits it
-                    return collisions.differentAppRunning(
-                        LaunchAttempt { resolveConflict(h, context) }
-                    )
-                }
-            } catch (e: HostHttpResponseException) {
-                if (e.errorCode == STATUS_NOT_YOUR_SESSION) {
-                    // This is the error you get when you try to resume a session that's not yours.
-                    // Because this is fairly common, we'll display a more detailed message.
-                    context.listener.displayMessage(
-                        "This session wasn't started by this device," +
-                            " so it cannot be resumed. End streaming on the original " +
-                            "device or the PC itself and try again. (Error code: " +
-                            e.errorCode +
-                            ")"
-                    )
-                    return false
-                } else if (e.errorCode == STATUS_MINIMIZED) {
-                    context.listener.displayMessage(
-                        "The application is minimized. Resume it on the PC manually or " +
-                            "quit the session and start streaming again."
-                    )
-                    return false
-                } else {
-                    throw e
-                }
-            }
-            // BOREALIS: nothing to resume, launch instead
-            if (resumed == LaunchOutcome.FALLBACK_TO_LAUNCH) {
-                return launchNotRunningApp(h, context)
-            }
-
-            collisions.resumeAccepted(context.isNvidiaServerSoftware) // BOREALIS
-            LimeLog.info("Resumed existing game session")
-            return true
+        return if (h.getCurrentGame(serverInfo) != 0) {
+            resumeRunningApp(h, serverInfo, streamConfig)
         } else {
-            return launchNotRunningApp(h, context)
+            launchNotRunningApp(h, context)
         }
+    }
+
+    // If the client did not provide an exact app ID, do a lookup with the applist
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun lookUpApp(h: NvHTTP, configuredApp: NvApp): NvApp? {
+        if (configuredApp.isInitialized) {
+            return configuredApp
+        }
+        LimeLog.info(
+            "Using deprecated app lookup method - " +
+                "Please specify an app ID in your StreamConfiguration instead"
+        )
+        val found = h.getAppByName(configuredApp.appName)
+        if (found == null) {
+            context.listener.displayMessage(
+                "The app " + configuredApp.appName + " is not in GFE app list"
+            )
+        }
+        return found
+    }
+
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun resumeRunningApp(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
+        // BOREALIS: kept outside the try so the fallback launch is not handled as a resume error
+        val resumed: LaunchOutcome
+        try {
+            val answer = askBeforeResume(h, serverInfo, streamConfig)
+            if (answer != null) {
+                return answer
+            }
+            resumed = requestResume(h)
+        } catch (e: HostHttpResponseException) {
+            return refusedResume(e)
+        }
+        return when (resumed) {
+            // BOREALIS: the user left, or the host did not take the /resume
+            LaunchOutcome.CANCELLED,
+            LaunchOutcome.FAILED -> false
+            // BOREALIS: nothing to resume, launch instead
+            LaunchOutcome.FALLBACK_TO_LAUNCH -> launchNotRunningApp(h, context)
+            else -> {
+                collisions.resumeAccepted(context.isNvidiaServerSoftware) // BOREALIS
+                LimeLog.info("Resumed existing game session")
+                true
+            }
+        }
+    }
+
+    // BOREALIS: the answer of the question about the app that runs, which ends the start; null when
+    // the start goes on to the /resume (host.launch)
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun askBeforeResume(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean? {
+        if (h.getCurrentGame(serverInfo) != appToStart.appId) {
+            // BOREALIS: ask before quitting another device's app; a restart never quits it
+            return collisions.differentAppRunning(LaunchAttempt { resolveConflict(h, context) })
+        }
+        // BOREALIS: nothing tells this session from another device's: ask, unless the user chose
+        // Resume or Continue for this app (host contract 7.6). A restart went through that already
+        val restart = collisions.isRestart()
+        if (!restart && !streamConfig.resumeChosen) {
+            return askAboutRunning(h, context, appToStart.appId)
+        }
+        if (!restart) {
+            conflicts.joinedByChoice(checkNotNull(context.serverAddress).address, appToStart.appId)
+        }
+        return null
+    }
+
+    // BOREALIS: wait while the host is busy; retries, cancellation and the no-app fallback
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun requestResume(h: NvHTTP): LaunchOutcome {
+        val resumed =
+            if (collisions.settleBeforeResume()) {
+                launchWithRetry(h, "resume", appToStart.appId)
+            } else {
+                LaunchOutcome.CANCELLED
+            }
+        // BOREALIS: was !h.launchApp(context, "resume", ...)
+        if (resumed == LaunchOutcome.FAILED) {
+            context.listener.displayMessage("Failed to resume existing session")
+        }
+        return resumed
+    }
+
+    // The host refused the resume. Two of its statuses have a message of their own; any other one
+    // goes up to the start.
+    private fun refusedResume(e: HostHttpResponseException): Boolean {
+        val message =
+            when (e.errorCode) {
+                // This is the error you get when you try to resume a session that's not yours.
+                // Because this is fairly common, we'll display a more detailed message.
+                STATUS_NOT_YOUR_SESSION ->
+                    "This session wasn't started by this device," +
+                        " so it cannot be resumed. End streaming on the original " +
+                        "device or the PC itself and try again. (Error code: " +
+                        e.errorCode +
+                        ")"
+                STATUS_MINIMIZED ->
+                    "The application is minimized. Resume it on the PC manually or " +
+                        "quit the session and start streaming again."
+                else -> throw e
+            }
+        context.listener.displayMessage(message)
+        return false
     }
 
     @Suppress("ReturnCount")

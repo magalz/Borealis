@@ -22,6 +22,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.testing.TV
+import io.github.magalz.borealis.library.testing.resetWindowFocus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,7 +65,7 @@ class AppActionsSheetFocusTest {
         show()
         tile(steam).requestFocus()
         openActions(steam)
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         Espresso.pressBack()
         composeRule.waitForIdle()
@@ -81,7 +82,7 @@ class AppActionsSheetFocusTest {
         tile(steam).performKeyInput { pressKey(Key.DirectionCenter) }
         composeRule.waitForIdle()
         composeRule.onNodeWithText(QUIT_AND_START).assertIsDisplayed()
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         Espresso.pressBack()
         composeRule.waitForIdle()
@@ -112,7 +113,7 @@ class AppActionsSheetFocusTest {
         show()
         tile(steam).requestFocus()
         openActions(steam)
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         composeRule.onNodeWithText("Add to home screen").performClick()
         composeRule.waitForIdle()
@@ -130,7 +131,7 @@ class AppActionsSheetFocusTest {
         composeRule.onNodeWithText("Details").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Close").assertIsDisplayed()
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         composeRule.onNodeWithText("Close").performClick()
         composeRule.waitForIdle()
@@ -147,7 +148,7 @@ class AppActionsSheetFocusTest {
         composeRule.onNodeWithText(QUIT_AND_START).performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Cancel").assertIsFocused()
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         composeRule.onNodeWithText("Quit").performClick()
         composeRule.waitForIdle()
@@ -250,7 +251,7 @@ class AppActionsSheetFocusTest {
     private fun hide(app: AppItemUiState) {
         tile(app).requestFocus()
         openActions(app, HIDE)
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         composeRule.onNodeWithText(HIDE).performClick()
         composeRule.waitForIdle()
@@ -259,17 +260,6 @@ class AppActionsSheetFocusTest {
 
     private fun removeApp(app: AppItemUiState) {
         state.value = state.value.copy(items = state.value.items.filter { it.id != app.id })
-    }
-
-    /**
-     * What a window that opens over the screen can do to the one under it (Sprint 14 UAT, U11):
-     * Android takes the focus from its view and gives it back, and Compose then puts the focus on
-     * the first element and not on the one that had it. The dialogs of Robolectric leave the focus
-     * alone, so the test does what the device did.
-     */
-    private fun resetWindowFocus() {
-        composeRule.runOnUiThread { checkNotNull(window).clearFocus() }
-        composeRule.waitForIdle()
     }
 
     /** The screen over a state that the callbacks change as the ViewModel does. */

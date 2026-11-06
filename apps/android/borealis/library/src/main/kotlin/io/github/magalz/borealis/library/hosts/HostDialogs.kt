@@ -2,12 +2,6 @@ package io.github.magalz.borealis.library.hosts
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.ActionSheet
 import io.github.magalz.borealis.designsystem.components.ActionSheetAction
@@ -19,6 +13,7 @@ import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
+import io.github.magalz.borealis.library.focus.neighbourOf
 
 internal enum class HostOption {
     Details,
@@ -73,32 +68,6 @@ internal fun HostsDialogs(
 }
 
 /**
- * Asks for [focus], the requester of the card of [openerId], once the last window that the options
- * opened over the screen has closed: the options, the Forget confirmation or the details. On the TV
- * the focus was lost after Back (Sprint 14 UAT, U11); the tests assume that the window took it from
- * the screen and that Compose gave it back to the first card, not to the one that had it. Nothing
- * happens when that host is already gone, and nothing when the screen starts with a window already
- * open: that is not a close. After Forget the removal is asynchronous (the ViewModel launches it),
- * so the host may still be in [hosts] when the confirmation closes: the screen has made [openerId]
- * the card that takes its place ([openerAfterForget]), so the card that asks for the focus is one
- * that stays. A card that the grid does not compose (many hosts, scrolled away while a window was
- * open) has no node for [focus]: Compose logs it and answers false, so nothing fails.
- */
-@Composable
-internal fun RestoreOpenerFocus(
-    open: Boolean,
-    openerId: String?,
-    hosts: List<HostItemUiState>,
-    focus: FocusRequester,
-) {
-    var wasOpen by remember { mutableStateOf(open) }
-    LaunchedEffect(open) {
-        if (wasOpen && !open && hosts.any { it.id == openerId }) focus.requestFocus()
-        wasOpen = open
-    }
-}
-
-/**
  * The host whose card has the focus when the windows close after Forget on [hostId], given that the
  * card that opened them is [openerId]. That card is about to go, and the focus must not wait for
  * it: it is the card that takes its place, the next one in the grid, or the previous one when it
@@ -106,9 +75,7 @@ internal fun RestoreOpenerFocus(
  * neighbour (no card is left, and the focus goes where Compose puts it).
  */
 internal fun List<HostItemUiState>.openerAfterForget(hostId: String, openerId: String?): String? {
-    val index = indexOfFirst { it.id == hostId }
-    val neighbour =
-        if (openerId == hostId && index >= 0) getOrNull(index + 1) ?: getOrNull(index - 1) else null
+    val neighbour = if (openerId == hostId) neighbourOf { it.id == hostId } else null
     return neighbour?.id ?: openerId
 }
 

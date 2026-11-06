@@ -32,8 +32,7 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.util.isNotEmpty
-import androidx.core.util.size
+import androidx.annotation.VisibleForTesting
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.binding.input.driver.AbstractController
@@ -81,8 +80,14 @@ class ControllerHandler(
 
     private val inputVector = Vector2d()
 
-    private val inputDeviceContexts = SparseArray<InputDeviceContext>()
-    private val usbDeviceContexts = SparseArray<UsbDeviceContext>()
+    // The main thread alone writes the first list. The second one is written by the threads of the
+    // USB driver and by the main thread, so its writes are under inputLock.
+    private val inputDeviceContexts = ContextList<InputDeviceContext>()
+    private val usbDeviceContexts = ContextList<UsbDeviceContext>()
+
+    // A test runs this at each step of a loop over the contexts, before the step reads its context,
+    // to hold a reader there; it is null in the app
+    @VisibleForTesting internal var deviceListStep: Runnable? = null
 
     private val stickDeadzone: Double
     private val defaultContext = InputDeviceContext()
@@ -1278,7 +1283,7 @@ class ControllerHandler(
 
     // BOREALIS: whether the USB driver holds a pad, which Android has no input device for (stream)
     fun hasUsbPad(): Boolean {
-        return usbDeviceContexts.isNotEmpty()
+        return usbDeviceContexts.hasAny()
     }
 
     override fun setCaptured(captured: Boolean) {
@@ -1381,6 +1386,21 @@ class ControllerHandler(
                 it.mouseEmulationLastInputMap = it.mouseEmulationLastInputMap and released.inv()
             }
             endMouse(context, released)
+        }
+    }
+
+    // A loop over the pads of a list, on the snapshot that was current when it began, on any
+    // thread: a pad that is added or leaves meanwhile does not change what the loop sees
+    private inline fun <T : GenericControllerContext> ContextList<T>.forEachValue(
+        action: (T) -> Unit
+    ) {
+        val contexts = snapshot
+        var i = 0
+        while (i < contexts.size) {
+            deviceListStep?.run()
+            @Suppress("UNCHECKED_CAST") val context = contexts[i] as T
+            action(context)
+            i++
         }
     }
 
@@ -2721,10 +2741,7 @@ class ControllerHandler(
                 else -> null
             }
 
-        var i = 0
-        while (i < inputDeviceContexts.size) {
-            val deviceContext = inputDeviceContexts.valueAt(i)
-
+        inputDeviceContexts.forEachValue { deviceContext ->
             if (
                 deviceContext.assignedControllerNumber &&
                     deviceContext.controllerNumber == controllerNumber
@@ -2742,8 +2759,7 @@ class ControllerHandler(
 
                 val sm = deviceContext.sensorManager
                 if (sm == null) {
-                    i++
-                    continue
+                    return@forEachValue
                 }
 
                 when (motionType) {
@@ -2799,7 +2815,6 @@ class ControllerHandler(
                     }
                 }
             }
-            i++
         }
     }
 
@@ -3351,7 +3366,7 @@ class ControllerHandler(
         leftTrigger: Float,
         rightTrigger: Float,
     ) {
-        val context: GenericControllerContext = usbDeviceContexts.get(controllerId) ?: return
+        val context: GenericControllerContext = usbDeviceContexts.find(controllerId) ?: return
 
         context.chromeInput.report(buttonFlags, leftStickX, leftStickY)
         val filteredButtonFlags = context.heldSinceCapture.filter(buttonFlags, captured)
@@ -3404,13 +3419,13 @@ class ControllerHandler(
     }
 
     override fun deviceRemoved(controller: AbstractController) {
-        val context = usbDeviceContexts.get(controller.controllerId)
+        val context = usbDeviceContexts.find(controller.controllerId)
         if (context != null) {
             LimeLog.info("Removed controller: ${controller.controllerId}")
             endLeavingMouse(context)
             releaseControllerNumber(context)
             context.destroy()
-            usbDeviceContexts.remove(controller.controllerId)
+            synchronized(inputLock) { usbDeviceContexts.remove(controller.controllerId) }
         }
     }
 
@@ -3423,7 +3438,47 @@ class ControllerHandler(
         if (mouseEmulationEnabled) {
             context.setMouseEmulation(true, false)
         }
-        usbDeviceContexts.put(controller.controllerId, context)
+        synchronized(inputLock) { usbDeviceContexts.put(controller.controllerId, context) }
+    }
+
+    // The pads of one kind by id. A SparseArray is safe only on the thread that writes it: a remove
+    // leaves a gc() that moves the entries in place at the next size() or valueAt(), so a thread
+    // that reads meanwhile skips a pad or finds a hole. The writers use the SparseArray itself
+    // (put, remove, and get by id on the main thread), one at a time. Every write publishes a
+    // snapshot, an array that nothing changes again, and every other read goes through it, with
+    // no lock and no allocation.
+    private class ContextList<T : GenericControllerContext> : SparseArray<T>() {
+        @Volatile
+        var snapshot: Array<Any?> = arrayOfNulls(0)
+            private set
+
+        override fun put(key: Int, value: T) {
+            super.put(key, value)
+            publish()
+        }
+
+        // remove(key) is the alias of delete(key)
+        override fun delete(key: Int) {
+            super.delete(key)
+            publish()
+        }
+
+        private fun publish() {
+            snapshot = Array<Any?>(size()) { valueAt(it) }
+        }
+
+        // The pad with the id, which is its key, for the threads that do not write
+        fun find(id: Int): T? {
+            for (candidate in snapshot) {
+                @Suppress("UNCHECKED_CAST") val context = candidate as T
+                if (context.id == id) {
+                    return context
+                }
+            }
+            return null
+        }
+
+        fun hasAny() = snapshot.isNotEmpty()
     }
 
     private open inner class GenericControllerContext {
@@ -4254,15 +4309,6 @@ class ControllerHandler(
 
                 // FIXME Paddles?
             )
-
-        // A SparseArray loop that reads size() at each step, as the for loops of the Java did
-        private inline fun <T> SparseArray<T>.forEachValue(action: (T) -> Unit) {
-            var i = 0
-            while (i < size) {
-                action(valueAt(i))
-                i++
-            }
-        }
 
         // How long a key held for heldMs still waits before its release goes out: what is missing
         // of 25 ms, whatever the times of the event say (a key can come up before it went down)

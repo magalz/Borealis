@@ -49,14 +49,16 @@ import okhttp3.ConnectionPool
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.ResponseBody
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import org.xmlpull.v1.XmlPullParserFactory
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-// The stack traces that the Java prints to stderr and the RuntimeException that wraps their cause
-// stay as they were: PrintStackTrace and TooGenericExceptionThrown are suppressed for that.
+// Converted as is from the inherited Java; the rest is for later sprints:
+// - TooManyFunctions: the class waits for its split (Sprint 18d backlog).
+// - PrintStackTrace and TooGenericExceptionThrown: the stack traces that the Java prints to stderr
+//   and the RuntimeException that wraps their cause stay as they were (Sprint 18c backlog).
 @Suppress("TooManyFunctions", "PrintStackTrace", "TooGenericExceptionThrown")
 class NvHTTP
 @Throws(IOException::class)
@@ -256,8 +258,6 @@ constructor(
         this.pairingManager = PairingManager(this, cryptoProvider)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ThrowsCount")
     @Throws(IOException::class, XmlPullParserException::class)
     fun getServerInfo(likelyOnline: Boolean): String {
         // If we believe the PC is online, give it a little extra time to respond
@@ -270,54 +270,60 @@ constructor(
         // like there are extra request headers required to make this stuff work over HTTP.
         //
 
+        // No pinned cert, so use HTTP
+        if (serverCert == null) {
+            return openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
+        }
+
         // When we have a pinned cert, use HTTPS to fetch serverinfo and fall back on cert mismatch
-        if (serverCert != null) {
-            try {
-                val resp =
-                    try {
-                        openHttpConnectionToString(client, getHttpsUrl(likelyOnline), "serverinfo")
-                    } catch (e: SSLHandshakeException) {
-                        // Detect if we failed due to a server cert mismatch
-                        if (e.cause is CertificateException) {
-                            // Jump to the GfeHttpResponseException exception handler to retry
-                            // over HTTP which will allow us to pair again to update the cert
-                            throw HostHttpResponseException(
-                                HTTP_UNAUTHORIZED,
-                                "Server certificate mismatch",
-                            )
-                        } else {
-                            // BOREALIS: audit trail
-                            TlsAudit.failure(baseUrlHttp.host, e)
-                            throw e
-                        }
-                    } catch (ignored: CertificateMismatchException) {
-                        // BOREALIS: the mismatch is typed now, the fallback is the same
-                        throw HostHttpResponseException(
-                            HTTP_UNAUTHORIZED,
-                            "Server certificate mismatch",
-                        )
-                    }
-
-                // This will throw an exception if the request came back with a failure status.
-                // We want this because it will throw us into the HTTP case if the client is
-                // unpaired.
-                getServerVersion(resp)
-
-                return resp
-            } catch (e: HostHttpResponseException) {
-                if (e.errorCode == HTTP_UNAUTHORIZED) {
-                    // Cert validation error - fall back to HTTP
-                    return openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
-                }
-
-                // If it's not a cert validation error, throw it
+        try {
+            return getServerInfoOverHttps(client, likelyOnline)
+        } catch (e: HostHttpResponseException) {
+            if (e.errorCode != HTTP_UNAUTHORIZED) {
+                // It's not a cert validation error, throw it
                 throw e
             }
-        } else {
-            // No pinned cert, so use HTTP
+
+            // Cert validation error - fall back to HTTP
             return openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
         }
     }
+
+    // A server cert mismatch comes out as the HostHttpResponseException that sends getServerInfo to
+    // retry over HTTP, which will allow us to pair again to update the cert.
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun getServerInfoOverHttps(client: OkHttpClient, likelyOnline: Boolean): String {
+        val resp =
+            try {
+                openHttpConnectionToString(client, getHttpsUrl(likelyOnline), "serverinfo")
+            } catch (e: SSLHandshakeException) {
+                throw handshakeFailure(e)
+            } catch (ignored: CertificateMismatchException) {
+                // BOREALIS: the mismatch is typed now, the fallback is the same
+                throw certificateMismatchResponse()
+            }
+
+        // This will throw an exception if the request came back with a failure status.
+        // We want this because it will throw us into the HTTP case if the client is
+        // unpaired.
+        getServerVersion(resp)
+
+        return resp
+    }
+
+    private fun handshakeFailure(e: SSLHandshakeException): IOException {
+        // Detect if we failed due to a server cert mismatch
+        if (e.cause is CertificateException) {
+            return certificateMismatchResponse()
+        }
+
+        // BOREALIS: audit trail
+        TlsAudit.failure(baseUrlHttp.host, e)
+        return e
+    }
+
+    private fun certificateMismatchResponse(): HostHttpResponseException =
+        HostHttpResponseException(HTTP_UNAUTHORIZED, "Server certificate mismatch")
 
     @Throws(IOException::class, XmlPullParserException::class)
     fun getComputerDetails(serverInfo: String): ComputerDetails {
@@ -403,8 +409,6 @@ constructor(
     // The initial pair query does require outside action (user entering a PIN) but subsequent
     // pairing
     // queries do not.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ThrowsCount")
     @Throws(IOException::class)
     private fun openHttpConnection(
         client: OkHttpClient,
@@ -423,10 +427,11 @@ constructor(
                 performAndroidTlsHack(client).newCall(request).execute()
             } catch (e: SSLHandshakeException) {
                 // BOREALIS: surface a pinned-certificate mismatch as its own type (host.failure)
-                if (certificateMismatch && e.cause is CertificateException) {
-                    throw CertificateMismatchException(e)
+                throw if (certificateMismatch && e.cause is CertificateException) {
+                    CertificateMismatchException(e)
+                } else {
+                    e
                 }
-                throw e
             }
 
         val body = response.body
@@ -438,12 +443,15 @@ constructor(
         // Unsuccessful, so close the response body
         body.close()
 
-        if (response.code == HTTP_NOT_FOUND) {
-            throw FileNotFoundException(completeUrl.toString())
-        } else {
-            throw HostHttpResponseException(response.code, response.message)
-        }
+        throw failureOf(response, completeUrl)
     }
+
+    private fun failureOf(response: Response, url: HttpUrl): IOException =
+        if (response.code == HTTP_NOT_FOUND) {
+            FileNotFoundException(url.toString())
+        } else {
+            HostHttpResponseException(response.code, response.message)
+        }
 
     @Throws(IOException::class)
     private fun openHttpConnectionToString(
@@ -706,8 +714,6 @@ constructor(
         return ret
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("LongMethod", "ComplexCondition")
     @Throws(IOException::class, XmlPullParserException::class)
     fun launchApp(
         context: ConnectionContext,
@@ -716,7 +722,57 @@ constructor(
         enableHdr: Boolean,
     ): Boolean {
         val streamConfig = checkNotNull(context.streamConfig)
+        val enableSops = isSopsEnabled(context, streamConfig)
 
+        val xmlStr =
+            openHttpConnectionToString(
+                httpClientLongConnectNoReadTimeout,
+                getHttpsUrl(true),
+                verb,
+                launchQuery(context, streamConfig, appId, enableSops, enableHdr),
+            )
+        if (!isSessionStarted(verb, xmlStr)) {
+            return false
+        }
+
+        // sessionUrl0 will be missing for older GFE versions
+        context.rtspSessionUrl = getXmlString(xmlStr, "sessionUrl0", false)
+        return true
+    }
+
+    private fun isSopsEnabled(
+        context: ConnectionContext,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
+        if (context.isNvidiaServerSoftware) {
+            // Using an unsupported resolution (not 720p, 1080p, or 4K) causes
+            // GFE to force SOPS to 720p60. This is fine for < 720p resolutions like
+            // 360p or 480p, but it is not ideal for 1440p and other resolutions.
+            // When we detect an unsupported resolution, disable SOPS unless it's under 720p.
+            // FIXME Detect support resolutions using the serverinfo response, not a hardcoded list
+            val pixels = context.negotiatedWidth * context.negotiatedHeight
+            if (pixels > RESOLUTION_720P && pixels != RESOLUTION_1080P && pixels != RESOLUTION_4K) {
+                LimeLog.info(
+                    "Disabling SOPS due to non-standard resolution: " +
+                        context.negotiatedWidth +
+                        "x" +
+                        context.negotiatedHeight
+                )
+                return false
+            }
+        }
+
+        return streamConfig.sops
+    }
+
+    // The parameters of /launch and /resume, in the order that the hosts have always been sent
+    private fun launchQuery(
+        context: ConnectionContext,
+        streamConfig: StreamConfiguration,
+        appId: Int,
+        enableSops: Boolean,
+        enableHdr: Boolean,
+    ): String {
         // Using an FPS value over 60 causes SOPS to default to 720p60,
         // so force it to 0 to ensure the correct resolution is set. We
         // used to use 60 here but that locked the frame rate to 60 FPS
@@ -730,83 +786,41 @@ constructor(
                 streamConfig.refreshRate,
             )
 
-        var enableSops = streamConfig.sops
-        if (context.isNvidiaServerSoftware) {
-            // Using an unsupported resolution (not 720p, 1080p, or 4K) causes
-            // GFE to force SOPS to 720p60. This is fine for < 720p resolutions like
-            // 360p or 480p, but it is not ideal for 1440p and other resolutions.
-            // When we detect an unsupported resolution, disable SOPS unless it's under 720p.
-            // FIXME Detect support resolutions using the serverinfo response, not a hardcoded list
-            if (
-                context.negotiatedWidth * context.negotiatedHeight > RESOLUTION_720P &&
-                    context.negotiatedWidth * context.negotiatedHeight != RESOLUTION_1080P &&
-                    context.negotiatedWidth * context.negotiatedHeight != RESOLUTION_4K
-            ) {
-                LimeLog.info(
-                    "Disabling SOPS due to non-standard resolution: " +
-                        context.negotiatedWidth +
-                        "x" +
-                        context.negotiatedHeight
-                )
-                enableSops = false
-            }
-        }
-
-        val xmlStr =
-            openHttpConnectionToString(
-                httpClientLongConnectNoReadTimeout,
-                getHttpsUrl(true),
-                verb,
-                "appid=" +
-                    appId +
-                    "&mode=" +
-                    context.negotiatedWidth +
-                    "x" +
-                    context.negotiatedHeight +
-                    "x" +
-                    fps +
-                    "&additionalStates=1&sops=" +
-                    (if (enableSops) 1 else 0) +
-                    "&rikey=" +
-                    bytesToHex(checkNotNull(context.riKey).encoded) +
-                    "&rikeyid=" +
-                    context.riKeyId +
-                    (if (!enableHdr) "" else HDR_QUERY) +
-                    "&localAudioPlayMode=" +
-                    (if (streamConfig.playLocalAudio) 1 else 0) +
-                    "&surroundAudioInfo=" +
-                    checkNotNull(streamConfig.audioConfiguration).surroundAudioInfo +
-                    continuousAudioQuery(context, streamConfig) +
-                    "&remoteControllersBitmap=" +
-                    streamConfig.attachedGamepadMask +
-                    "&gcmap=" +
-                    streamConfig.attachedGamepadMask +
-                    "&gcpersist=" +
-                    (if (streamConfig.persistGamepadsAfterDisconnect) 1 else 0) +
-                    MoonBridge.getLaunchUrlQueryParameters(),
-            )
-        if (
-            (verb == "launch" && requireXmlString(xmlStr, "gamesession") != "0" ||
-                (verb == "resume" && requireXmlString(xmlStr, "resume") != "0"))
-        ) {
-            // sessionUrl0 will be missing for older GFE versions
-            context.rtspSessionUrl = getXmlString(xmlStr, "sessionUrl0", false)
-            return true
-        } else {
-            return false
-        }
+        return "appid=" +
+            appId +
+            "&mode=" +
+            context.negotiatedWidth +
+            "x" +
+            context.negotiatedHeight +
+            "x" +
+            fps +
+            "&additionalStates=1&sops=" +
+            (if (enableSops) 1 else 0) +
+            "&rikey=" +
+            bytesToHex(checkNotNull(context.riKey).encoded) +
+            "&rikeyid=" +
+            context.riKeyId +
+            (if (!enableHdr) "" else HDR_QUERY) +
+            "&localAudioPlayMode=" +
+            (if (streamConfig.playLocalAudio) 1 else 0) +
+            "&surroundAudioInfo=" +
+            checkNotNull(streamConfig.audioConfiguration).surroundAudioInfo +
+            "&remoteControllersBitmap=" +
+            streamConfig.attachedGamepadMask +
+            "&gcmap=" +
+            streamConfig.attachedGamepadMask +
+            "&gcpersist=" +
+            (if (streamConfig.persistGamepadsAfterDisconnect) 1 else 0) +
+            MoonBridge.getLaunchUrlQueryParameters()
     }
 
-    // BOREALIS: only LuminalShine reads it: the host then sends silence while the PC is quiet
-    // (host.launch)
-    private fun continuousAudioQuery(
-        context: ConnectionContext,
-        streamConfig: StreamConfiguration,
-    ): String =
-        if (streamConfig.continuousAudio && !context.isNvidiaServerSoftware) {
-            CONTINUOUS_AUDIO_QUERY
-        } else {
-            ""
+    // A launch reads the gamesession tag of the answer and a resume the resume tag; the tag of
+    // another verb is not read
+    private fun isSessionStarted(verb: String, xmlStr: String): Boolean =
+        when (verb) {
+            "launch" -> requireXmlString(xmlStr, "gamesession") != "0"
+            "resume" -> requireXmlString(xmlStr, "resume") != "0"
+            else -> false
         }
 
     // BOREALIS: asks the host to cancel the app that this client launched, without the check of
@@ -870,8 +884,6 @@ constructor(
         private const val NIBBLE_BITS = 4
         private const val BYTE_MASK = 0xFF
         private const val NIBBLE_MASK = 0x0F
-
-        private const val CONTINUOUS_AUDIO_QUERY = "&continuousAudio=1"
 
         private const val HDR_QUERY =
             "&hdrMode=1&clientHdrCapVersion=0&clientHdrCapSupportedFlagsInUint32=0" +

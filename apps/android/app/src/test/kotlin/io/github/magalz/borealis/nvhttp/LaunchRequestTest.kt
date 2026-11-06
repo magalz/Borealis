@@ -113,10 +113,7 @@ class LaunchRequestTest {
             )
     }
 
-    /**
-     * Only a LuminalShine host reads `continuousAudio`. GFE gets the request that it always got,
-     * for a launch and for a resume.
-     */
+    /** GFE gets the request that it always got, for a launch and for a resume. */
     @Test
     fun `a GFE host is sent no continuous audio, and the rest of its request is as it was`() {
         val host = host()
@@ -136,16 +133,6 @@ class LaunchRequestTest {
     }
 
     @Test
-    fun `a stream configuration that turns continuous audio off sends no continuousAudio`() {
-        val host = host()
-        answerLaunch(host)
-
-        client(host).launchApp(context { setContinuousAudio(false) }, "launch", 12, false)
-
-        assertThat(host.requests.single().names).doesNotContain("continuousAudio")
-    }
-
-    @Test
     fun `continuous audio is off by default, so a LuminalShine launch and resume send none`() {
         val host = host()
         answerLaunch(host)
@@ -160,36 +147,22 @@ class LaunchRequestTest {
     }
 
     @Test
-    fun `a stream configuration that turns continuous audio on adds it to a LuminalShine host`() {
+    fun `a LuminalShine launch and resume carry no continuousAudio in their query`() {
         val host = host()
         answerLaunch(host)
         answerLaunch(host, verb = "resume", body = "<resume>1</resume>")
         val http = client(host)
 
-        http.launchApp(context { setContinuousAudio(true) }, "launch", 12, false)
-        http.launchApp(context { setContinuousAudio(true) }, "resume", 12, false)
+        http.launchApp(context(), "launch", 12, false)
+        http.launchApp(context(), "resume", 12, false)
 
         val targets = host.requests.map { it.target.substringBefore("&uniqueid=") }
         val query =
             "?appid=12&mode=1920x1080x60&additionalStates=1&sops=1" +
                 "&rikey=00010F107F8081A5ABCDEFFEFF09905A&rikeyid=-5&localAudioPlayMode=0" +
-                "&surroundAudioInfo=196610&continuousAudio=1&remoteControllersBitmap=0" +
+                "&surroundAudioInfo=196610&remoteControllersBitmap=0" +
                 "&gcmap=0&gcpersist=0&corever=1"
         assertThat(targets).containsExactly("/launch$query", "/resume$query").inOrder()
-    }
-
-    @Test
-    fun `a GFE host is sent no continuous audio even when the configuration turns it on`() {
-        val host = host()
-        answerLaunch(host)
-        answerLaunch(host, verb = "resume", body = "<resume>1</resume>")
-        val http = client(host)
-
-        http.launchApp(context(gfe = true) { setContinuousAudio(true) }, "launch", 12, false)
-        http.launchApp(context(gfe = true) { setContinuousAudio(true) }, "resume", 12, false)
-
-        assertThat(host.requests.map { it.path }).containsExactly("/launch", "/resume").inOrder()
-        host.requests.forEach { assertThat(it.names).doesNotContain("continuousAudio") }
     }
 
     @Test

@@ -79,4 +79,17 @@ class SharedNumberLeavesTest {
 
         assertThat(rig.connection.buttonEvents()).isEqualTo(before)
     }
+
+    @Test
+    fun `the pad that stays can click again after the other pad let its click go`() {
+        first.report(a)
+        // The second pad sends its state with what the first one holds in it
+        second.report(0, leftStickX = 0.5f)
+        rig.handler.deviceRemoved(first)
+        val before = rig.connection.buttonEvents()
+
+        second.report(a)
+
+        assertThat(rig.connection.buttonEvents().drop(before.size)).containsExactly("down 1")
+    }
 }

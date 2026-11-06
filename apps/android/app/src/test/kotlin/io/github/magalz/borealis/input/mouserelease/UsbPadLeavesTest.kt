@@ -92,7 +92,7 @@ class UsbPadLeavesTest {
     }
 
     @Test
-    fun `a pad that leaves while it shares its number still lets the button go`() {
+    fun `a pad that leaves while it shares its number lets the button go once`() {
         // Multiple controllers are off, so both pads are on controller number 0, in mouse mode.
         val sharer = FakeUsbController(2, rig.handler).also { rig.handler.deviceAdded(it) }
         rig.handler.setMouseEmulation(true)
@@ -102,9 +102,9 @@ class UsbPadLeavesTest {
 
         rig.handler.deviceRemoved(sharer)
 
-        // The first pad saw the click in the state it fused, so it sends an up of its own when the
-        // second one goes: the PC gets two. No pad holds the button then, so the extra up is no
-        // harm, and the click is up at the end.
+        // The first pad fused the click into its own state: it must not send an up of its own when
+        // the second one goes
+        assertThat(rig.connection.buttonEvents().filter { it == "up 1" }).hasSize(1)
         assertThat(rig.connection.buttonEvents().last()).isEqualTo("up 1")
     }
 }

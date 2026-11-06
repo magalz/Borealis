@@ -1,6 +1,7 @@
 package com.limelight.binding.input.driver
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// Converted as is from the inherited Java; LongParameterList stays because the interface is frozen:
+// ControllerHandler and UsbDriverService implement it (Sprint 18c backlog).
 @Suppress("LongParameterList")
 interface UsbDriverListener {
     fun reportControllerState(

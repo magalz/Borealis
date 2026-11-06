@@ -43,7 +43,8 @@ class UsbDriverService : Service(), UsbDriverListener {
     private var stateListener: UsbDriverStateListener? = null
     private var nextDeviceId = 0
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // Converted as is from the inherited Java; LongParameterList stays because this implements the
+    // frozen UsbDriverListener method (Sprint 18c backlog).
     @Suppress("LongParameterList")
     override fun reportControllerState(
         controllerId: Int,
@@ -84,7 +85,8 @@ class UsbDriverService : Service(), UsbDriverListener {
     inner class UsbEventReceiver : BroadcastReceiver() {
         // The deprecated getParcelableExtra stays (the typed one needs API 33), and so does the
         // no-looper Handler().
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+        // Converted as is from the inherited Java; DEPRECATION stays for those two calls
+        // (Sprint 18c backlog).
         @Suppress("DEPRECATION")
         override fun onReceive(context: Context, intent: Intent) {
             val action = checkNotNull(intent.action)
@@ -243,7 +245,8 @@ class UsbDriverService : Service(), UsbDriverListener {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // Converted as is from the inherited Java; UnspecifiedRegisterReceiverFlag stays because the
+    // registerReceiver of Android 12 and older has no flag to give (Sprint 18c backlog).
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun start() {
         val manager = usbManager

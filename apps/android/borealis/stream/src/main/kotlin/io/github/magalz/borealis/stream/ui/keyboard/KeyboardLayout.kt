@@ -7,6 +7,22 @@ import androidx.compose.ui.res.stringResource
 import io.github.magalz.borealis.designsystem.components.KeyStyle
 import io.github.magalz.borealis.stream.R
 import io.github.magalz.borealis.stream.keys.KeyModifier
+import io.github.magalz.borealis.stream.keys.VK_0
+import io.github.magalz.borealis.stream.keys.VK_A
+import io.github.magalz.borealis.stream.keys.VK_BACKSPACE
+import io.github.magalz.borealis.stream.keys.VK_DELETE
+import io.github.magalz.borealis.stream.keys.VK_DOWN
+import io.github.magalz.borealis.stream.keys.VK_END
+import io.github.magalz.borealis.stream.keys.VK_ENTER
+import io.github.magalz.borealis.stream.keys.VK_F1
+import io.github.magalz.borealis.stream.keys.VK_HOME
+import io.github.magalz.borealis.stream.keys.VK_LEFT
+import io.github.magalz.borealis.stream.keys.VK_PAGE_DOWN
+import io.github.magalz.borealis.stream.keys.VK_PAGE_UP
+import io.github.magalz.borealis.stream.keys.VK_RIGHT
+import io.github.magalz.borealis.stream.keys.VK_SPACE
+import io.github.magalz.borealis.stream.keys.VK_TAB
+import io.github.magalz.borealis.stream.keys.VK_UP
 
 /**
  * What a key shows: a character that needs no translation, a named key from the resources, or a
@@ -80,23 +96,6 @@ internal data object FnKey : KeySpec {
  * languages goes through the system keyboard.
  */
 internal object KeyboardLayout {
-    private const val VK_BACKSPACE = 0x08
-    private const val VK_TAB = 0x09
-    private const val VK_ENTER = 0x0D
-    private const val VK_SPACE = 0x20
-    private const val VK_PAGE_UP = 0x21
-    private const val VK_PAGE_DOWN = 0x22
-    private const val VK_END = 0x23
-    private const val VK_HOME = 0x24
-    private const val VK_LEFT = 0x25
-    private const val VK_UP = 0x26
-    private const val VK_RIGHT = 0x27
-    private const val VK_DOWN = 0x28
-    private const val VK_DELETE = 0x2E
-    private const val VK_0 = 0x30
-    private const val VK_A = 0x41
-    private const val VK_F1 = 0x70
-
     private fun letters(chars: String) = chars.map {
         CharKey(KeyLabel.Letter(it), VK_A + (it - 'A'))
     }

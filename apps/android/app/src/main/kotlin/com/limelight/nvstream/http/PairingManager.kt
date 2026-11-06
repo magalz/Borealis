@@ -67,8 +67,6 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
     val pairedCert: X509Certificate?
         get() = serverCert
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("LongMethod", "ReturnCount", "CyclomaticComplexMethod", "CognitiveComplexMethod")
     @Throws(IOException::class, XmlPullParserException::class)
     fun pair(serverInfo: String, pin: String): PairState {
         val serverMajorVersion = http.getServerMajorVersion(serverInfo)
@@ -88,33 +86,82 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
         // Combine the salt and pin, then create an AES key from them
         val aesKey = generateAesKey(hashAlgo, saltPin(salt, pin))
 
-        // Send the salt and get the server cert. This doesn't have a read timeout
-        // because the user must enter the PIN before the server responds
-        val getCert =
-            http.executePairingCommand(
-                "phrase=getservercert&salt=" +
-                    bytesToHex(salt) +
-                    "&clientcert=" +
-                    bytesToHex(checkNotNull(pemCertBytes)),
-                false,
-            )
-        if (NvHTTP.getXmlString(getCert, "paired", true) != "1") {
+        // The first phase starts nothing on the host that would need to be cancelled
+        val getCert = requestServerCert(salt)
+        if (!isPaired(getCert)) {
             return PairState.FAILED
         }
 
         // Save this cert for retrieval later
         val plainCert = extractPlainCert(getCert)
         serverCert = plainCert
-        if (plainCert == null) {
-            // Attempting to pair while another device is pairing will cause GFE
-            // to give an empty cert in the response.
-            http.unpair()
-            return PairState.ALREADY_IN_PROGRESS
-        }
 
+        val state =
+            if (plainCert == null) {
+                // Attempting to pair while another device is pairing will cause GFE
+                // to give an empty cert in the response.
+                PairState.ALREADY_IN_PROGRESS
+            } else {
+                challengeServer(hashAlgo, aesKey, plainCert)
+            }
+
+        // From the server cert on, a pairing that does not end as PAIRED is cancelled on the host
+        // (a request that fails with an exception is not: the exception goes up as it is)
+        if (state != PairState.PAIRED) {
+            http.unpair()
+        }
+        return state
+    }
+
+    private fun isPaired(response: String): Boolean =
+        NvHTTP.getXmlString(response, "paired", true) == "1"
+
+    // Send the salt and get the server cert. This doesn't have a read timeout
+    // because the user must enter the PIN before the server responds
+    private fun requestServerCert(salt: ByteArray): String =
+        http.executePairingCommand(
+            "phrase=getservercert&salt=" +
+                bytesToHex(salt) +
+                "&clientcert=" +
+                bytesToHex(checkNotNull(pemCertBytes)),
+            false,
+        )
+
+    // The phases after the server cert, up to the first one that ends the pairing
+    private fun challengeServer(
+        hashAlgo: PairingHashAlgorithm,
+        aesKey: ByteArray,
+        plainCert: X509Certificate,
+    ): PairState {
         // Require this cert for TLS to this host
         http.setServerCert(plainCert)
 
+        val challenge = sendClientChallenge(hashAlgo, aesKey) ?: return PairState.FAILED
+        val secrets =
+            sendServerChallengeResponse(hashAlgo, aesKey, challenge) ?: return PairState.FAILED
+        return verifyServer(hashAlgo, plainCert, challenge, secrets)
+            ?: sendClientPairingSecret(secrets.clientSecret)
+    }
+
+    // What the server answers to our challenge: its response to it, and its own challenge
+    private class ChallengeExchange(
+        val randomChallenge: ByteArray,
+        val serverResponse: ByteArray,
+        val serverChallenge: ByteArray,
+    )
+
+    // What the server answers to our response to its challenge: its signed secret
+    private class SecretExchange(
+        val clientSecret: ByteArray,
+        val serverSecret: ByteArray,
+        val serverSignature: ByteArray,
+    )
+
+    // Null when the server did not accept the challenge
+    private fun sendClientChallenge(
+        hashAlgo: PairingHashAlgorithm,
+        aesKey: ByteArray,
+    ): ChallengeExchange? {
         // Generate a random challenge and encrypt it with our AES key
         val randomChallenge = generateRandomBytes(CHALLENGE_LENGTH)
         val encryptedChallenge = encryptAes(randomChallenge, aesKey)
@@ -122,9 +169,8 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
         // Send the encrypted challenge to the server
         val challengeResp =
             http.executePairingCommand("clientchallenge=" + bytesToHex(encryptedChallenge), true)
-        if (NvHTTP.getXmlString(challengeResp, "paired", true) != "1") {
-            http.unpair()
-            return PairState.FAILED
+        if (!isPaired(challengeResp)) {
+            return null
         }
 
         // Decode the server's response and subsequent challenge
@@ -140,14 +186,22 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
                 hashAlgo.hashLength,
                 hashAlgo.hashLength + CHALLENGE_LENGTH,
             )
+        return ChallengeExchange(randomChallenge, serverResponse, serverChallenge)
+    }
 
+    // Null when the server did not accept the response
+    private fun sendServerChallengeResponse(
+        hashAlgo: PairingHashAlgorithm,
+        aesKey: ByteArray,
+        challenge: ChallengeExchange,
+    ): SecretExchange? {
         // Using another 16 bytes secret, compute a challenge response hash using the secret, our
         // cert sig, and the challenge
         val clientSecret = generateRandomBytes(SECRET_LENGTH)
         val challengeRespHash =
             hashAlgo.hashData(
                 concatBytes(
-                    concatBytes(serverChallenge, checkNotNull(cert).signature),
+                    concatBytes(challenge.serverChallenge, checkNotNull(cert).signature),
                     clientSecret,
                 )
             )
@@ -157,9 +211,8 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
                 "serverchallengeresp=" + bytesToHex(challengeRespEncrypted),
                 true,
             )
-        if (NvHTTP.getXmlString(secretResp, "paired", true) != "1") {
-            http.unpair()
-            return PairState.FAILED
+        if (!isPaired(secretResp)) {
+            return null
         }
 
         // Get the server's signed secret
@@ -168,12 +221,19 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
         val serverSecret = Arrays.copyOfRange(serverSecretResp, 0, SECRET_LENGTH)
         val serverSignature =
             Arrays.copyOfRange(serverSecretResp, SECRET_LENGTH, serverSecretResp.size)
+        return SecretExchange(clientSecret, serverSecret, serverSignature)
+    }
 
+    // The state that ends the pairing, or null when the server is who it says it is and the PIN
+    // was right
+    private fun verifyServer(
+        hashAlgo: PairingHashAlgorithm,
+        plainCert: X509Certificate,
+        challenge: ChallengeExchange,
+        secrets: SecretExchange,
+    ): PairState? {
         // Ensure the authenticity of the data
-        if (!verifySignature(serverSecret, serverSignature, plainCert)) {
-            // Cancel the pairing process
-            http.unpair()
-
+        if (!verifySignature(secrets.serverSecret, secrets.serverSignature, plainCert)) {
             // Looks like a MITM
             return PairState.FAILED
         }
@@ -181,17 +241,21 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
         // Ensure the server challenge matched what we expected (aka the PIN was correct)
         val serverChallengeRespHash =
             hashAlgo.hashData(
-                concatBytes(concatBytes(randomChallenge, plainCert.signature), serverSecret)
+                concatBytes(
+                    concatBytes(challenge.randomChallenge, plainCert.signature),
+                    secrets.serverSecret,
+                )
             )
-        if (!Arrays.equals(serverChallengeRespHash, serverResponse)) {
-            // Cancel the pairing process
-            http.unpair()
-
+        if (!Arrays.equals(serverChallengeRespHash, challenge.serverResponse)) {
             // Probably got the wrong PIN
             return PairState.PIN_WRONG
         }
 
-        // Send the server our signed secret
+        return null
+    }
+
+    // The last two phases: send the server our signed secret, then do the initial challenge
+    private fun sendClientPairingSecret(clientSecret: ByteArray): PairState {
         val clientPairingSecret =
             concatBytes(clientSecret, signData(clientSecret, checkNotNull(pk)))
         val clientSecretResp =
@@ -199,15 +263,13 @@ class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoPr
                 "clientpairingsecret=" + bytesToHex(clientPairingSecret),
                 true,
             )
-        if (NvHTTP.getXmlString(clientSecretResp, "paired", true) != "1") {
-            http.unpair()
+        if (!isPaired(clientSecretResp)) {
             return PairState.FAILED
         }
 
         // Do the initial challenge (seems necessary for us to show as paired)
         val pairChallenge = http.executePairingChallenge()
-        if (NvHTTP.getXmlString(pairChallenge, "paired", true) != "1") {
-            http.unpair()
+        if (!isPaired(pairChallenge)) {
             return PairState.FAILED
         }
 

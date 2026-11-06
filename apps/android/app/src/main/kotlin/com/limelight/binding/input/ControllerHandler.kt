@@ -70,7 +70,8 @@ import org.cgutman.shieldcontrollerextensions.SceChargingState
 import org.cgutman.shieldcontrollerextensions.SceConnectionType
 import org.cgutman.shieldcontrollerextensions.SceManager
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// Converted as is from the inherited Java; LargeClass and TooManyFunctions stay because the class
+// waits for its split (Sprint 18d backlog).
 @Suppress("LargeClass", "TooManyFunctions")
 class ControllerHandler(
     private val activityContext: Activity,
@@ -390,38 +391,28 @@ class ControllerHandler(
         return sharers.firstOrNull { !it.mouseEmulationActive } ?: sharers.firstOrNull()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount")
     private fun isAssociatedJoystick(
         originalDevice: InputDevice?,
         possibleAssociatedJoystick: InputDevice?,
     ): Boolean {
-        if (possibleAssociatedJoystick == null) {
-            return false
-        }
-
         // This can't be an associated joystick if it's not a joystick
         if (
-            (possibleAssociatedJoystick.sources and InputDevice.SOURCE_JOYSTICK) !=
-                InputDevice.SOURCE_JOYSTICK
+            possibleAssociatedJoystick == null ||
+                (possibleAssociatedJoystick.sources and InputDevice.SOURCE_JOYSTICK) !=
+                    InputDevice.SOURCE_JOYSTICK
         ) {
             return false
         }
 
+        val original = checkNotNull(originalDevice)
+
         // Make sure the device names *don't* match in order to prevent us from accidentally
         // matching on another of the exact same device.
-        val original = checkNotNull(originalDevice)
-        if (possibleAssociatedJoystick.name == original.name) {
-            return false
-        }
-
+        //
         // Make sure the descriptor matches. This can match in cases where two of the exact same
         // input device are connected, so we perform the name check to exclude that case.
-        if (possibleAssociatedJoystick.descriptor != original.descriptor) {
-            return false
-        }
-
-        return true
+        return possibleAssociatedJoystick.name != original.name &&
+            possibleAssociatedJoystick.descriptor == original.descriptor
     }
 
     // Takes the lowest controller number that no pad holds for the context. False when all
@@ -581,19 +572,17 @@ class ControllerHandler(
         return context
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount")
     private fun shouldIgnoreBack(dev: InputDevice): Boolean {
         val devName = dev.name
 
         // The Serval has a Select button but the framework doesn't
         // know about that because it uses a non-standard scancode.
-        if (devName.contains("Razer Serval")) {
-            return true
-        }
-
+        //
         // Classify this device as a remote by name if it has no joystick axes
-        if (!hasJoystickAxes(dev) && devName.lowercase(Locale.getDefault()).contains("remote")) {
+        if (
+            devName.contains("Razer Serval") ||
+                (!hasJoystickAxes(dev) && devName.lowercase(Locale.getDefault()).contains("remote"))
+        ) {
             return true
         }
 
@@ -982,37 +971,25 @@ class ControllerHandler(
         return context
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount")
-    private fun getContextForEvent(event: InputEvent): InputDeviceContext? {
-        // Don't return a context if we're stopped
-        if (stopped) {
-            return null
-        } else if (event.deviceId == 0) {
+    // The rules apply in this order: when two fit, the first one decides.
+    private fun getContextForEvent(event: InputEvent): InputDeviceContext? =
+        when {
+            // Don't return a context if we're stopped
+            stopped -> null
             // Unknown devices use the default context
-            return defaultContext
-        } else if (event.device == null) {
+            event.deviceId == 0 -> defaultContext
             // During device removal, sometimes we can get events after the
             // input device has been destroyed. In this case we'll see a
             // != 0 device ID but no device attached.
-            return null
+            event.device == null -> null
+            // HACK for https://issuetracker.google.com/issues/163120692
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.R && event.deviceId == -1 -> defaultContext
+            // Return the existing context if it exists, otherwise create a new one
+            else -> inputDeviceContexts.get(event.deviceId) ?: createContextForEvent(event)
         }
 
-        // HACK for https://issuetracker.google.com/issues/163120692
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.R) {
-            if (event.deviceId == -1) {
-                return defaultContext
-            }
-        }
-
-        // Return the existing context if it exists
-        var context = inputDeviceContexts.get(event.deviceId)
-        if (context != null) {
-            return context
-        }
-
-        // Otherwise create a new context
-        context = createInputDeviceContextForDevice(event.device)
+    private fun createContextForEvent(event: InputEvent): InputDeviceContext {
+        val context = createInputDeviceContextForDevice(event.device)
         if (mouseEmulationEnabled) {
             context.setMouseEmulation(true, false)
         }
@@ -2339,8 +2316,6 @@ class ControllerHandler(
 
     // This must only be called if hasQuadAmplitudeControlledRumbleVibrators() is true!
     @RequiresApi(Build.VERSION_CODES.S)
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ComplexCondition")
     private fun rumbleQuadVibrators(
         vm: VibratorManager,
         lowFreqMotor: Short,
@@ -2355,12 +2330,9 @@ class ControllerHandler(
         val rightTriggerAmplitude = motorAmplitude(rightTrigger)
 
         // If they're all zero, we can just call cancel().
-        if (
-            lowFreqAmplitude == 0 &&
-                highFreqAmplitude == 0 &&
-                leftTriggerAmplitude == 0 &&
-                rightTriggerAmplitude == 0
-        ) {
+        val motorsOff = lowFreqAmplitude == 0 && highFreqAmplitude == 0
+        val triggersOff = leftTriggerAmplitude == 0 && rightTriggerAmplitude == 0
+        if (motorsOff && triggersOff) {
             vm.cancel()
             return
         }
@@ -2408,7 +2380,8 @@ class ControllerHandler(
         return if (unsigned != 0 && strength > 0) max(1, scaled).toShort() else scaled.toShort()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // Converted as is from the inherited Java; DEPRECATION stays for the AudioAttributes overloads
+    // of Vibrator.vibrate, which Android before 13 needs (Sprint 18c backlog).
     @Suppress("DEPRECATION")
     private fun rumbleSingleVibrator(
         vibrator: Vibrator,
@@ -2621,7 +2594,8 @@ class ControllerHandler(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // Converted as is from the inherited Java; DEPRECATION stays for WindowManager.defaultDisplay,
+    // which the device rotation is read from (Sprint 18c backlog).
     @Suppress("DEPRECATION")
     private fun createSensorListener(
         controllerNumber: Short,
@@ -3329,7 +3303,8 @@ class ControllerHandler(
         return true
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // Converted as is from the inherited Java; LongParameterList stays because the on-screen
+    // controller calls this method with this signature (Sprint 18c backlog).
     @Suppress("LongParameterList")
     fun reportOscState(
         buttonFlags: Int,
@@ -3358,8 +3333,6 @@ class ControllerHandler(
         sendControllerInputPacket(defaultContext)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ComplexCondition")
     override fun reportControllerState(
         controllerId: Int,
         buttonFlags: Int,
@@ -3377,9 +3350,7 @@ class ControllerHandler(
         if (
             context.startHold.update(filteredButtonFlags, SystemClock.uptimeMillis()) &&
                 !captured &&
-                prefConfig.mouseEmulation &&
-                !context.menuChord.claims(ControllerPacket.PLAY_FLAG) &&
-                !context.quitCombo.pending()
+                startTogglesMouseEmulation(context)
         ) {
             // The USB driver reports from a thread without a looper, and the toggle shows a notice
             if (Looper.myLooper() == Looper.getMainLooper()) {
@@ -3421,6 +3392,13 @@ class ControllerHandler(
 
         sendControllerInputPacket(context)
     }
+
+    // A long Start hold toggles the gamepad mouse when the setting is on, unless that Start belongs
+    // to the menu chord or to the quit combo
+    private fun startTogglesMouseEmulation(context: GenericControllerContext): Boolean =
+        prefConfig.mouseEmulation &&
+            !context.menuChord.claims(ControllerPacket.PLAY_FLAG) &&
+            !context.quitCombo.pending()
 
     override fun deviceRemoved(controller: AbstractController) {
         val context = usbDeviceContexts.find(controller.controllerId)
@@ -3832,8 +3810,8 @@ class ControllerHandler(
             }
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        // The run override carries the API level, which a lambda cannot.
+        // Converted as is from the inherited Java; ObjectLiteralToLambda stays because the run
+        // override carries the API level, which a lambda cannot (Sprint 18c backlog).
         @Suppress("ObjectLiteralToLambda")
         @JvmField
         val setLedStateRunnable: Runnable =
@@ -3864,7 +3842,8 @@ class ControllerHandler(
                 }
             }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+        // Converted as is from the inherited Java; TooGenericExceptionCaught stays because closing
+        // the lights session catches any RuntimeException, as the Java did (Sprint 18c backlog).
         @Suppress("TooGenericExceptionCaught")
         override fun destroy() {
             retired = true
@@ -4418,8 +4397,28 @@ class ControllerHandler(
             return type == MoonBridge.LI_CTYPE_PS
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition", "PrintStackTrace", "ReturnCount")
+        // The names of keys that are part of the device itself, whatever the framework says
+        private fun isInternalKeyName(deviceName: String): Boolean =
+            // This is the back button on Shield portable consoles
+            deviceName.contains("gpio", true) ||
+                // These are the gamepad buttons on the Archos Gamepad 2
+                deviceName.contains("joy_key", true) ||
+                // These are gamepad buttons on the XPERIA Play
+                deviceName.contains("keypad", true)
+
+        // The names of gamepads that are part of the device itself, whatever the framework says
+        private fun isInternalGamepadName(deviceName: String): Boolean =
+            // Gamepad on Shield Portable
+            deviceName.equals("NVIDIA Corporation NVIDIA Controller v01.01", true) ||
+                // Gamepad on Shield Portable (?)
+                deviceName.equals("NVIDIA Corporation NVIDIA Controller v01.02", true) ||
+                // Gamepad on Logitech G Cloud
+                deviceName.equals("GR0006", true)
+
+        // Converted as is from the inherited Java; the stack traces of the reflected call go to
+        // the standard error stream, as in the inherited Java. Logging them instead is a behaviour
+        // change (Sprint 18c backlog).
+        @Suppress("PrintStackTrace")
         private fun isExternal(dev: InputDevice): Boolean {
             // The ASUS Tinker Board inaccurately reports Bluetooth gamepads as internal,
             // causing shouldIgnoreBack() to believe it should pass through back as a
@@ -4429,32 +4428,21 @@ class ControllerHandler(
             }
 
             val deviceName = dev.name
-            if (
-                // This is the back button on Shield portable consoles
-                deviceName.contains("gpio", true) ||
-                    // These are the gamepad buttons on the Archos Gamepad 2
-                    deviceName.contains("joy_key", true) ||
-                    // These are gamepad buttons on the XPERIA Play
-                    deviceName.contains("keypad", true) ||
-                    // Gamepad on Shield Portable
-                    deviceName.equals("NVIDIA Corporation NVIDIA Controller v01.01", true) ||
-                    // Gamepad on Shield Portable (?)
-                    deviceName.equals("NVIDIA Corporation NVIDIA Controller v01.02", true) ||
-                    // Gamepad on Logitech G Cloud
-                    deviceName.equals("GR0006", true)
-            ) {
+            if (isInternalKeyName(deviceName) || isInternalGamepadName(deviceName)) {
                 LimeLog.info("${dev.name} is internal by hardcoded mapping")
                 return false
             }
 
+            // Answer true if we don't know
+            var external = true
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // Landroid/view/InputDevice;->isExternal()Z is officially public on Android Q
-                return dev.isExternal
+                external = dev.isExternal
             } else {
                 try {
                     // Landroid/view/InputDevice;->isExternal()Z is on the light graylist in Android
                     // P
-                    return dev.javaClass.getMethod("isExternal").invoke(dev) as Boolean
+                    external = dev.javaClass.getMethod("isExternal").invoke(dev) as Boolean
                 } catch (e: NoSuchMethodException) {
                     e.printStackTrace()
                 } catch (e: IllegalAccessException) {
@@ -4466,8 +4454,7 @@ class ControllerHandler(
                 }
             }
 
-            // Answer true if we don't know
-            return true
+            return external
         }
 
         private fun areBatteryCapacitiesEqual(first: Float, second: Float): Boolean {

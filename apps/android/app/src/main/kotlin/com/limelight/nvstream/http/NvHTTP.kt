@@ -3,6 +3,7 @@ package com.limelight.nvstream.http
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.nvstream.ConnectionContext
+import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager.PairState
 import com.limelight.nvstream.jni.MoonBridge
@@ -712,8 +713,6 @@ constructor(
         return ret
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("LongMethod", "ComplexCondition")
     @Throws(IOException::class, XmlPullParserException::class)
     fun launchApp(
         context: ConnectionContext,
@@ -722,7 +721,57 @@ constructor(
         enableHdr: Boolean,
     ): Boolean {
         val streamConfig = checkNotNull(context.streamConfig)
+        val enableSops = isSopsEnabled(context, streamConfig)
 
+        val xmlStr =
+            openHttpConnectionToString(
+                httpClientLongConnectNoReadTimeout,
+                getHttpsUrl(true),
+                verb,
+                launchQuery(context, streamConfig, appId, enableSops, enableHdr),
+            )
+        if (!isSessionStarted(verb, xmlStr)) {
+            return false
+        }
+
+        // sessionUrl0 will be missing for older GFE versions
+        context.rtspSessionUrl = getXmlString(xmlStr, "sessionUrl0", false)
+        return true
+    }
+
+    private fun isSopsEnabled(
+        context: ConnectionContext,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
+        if (context.isNvidiaServerSoftware) {
+            // Using an unsupported resolution (not 720p, 1080p, or 4K) causes
+            // GFE to force SOPS to 720p60. This is fine for < 720p resolutions like
+            // 360p or 480p, but it is not ideal for 1440p and other resolutions.
+            // When we detect an unsupported resolution, disable SOPS unless it's under 720p.
+            // FIXME Detect support resolutions using the serverinfo response, not a hardcoded list
+            val pixels = context.negotiatedWidth * context.negotiatedHeight
+            if (pixels > RESOLUTION_720P && pixels != RESOLUTION_1080P && pixels != RESOLUTION_4K) {
+                LimeLog.info(
+                    "Disabling SOPS due to non-standard resolution: " +
+                        context.negotiatedWidth +
+                        "x" +
+                        context.negotiatedHeight
+                )
+                return false
+            }
+        }
+
+        return streamConfig.sops
+    }
+
+    // The parameters of /launch and /resume, in the order that the hosts have always been sent
+    private fun launchQuery(
+        context: ConnectionContext,
+        streamConfig: StreamConfiguration,
+        appId: Int,
+        enableSops: Boolean,
+        enableHdr: Boolean,
+    ): String {
         // Using an FPS value over 60 causes SOPS to default to 720p60,
         // so force it to 0 to ensure the correct resolution is set. We
         // used to use 60 here but that locked the frame rate to 60 FPS
@@ -736,71 +785,42 @@ constructor(
                 streamConfig.refreshRate,
             )
 
-        var enableSops = streamConfig.sops
-        if (context.isNvidiaServerSoftware) {
-            // Using an unsupported resolution (not 720p, 1080p, or 4K) causes
-            // GFE to force SOPS to 720p60. This is fine for < 720p resolutions like
-            // 360p or 480p, but it is not ideal for 1440p and other resolutions.
-            // When we detect an unsupported resolution, disable SOPS unless it's under 720p.
-            // FIXME Detect support resolutions using the serverinfo response, not a hardcoded list
-            if (
-                context.negotiatedWidth * context.negotiatedHeight > RESOLUTION_720P &&
-                    context.negotiatedWidth * context.negotiatedHeight != RESOLUTION_1080P &&
-                    context.negotiatedWidth * context.negotiatedHeight != RESOLUTION_4K
-            ) {
-                LimeLog.info(
-                    "Disabling SOPS due to non-standard resolution: " +
-                        context.negotiatedWidth +
-                        "x" +
-                        context.negotiatedHeight
-                )
-                enableSops = false
-            }
-        }
-
-        val xmlStr =
-            openHttpConnectionToString(
-                httpClientLongConnectNoReadTimeout,
-                getHttpsUrl(true),
-                verb,
-                "appid=" +
-                    appId +
-                    "&mode=" +
-                    context.negotiatedWidth +
-                    "x" +
-                    context.negotiatedHeight +
-                    "x" +
-                    fps +
-                    "&additionalStates=1&sops=" +
-                    (if (enableSops) 1 else 0) +
-                    "&rikey=" +
-                    bytesToHex(checkNotNull(context.riKey).encoded) +
-                    "&rikeyid=" +
-                    context.riKeyId +
-                    (if (!enableHdr) "" else HDR_QUERY) +
-                    "&localAudioPlayMode=" +
-                    (if (streamConfig.playLocalAudio) 1 else 0) +
-                    "&surroundAudioInfo=" +
-                    checkNotNull(streamConfig.audioConfiguration).surroundAudioInfo +
-                    "&remoteControllersBitmap=" +
-                    streamConfig.attachedGamepadMask +
-                    "&gcmap=" +
-                    streamConfig.attachedGamepadMask +
-                    "&gcpersist=" +
-                    (if (streamConfig.persistGamepadsAfterDisconnect) 1 else 0) +
-                    MoonBridge.getLaunchUrlQueryParameters(),
-            )
-        if (
-            (verb == "launch" && requireXmlString(xmlStr, "gamesession") != "0" ||
-                (verb == "resume" && requireXmlString(xmlStr, "resume") != "0"))
-        ) {
-            // sessionUrl0 will be missing for older GFE versions
-            context.rtspSessionUrl = getXmlString(xmlStr, "sessionUrl0", false)
-            return true
-        } else {
-            return false
-        }
+        return "appid=" +
+            appId +
+            "&mode=" +
+            context.negotiatedWidth +
+            "x" +
+            context.negotiatedHeight +
+            "x" +
+            fps +
+            "&additionalStates=1&sops=" +
+            (if (enableSops) 1 else 0) +
+            "&rikey=" +
+            bytesToHex(checkNotNull(context.riKey).encoded) +
+            "&rikeyid=" +
+            context.riKeyId +
+            (if (!enableHdr) "" else HDR_QUERY) +
+            "&localAudioPlayMode=" +
+            (if (streamConfig.playLocalAudio) 1 else 0) +
+            "&surroundAudioInfo=" +
+            checkNotNull(streamConfig.audioConfiguration).surroundAudioInfo +
+            "&remoteControllersBitmap=" +
+            streamConfig.attachedGamepadMask +
+            "&gcmap=" +
+            streamConfig.attachedGamepadMask +
+            "&gcpersist=" +
+            (if (streamConfig.persistGamepadsAfterDisconnect) 1 else 0) +
+            MoonBridge.getLaunchUrlQueryParameters()
     }
+
+    // A launch reads the gamesession tag of the answer and a resume the resume tag; the tag of
+    // another verb is not read
+    private fun isSessionStarted(verb: String, xmlStr: String): Boolean =
+        when (verb) {
+            "launch" -> requireXmlString(xmlStr, "gamesession") != "0"
+            "resume" -> requireXmlString(xmlStr, "resume") != "0"
+            else -> false
+        }
 
     // BOREALIS: asks the host to cancel the app that this client launched, without the check of
     // quitApp for the app of another client: the leave of a start that never streamed (host.launch)

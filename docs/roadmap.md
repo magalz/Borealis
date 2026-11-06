@@ -447,7 +447,10 @@ with any number of sprints. The phase pull requests stay small and easy to test.
 | 16 | Fixes of the converted code |
 | 17a | General fixes: audio, video and the stream screens, and the stream session |
 | 17b | General fixes: Library and Settings, input, pads, and accessibility and layout |
-| 18 | Refactor of the converted code |
+| 18a | Refactor of the converted code: network, host and input (and the duplication of Sprint 17b) |
+| 18b | Refactor of the converted code: video, audio and the stream activity, and the test and tooling items |
+| 18c | The behaviour-bound places of the converted code |
+| 18d | Splitting the large converted classes |
 | 19 | SecOps |
 | 20 | Release preparation |
 | — | `android-v0.1.0` |
@@ -472,6 +475,15 @@ code (Sprint 16), the general fixes (Sprint 17) and the refactor of the converte
 - The renumbering: before 2026-10-28 SecOps was Sprint 16, release preparation was Sprint 17,
   and translation and opt-in crash reporting was Sprint 18. Sprints 15 and earlier keep their
   numbers.
+
+Owner decisions of 2026-11-05: Sprint 18 is split into 18a and 18b, so that each phase pull
+request is smaller and each device round looks at one area: the controls first, then the
+picture and the sound. Two sprints are added before SecOps: 18c for the places that a
+refactor cannot clear without changing behaviour, and any behaviour-changing leftover of 18a
+and 18b; and 18d for the splits of the large classes. 18c comes before 18d for the reason
+this order already gives: the fixes come before the refactor, so the splits move code that
+is final. Both come before SecOps, so that SecOps audits the final code. The release and
+translation sprints keep their numbers.
 
 Why this order:
 
@@ -1174,15 +1186,15 @@ UAT, so none is left with no place. The owner can move any of them:
 - **`StreamChromeHost.handleBack`** still handles the Failed phase, which is unreachable while the popup is
   composed. It is a harmless fallback. Two branches have no test, `FrozenFrame.kt` (the copy worked but the
   view has no bounds when it ends) and `VideoSource.kt` (a refused `PixelCopy` request); the patch
-  coverage of #105 is 98.7%. In [Sprint 18](#sprint-18-refactor-of-the-converted-code), with the
+  coverage of #105 is 98.7%. In [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling), with the
   tooling items: remove the unreachable branch, and test or delete the two branches.
 - **The test fixtures:** other tests that end on a screen outside the game with the default look (the
   default background style, which moves) have the order hazard that `StreamBackTest` had, and
   `VideoGlassSpec.kt` repeats the Reduced values (85 percent, 48 dp) that `GlassRules` keeps private. Both
-  are in Sprint 18.
+  are in [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling).
 
 The two flaky tests and the duplicated pixel helpers, which the owner listed for the backlog on 2026-10-30 from the
-gates and reviews of the phase, are in Sprint 18 too. The bottom-edge line on the TV and the owner's mouse, which
+gates and reviews of the phase, are in [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling) too. The bottom-edge line on the TV and the owner's mouse, which
 came from the UAT, and the orphan DataStore key are in Sprint 17. The results of the
 round are in [device-validation section 20](development/device-validation.md#20-results-sprint-15).
 
@@ -1220,8 +1232,9 @@ the client side, and none of its findings is a Sprint 16 regression.
   entry too.
 - **Outcome:** 113 entries are fixed, 5 are recorded with no change (C1, C9, C17, O7 and U8), 4 are
   closed (P4, U10, G-M5 and R2), and 6 are moved: P9 and B3 to [Sprint 19](#sprint-19-secops), C18
-  to the open owner decision of [Sprint 17](#sprint-17-general-fixes), and K6, C4 and A8 to
-  [Sprint 18](#sprint-18-refactor-of-the-converted-code). Of the 113, U2 is fixed by the same change as
+  to the open owner decision of [Sprint 17](#sprint-17-general-fixes), K6 and C4 to
+  [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input), and A8 to
+  [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling). Of the 113, U2 is fixed by the same change as
   U1. The owner-approved triage had U2 as intended and U8 as a fix: the owner moved U2 to the fixes
   on 2026-10-30, and batch D found that U8 is not a defect. Each entry of item (b) of the three
   blocks now ends with its triage id and what Sprint 16 did, and the triage corrected a few of the
@@ -1296,10 +1309,10 @@ the client side, and none of its findings is a Sprint 16 regression.
   passed at `4e1985c6f`.
 - **What it found for later.** New items are in [Sprint 17](#sprint-17-general-fixes) (Input, Pads,
   Video and the stream screens, and the stream session),
-  [Sprint 18](#sprint-18-refactor-of-the-converted-code) (a flaky
+  [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling) (a flaky
   test), [Sprint 19](#sprint-19-secops) and [Sprint 20](#sprint-20-release-preparation) (the host
   version line).
-- **Order:** the fixes come before the refactor of Sprint 18. The triage removes dead and
+- **Order:** the fixes come before the refactors of Sprints 18a to 18d. The triage removes dead and
   unreachable paths, which shrinks the refactor, and the refactor then does not have to keep known
   defects on purpose.
 - **Ends with a device round.** Run on 2026-11-01 on the Google TV Streamer and the S22, on the
@@ -1893,8 +1906,8 @@ Moved here from Sprint 15 or from the backlog (owner, 2026-10-28), as each item 
 
 #### Found in Sprint 17b (backlog)
 
-The cards of the backlog that Sprint 17b found or moved out of the sprint. Each one is in itsaplan, in the
-Backlog column, and none is scheduled.
+The cards of the backlog that Sprint 17b found or moved out of the sprint. Each one is an itsaplan card. The entries
+that name a sprint are scheduled in that sprint; the others are not scheduled.
 
 - **BORE-33, research: why the S22 audio queue fills at the first sound of a stream.** The table of the A/B in
   [section 23](development/device-validation.md#23-results-sprint-17b), R4. The options are a pre-roll of
@@ -1903,15 +1916,19 @@ Backlog column, and none is scheduled.
   answers). Found in the device read R6 and the pinned-shortcut card.
 - **BORE-36, found by the agent: a tap during the shortcut wait leaves the launch pending.**
 - **BORE-37, found by the agent: a flaky case of `RendererRecoveryTest`.** Found in the gate of the Screens lane.
+  Taken by [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling).
 - **BORE-39, found by the agent: the Xbox One motor shift sign-extends a motor value of 0x8000 and above.** The
   shift is inherited code. Check it against the GIP rumble packet before changing the shift.
+  Taken by [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (wave 0).
 - **BORE-40, feature: Try again joins without the question** when the host reports a running app, once the
   owner's host change lands (see the Try again item above).
 - **BORE-41, found by the agent: the Back and Forward chord waits only on mice seen sending pulses.** Today a
   short side-button press of any mouse is delayed by 25 ms, and the owner accepted that in the K3 decision.
 - **BORE-42: USB stop follow-ups of PH3.** The write timeout copies the drivers' `RUMBLE_TIMEOUT_MS` with no
   link; the drivers still zero their motors at unbind; a stuck pad is found by elapsed time only.
+  Taken by [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (wave 0, with BORE-63).
 - **BORE-43: a battery poll after destroy can mark a freed controller number** (PH2).
+  Taken by [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (wave 0).
 - **BORE-44, found by the agent: two-finger tap edge cases.** They need a per-finger identity: the lift-order
   asymmetry after a pointer move, the index-0 restart, and a second-finger tap during a double-tap drag.
 - **BORE-45, feature: a userspace USB driver for the Switch Pro receiver** (`057E:2009`: rumble, and maybe gyro and
@@ -1927,80 +1944,175 @@ Backlog column, and none is scheduled.
   review found it: `RestoreOpenerFocus` twice, test helpers copied across the fit, focus and motion tests, the
   traversal-order pattern written twice, `motorByte` in both Xbox drivers, and the pad fusing block of
   `ControllerHandler` still in three copies. None is a defect, and the card's title marks it
-  for the [refactor](#sprint-18-refactor-of-the-converted-code).
+  for the refactor. Taken by [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input).
 - **BORE-50, found in the round: "already paired" cannot be reached with LuminalShine.** A forgotten host that is added
   again comes back "Not paired", because LuminalShine 26.11.0 reports its pairing state only over HTTPS. The owner
   decides between a reworded message and a pairing over HTTPS on re-add (section 23, finding 1).
+  Moved to [Sprint 19](#sprint-19-secops) (owner, 2026-11-05), where the choice is weighed with the
+  SecOps pairing review.
 - **BORE-51, found in the round: the TV focus after Hide or Forget goes to the rail item "Hosts".** The focus should go
   to the next card (section 23, finding 5).
+  Taken by [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (wave 0).
 - **BORE-52, found in the round: the audio delay reads "0 ms" with a silent PC.** The three stages of the Audio delay
   line need sound on the PC (section 23, finding 4).
 - **BORE-53, found in the round, low: the stream's notices leave the screen too soon** (section 23, finding 6).
 - **BORE-54, found by the agent: a pad that leaves while a button is held in mouse emulation leaves the PC's mouse
   button down.** `ControllerHandler.destroy` sends no button up for the held buttons. Inherited code, found by
   reading it in the trace of the touch-loss observation (section 23); not seen on a device.
+  Taken by [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (wave 0).
 
-### Sprint 18: refactor of the converted code
+### Sprint 18a: refactor of the converted code (network, host and input)
 
-Planned, not started. Owner decision of 2026-10-28.
+Planned 2026-11-05, started. Phase card BORE-60. The scope was first set on 2026-10-28. On
+2026-11-05 the owner split the sprint in two, run one after the other, each with its own phase
+pull request and device round, and added Sprints 18c and 18d before SecOps (see the
+[order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28)).
+The numbers of the later sprints do not change.
 
-- **Scope:** item (a) of the same three blocks of the [backlog](#backlog-not-scheduled): the 166
-  places marked `(Sprint 12 backlog)` (49), `(Sprint 13 backlog)` (65) and `(Sprint 14 backlog)`
-  (52), with the other notes of item (a) of the Sprint 14 block. The fixes of Sprint 16 left 163
-  at `5c364487c` (49, 63 and 51), and 162 after the merge of wave 2 (`4e1985c6f`), whose C5 removed
-  one more. Each block has the recount by file.
-- **Moved here by Sprint 16:** K6, the Windows `VK_*` codes duplicated in `KeyboardLayout.kt`; C4,
-  the controller-input fusing block of `ControllerHandler` written out three times; and A8, the stale
-  Lollipop comment on the 7.1 mask of `AndroidAudioRenderer`. Each is in item (b) of its block.
+- **Sprint 18a** takes the network, host and input code: the structural places of the Sprint 12
+  and Sprint 13 code, the duplication that Sprint 17b left, and the wave 0 fixes. It ends with a
+  device round on the controls and the host flows.
+- **Sprint 18b** takes the video, audio and stream-activity code of the Sprint 14 block, and the
+  test and tooling items. It ends with a device round on the picture and the sound.
+
+- **Recount** at `3e55b12a1`: 158 markers on 157 places in 43 files (48 `(Sprint 12 backlog)`,
+  59 `(Sprint 13 backlog)`, 51 `(Sprint 14 backlog)`; `WakeOnLanSender` has two markers on one
+  place). The 166 of the 2026-10-28 decision and the 162 of the earlier text (the Sprint 16 count)
+  are superseded: the difference is the places that Sprints 16 and 17 removed. By kind: 97 sit on
+  structural suppressions that a refactor can clear (complexity, `ReturnCount` and `ThrowsCount`,
+  `ComplexCondition`, `NestedBlockDepth`), 44 are bound to behaviour or to the ABI
+  (`PrintStackTrace` and generic catches, deprecated APIs kept on purpose, `@SuppressLint`, JNI and
+  fixed listener signatures, `PLATFORM_CLASS_MAPPED_TO_KOTLIN`), and 16 are whole-class
+  `LargeClass` and `TooManyFunctions`.
+- **Marker rule** (applies to 18a and 18b): each place a task touches ends done (its structural
+  suppression entries deleted, detekt green, marker removed), or it is relabeled
+  `(Sprint 18c backlog)` (behaviour or ABI) or `(Sprint 18d backlog)` (class split), with a
+  one-line reason. A mixed place loses its structural entries and is relabeled 18c for the rest.
+  18a ends with no `(Sprint 12 backlog)` or `(Sprint 13 backlog)` marker.
+- **Wave 0, fixes first** (owner: the refactor keeps no known defect). Each one is test-first:
+  - BORE-54: a pad that leaves while a button is held in mouse emulation leaves the PC's mouse
+    button down.
+  - BORE-43: a battery poll after destroy can mark a freed controller number.
+  - BORE-42 with BORE-63: the USB rumble stop, so that there is one timeout, the writes report
+    failure, and the unbind does not block a second time.
+  - BORE-39: the Xbox One rumble shift, checked against the GIP range first.
+  - BORE-51: the TV focus after Hide or Forget goes to the neighbour card, not to the rail item
+    "Hosts".
+- **Scope:**
+  - the structural places of the Sprint 12 and Sprint 13 code: `ControllerHandler` (in five
+    tasks), `NvConnection`, `NvHTTP` and `PairingManager`, `ComputerManagerService`, the identity,
+    Wake-on-LAN and crypto places, `TvChannelHelper` and `PosterContentProvider`,
+    `PreferenceConfiguration` and mDNS, the USB drivers, the on-screen controller, the capture
+    providers and `KeyboardTranslator.translate`;
+  - BORE-49, the duplication that Sprint 17b left: `RestoreOpenerFocus`, the pad fusing block,
+    the traversal-order modifier, `motorByte` and the test helpers;
+  - K6, the Windows `VK_*` codes declared three times in `:borealis:stream` (moved here by
+    Sprint 16);
+  - C4, the controller-input fusing block of `ControllerHandler`, written out three times (moved
+    here by Sprint 16; it is the fusing block of BORE-49);
+  - the deletion of `StreamConfiguration.continuousAudio` and its query in `NvHTTP` (owner,
+    2026-11-05: delete it; it has no caller since Sprint 17a turned continuous audio off);
+  - a relabel sweep for the Sprint 12 and Sprint 13 markers that no task removed.
+- **Two deviations from the split, stated.** The flaky `ControllerNumberLimitTest` and the
+  `MenuChordDetector.update` complexity refactor are in 18a, not 18b, because both are input code.
+  - **A flaky controller test**, from Sprint 17a (seen once each in three task gates of the phase).
+    `ControllerNumberLimitTest`, "a number that frees up goes to the pad that was left out", fails
+    with an NPE at `ControllerHandler.kt:244` and depends on the order of the tests. Make it
+    deterministic.
+  - **`MenuChordDetector.update`** (`borealis/stream/.../input/MenuChordDetector.kt`), from the
+    Sprint 9 quality review: a complexity refactor. Cyclomatic complexity 13 and cognitive
+    complexity 18, seven mutable fields, a repeated expression, and an order dependency with no
+    comment.
+- **Method:** behaviour does not change outside wave 0. Characterization tests come first where a
+  refactored method has none. A refactored place loses its suppression and its marker.
+- **Ends with a device round** on the controls and the host flows: pads on USB and Bluetooth,
+  rumble, mouse emulation, touch, the on-screen controller, the keyboard, the menu chord, the TV
+  focus after Hide and Forget, Add host, pairing, wake and shortcuts.
+
+### Sprint 18b: refactor of the converted code (video, audio and the stream activity) and test tooling
+
+Planned, not started. Phase card BORE-86. Split from Sprint 18 by the owner on 2026-11-05; see
+[Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input).
+
+- **The Sprint 14 markers that a refactor can clear**, under the marker rule, in `Game.kt`,
+  `binding/video/MediaCodecDecoderRenderer.kt`, `binding/video/MediaCodecHelper.kt` and
+  `binding/audio/AndroidAudioRenderer.kt` (all under `apps/android/app/src/main/kotlin/com/limelight/`).
+  The whole-class `LargeClass` and `TooManyFunctions` markers of these files go to
+  [Sprint 18d](#sprint-18d-splitting-the-large-converted-classes).
+- **MoonBridge and VideoDecoderRenderer** (`nvstream/jni/MoonBridge.kt`, 8 places, and
+  `nvstream/av/video/VideoDecoderRenderer.kt`, 1 place) are bound to the JNI, so they are relabeled
+  `(Sprint 18c backlog)` and not refactored. See [Sprint 18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code).
+- **A8**, moved here by Sprint 16: a comment on the 7.1 mask `0x18FC` of `AndroidAudioRenderer`
+  still says that the constant is hardcoded for Lollipop. Only the value is pinned, by
+  `AudioRendererSetupCharacterizationTest`, "8 channels ask for the 7 point 1 surround mask".
 - **Test and tooling items.** Moved here from the [backlog](#backlog-not-scheduled) (owner,
-  2026-10-28):
-  - item (c) of the block "From the Sprint 14 conversion": the tests that read text, the test code that
-    repeats across modules, the smaller leftovers and the Robolectric limit;
+  2026-10-28), except the two items that 18a takes: `ControllerNumberLimitTest` and
+  `MenuChordDetector.update`.
+  - item (c) of the block "From the Sprint 14 conversion": `GameWiringTest` keeps 6 tests that read
+    text (3 read `NvConnection.kt`, 3 read `src/main/res`); test code repeats across modules
+    (`MainDispatcherRule`, `WorkerDispatcherRule` and the device qualifiers); the smaller leftovers
+    (`ANDROID_NS`, the `@Config(sdk = [30])` literals, the name of `BorealisCoverageTest`, and line 16
+    of `apps/android/borealis/README.md`); and the Robolectric limit;
   - the open entries of item (c) of the block "From the Sprint 13 conversion": the wall-clock test
-    (`ButtonTimingCharacterizationTest`) and the Robolectric sandbox limit. Its entries marked "Done in Sprint 14"
-    are done;
-  - **`MenuChordDetector.update`** (`borealis/stream/.../input/MenuChordDetector.kt`), from the Sprint 9
-    quality review: a complexity refactor. Cyclomatic complexity 13 and cognitive complexity 18, seven mutable
-    fields, a repeated expression, and an order dependency with no comment;
+    (`ButtonTimingCharacterizationTest`) and the Robolectric sandbox limit. Its entries marked
+    "Done in Sprint 14" are done;
   - **Test fixtures and the Reduced glass values**, from [Sprint 15](#sprint-15-the-stream-screens-and-glass)
-    (the reviews of #104): other tests that end on a screen outside the game with the default look (the
-    default background style, which moves) have the order hazard that `StreamBackTest` had, so consider a
-    background Off default in the test fixtures; and `VideoGlassSpec.kt` (`:borealis:stream`) repeats the
-    Reduced values (85 percent, 48 dp) that `GlassRules` keeps private, with a comment that points at
-    ADR 0057, so keep them in one place.
-  - **Two flaky tests and the duplicated pixel helpers**, from Sprint 15 (the gates and reviews of the phase;
-    the owner listed them for the backlog on 2026-10-30). `StreamChromeHostFrozenFrameTest` failed once under
-    load with a Robolectric `NullPointerException` before the body of the test, and `StreamBackTest` "back
-    opens the menu…" failed once on the timing of `menuHintShown`. The stream tests also repeat pixel helpers:
-    `ui/glass/PixelSupport.kt` against the private copies in `DialogOverBackgroundTest` and
-    `DialogOverBackgroundApi30Test`, and the private `assertNear` copies in four stream tests. Make the two
-    tests deterministic, and keep the helpers in one place.
-  - **The Failed phase of `StreamChromeHost.handleBack` and two untested branches**, from Sprint 15 (the known
-    limits): the branch is unreachable while the popup is composed, and `FrozenFrame.kt` (the copy worked but
-    the view has no bounds when it ends) and `VideoSource.kt` (a refused `PixelCopy` request) have no test.
-    Remove the first, and test or delete the others.
+    (the reviews of #104): other tests that end on a screen outside the game with the default look
+    (the default background style, which moves) have the order hazard that `StreamBackTest` had, so
+    consider a background Off default in the test fixtures; and `VideoGlassSpec.kt`
+    (`:borealis:stream`) repeats the Reduced values (85 percent, 48 dp) that `GlassRules` keeps
+    private, with a comment that points at ADR 0057, so keep them in one place.
+  - **Two flaky tests and the duplicated pixel helpers**, from Sprint 15 (the gates and reviews of
+    the phase; the owner listed them for the backlog on 2026-10-30). `StreamChromeHostFrozenFrameTest`
+    failed once under load with a Robolectric `NullPointerException` before the body of the test,
+    and `StreamBackTest` "back opens the menu…" failed once on the timing of `menuHintShown`. The
+    stream tests also repeat pixel helpers: `ui/glass/PixelSupport.kt` against the private copies in
+    `DialogOverBackgroundTest` and `DialogOverBackgroundApi30Test`, and the private `assertNear`
+    copies in four stream tests. Make the two tests deterministic, and keep the helpers in one place.
+  - **The Failed phase of `StreamChromeHost.handleBack` and two untested branches**, from Sprint 15
+    (the known limits): the branch is unreachable while the popup is composed, and `FrozenFrame.kt`
+    (the copy worked but the view has no bounds when it ends) and `VideoSource.kt` (a refused
+    `PixelCopy` request) have no test. Remove the first, and test or delete the others.
   - **The test heap of `:borealis:library` and `:borealis:settings`**, from Sprint 15: under load
     (two Gradle runs at once on 2026-10-29) their accessibility tests ran out of memory. Only `:app`
     gets the 2 GB heap of `BorealisUnitTestHeap` (`build-logic`); decide whether these two modules
     need it too, or whether one Gradle run at a time stays the rule.
   - **A flaky renderer test**, from Sprint 16 (the gates of #113): `RendererRecoveryTest`, "three
-    seconds after the first failure that is not recovered …", failed once in a full gate under load,
-    and passed 5 times out of 5 alone at the base and at the head of the batch. Make it
-    deterministic.
-  - **A flaky controller test**, from Sprint 17a (seen once each in three task gates of the phase).
-    `ControllerNumberLimitTest`, "a number
-    that frees up goes to the pad that was left out", fails with an NPE at `ControllerHandler.kt:244`
-    and depends on the order of the tests. Make it deterministic.
+    seconds after the first failure that is not recovered …", failed once in a full gate under
+    load, and passed 5 times out of 5 alone at the base and at the head of the batch. Make it
+    deterministic. This is BORE-37.
   - **The `menu_glass_*` Roborazzi references**, from Sprint 17a. Four of the eight under
-    `apps/android/borealis/stream/src/test/screenshots/` (`menu_glass_handheld`, `menu_glass_phone`,
-    `menu_glass_phone_white-frame`, `menu_glass_tv_focused`) changed when two tasks re-recorded the
-    module on Windows, with no change to the menu; the tasks kept the committed ones, and the verify
-    passes with them. Find why they move.
-- **A code item, from Sprint 17a.** `StreamConfiguration.continuousAudio` has no caller (Sprint 17a
-  turned continuous audio off after measuring it). Delete the field and its query in `NvHTTP`, or give
-  it a setting with a consumer.
-- **Method:** behaviour does not change. The characterization tests guide the refactor. A
-  refactored place loses its suppression and its marker.
+    `apps/android/borealis/stream/src/test/screenshots/` (`menu_glass_handheld`,
+    `menu_glass_phone`, `menu_glass_phone_white-frame`, `menu_glass_tv_focused`) changed when two
+    tasks re-recorded the module on Windows, with no change to the menu; the tasks kept the
+    committed ones, and the verify passes with them. Find why they move.
+- **Ends with a picture-and-sound device round.**
+
+### Sprint 18c: the behaviour-bound places of the converted code
+
+Planned, not started. Phase card BORE-87. Owner decision of 2026-11-05: the places that a refactor
+cannot clear without changing behaviour or the ABI get their own sprint, after 18a and 18b and
+before the class splits of 18d.
+
+- **Scope:** every place relabeled `(Sprint 18c backlog)` by the marker rule of 18a and 18b, among
+  them `MoonBridge.kt` and `VideoDecoderRenderer.kt` (the Sprint 14 block, bound to the JNI), and any
+  behaviour-changing leftover that 18a and 18b report.
+- `PrintStackTrace` becomes `BorealisLog`, under the address rule for logs (owner, 2026-10-24; see
+  the [Sprint 19 section](#sprint-19-secops)). Generic catches are narrowed. Deprecated APIs are
+  swapped behind API checks. The `@SuppressLint` places are reviewed.
+- The JNI and the fixed signatures cannot change. Each one gets a final "kept" comment with the
+  reason.
+- **Ends with a device round.**
+
+### Sprint 18d: splitting the large converted classes
+
+Planned, not started. Phase card BORE-88. Owner decision of 2026-11-05.
+
+- **Scope:** the 16 whole-class `LargeClass` and `TooManyFunctions` markers, relabeled
+  `(Sprint 18d backlog)`, among them `ControllerHandler` (about 4,300 lines, first), `Game`,
+  `MediaCodecDecoderRenderer`, `MediaCodecHelper`, `ComputerManagerService`, `NvConnection`,
+  `NvHTTP` and `PreferenceConfiguration`.
+- Characterization tests carry each split. The `com.limelight` names, the JNI and the manifest stay.
 - **Ends with a device round.**
 
 ### Sprint 19: SecOps
@@ -2049,6 +2161,9 @@ release. Sprint 19 is hardening and security testing.
   - An independent review recommended against a `/unpair` cancel route.
   - See [host contract, section 4.3](host-contract/luminalshine.md#43-pairing-status-codes)
     and the [host-side table](#host-side-items-luminalshine).
+- **BORE-50, from Sprint 17b: "already paired" cannot be reached with LuminalShine.** The owner's
+  choice, a reworded message or a pairing over HTTPS on re-add, is weighed with the pairing review
+  of this sprint (owner, 2026-11-05). See [section 23](development/device-validation.md#23-results-sprint-17b), finding 1.
 - **Security observations from the Sprint 12 conversion.** Paths are under
   `apps/android/app/src/main/kotlin/`. Each one is a finding to audit, not a fix.
   - Pinning accepts any certificate the platform trusts; the pin only limits the
@@ -2220,7 +2335,7 @@ The owner creates the tag. See the [release procedure](development/release.md).
 
 On 2026-10-28 the owner moved nearly all of this backlog to
 [Sprint 17](#sprint-17-general-fixes) (general fixes) and
-[Sprint 18](#sprint-18-refactor-of-the-converted-code) (refactor of the converted code). Each
+[Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (refactor of the converted code, split into 18a to 18d on 2026-11-05). Each
 block below says where its entries went. The conversion blocks keep their lists (a), (b) and (c) in
 place, because the sprints that take them point here.
 
@@ -2234,7 +2349,7 @@ From the Sprint 9 quality review. None of these changes behaviour. Sprint 10 (it
 deprecated `FocusProperties.enter`, the copied spacing constants and the two background defaults.
 The test size item moved to Sprint 14, the quit wording to Sprint 15 and the host details to
 Sprint 20. The `MenuChordDetector.update` complexity refactor moved to
-[Sprint 18](#sprint-18-refactor-of-the-converted-code) (owner, 2026-10-28). Nothing is left
+[Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (owner, 2026-10-28; in 18a since the split of 2026-11-05). Nothing is left
 here.
 
 From the Sprint 9 device round, 2026-10-19. Sprint 10 took the Back from Apps focus, the About
@@ -2256,7 +2371,7 @@ restarts", and from there to Sprint 17 the same day. The list code (`ComputerMan
 Kotlin from Sprint 12 on. Nothing is left here.
 
 From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
-[Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (b) for
+[Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) and item (b) for
 [Sprint 16](#sprint-16-fixes-of-the-converted-code) (owner, 2026-10-28). Item (c) is listed under
 [Sprint 19](#sprint-19-secops), and item (d) went to Sprints 17 and 19. Paths are under
 `apps/android/app/src/main/kotlin/com/limelight/`, except `HeldStageFailures.kt`,
@@ -2445,9 +2560,9 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
     does not send it.
 
 From the Sprint 13 conversion (2026-10-25). Item (a) is scheduled for
-[Sprint 18](#sprint-18-refactor-of-the-converted-code), item (b) for
+[Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input), item (b) for
 [Sprint 16](#sprint-16-fixes-of-the-converted-code), the open entries of item (c) for
-[Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (d) for
+[Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling) and item (d) for
 [Sprint 17](#sprint-17-general-fixes) (owner, 2026-10-28). None of the bugs was fixed by the
 conversion: it keeps behaviour (ADR 0059, rule 10). [Sprint 16](#sprint-16-fixes-of-the-converted-code)
 took item (b), and each of its entries now ends with its triage id and what Sprint 16 did. Paths are under
@@ -2517,7 +2632,7 @@ took item (b), and each of its entries now ends with its triage id and what Spri
     - `InputCaptureManager` logs "Android O+ native mouse capture", though there is one provider.
       **K5, Sprint 16:** fixed (#109). The line reads "Using the native pointer capture".
     - The Windows `VK_*` codes are duplicated in `borealis/stream/.../KeyboardLayout.kt`. **K6,
-      Sprint 16:** moved to [Sprint 18](#sprint-18-refactor-of-the-converted-code).
+      Sprint 16:** moved to [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input).
   - **Touch** (`touch/`):
     - `RelativeTouchContext`: the release runnables of the middle, X1 and X2 buttons are
       unreachable, because `getMouseButtonIndex` gives only left or right. **T1, Sprint 16:**
@@ -2613,7 +2728,7 @@ took item (b), and each of its entries now ends with its triage id and what Spri
       Sprint 16:** fixed (#108) with `?.let`. The triage found no null path today: a pad is marked
       quad only with a manager.
     - The controller-input fusing block is written out three times (about lines 1479 to 1514 of
-      the Java). **C4, Sprint 16:** moved to [Sprint 18](#sprint-18-refactor-of-the-converted-code).
+      the Java). **C4, Sprint 16:** moved to [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input).
     - The `gestures` constructor property is stored and never read. **C5, Sprint 16:** deleted in
       wave 2 (#108), with its argument at the `Game` call site and in the test rigs.
     - `(byte)(lt * 0xFF)` turns negative above 0.5; `(short)(x * 0x7FFE)` wraps past plus or
@@ -2710,9 +2825,10 @@ took item (b), and each of its entries now ends with its triage id and what Spri
 
 From the Sprint 14 conversion (2026-10-27). The owner decided on 2026-10-27 that the defects
 of item (b) are fixed after Sprint 14. On 2026-10-28 the owner scheduled item (a) for
-[Sprint 18](#sprint-18-refactor-of-the-converted-code), item (b) for
+[Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling), [18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code)
+and [18d](#sprint-18d-splitting-the-large-converted-classes), item (b) for
 [Sprint 16](#sprint-16-fixes-of-the-converted-code), item (c) for
-[Sprint 18](#sprint-18-refactor-of-the-converted-code) and item (d) for Sprints 17
+[Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling) and item (d) for Sprints 17
 and 19, as item (d) says. None of the defects was fixed by the conversion: it keeps behaviour (ADR
 0059, rule 10), and each one was kept as it was and pinned by a test that passes on the Java and on
 the Kotlin, so a fix changes that test on purpose. [Sprint 16](#sprint-16-fixes-of-the-converted-code)
@@ -2966,7 +3082,7 @@ test is named, none pins the item.
     - A comment on the 7.1 mask `0x18FC` still says that the constant is hardcoded for Lollipop.
       Only the value is pinned: `AudioRendererSetupCharacterizationTest`, "8 channels ask for the
       7 point 1 surround mask". **A8, Sprint 16:** moved to
-      [Sprint 18](#sprint-18-refactor-of-the-converted-code).
+      [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling).
   - **MoonBridge** (`nvstream/jni/MoonBridge.kt` and `app/src/main/jni/moonlight-core/`):
     - `VIDEO_FORMAT_MASK_10BIT` is `0x2200` in Kotlin and `0xAA00` in `Limelight.h`, which also
       counts the 4:4:4 formats. It has no effect today, because the client never asks for them.

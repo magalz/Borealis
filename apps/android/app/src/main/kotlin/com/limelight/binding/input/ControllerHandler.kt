@@ -323,6 +323,10 @@ class ControllerHandler(
             // The PC drops the battery of a controller together with it, so the flag of the number
             // starts over: the next pad on the number has to tell the host again that it has none
             val freedNumber = context.controllerNumber.toInt()
+
+            // A poll behind the reset would set the flag again: the pad retires before the reset is
+            // queued, and destroy() comes only after the zero packet below
+            (context as? InputDeviceContext)?.retired = true
             backgroundThreadHandler.post { numberHasNoBattery[freedNumber] = false }
 
             // The PC drops the controller with the zeroed packet below, so it has no input to
@@ -3723,10 +3727,19 @@ class ControllerHandler(
             return hasSelect
         }
 
+        // Set once the pad has left. A poll that the thread had already taken cannot be cancelled
+        // and
+        // runs once more: it finds this set, so it neither reports for a number that is no longer
+        // the pad's nor queues its next turn
+        @JvmField @Volatile var retired = false
+
         @JvmField
         val batteryStateUpdateRunnable: Runnable =
             object : Runnable {
                 override fun run() {
+                    if (retired) {
+                        return
+                    }
                     sendControllerBatteryPacket(this@InputDeviceContext)
 
                     // Requeue the callback

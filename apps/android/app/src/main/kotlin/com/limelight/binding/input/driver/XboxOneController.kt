@@ -148,10 +148,11 @@ class XboxOneController(
         return true
     }
 
-    // A motor shifted down, but never to 0 for a motor that is not zero, so a weak rumble is not
-    // lost and only a real zero stops the motor.
+    // A motor shifted down as an unsigned number (the motor bytes take 0 to 0x7F), but never to 0
+    // for a motor that is not zero, so a weak rumble is not lost and only a real zero stops the
+    // motor.
     private fun motorByte(motor: Short): Byte {
-        val byte = (motor.toInt() shr MOTOR_SHIFT).toByte()
+        val byte = ((motor.toInt() and 0xFFFF) shr MOTOR_SHIFT).toByte()
         return if (byte.toInt() == 0 && motor.toInt() != 0) 1 else byte
     }
 

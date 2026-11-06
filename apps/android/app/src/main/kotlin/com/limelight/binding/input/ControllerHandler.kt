@@ -247,6 +247,12 @@ class ControllerHandler(
         // Unregister our input device callbacks
         inputManager.unregisterInputDeviceListener(this)
 
+        // The buttons a pad in mouse mode holds go up before anything that waits on a pad, and
+        // before the contexts end it
+        inputDeviceContexts.forEachValue { releaseMouseButtons(it) }
+        usbDeviceContexts.forEachValue { releaseMouseButtons(it) }
+        releaseMouseButtons(defaultContext)
+
         inputDeviceContexts.forEachValue { deviceContext -> deviceContext.destroy() }
 
         val zeroingStarted = SystemClock.uptimeMillis()
@@ -1314,10 +1320,11 @@ class ControllerHandler(
         }
     }
 
-    // Mouse buttons held by a pad in mouse mode would stay down on the PC. A pad that leaves
-    // releases them here too, but destroy() does not: a changed device destroys its old context and
-    // the new one carries the click over. The lock is the packet send's, so no packet follows the
-    // release, and a second release finds the buttons let go.
+    // Mouse buttons held by a pad in mouse mode would stay down on the PC. A pad that leaves and
+    // the stop of the handler release them here too, but a context's destroy() does not: a changed
+    // device destroys its old context and the new one carries the click over. The lock is the
+    // packet send's, so no packet follows the release, and a second release finds the buttons let
+    // go.
     private fun releaseMouseButtons(context: GenericControllerContext) {
         synchronized(inputLock) {
             if (context.mouseEmulationActive) {

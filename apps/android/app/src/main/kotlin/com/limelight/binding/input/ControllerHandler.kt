@@ -1322,8 +1322,7 @@ class ControllerHandler(
 
     // Mouse buttons held by a pad in mouse mode would stay down on the PC; of those, only the ones
     // in [only] go up. The lock is the packet send's, so no packet follows the release, and a
-    // second
-    // release finds the buttons let go.
+    // second release finds the buttons let go.
     private fun releaseMouseButtons(
         context: GenericControllerContext,
         only: Int = ControllerPacket.A_FLAG or ControllerPacket.B_FLAG,

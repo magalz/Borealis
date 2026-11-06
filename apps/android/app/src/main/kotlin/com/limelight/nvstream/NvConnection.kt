@@ -3,6 +3,7 @@ package com.limelight.nvstream
 import android.app.ActivityManager
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.NetworkCapabilities
 import android.net.RouteInfo
 import android.os.Build
@@ -392,88 +393,91 @@ open class NvConnection(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ReturnCount", "PrintStackTrace")
     private fun detectServerConnectionType(): Int {
         val connMgr =
             appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork = connMgr.activeNetwork
-        if (activeNetwork != null) {
-            val netCaps = connMgr.getNetworkCapabilities(activeNetwork)
-            if (netCaps != null) {
-                if (
-                    netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                        !netCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                ) {
-                    // VPNs are treated as remote connections
-                    return StreamConfiguration.STREAM_CFG_REMOTE
-                } else if (netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                    // Cellular is always treated as remote to avoid any possible
-                    // issues with 464XLAT or similar technologies.
-                    return StreamConfiguration.STREAM_CFG_REMOTE
-                }
-            }
+        val activeNetwork = connMgr.activeNetwork ?: return StreamConfiguration.STREAM_CFG_AUTO
+        // If we can't determine the connection type, let moonlight-common-c decide.
+        return remoteByTransport(connMgr.getNetworkCapabilities(activeNetwork))
+            ?: typeByLink(connMgr.getLinkProperties(activeNetwork))
+            ?: StreamConfiguration.STREAM_CFG_AUTO
+    }
 
-            // Check if the server address is on-link
-            val linkProperties = connMgr.getLinkProperties(activeNetwork)
-            if (linkProperties != null) {
-                val serverAddress: InetAddress
-                try {
-                    serverAddress = resolveServerAddress()
-                } catch (e: IOException) {
-                    e.printStackTrace()
+    /** The remote type for a VPN or a cellular network; null when [netCaps] do not say. */
+    private fun remoteByTransport(netCaps: NetworkCapabilities?): Int? {
+        if (netCaps == null) {
+            return null
+        }
+        // VPNs are treated as remote connections. Cellular is always treated as remote to avoid any
+        // possible issues with 464XLAT or similar technologies.
+        val remote =
+            netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
+                !netCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) ||
+                netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        return if (remote) StreamConfiguration.STREAM_CFG_REMOTE else null
+    }
 
-                    // We can't decide without being able to resolve the server address
-                    return StreamConfiguration.STREAM_CFG_AUTO
-                }
+    /**
+     * Whether the server address is on-link, from the link properties of the network; null when
+     * they do not say.
+     */
+    private fun typeByLink(linkProperties: LinkProperties?): Int? {
+        if (linkProperties == null) {
+            return null
+        }
+        val serverAddress = resolveServerAddressOrNull()
+        return when {
+            // We can't decide without being able to resolve the server address
+            serverAddress == null -> StreamConfiguration.STREAM_CFG_AUTO
+            // If the address is in the NAT64 prefix, always treat it as remote
+            inNat64Prefix(linkProperties, serverAddress) -> StreamConfiguration.STREAM_CFG_REMOTE
+            hasOnLinkRoute(linkProperties, serverAddress) -> StreamConfiguration.STREAM_CFG_LOCAL
+            else -> null
+        }
+    }
 
-                // If the address is in the NAT64 prefix, always treat it as remote
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    val nat64Prefix = linkProperties.nat64Prefix
-                    if (nat64Prefix != null && nat64Prefix.contains(serverAddress)) {
-                        return StreamConfiguration.STREAM_CFG_REMOTE
-                    }
-                }
-
-                for (route in linkProperties.routes) {
-                    // Skip non-unicast routes (which are all we get prior to Android 13)
-                    if (
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            route.type != RouteInfo.RTN_UNICAST
-                    ) {
-                        continue
-                    }
-
-                    // Find the first route that matches this address
-                    if (route.matches(serverAddress)) {
-                        // If there's no gateway, this is an on-link destination
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            // We want to use hasGateway() because getGateway() doesn't adhere
-                            // to documented behavior of returning null for on-link addresses.
-                            if (!route.hasGateway()) {
-                                return StreamConfiguration.STREAM_CFG_LOCAL
-                            }
-                        } else {
-                            // getGateway() is documented to return null for on-link destinations,
-                            // but it actually returns the unspecified address (0.0.0.0 or ::).
-                            val gateway = route.gateway
-                            if (gateway == null || gateway.isAnyLocalAddress) {
-                                return StreamConfiguration.STREAM_CFG_LOCAL
-                            }
-                        }
-
-                        // We _should_ stop after the first matching route, but for some reason
-                        // Android doesn't always report IPv6 routes in descending order of
-                        // specificity and metric. To handle that case, we enumerate all matching
-                        // routes, assuming that an on-link route will always be preferred.
-                    }
-                }
-            }
+    // Converted as is from the inherited Java; the stack trace that it prints to stderr stays as it
+    // was (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun resolveServerAddressOrNull(): InetAddress? =
+        try {
+            resolveServerAddress()
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
         }
 
-        // If we can't determine the connection type, let moonlight-common-c decide.
-        return StreamConfiguration.STREAM_CFG_AUTO
-    }
+    private fun inNat64Prefix(linkProperties: LinkProperties, serverAddress: InetAddress): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            linkProperties.nat64Prefix?.contains(serverAddress) == true
+
+    // We _should_ stop after the first matching route, but for some reason Android doesn't always
+    // report IPv6 routes in descending order of specificity and metric. To handle that case, we
+    // enumerate all matching routes, assuming that an on-link route will always be preferred.
+    private fun hasOnLinkRoute(
+        linkProperties: LinkProperties,
+        serverAddress: InetAddress,
+    ): Boolean =
+        linkProperties.routes.any { route ->
+            !isSkipped(route) && route.matches(serverAddress) && isOnLink(route)
+        }
+
+    // Skip non-unicast routes (which are all we get prior to Android 13)
+    private fun isSkipped(route: RouteInfo): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && route.type != RouteInfo.RTN_UNICAST
+
+    // If there's no gateway, this is an on-link destination
+    private fun isOnLink(route: RouteInfo): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // We want to use hasGateway() because getGateway() doesn't adhere to documented
+            // behavior of returning null for on-link addresses.
+            !route.hasGateway()
+        } else {
+            // getGateway() is documented to return null for on-link destinations, but it actually
+            // returns the unspecified address (0.0.0.0 or ::).
+            val gateway = route.gateway
+            gateway == null || gateway.isAnyLocalAddress
+        }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     @Suppress(

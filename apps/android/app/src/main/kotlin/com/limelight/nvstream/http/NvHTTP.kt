@@ -3,7 +3,6 @@ package com.limelight.nvstream.http
 import com.limelight.BuildConfig
 import com.limelight.LimeLog
 import com.limelight.nvstream.ConnectionContext
-import com.limelight.nvstream.StreamConfiguration
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import com.limelight.nvstream.http.PairingManager.PairState
 import com.limelight.nvstream.jni.MoonBridge
@@ -776,7 +775,6 @@ constructor(
                     (if (streamConfig.playLocalAudio) 1 else 0) +
                     "&surroundAudioInfo=" +
                     checkNotNull(streamConfig.audioConfiguration).surroundAudioInfo +
-                    continuousAudioQuery(context, streamConfig) +
                     "&remoteControllersBitmap=" +
                     streamConfig.attachedGamepadMask +
                     "&gcmap=" +
@@ -796,18 +794,6 @@ constructor(
             return false
         }
     }
-
-    // BOREALIS: only LuminalShine reads it: the host then sends silence while the PC is quiet
-    // (host.launch)
-    private fun continuousAudioQuery(
-        context: ConnectionContext,
-        streamConfig: StreamConfiguration,
-    ): String =
-        if (streamConfig.continuousAudio && !context.isNvidiaServerSoftware) {
-            CONTINUOUS_AUDIO_QUERY
-        } else {
-            ""
-        }
 
     // BOREALIS: asks the host to cancel the app that this client launched, without the check of
     // quitApp for the app of another client: the leave of a start that never streamed (host.launch)
@@ -870,8 +856,6 @@ constructor(
         private const val NIBBLE_BITS = 4
         private const val BYTE_MASK = 0xFF
         private const val NIBBLE_MASK = 0x0F
-
-        private const val CONTINUOUS_AUDIO_QUERY = "&continuousAudio=1"
 
         private const val HDR_QUERY =
             "&hdrMode=1&clientHdrCapVersion=0&clientHdrCapSupportedFlagsInUint32=0" +

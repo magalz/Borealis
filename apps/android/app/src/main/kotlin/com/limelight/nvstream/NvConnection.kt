@@ -741,29 +741,24 @@ open class NvConnection(
         return launchNotRunningApp(h, context)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount")
     @Throws(IOException::class, XmlPullParserException::class)
     private fun launchNotRunningApp(h: NvHTTP, context: ConnectionContext): Boolean {
         // Launch the app since it's not running
         // BOREALIS: retries and cancellation
-        val launched = launchWithRetry(h, "launch", appToStart.appId)
-        if (launched == LaunchOutcome.CANCELLED) { // BOREALIS
-            return false
+        return when (launchWithRetry(h, "launch", appToStart.appId)) {
+            LaunchOutcome.CANCELLED -> false
+            // BOREALIS: ask the user once
+            LaunchOutcome.CONFLICT -> resolveConflict(h, context)
+            // BOREALIS: was !h.launchApp(context, "launch", ...)
+            LaunchOutcome.SUCCEEDED -> {
+                LimeLog.info("Launched new game session")
+                true
+            }
+            else -> {
+                context.listener.displayMessage("Failed to launch application")
+                false
+            }
         }
-        // BOREALIS: ask the user once
-        if (launched == LaunchOutcome.CONFLICT) {
-            return resolveConflict(h, context)
-        }
-        // BOREALIS: was !h.launchApp(context, "launch", ...)
-        if (launched != LaunchOutcome.SUCCEEDED) {
-            context.listener.displayMessage("Failed to launch application")
-            return false
-        }
-
-        LimeLog.info("Launched new game session")
-
-        return true
     }
 
     fun start(

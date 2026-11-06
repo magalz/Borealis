@@ -3336,6 +3336,7 @@ class ControllerHandler(
         val context = usbDeviceContexts.get(controller.controllerId)
         if (context != null) {
             LimeLog.info("Removed controller: ${controller.controllerId}")
+            releaseMouseButtons(context)
             releaseControllerNumber(context)
             context.destroy()
             usbDeviceContexts.remove(controller.controllerId)

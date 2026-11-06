@@ -128,10 +128,22 @@ abstract class AbstractXboxController(
             }
         }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount")
     override fun start(): Boolean {
-        // Force claim all interfaces
+        // Claim the interfaces, find the endpoints and run the init function, in this order
+        if (!claimInterfaces() || !findEndpoints() || !doInit()) {
+            return false
+        }
+
+        // Start listening for controller input
+        val thread = createInputThread()
+        inputThread = thread
+        thread.start()
+
+        return true
+    }
+
+    // Force claim all interfaces
+    private fun claimInterfaces(): Boolean {
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
 
@@ -140,8 +152,11 @@ abstract class AbstractXboxController(
                 return false
             }
         }
+        return true
+    }
 
-        // Find the endpoints
+    // Find the endpoints, one IN and one OUT, of the first interface
+    private fun findEndpoints(): Boolean {
         val iface = device.getInterface(0)
         for (i in 0 until iface.endpointCount) {
             val endpt = iface.getEndpoint(i)
@@ -161,22 +176,11 @@ abstract class AbstractXboxController(
         }
 
         // Make sure the required endpoints were present
-        if (inEndpt == null || outEndpt == null) {
+        val found = inEndpt != null && outEndpt != null
+        if (!found) {
             LimeLog.warning("Missing required endpoint")
-            return false
         }
-
-        // Run the init function
-        if (!doInit()) {
-            return false
-        }
-
-        // Start listening for controller input
-        val thread = createInputThread()
-        inputThread = thread
-        thread.start()
-
-        return true
+        return found
     }
 
     override fun stop() {

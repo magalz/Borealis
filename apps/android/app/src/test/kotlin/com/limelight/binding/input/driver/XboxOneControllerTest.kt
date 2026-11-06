@@ -15,6 +15,9 @@ import org.robolectric.annotation.Config
  * Characterizes the Xbox One driver through its public side: the packets it sends to the OUT
  * endpoint, and what reaches the listener from the reports a pad plays on the IN endpoint.
  */
+// One suite for one driver: detekt's size limit is passed, and the helpers are shared by every
+// test.
+@Suppress("LargeClass")
 @RunWith(RobolectricTestRunner::class)
 @Config(
     shadows =

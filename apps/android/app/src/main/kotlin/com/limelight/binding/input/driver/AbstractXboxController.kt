@@ -22,6 +22,10 @@ abstract class AbstractXboxController(
     // Set once by stop(), which the main thread and the reader thread can both call.
     private val stopped = AtomicBoolean(false)
 
+    // Whether the last rumble write failed. The rumble runs on the handler's thread and stop() on
+    // the main thread or the reader thread.
+    @Volatile private var lastRumbleFailed = false
+
     @JvmField protected var inEndpt: UsbEndpoint? = null
     @JvmField protected var outEndpt: UsbEndpoint? = null
 
@@ -173,8 +177,11 @@ abstract class AbstractXboxController(
             return
         }
 
-        // Cancel any rumble effects
-        rumble(0, 0)
+        // Cancel any rumble effects. A pad whose last rumble write failed is stuck: its write would
+        // block this thread, the main thread on an unbind, for the whole timeout again.
+        if (!lastRumbleFailed) {
+            rumble(0, 0)
+        }
 
         // Stop the input thread
         inputThread?.let {
@@ -187,6 +194,19 @@ abstract class AbstractXboxController(
 
         // Report the device removed
         notifyDeviceRemoved()
+    }
+
+    // Writes a rumble packet and remembers whether it went through. Returns true when the whole
+    // packet was sent.
+    protected fun writeRumble(data: ByteArray): Boolean {
+        val res =
+            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
+        val sent = res == data.size
+        if (!sent) {
+            LimeLog.warning("Rumble transfer failed: $res")
+        }
+        lastRumbleFailed = !sent
+        return sent
     }
 
     // A motor shifted down as an unsigned number, but never to 0 for a motor that is not zero, so

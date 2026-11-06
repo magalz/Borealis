@@ -1,12 +1,10 @@
 package io.github.magalz.borealis.input.ch5
 
 import android.hardware.Sensor
-import android.util.SparseArray
 import com.google.common.truth.Truth.assertThat
-import com.limelight.binding.input.ControllerHandler
 import io.github.magalz.borealis.input.feedback.DeviceFeatures
-import io.github.magalz.borealis.input.feedback.FeedbackRig
 import io.github.magalz.borealis.input.feedback.Hardware
+import io.github.magalz.borealis.testing.contextField
 import org.junit.Test
 
 /**
@@ -20,19 +18,6 @@ class MotionRequestTest : FeedbackCharacterization() {
 
     private fun sensorRig() = rig { gamepadMotionSensors = true }
 
-    /** The field [name] of the context of the pad with [id], as a number. */
-    private fun fieldOf(rig: FeedbackRig, id: Int, name: String): Any? {
-        @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.
-        val contexts =
-            ControllerHandler::class
-                .java
-                .getDeclaredField("inputDeviceContexts")
-                .apply { isAccessible = true }
-                .get(rig.handler) as SparseArray<Any>
-        val context = contexts.get(id)
-        return context.javaClass.getDeclaredField(name).apply { isAccessible = true }.get(context)
-    }
-
     @Test
     fun `a pad without sensors keeps the rates the host asked for`() {
         val rig = sensorRig()
@@ -43,11 +28,11 @@ class MotionRequestTest : FeedbackCharacterization() {
         rig.motionState(GYRO, 100)
         rig.motionState(ACCEL, 50)
 
-        assertThat(fieldOf(rig, pad.id, "sensorManager")).isNull()
-        assertThat(fieldOf(rig, pad.id, "gyroReportRateHz")).isEqualTo(100.toShort())
-        assertThat(fieldOf(rig, pad.id, "accelReportRateHz")).isEqualTo(50.toShort())
-        assertThat(fieldOf(rig, pad.id, "gyroListener")).isNull()
-        assertThat(fieldOf(rig, pad.id, "accelListener")).isNull()
+        assertThat(rig.handler.contextField(pad.id, "sensorManager")).isNull()
+        assertThat(rig.handler.contextField(pad.id, "gyroReportRateHz")).isEqualTo(100.toShort())
+        assertThat(rig.handler.contextField(pad.id, "accelReportRateHz")).isEqualTo(50.toShort())
+        assertThat(rig.handler.contextField(pad.id, "gyroListener")).isNull()
+        assertThat(rig.handler.contextField(pad.id, "accelListener")).isNull()
     }
 
     @Test

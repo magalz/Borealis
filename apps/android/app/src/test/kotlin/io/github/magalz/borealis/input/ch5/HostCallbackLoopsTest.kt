@@ -1,14 +1,13 @@
 package io.github.magalz.borealis.input.ch5
 
 import android.hardware.Sensor
-import android.util.SparseArray
 import com.google.common.truth.Truth.assertThat
-import com.limelight.binding.input.ControllerHandler
 import io.github.magalz.borealis.input.HeldReader
 import io.github.magalz.borealis.input.feedback.DeviceFeatures
 import io.github.magalz.borealis.input.feedback.FeedbackRig
 import io.github.magalz.borealis.input.feedback.Hardware
 import io.github.magalz.borealis.input.usbPad
+import io.github.magalz.borealis.testing.contextField
 import java.util.concurrent.TimeUnit
 import org.junit.Test
 import org.robolectric.util.ReflectionHelpers
@@ -22,19 +21,6 @@ import org.robolectric.util.ReflectionHelpers
 class HostCallbackLoopsTest : FeedbackCharacterization() {
     private fun FeedbackRig.padWith(id: Int, features: DeviceFeatures) =
         wake(connectPad(id = id, features = features))
-
-    /** The field [name] of the context of the pad with [id]. */
-    private fun fieldOf(rig: FeedbackRig, id: Int, name: String): Any? {
-        @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.
-        val contexts =
-            ControllerHandler::class
-                .java
-                .getDeclaredField("inputDeviceContexts")
-                .apply { isAccessible = true }
-                .get(rig.handler) as SparseArray<Any>
-        val context = contexts.get(id)
-        return context.javaClass.getDeclaredField(name).apply { isAccessible = true }.get(context)
-    }
 
     @Test
     fun `a rumble partway through the pads still reaches the ones that stay when the first leaves`() {
@@ -82,8 +68,8 @@ class HostCallbackLoopsTest : FeedbackCharacterization() {
         rig.handler.onInputDeviceRemoved(5)
 
         assertThat(reader.finish()).isNull()
-        assertThat(fieldOf(rig, 6, "gyroReportRateHz")).isEqualTo(100.toShort())
-        assertThat(fieldOf(rig, 7, "gyroReportRateHz")).isEqualTo(100.toShort())
+        assertThat(rig.handler.contextField(6, "gyroReportRateHz")).isEqualTo(100.toShort())
+        assertThat(rig.handler.contextField(7, "gyroReportRateHz")).isEqualTo(100.toShort())
     }
 
     @Test

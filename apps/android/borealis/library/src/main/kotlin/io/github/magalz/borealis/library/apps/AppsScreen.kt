@@ -56,7 +56,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.focus.RestoreOpenerFocus
-import io.github.magalz.borealis.library.focus.neighbourOf
+import io.github.magalz.borealis.library.focus.openerAfterRemoval
 
 /**
  * An outline reaches BorealisDimens.outlineReach outside a tile, thickOutlineReach when it is the
@@ -87,7 +87,7 @@ private const val STACKED_HEADER_FONT_SCALE = 2f
  * title takes the whole width: under the bar of a phone, above the toggle of a TV or handheld
  * ([STACKED_HEADER_FONT_SCALE]). When the last of these windows closes, the tile of the app they
  * were for has the focus again ([RestoreOpenerFocus]); after Hide, which takes the app off the
- * grid, it is the tile that takes its place ([openerAfterHide]). Messages go through
+ * grid, it is the tile that takes its place ([openerAfterRemoval]). Messages go through
  * [snackbarHostState]. Provides its own theme for [formFactor].
  */
 @Composable
@@ -153,7 +153,7 @@ fun AppsScreen(
                     // Hide takes the app off the grid only while the hidden apps are not shown (the
                     // filter of the ViewModel keeps `showHidden || !hidden`); else its tile stays.
                     if (action == AppAction.HIDE && !state.showHidden) {
-                        openerId = state.items.openerAfterHide(sheet.app.id, openerId)
+                        openerId = state.items.openerAfterRemoval(sheet.app.id, openerId) { it.id }
                     }
                     onActionChosen(action)
                 },
@@ -167,18 +167,6 @@ fun AppsScreen(
             focus = openerFocus,
         )
     }
-}
-
-/**
- * The app whose tile has the focus when the windows close after Hide on [appId], given that the app
- * that opened them is [openerId]. That tile is about to go, and the focus must not wait for it: it
- * is the tile that takes its place, the next one in the grid, or the previous one when it was the
- * last. It stays [openerId] when [appId] is not that app, is not listed or has no neighbour (no
- * tile is left, and the focus goes where Compose puts it).
- */
-private fun List<AppItemUiState>.openerAfterHide(appId: Int, openerId: Int?): Int? {
-    val neighbour = if (openerId == appId) neighbourOf { it.id == appId } else null
-    return neighbour?.id ?: openerId
 }
 
 /** The toggle of the phone bar, as an icon: a TV or handheld has a button in [Header]. */

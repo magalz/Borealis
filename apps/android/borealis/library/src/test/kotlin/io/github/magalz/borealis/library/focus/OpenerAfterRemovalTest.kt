@@ -1,10 +1,10 @@
 package io.github.magalz.borealis.library.focus
 
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.library.apps.AppItemUiState
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.hosts.HostAction
 import io.github.magalz.borealis.library.hosts.HostItemUiState
-import io.github.magalz.borealis.library.hosts.openerAfterForget
 import org.junit.Test
 
 /**
@@ -49,6 +49,25 @@ class OpenerAfterRemovalTest {
         assertThat(emptyList<HostItemUiState>().openerAfterForget("a", "a")).isEqualTo("a")
     }
 
+    @Test
+    fun `an app tile takes the focus the same way after Hide`() {
+        val apps = listOf(1, 2, 3).map(::app)
+
+        assertThat(apps.openerAfterHide(1, 1)).isEqualTo(2)
+        assertThat(apps.openerAfterHide(3, 3)).isEqualTo(2)
+        assertThat(apps.openerAfterHide(1, 3)).isEqualTo(3)
+        assertThat(apps.openerAfterHide(1, null)).isNull()
+        assertThat(listOf(app(1)).openerAfterHide(1, 1)).isEqualTo(1)
+    }
+
+    private fun List<HostItemUiState>.openerAfterForget(hostId: String, openerId: String?) =
+        openerAfterRemoval(hostId, openerId) { it.id }
+
+    private fun List<AppItemUiState>.openerAfterHide(appId: Int, openerId: Int?) =
+        openerAfterRemoval(appId, openerId) { it.id }
+
     private fun host(id: String) =
         HostItemUiState(id, "Host $id", Reachability.ONLINE, true, null, HostAction.OPEN)
+
+    private fun app(id: Int) = AppItemUiState(id, "App $id", false, false, false)
 }

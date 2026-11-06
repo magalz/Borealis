@@ -70,7 +70,8 @@ import org.cgutman.shieldcontrollerextensions.SceChargingState
 import org.cgutman.shieldcontrollerextensions.SceConnectionType
 import org.cgutman.shieldcontrollerextensions.SceManager
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// Converted as is from the inherited Java; LargeClass and TooManyFunctions stay because the class
+// waits for its split (Sprint 18d backlog).
 @Suppress("LargeClass", "TooManyFunctions")
 class ControllerHandler(
     private val activityContext: Activity,
@@ -2379,7 +2380,8 @@ class ControllerHandler(
         return if (unsigned != 0 && strength > 0) max(1, scaled).toShort() else scaled.toShort()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // Converted as is from the inherited Java; DEPRECATION stays for the AudioAttributes overloads
+    // of Vibrator.vibrate, which Android before 13 needs (Sprint 18c backlog).
     @Suppress("DEPRECATION")
     private fun rumbleSingleVibrator(
         vibrator: Vibrator,
@@ -2592,7 +2594,8 @@ class ControllerHandler(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // Converted as is from the inherited Java; DEPRECATION stays for WindowManager.defaultDisplay,
+    // which the device rotation is read from (Sprint 18c backlog).
     @Suppress("DEPRECATION")
     private fun createSensorListener(
         controllerNumber: Short,
@@ -3300,7 +3303,8 @@ class ControllerHandler(
         return true
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // Converted as is from the inherited Java; LongParameterList stays because the on-screen
+    // controller calls this method with this signature (Sprint 18c backlog).
     @Suppress("LongParameterList")
     fun reportOscState(
         buttonFlags: Int,
@@ -3806,8 +3810,8 @@ class ControllerHandler(
             }
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        // The run override carries the API level, which a lambda cannot.
+        // Converted as is from the inherited Java; ObjectLiteralToLambda stays because the run
+        // override carries the API level, which a lambda cannot (Sprint 18c backlog).
         @Suppress("ObjectLiteralToLambda")
         @JvmField
         val setLedStateRunnable: Runnable =
@@ -3838,7 +3842,8 @@ class ControllerHandler(
                 }
             }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+        // Converted as is from the inherited Java; TooGenericExceptionCaught stays because closing
+        // the lights session catches any RuntimeException, as the Java did (Sprint 18c backlog).
         @Suppress("TooGenericExceptionCaught")
         override fun destroy() {
             retired = true

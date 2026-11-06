@@ -895,8 +895,6 @@ open class NvConnection(
     }
 
     /** What the thread of [start] does. */
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("LongMethod", "ReturnCount")
     private fun runStart(
         audioRenderer: AudioRenderer?,
         videoDecoderRenderer: VideoDecoderRenderer?,
@@ -916,33 +914,7 @@ open class NvConnection(
 
         context.listener.stageStarting(appName)
 
-        try {
-            if (!startApp()) {
-                // BOREALIS: the user left, nothing to report
-                if (launchCancelled) {
-                    return
-                }
-                // BOREALIS: the step, not the app name
-                context.listener.stageFailed(startStep, 0, 0)
-                return
-            }
-            context.listener.stageComplete(appName)
-        } catch (e: HostHttpResponseException) {
-            // BOREALIS: the user left during the request, nothing to report
-            if (launchCancelled) {
-                return
-            }
-            // BOREALIS: the log masks addresses; the screen never shows the exception text
-            StartFailureLog.failed(startStep, e)
-            recordStartFailure(e) // BOREALIS: host.failure
-            // BOREALIS: the step, not the app name
-            context.listener.stageFailed(startStep, 0, e.errorCode)
-            return
-        } catch (e: XmlPullParserException) {
-            failedOnTheNetwork(e)
-            return
-        } catch (e: IOException) {
-            failedOnTheNetwork(e)
+        if (!startOnHost(appName)) {
             return
         }
 
@@ -954,8 +926,51 @@ open class NvConnection(
         val ib = ByteBuffer.allocate(RI_IV_SIZE)
         ib.putInt(context.riKeyId)
 
-        // Acquire the connection semaphore to ensure we only have one
-        // connection going at once.
+        if (!takePlace()) {
+            return
+        }
+
+        // Moonlight-core is not thread-safe with respect to connection start and stop, so
+        // we must not invoke that functionality in parallel.
+        synchronized(MoonBridge::class.java) {
+            startNative(audioRenderer, videoDecoderRenderer, connectionListener, ib.array())
+        }
+    }
+
+    /**
+     * The part of the start that talks to the host, up to the stage that is complete. False when
+     * the start is over: the host or the user ended it, and the listener has been told, unless the
+     * user left.
+     */
+    private fun startOnHost(appName: String?): Boolean =
+        try {
+            if (startApp()) {
+                context.listener.stageComplete(appName)
+                true
+            } else {
+                // BOREALIS: the user left, nothing to report
+                if (!launchCancelled) {
+                    // BOREALIS: the step, not the app name
+                    context.listener.stageFailed(startStep, 0, 0)
+                }
+                false
+            }
+        } catch (e: HostHttpResponseException) {
+            failedOnTheHost(e)
+            false
+        } catch (e: XmlPullParserException) {
+            failedOnTheNetwork(e)
+            false
+        } catch (e: IOException) {
+            failedOnTheNetwork(e)
+            false
+        }
+
+    /**
+     * Takes the place of the connection semaphore, to have only one connection going at once. False
+     * when the start is over: it was interrupted while it waited, or the user left.
+     */
+    private fun takePlace(): Boolean {
         try {
             connectionAllowed.acquire()
         } catch (e: InterruptedException) {
@@ -963,7 +978,7 @@ open class NvConnection(
             StartFailureLog.failed(startStep, e)
             // BOREALIS: the step, not the app name
             context.listener.stageFailed(startStep, 0, 0)
-            return
+            return false
         }
         // BOREALIS: before the cancel check, so that a stop() from here on gives the place back
         // too (host.launch)
@@ -971,75 +986,107 @@ open class NvConnection(
         // BOREALIS: left while waiting for the semaphore
         if (launchCancelled) {
             releasePlace()
+            return false
+        }
+        return true
+    }
+
+    /** The native start, which [runStart] calls with the monitor of the bridge held. */
+    private fun startNative(
+        audioRenderer: AudioRenderer?,
+        videoDecoderRenderer: VideoDecoderRenderer?,
+        connectionListener: NvConnectionListener?,
+        iv: ByteArray,
+    ) {
+        // BOREALIS: a whole stop() may have come since the check above, and the native start
+        // would reset its interrupt: the start is either complete before the stop takes the
+        // monitor, and the stop then stops it, or it never begins. The flag is written before
+        // the cancel is read: stop() writes the cancel and then reads the flag outside the
+        // monitor to decide on the interrupt, so either this sees the cancel and never begins,
+        // or the stop sees the flag and interrupts. The opposite order would let the start
+        // begin after a stop that skipped the interrupt (host.launch)
+        if (!setBridgeUpUnlessCancelled()) {
+            releasePlace()
             return
         }
-
-        // Moonlight-core is not thread-safe with respect to connection start and stop, so
-        // we must not invoke that functionality in parallel.
-        synchronized(MoonBridge::class.java) {
-            // BOREALIS: a whole stop() may have come since the check above, and the native start
-            // would reset its interrupt: the start is either complete before the stop takes the
-            // monitor, and the stop then stops it, or it never begins. The flag is written before
-            // the cancel is read: stop() writes the cancel and then reads the flag outside the
-            // monitor to decide on the interrupt, so either this sees the cancel and never begins,
-            // or the stop sees the flag and interrupts. The opposite order would let the start
-            // begin after a stop that skipped the interrupt (host.launch)
-            if (!setBridgeUpUnlessCancelled()) {
-                releasePlace()
-                return
-            }
-            // BOREALIS: hold an RTSP failure that collides with another device
-            MoonBridge.setupBridge(
-                videoDecoderRenderer,
-                audioRenderer,
-                HeldStageFailures(checkNotNull(connectionListener), collisions),
-            )
-            val streamConfig = checkNotNull(context.streamConfig)
-            val ret =
-                MoonBridge.startConnection(
-                    checkNotNull(context.serverAddress).address,
-                    context.serverAppVersion,
-                    context.serverGfeVersion,
-                    context.rtspSessionUrl,
-                    context.serverCodecModeSupport,
-                    context.negotiatedWidth,
-                    context.negotiatedHeight,
-                    streamConfig.refreshRate,
-                    streamConfig.bitrate,
-                    context.negotiatedPacketSize,
-                    context.negotiatedRemoteStreaming,
-                    checkNotNull(streamConfig.audioConfiguration).toInt(),
-                    streamConfig.supportedVideoFormats,
-                    streamConfig.clientRefreshRateX100,
-                    checkNotNull(context.riKey).encoded,
-                    ib.array(),
-                    context.videoCapabilities,
-                    streamConfig.colorSpace,
-                    streamConfig.colorRange,
-                )
-            connected = ret == 0 // BOREALIS: stream.keyframe
-            nativeStartEnded(ret) // BOREALIS: host.launch
-            if (ret != 0) {
-                // LiStartConnection() failed, so the caller is not expected
-                // to stop the connection themselves. We need to release their
-                // semaphore count for them.
-                // BOREALIS: and the bridge: LiStartConnection undid its own work, so what is left
-                // is the renderers and the listener of this start, which must not outlive it. The
-                // flag goes before the place, because another connection may start right after
-                // this one gave it back, and a late stop() of this one must then make no native
-                // call; a restart sets it again. A stop that read the flag has made its interrupt
-                // by the time the lock lets the clear through, so it cannot land on the start of
-                // the connection that takes the place next (host.launch)
-                MoonBridge.cleanupBridge()
-                synchronized(bridgeFlagLock) { bridgeSetUp = false }
-                releasePlace()
-                // BOREALIS: restart the whole start once
-                if (collisions.restartAfterFailure()) {
-                    start(audioRenderer, videoDecoderRenderer, connectionListener)
-                }
-                return
-            }
+        // BOREALIS: hold an RTSP failure that collides with another device
+        MoonBridge.setupBridge(
+            videoDecoderRenderer,
+            audioRenderer,
+            HeldStageFailures(checkNotNull(connectionListener), collisions),
+        )
+        val ret = startNativeConnection(iv)
+        connected = ret == 0 // BOREALIS: stream.keyframe
+        nativeStartEnded(ret) // BOREALIS: host.launch
+        if (ret != 0) {
+            failedNativeStart(audioRenderer, videoDecoderRenderer, connectionListener)
         }
+    }
+
+    private fun startNativeConnection(iv: ByteArray): Int {
+        val streamConfig = checkNotNull(context.streamConfig)
+        return MoonBridge.startConnection(
+            checkNotNull(context.serverAddress).address,
+            context.serverAppVersion,
+            context.serverGfeVersion,
+            context.rtspSessionUrl,
+            context.serverCodecModeSupport,
+            context.negotiatedWidth,
+            context.negotiatedHeight,
+            streamConfig.refreshRate,
+            streamConfig.bitrate,
+            context.negotiatedPacketSize,
+            context.negotiatedRemoteStreaming,
+            checkNotNull(streamConfig.audioConfiguration).toInt(),
+            streamConfig.supportedVideoFormats,
+            streamConfig.clientRefreshRateX100,
+            checkNotNull(context.riKey).encoded,
+            iv,
+            context.videoCapabilities,
+            streamConfig.colorSpace,
+            streamConfig.colorRange,
+        )
+    }
+
+    /**
+     * The native start answered with an error: cleans the bridge up, gives the place back and
+     * restarts the start at most once.
+     */
+    private fun failedNativeStart(
+        audioRenderer: AudioRenderer?,
+        videoDecoderRenderer: VideoDecoderRenderer?,
+        connectionListener: NvConnectionListener?,
+    ) {
+        // LiStartConnection() failed, so the caller is not expected
+        // to stop the connection themselves. We need to release their
+        // semaphore count for them.
+        // BOREALIS: and the bridge: LiStartConnection undid its own work, so what is left
+        // is the renderers and the listener of this start, which must not outlive it. The
+        // flag goes before the place, because another connection may start right after
+        // this one gave it back, and a late stop() of this one must then make no native
+        // call; a restart sets it again. A stop that read the flag has made its interrupt
+        // by the time the lock lets the clear through, so it cannot land on the start of
+        // the connection that takes the place next (host.launch)
+        MoonBridge.cleanupBridge()
+        synchronized(bridgeFlagLock) { bridgeSetUp = false }
+        releasePlace()
+        // BOREALIS: restart the whole start once
+        if (collisions.restartAfterFailure()) {
+            start(audioRenderer, videoDecoderRenderer, connectionListener)
+        }
+    }
+
+    /** The host answered a request of the start with a status that is not 200. */
+    private fun failedOnTheHost(e: HostHttpResponseException) {
+        // BOREALIS: the user left during the request, nothing to report
+        if (launchCancelled) {
+            return
+        }
+        // BOREALIS: the log masks addresses; the screen never shows the exception text
+        StartFailureLog.failed(startStep, e)
+        recordStartFailure(e) // BOREALIS: host.failure
+        // BOREALIS: the step, not the app name
+        context.listener.stageFailed(startStep, 0, e.errorCode)
     }
 
     /** The XML of the host, or the connection to it, failed during the start. */

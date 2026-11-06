@@ -1634,203 +1634,262 @@ class ControllerHandler(
 
     // Return a valid keycode, -2 to consume, or -1 to not consume the event
     // Device MAY BE NULL
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "ReturnCount",
-    )
     private fun handleRemapping(context: InputDeviceContext, event: KeyEvent): Int {
-        // Don't capture the back button if configured
-        if (context.ignoreBack) {
-            if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-                return REMAP_IGNORE
-            }
+        // The first step that has an answer ends the remapping: the steps after it never see the
+        // key, which keeps the flags of the pad that they would change as they are
+        var keyCode = remapSpecialKey(context, event)
+        if (keyCode == REMAP_NONE) {
+            keyCode = remapByScanCode(context, event)
+        }
+        if (keyCode == REMAP_NONE) {
+            keyCode = fixUpKeyCode(context, event)
+        }
+        return keyCode
+    }
+
+    // The keys that no scan code table decides: Back on a pad that ignores it, the Share button,
+    // the clickpad of a Sony pad and the Mode button of an 8BitDo pad. REMAP_NONE for the others
+    private fun remapSpecialKey(context: InputDeviceContext, event: KeyEvent): Int =
+        when {
+            // Don't capture the back button if configured
+            context.ignoreBack && event.keyCode == KeyEvent.KEYCODE_BACK -> REMAP_IGNORE
+
+            // If we know this gamepad has a share button and receive an unmapped
+            // KEY_RECORD event, report that as a share button press.
+            context.hasShare &&
+                event.keyCode == KeyEvent.KEYCODE_UNKNOWN &&
+                event.scanCode == KEY_RECORD -> KeyEvent.KEYCODE_MEDIA_RECORD
+
+            isSonyClickpadSelect(context, event) -> KeyEvent.KEYCODE_BUTTON_1
+
+            // Override mode button for 8BitDo controllers
+            context.vendorId == VENDOR_8BITDO && event.scanCode == BTN_C ->
+                KeyEvent.KEYCODE_BUTTON_MODE
+            else -> REMAP_NONE
         }
 
-        // If we know this gamepad has a share button and receive an unmapped
-        // KEY_RECORD event, report that as a share button press.
-        if (context.hasShare) {
-            if (event.keyCode == KeyEvent.KEYCODE_UNKNOWN && event.scanCode == KEY_RECORD) {
-                return KeyEvent.KEYCODE_MEDIA_RECORD
-            }
+    // The Shield's key layout files map the DualShock 4 clickpad button to
+    // BUTTON_SELECT instead of something sane like BUTTON_1 as the standard AOSP
+    // mapping does. If we get a button from a Sony device reported as BUTTON_SELECT
+    // that matches the keycode used by hid-sony for the clickpad or it's from the
+    // separate touchpad input device, remap it to BUTTON_1 to match the current AOSP
+    // layout and trigger our touchpad button logic.
+    private fun isSonyClickpadSelect(context: InputDeviceContext, event: KeyEvent): Boolean {
+        if (context.vendorId != VENDOR_SONY || event.keyCode != KeyEvent.KEYCODE_BUTTON_SELECT) {
+            return false
         }
+        return event.scanCode == BTN_THUMBL || context.isDualShockStandaloneTouchpad
+    }
 
-        // The Shield's key layout files map the DualShock 4 clickpad button to
-        // BUTTON_SELECT instead of something sane like BUTTON_1 as the standard AOSP
-        // mapping does. If we get a button from a Sony device reported as BUTTON_SELECT
-        // that matches the keycode used by hid-sony for the clickpad or it's from the
-        // separate touchpad input device, remap it to BUTTON_1 to match the current AOSP
-        // layout and trigger our touchpad button logic.
-        if (
-            context.vendorId == VENDOR_SONY &&
-                event.keyCode == KeyEvent.KEYCODE_BUTTON_SELECT &&
-                (event.scanCode == BTN_THUMBL || context.isDualShockStandaloneTouchpad)
-        ) {
-            return KeyEvent.KEYCODE_BUTTON_1
+    // The scan code tables of the pads whose key layout is wrong or missing, in the order they
+    // apply: the first table that has an answer ends the search. REMAP_NONE when none has
+    private fun remapByScanCode(context: InputDeviceContext, event: KeyEvent): Int {
+        var keyCode = if (hasSwitchLayout(context)) switchButton(event.scanCode) else REMAP_NONE
+        if (keyCode == REMAP_NONE && context.usesLinuxGamepadStandardFaceButtons) {
+            keyCode = linuxFaceButton(event.scanCode)
         }
-
-        // Override mode button for 8BitDo controllers
-        if (context.vendorId == VENDOR_8BITDO && event.scanCode == BTN_C) {
-            return KeyEvent.KEYCODE_BUTTON_MODE
+        if (keyCode == REMAP_NONE) {
+            keyCode = remapQuirkyPad(context, event)
         }
+        if (keyCode == REMAP_NONE) {
+            keyCode = rawDpadButton(context, event)
+        }
+        return keyCode
+    }
 
-        // This mapping was adding in Android 10, then changed based on
-        // kernel changes (adding hid-nintendo) in Android 11. If we're
-        // on anything newer than Pie, just use the built-in mapping.
-        if (
-            (context.vendorId == VENDOR_NINTENDO &&
+    // This mapping was adding in Android 10, then changed based on
+    // kernel changes (adding hid-nintendo) in Android 11. If we're
+    // on anything newer than Pie, just use the built-in mapping.
+    private fun hasSwitchLayout(context: InputDeviceContext): Boolean {
+        // The Switch Pro controller
+        val switchPro =
+            context.vendorId == VENDOR_NINTENDO &&
                 context.productId == PRODUCT_SWITCH_PRO &&
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) || // Switch Pro controller
-                (context.vendorId == VENDOR_HORI && context.productId == PRODUCT_HORIPAD_SWITCH)
-        ) { // HORIPAD for Switch
-            when (event.scanCode) {
-                BTN_SOUTH -> return KeyEvent.KEYCODE_BUTTON_A
-                BTN_EAST -> return KeyEvent.KEYCODE_BUTTON_B
-                BTN_C -> return KeyEvent.KEYCODE_BUTTON_X
-                BTN_NORTH -> return KeyEvent.KEYCODE_BUTTON_Y
-                BTN_WEST -> return KeyEvent.KEYCODE_BUTTON_L1
-                BTN_Z -> return KeyEvent.KEYCODE_BUTTON_R1
-                BTN_TL -> return KeyEvent.KEYCODE_BUTTON_L2
-                BTN_TR -> return KeyEvent.KEYCODE_BUTTON_R2
-                BTN_TL2 -> return KeyEvent.KEYCODE_BUTTON_SELECT
-                BTN_TR2 -> return KeyEvent.KEYCODE_BUTTON_START
-                BTN_SELECT -> return KeyEvent.KEYCODE_BUTTON_THUMBL
-                BTN_START -> return KeyEvent.KEYCODE_BUTTON_THUMBR
-                BTN_THUMBL -> return KeyEvent.KEYCODE_BUTTON_MODE
-            }
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+
+        // The HORIPAD for Switch
+        val horipad = context.vendorId == VENDOR_HORI && context.productId == PRODUCT_HORIPAD_SWITCH
+        return switchPro || horipad
+    }
+
+    // The face buttons, the bumpers and the triggers, then the buttons in the middle
+    private fun switchButton(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_SOUTH -> KeyEvent.KEYCODE_BUTTON_A
+            BTN_EAST -> KeyEvent.KEYCODE_BUTTON_B
+            BTN_C -> KeyEvent.KEYCODE_BUTTON_X
+            BTN_NORTH -> KeyEvent.KEYCODE_BUTTON_Y
+            BTN_WEST -> KeyEvent.KEYCODE_BUTTON_L1
+            BTN_Z -> KeyEvent.KEYCODE_BUTTON_R1
+            BTN_TL -> KeyEvent.KEYCODE_BUTTON_L2
+            BTN_TR -> KeyEvent.KEYCODE_BUTTON_R2
+            else -> switchCenterButton(scanCode)
         }
 
-        if (context.usesLinuxGamepadStandardFaceButtons) {
-            // Android's Generic.kl swaps BTN_NORTH and BTN_WEST
-            when (event.scanCode) {
-                BTN_SOUTH -> return KeyEvent.KEYCODE_BUTTON_A
-                BTN_EAST -> return KeyEvent.KEYCODE_BUTTON_B
-                BTN_NORTH -> return KeyEvent.KEYCODE_BUTTON_Y
-                BTN_WEST -> return KeyEvent.KEYCODE_BUTTON_X
-            }
+    private fun switchCenterButton(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_TL2 -> KeyEvent.KEYCODE_BUTTON_SELECT
+            BTN_TR2 -> KeyEvent.KEYCODE_BUTTON_START
+            BTN_SELECT -> KeyEvent.KEYCODE_BUTTON_THUMBL
+            BTN_START -> KeyEvent.KEYCODE_BUTTON_THUMBR
+            BTN_THUMBL -> KeyEvent.KEYCODE_BUTTON_MODE
+            else -> REMAP_NONE
         }
 
-        if (context.isNonStandardDualShock4) {
-            when (event.scanCode) {
-                BTN_SOUTH -> return KeyEvent.KEYCODE_BUTTON_X
-                BTN_EAST -> return KeyEvent.KEYCODE_BUTTON_A
-                BTN_C -> return KeyEvent.KEYCODE_BUTTON_B
-                BTN_NORTH -> return KeyEvent.KEYCODE_BUTTON_Y
-                BTN_WEST -> return KeyEvent.KEYCODE_BUTTON_L1
-                BTN_Z -> return KeyEvent.KEYCODE_BUTTON_R1
-                /*
-                **** Using analog triggers instead ****
-                case 310:
-                    return KeyEvent.KEYCODE_BUTTON_L2;
-                case 311:
-                    return KeyEvent.KEYCODE_BUTTON_R2;
-                */
-                BTN_TL2 -> return KeyEvent.KEYCODE_BUTTON_SELECT
-                BTN_TR2 -> return KeyEvent.KEYCODE_BUTTON_START
-                BTN_SELECT -> return KeyEvent.KEYCODE_BUTTON_THUMBL
-                BTN_START -> return KeyEvent.KEYCODE_BUTTON_THUMBR
-                BTN_MODE -> return KeyEvent.KEYCODE_BUTTON_MODE
-                else -> return REMAP_CONSUME
-            }
-        } else if (context.isServal && event.keyCode == KeyEvent.KEYCODE_UNKNOWN) {
+    // Android's Generic.kl swaps BTN_NORTH and BTN_WEST
+    private fun linuxFaceButton(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_SOUTH -> KeyEvent.KEYCODE_BUTTON_A
+            BTN_EAST -> KeyEvent.KEYCODE_BUTTON_B
+            BTN_NORTH -> KeyEvent.KEYCODE_BUTTON_Y
+            BTN_WEST -> KeyEvent.KEYCODE_BUTTON_X
+            else -> REMAP_NONE
+        }
+
+    // At most one quirk applies to a pad, the first that fits, and a quirk whose table has no
+    // answer ends the chain: the quirks after it are not tried
+    private fun remapQuirkyPad(context: InputDeviceContext, event: KeyEvent): Int =
+        when {
+            context.isNonStandardDualShock4 -> dualShock4Button(event.scanCode)
+
             // If this is a Serval controller sending an unknown key code, it's probably
             // the start and select buttons
-            when (event.scanCode) {
-                BTN_SELECT -> return KeyEvent.KEYCODE_BUTTON_SELECT
-                BTN_START -> return KeyEvent.KEYCODE_BUTTON_START
-            }
-        } else if (context.isNonStandardXboxBtController) {
-            when (event.scanCode) {
-                BTN_C -> return KeyEvent.KEYCODE_BUTTON_X
-                BTN_NORTH -> return KeyEvent.KEYCODE_BUTTON_Y
-                BTN_WEST -> return KeyEvent.KEYCODE_BUTTON_L1
-                BTN_Z -> return KeyEvent.KEYCODE_BUTTON_R1
-                BTN_TL -> return KeyEvent.KEYCODE_BUTTON_SELECT
-                BTN_TR -> return KeyEvent.KEYCODE_BUTTON_START
-                BTN_TL2 -> return KeyEvent.KEYCODE_BUTTON_THUMBL
-                BTN_TR2 -> return KeyEvent.KEYCODE_BUTTON_THUMBR
-                KEY_MENU -> return KeyEvent.KEYCODE_BUTTON_MODE
-                else -> {
-                    // Other buttons are mapped correctly
-                }
-            }
-
-            // The Xbox button is sent as MENU
-            if (event.keyCode == KeyEvent.KEYCODE_MENU) {
-                return KeyEvent.KEYCODE_BUTTON_MODE
-            }
-        } else if (
-            context.vendorId == VENDOR_ASUS && // ASUS
-                (context.productId == PRODUCT_KUNAI_USB || // Kunai - USB
-                    context.productId == PRODUCT_KUNAI_BLUETOOTH) // Kunai - Bluetooth
-        ) {
-            // ROG Kunai has special M1-M4 buttons that are accessible via the
-            // joycon-style detachable controllers that we should map to Start
-            // and Select.
-            when (event.scanCode) {
-                KUNAI_START_1,
-                KUNAI_START_2 -> return KeyEvent.KEYCODE_BUTTON_START
-                KUNAI_SELECT_1,
-                KUNAI_SELECT_2 -> return KeyEvent.KEYCODE_BUTTON_SELECT
-            }
+            context.isServal && event.keyCode == KeyEvent.KEYCODE_UNKNOWN ->
+                servalButton(event.scanCode)
+            context.isNonStandardXboxBtController -> xboxBluetoothButton(event)
+            isAsusKunai(context) -> kunaiButton(event.scanCode)
+            else -> REMAP_NONE
         }
 
+    private fun dualShock4Button(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_SOUTH -> KeyEvent.KEYCODE_BUTTON_X
+            BTN_EAST -> KeyEvent.KEYCODE_BUTTON_A
+            BTN_C -> KeyEvent.KEYCODE_BUTTON_B
+            BTN_NORTH -> KeyEvent.KEYCODE_BUTTON_Y
+            BTN_WEST -> KeyEvent.KEYCODE_BUTTON_L1
+            BTN_Z -> KeyEvent.KEYCODE_BUTTON_R1
+            /*
+            **** Using analog triggers instead ****
+            case 310:
+                return KeyEvent.KEYCODE_BUTTON_L2;
+            case 311:
+                return KeyEvent.KEYCODE_BUTTON_R2;
+            */
+            BTN_TL2 -> KeyEvent.KEYCODE_BUTTON_SELECT
+            BTN_TR2 -> KeyEvent.KEYCODE_BUTTON_START
+            BTN_SELECT -> KeyEvent.KEYCODE_BUTTON_THUMBL
+            BTN_START -> KeyEvent.KEYCODE_BUTTON_THUMBR
+            BTN_MODE -> KeyEvent.KEYCODE_BUTTON_MODE
+            else -> REMAP_CONSUME
+        }
+
+    private fun servalButton(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_SELECT -> KeyEvent.KEYCODE_BUTTON_SELECT
+            BTN_START -> KeyEvent.KEYCODE_BUTTON_START
+            else -> REMAP_NONE
+        }
+
+    private fun xboxBluetoothButton(event: KeyEvent): Int {
+        // The buttons that are not here are mapped correctly
+        val keyCode =
+            when (event.scanCode) {
+                BTN_C -> KeyEvent.KEYCODE_BUTTON_X
+                BTN_NORTH -> KeyEvent.KEYCODE_BUTTON_Y
+                BTN_WEST -> KeyEvent.KEYCODE_BUTTON_L1
+                BTN_Z -> KeyEvent.KEYCODE_BUTTON_R1
+                BTN_TL -> KeyEvent.KEYCODE_BUTTON_SELECT
+                BTN_TR -> KeyEvent.KEYCODE_BUTTON_START
+                BTN_TL2 -> KeyEvent.KEYCODE_BUTTON_THUMBL
+                BTN_TR2 -> KeyEvent.KEYCODE_BUTTON_THUMBR
+                KEY_MENU -> KeyEvent.KEYCODE_BUTTON_MODE
+                else -> REMAP_NONE
+            }
+
+        // The Xbox button is sent as MENU
+        if (keyCode == REMAP_NONE && event.keyCode == KeyEvent.KEYCODE_MENU) {
+            return KeyEvent.KEYCODE_BUTTON_MODE
+        }
+        return keyCode
+    }
+
+    private fun isAsusKunai(context: InputDeviceContext) =
+        context.vendorId == VENDOR_ASUS && // ASUS
+            (context.productId == PRODUCT_KUNAI_USB || // Kunai - USB
+                context.productId == PRODUCT_KUNAI_BLUETOOTH) // Kunai - Bluetooth
+
+    // ROG Kunai has special M1-M4 buttons that are accessible via the
+    // joycon-style detachable controllers that we should map to Start
+    // and Select.
+    private fun kunaiButton(scanCode: Int): Int =
+        when (scanCode) {
+            KUNAI_START_1,
+            KUNAI_START_2 -> KeyEvent.KEYCODE_BUTTON_START
+            KUNAI_SELECT_1,
+            KUNAI_SELECT_2 -> KeyEvent.KEYCODE_BUTTON_SELECT
+            else -> REMAP_NONE
+        }
+
+    /* FIXME There's no good way to know for sure if xpad is bound
+    to this device, so we won't use the name to validate if these
+    scancodes should be mapped to DPAD
+
+    context.isXboxController &&
+    */
+    private fun rawDpadButton(context: InputDeviceContext, event: KeyEvent): Int {
         if (
             context.hatXAxis == -1 &&
                 context.hatYAxis == -1 &&
-                /* FIXME There's no good way to know for sure if xpad is bound
-                to this device, so we won't use the name to validate if these
-                scancodes should be mapped to DPAD
-
-                context.isXboxController &&
-                */
                 event.keyCode == KeyEvent.KEYCODE_UNKNOWN
         ) {
             // If there's not a proper Xbox controller mapping, we'll translate the raw d-pad
             // scan codes into proper key codes
-            when (event.scanCode) {
-                BTN_TRIGGER_HAPPY1 -> return KeyEvent.KEYCODE_DPAD_LEFT
-                BTN_TRIGGER_HAPPY2 -> return KeyEvent.KEYCODE_DPAD_RIGHT
-                BTN_TRIGGER_HAPPY3 -> return KeyEvent.KEYCODE_DPAD_UP
-                BTN_TRIGGER_HAPPY4 -> return KeyEvent.KEYCODE_DPAD_DOWN
+            return when (event.scanCode) {
+                BTN_TRIGGER_HAPPY1 -> KeyEvent.KEYCODE_DPAD_LEFT
+                BTN_TRIGGER_HAPPY2 -> KeyEvent.KEYCODE_DPAD_RIGHT
+                BTN_TRIGGER_HAPPY3 -> KeyEvent.KEYCODE_DPAD_UP
+                BTN_TRIGGER_HAPPY4 -> KeyEvent.KEYCODE_DPAD_DOWN
+                else -> REMAP_NONE
             }
         }
+        return REMAP_NONE
+    }
 
-        // Past here we can fixup the keycode and potentially trigger
-        // another special case so we need to remember what keycode we're using
-        var keyCode = event.keyCode
-
+    // Past here we can fixup the keycode and potentially trigger another special case so we need
+    // to remember what keycode we're using
+    private fun fixUpKeyCode(context: InputDeviceContext, event: KeyEvent): Int {
         // This is a hack for (at least) the "Tablet Remote" app
         // which sends BACK with META_ALT_ON instead of KEYCODE_BUTTON_B
-        if (
-            keyCode == KeyEvent.KEYCODE_BACK &&
-                !event.hasNoModifiers() &&
-                (event.flags and KeyEvent.FLAG_SOFT_KEYBOARD) != 0
-        ) {
-            keyCode = KeyEvent.KEYCODE_BUTTON_B
-        }
+        val keyCode = if (isSoftKeyboardBack(event)) KeyEvent.KEYCODE_BUTTON_B else event.keyCode
 
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU) {
-            // Ensure that we never use back as start if we have a real start
-            context.backIsStart = false
-        } else if (keyCode == KeyEvent.KEYCODE_BUTTON_SELECT) {
-            // Don't use mode as select if we have a select
-            context.modeIsSelect = false
-        } else if (context.backIsStart && keyCode == KeyEvent.KEYCODE_BACK) {
+        return when {
+            keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU -> {
+                // Ensure that we never use back as start if we have a real start
+                context.backIsStart = false
+                keyCode
+            }
+            keyCode == KeyEvent.KEYCODE_BUTTON_SELECT -> {
+                // Don't use mode as select if we have a select
+                context.modeIsSelect = false
+                keyCode
+            }
             // Emulate the start button with back
-            return KeyEvent.KEYCODE_BUTTON_START
-        } else if (context.modeIsSelect && keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            context.backIsStart && keyCode == KeyEvent.KEYCODE_BACK -> KeyEvent.KEYCODE_BUTTON_START
             // Emulate the select button with mode
-            return KeyEvent.KEYCODE_BUTTON_SELECT
-        } else if (context.searchIsMode && keyCode == KeyEvent.KEYCODE_SEARCH) {
+            context.modeIsSelect && keyCode == KeyEvent.KEYCODE_BUTTON_MODE ->
+                KeyEvent.KEYCODE_BUTTON_SELECT
             // Emulate the mode button with search
-            return KeyEvent.KEYCODE_BUTTON_MODE
+            context.searchIsMode && keyCode == KeyEvent.KEYCODE_SEARCH ->
+                KeyEvent.KEYCODE_BUTTON_MODE
+            else -> keyCode
         }
-
-        return keyCode
     }
+
+    private fun isSoftKeyboardBack(event: KeyEvent) =
+        event.keyCode == KeyEvent.KEYCODE_BACK &&
+            !event.hasNoModifiers() &&
+            (event.flags and KeyEvent.FLAG_SOFT_KEYBOARD) != 0
 
     private fun handleFlipFaceButtons(keyCode: Int): Int {
         return when (keyCode) {
@@ -4185,6 +4244,9 @@ class ControllerHandler(
 
         private const val REMAP_IGNORE = -1
         private const val REMAP_CONSUME = -2
+
+        // Not a key code: a step of handleRemapping that has no answer for the key
+        private const val REMAP_NONE = -3
 
         private const val SENSOR_ENABLE_DELAY_MS = 1000L
         private const val MAX_SENSOR_RATE_HZ = 200

@@ -132,6 +132,15 @@ class HandlerStopTest {
 
         val waited = SystemClock.uptimeMillis() - before
         assertThat(waited).isAtMost(2 * ZeroingPad.BULK_TIMEOUT_MS)
+        // The first two pads use up the time: the other two are not written at all
+        assertThat(pads.map { it.writes })
+            .containsExactly(
+                listOf("motors 0 0"),
+                listOf("motors 0 0"),
+                emptyList<String>(),
+                emptyList<String>(),
+            )
+            .inOrder()
     }
 }
 

@@ -736,9 +736,8 @@ class ControllerHandler(
             MoonBridge.guessControllerHasShareButton(context.vendorId, context.productId)
     }
 
-    // Converted as is from the inherited Java; DEPRECATION stays because InputDevice.getVibrator is
-    // the way to the vibrator of a pad before Android 12 and the fallback after it (Sprint 18c
-    // backlog).
+    // Converted as is from the inherited Java; DEPRECATION stays because the pad's own vibrator
+    // comes from InputDevice.getVibrator, deprecated since Android 12 (Sprint 18c backlog).
     @Suppress("DEPRECATION")
     private fun chooseVibrator(context: InputDeviceContext, dev: InputDevice) {
         // Try to use the InputDevice's associated vibrators first

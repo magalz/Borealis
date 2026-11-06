@@ -2134,8 +2134,6 @@ class ControllerHandler(
         ) != MoonBridge.LI_ERR_UNSUPPORTED
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     fun tryHandleTouchpadEvent(event: MotionEvent): Boolean {
         // Bail if this is not a touchpad or mouse event
         if (
@@ -2147,112 +2145,125 @@ class ControllerHandler(
         // Only get a context if one already exists. We want to ensure we don't report non-gamepads.
         val context = inputDeviceContexts.get(event.deviceId) ?: return false
 
-        // The touchpad of a pad the chrome owns reaches neither the controller nor the mouse
-        if (captured) {
-            return true
+        return when {
+            // The touchpad of a pad the chrome owns reaches neither the controller nor the mouse
+            captured -> true
+            event.source == InputDevice.SOURCE_MOUSE -> handleMouseSourceEvent(context, event)
+            else -> handleTouchpadSourceEvent(context, event)
         }
+    }
 
-        // When we're working with a mouse source instead of a touchpad, we're quite limited in
-        // what useful input we can provide via the controller API. The ABS_X/ABS_Y values are
-        // screen coordinates rather than touchpad coordinates. For now, we will just support
-        // the clickpad button and nothing else.
-        if (event.source == InputDevice.SOURCE_MOUSE) {
-            // Unlike the touchpad where down and up refer to individual touches on the touchpad,
-            // down and up on a mouse indicates the state of the left mouse button.
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    context.inputMap = context.inputMap or ControllerPacket.TOUCHPAD_FLAG
-                    sendControllerInputPacket(context)
-                }
-                MotionEvent.ACTION_UP,
-                MotionEvent.ACTION_CANCEL -> {
-                    context.inputMap = context.inputMap and ControllerPacket.TOUCHPAD_FLAG.inv()
-                    sendControllerInputPacket(context)
-                }
-                else -> {}
-            }
-
-            return !prefConfig.gamepadTouchpadAsMouse
-        }
-
-        val touchType: Byte
+    // When we're working with a mouse source instead of a touchpad, we're quite limited in
+    // what useful input we can provide via the controller API. The ABS_X/ABS_Y values are
+    // screen coordinates rather than touchpad coordinates. For now, we will just support
+    // the clickpad button and nothing else.
+    private fun handleMouseSourceEvent(context: InputDeviceContext, event: MotionEvent): Boolean {
+        // Unlike the touchpad where down and up refer to individual touches on the touchpad,
+        // down and up on a mouse indicates the state of the left mouse button.
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN,
-            MotionEvent.ACTION_POINTER_DOWN -> touchType = MoonBridge.LI_TOUCH_EVENT_DOWN
+            MotionEvent.ACTION_DOWN -> setTouchpadButton(context, down = true)
             MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_POINTER_UP -> {
-                if ((event.flags and MotionEvent.FLAG_CANCELED) != 0) {
-                    touchType = MoonBridge.LI_TOUCH_EVENT_CANCEL
-                } else {
-                    touchType = MoonBridge.LI_TOUCH_EVENT_UP
-                }
-            }
-            MotionEvent.ACTION_MOVE -> touchType = MoonBridge.LI_TOUCH_EVENT_MOVE
-            MotionEvent.ACTION_CANCEL ->
-                // ACTION_CANCEL applies to *all* pointers in the gesture, so it maps to CANCEL_ALL
-                // rather than CANCEL. For a single pointer cancellation, that's indicated via
-                // FLAG_CANCELED on a ACTION_POINTER_UP.
-                // https://developer.android.com/develop/ui/views/touch-and-input/gestures/multi
-                touchType = MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL
-            MotionEvent.ACTION_BUTTON_PRESS -> {
-                if (event.actionButton == MotionEvent.BUTTON_PRIMARY) {
-                    context.inputMap = context.inputMap or ControllerPacket.TOUCHPAD_FLAG
-                    sendControllerInputPacket(context)
-                    // Report as unhandled event to trigger mouse handling
-                    return !prefConfig.gamepadTouchpadAsMouse
-                }
-                return false
-            }
-            MotionEvent.ACTION_BUTTON_RELEASE -> {
-                if (event.actionButton == MotionEvent.BUTTON_PRIMARY) {
-                    context.inputMap = context.inputMap and ControllerPacket.TOUCHPAD_FLAG.inv()
-                    sendControllerInputPacket(context)
-                    // Report as unhandled event to trigger mouse handling
-                    return !prefConfig.gamepadTouchpadAsMouse
-                }
-                return false
-            }
-            else -> return false
+            MotionEvent.ACTION_CANCEL -> setTouchpadButton(context, down = false)
+            else -> {}
         }
 
+        return !prefConfig.gamepadTouchpadAsMouse
+    }
+
+    private fun handleTouchpadSourceEvent(context: InputDeviceContext, event: MotionEvent) =
+        when (event.actionMasked) {
+            MotionEvent.ACTION_BUTTON_PRESS -> handleClickpadButton(context, event, down = true)
+            MotionEvent.ACTION_BUTTON_RELEASE -> handleClickpadButton(context, event, down = false)
+            else -> sendTouchpadTouch(context, event)
+        }
+
+    // The primary button of a touchpad is the touchpad button of the pad
+    private fun handleClickpadButton(
+        context: InputDeviceContext,
+        event: MotionEvent,
+        down: Boolean,
+    ): Boolean {
+        if (event.actionButton != MotionEvent.BUTTON_PRIMARY) {
+            return false
+        }
+
+        setTouchpadButton(context, down)
+        // Report as unhandled event to trigger mouse handling
+        return !prefConfig.gamepadTouchpadAsMouse
+    }
+
+    private fun setTouchpadButton(context: InputDeviceContext, down: Boolean) {
+        setButtons(context, ControllerPacket.TOUCHPAD_FLAG, down)
+        sendControllerInputPacket(context)
+    }
+
+    private fun sendTouchpadTouch(context: InputDeviceContext, event: MotionEvent): Boolean {
         // Bail if the user wants gamepad touchpads to control the mouse
         //
         // NB: We do this after processing ACTION_BUTTON_PRESS and ACTION_BUTTON_RELEASE
         // because we want to still send the touchpad button via the gamepad even when
         // configured to use the touchpad for mouse control.
-        if (prefConfig.gamepadTouchpadAsMouse) {
+        //
+        // If we don't have X and Y ranges, we can't process this event either
+        if (
+            prefConfig.gamepadTouchpadAsMouse ||
+                context.touchpadXRange == null ||
+                context.touchpadYRange == null
+        ) {
             return false
         }
 
-        // If we don't have X and Y ranges, we can't process this event
-        if (context.touchpadXRange == null || context.touchpadYRange == null) {
-            return false
-        }
-
-        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
-            // Move events may impact all active pointers
-            for (i in 0 until event.pointerCount) {
-                if (!sendTouchpadEventForPointer(context, event, touchType, i)) {
-                    // Controller touch events are not supported by the host
-                    return false
-                }
-            }
-            return true
-        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-            // Cancel impacts all active pointers
-            return conn.sendControllerTouchEvent(
-                context.controllerNumber.toByte(),
-                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
-                0,
-                0f,
-                0f,
-                0f,
-            ) != MoonBridge.LI_ERR_UNSUPPORTED
-        } else {
-            // Down and Up events impact the action index pointer
-            return sendTouchpadEventForPointer(context, event, touchType, event.actionIndex)
+        // Down and Up events impact the action index pointer
+        return when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_POINTER_DOWN ->
+                sendTouchpadEventForPointer(
+                    context,
+                    event,
+                    MoonBridge.LI_TOUCH_EVENT_DOWN,
+                    event.actionIndex,
+                )
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_POINTER_UP ->
+                sendTouchpadEventForPointer(context, event, touchUpType(event), event.actionIndex)
+            MotionEvent.ACTION_MOVE -> sendTouchpadMoves(context, event)
+            MotionEvent.ACTION_CANCEL -> sendTouchpadCancelAll(context)
+            // Another action is no touch: it is left to the system
+            else -> false
         }
     }
+
+    private fun touchUpType(event: MotionEvent): Byte =
+        if ((event.flags and MotionEvent.FLAG_CANCELED) != 0) {
+            MoonBridge.LI_TOUCH_EVENT_CANCEL
+        } else {
+            MoonBridge.LI_TOUCH_EVENT_UP
+        }
+
+    // Move events may impact all active pointers
+    private fun sendTouchpadMoves(context: InputDeviceContext, event: MotionEvent): Boolean {
+        for (i in 0 until event.pointerCount) {
+            if (!sendTouchpadEventForPointer(context, event, MoonBridge.LI_TOUCH_EVENT_MOVE, i)) {
+                // Controller touch events are not supported by the host
+                return false
+            }
+        }
+        return true
+    }
+
+    // ACTION_CANCEL applies to *all* pointers in the gesture, so it is CANCEL_ALL rather than
+    // CANCEL. For a single pointer cancellation, that's indicated via FLAG_CANCELED on a
+    // ACTION_POINTER_UP.
+    // https://developer.android.com/develop/ui/views/touch-and-input/gestures/multi
+    private fun sendTouchpadCancelAll(context: InputDeviceContext): Boolean =
+        conn.sendControllerTouchEvent(
+            context.controllerNumber.toByte(),
+            MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+            0,
+            0f,
+            0f,
+            0f,
+        ) != MoonBridge.LI_ERR_UNSUPPORTED
 
     fun handleMotionEvent(event: MotionEvent): Boolean {
         val context = getContextForEvent(event) ?: return true

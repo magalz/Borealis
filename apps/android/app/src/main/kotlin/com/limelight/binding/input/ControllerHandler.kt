@@ -1503,15 +1503,20 @@ class ControllerHandler(
         }
     }
 
-    // The contexts that transmitControllerInputLocked fuses into the number of the context, in the
-    // way it picks them
+    // The other contexts on the number of the context, whose buttons are fused into its state: the
+    // pads in the same mouse mode, and the default context (the on-screen controller) whatever its
+    // mode. Never the context itself, the default one included: what it holds is not held by
+    // another. transmitControllerInputLocked picks its own, with the sender among them.
     private inline fun forEachFusedWith(
         context: GenericControllerContext,
         action: (GenericControllerContext) -> Unit,
     ) {
         inputDeviceContexts.forEachValue { if (isFusedWith(context, it)) action(it) }
         usbDeviceContexts.forEachValue { if (isFusedWith(context, it)) action(it) }
-        if (defaultContext.controllerNumber == context.controllerNumber) {
+        if (
+            defaultContext !== context &&
+                defaultContext.controllerNumber == context.controllerNumber
+        ) {
             action(defaultContext)
         }
     }

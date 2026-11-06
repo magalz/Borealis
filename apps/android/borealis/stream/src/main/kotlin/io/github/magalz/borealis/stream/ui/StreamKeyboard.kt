@@ -62,6 +62,7 @@ import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.keys.KeyModifier.SHIFT
 import io.github.magalz.borealis.stream.keys.NamedChord
 import io.github.magalz.borealis.stream.keys.Shortcuts
+import io.github.magalz.borealis.stream.keys.VK_BACKSPACE
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.keyboard.CharKey
@@ -81,8 +82,6 @@ private val CHIP_GAP = 6.dp
 // padding of a list holds BorealisDimens.outlineReach, and thickOutlineReach when it is the
 // thicker one.
 private val CHIP_ROW_PADDING = BorealisDimens.listPadding
-
-private const val VK_BACKSPACE = 0x08
 
 /**
  * The Borealis keyboard: a shortcut row, three letter rows and a bottom row, with Ctrl, Alt, Win

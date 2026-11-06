@@ -123,6 +123,8 @@ class Xbox360ControllerTest {
         assertThat(log.warnings()).containsExactly("LED set transfer failed: -1")
     }
 
+    // The claim and the search for the endpoints are AbstractXboxController's: the Xbox One pad
+    // shares them, so the tests of their failures below pin both pads.
     @Test
     fun `start fails when an interface cannot be claimed, and goes no further`() {
         val pad = pad()
@@ -155,17 +157,6 @@ class Xbox360ControllerTest {
                 )
         )
 
-    private fun startFailsWith(
-        warning: String,
-        vararg endpoints: android.hardware.usb.UsbEndpoint,
-    ) {
-        val pad = padWithEndpoints(*endpoints)
-
-        assertThat(pad.start()).isFalse()
-        assertThat(pad.usb.writes).isEmpty()
-        assertThat(log.warnings()).containsExactly(warning)
-    }
-
     @Test
     fun `a pad that cannot be claimed is not looked at for its endpoints`() {
         val pad = padWithEndpoints(UsbPads.outEndpoint(1))
@@ -178,29 +169,21 @@ class Xbox360ControllerTest {
 
     @Test
     fun `start fails on a second IN endpoint`() =
-        startFailsWith(
-            "Found duplicate IN endpoint",
-            UsbPads.inEndpoint(1),
-            UsbPads.outEndpoint(1),
-            UsbPads.inEndpoint(2),
-        )
+        padWithEndpoints(UsbPads.inEndpoint(1), UsbPads.outEndpoint(1), UsbPads.inEndpoint(2))
+            .assertStartFails(log, "Found duplicate IN endpoint")
 
     @Test
     fun `start fails on a second OUT endpoint`() =
-        startFailsWith(
-            "Found duplicate OUT endpoint",
-            UsbPads.inEndpoint(1),
-            UsbPads.outEndpoint(1),
-            UsbPads.outEndpoint(2),
-        )
+        padWithEndpoints(UsbPads.inEndpoint(1), UsbPads.outEndpoint(1), UsbPads.outEndpoint(2))
+            .assertStartFails(log, "Found duplicate OUT endpoint")
 
     @Test
     fun `start fails without an IN endpoint`() =
-        startFailsWith("Missing required endpoint", UsbPads.outEndpoint(1))
+        padWithEndpoints(UsbPads.outEndpoint(1)).assertStartFails(log, "Missing required endpoint")
 
     @Test
     fun `start fails without an OUT endpoint`() =
-        startFailsWith("Missing required endpoint", UsbPads.inEndpoint(1))
+        padWithEndpoints(UsbPads.inEndpoint(1)).assertStartFails(log, "Missing required endpoint")
 
     @Test
     fun `the pad is announced after the first second and before any report`() {

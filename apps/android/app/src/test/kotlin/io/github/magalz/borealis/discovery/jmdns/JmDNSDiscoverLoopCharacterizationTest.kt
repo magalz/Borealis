@@ -3,7 +3,6 @@ package io.github.magalz.borealis.discovery.jmdns
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.mdns.JmDNSDiscoveryAgent
 import com.limelight.nvstream.mdns.MdnsComputer
 import io.github.magalz.borealis.discovery.FakeJmDns
@@ -66,25 +65,9 @@ class JmDNSDiscoverLoopCharacterizationTest {
         awaitThreads(0)
     }
 
-    private fun discoveryThreads(): List<Thread> =
-        Thread.getAllStackTraces().keys.filter { it.name == THREAD_NAME && it.isAlive }
-
     private fun awaitThreads(count: Int): List<Thread> {
         awaitUntil("$count discovery threads") { discoveryThreads().size == count }
         return discoveryThreads()
-    }
-
-    /** Whether the thread is in the sleep of its loop, and not in a wait for the old thread. */
-    private fun Thread.isSleeping() =
-        state == Thread.State.TIMED_WAITING && stackTrace.any { it.methodName.startsWith("sleep") }
-
-    /** Waits until [condition] holds, and fails if it does not within the wait. */
-    private fun awaitUntil(what: String, condition: () -> Boolean) {
-        val deadline = System.nanoTime() + WAIT_NANOS
-        while (!condition() && System.nanoTime() < deadline) {
-            Thread.sleep(POLL_MS)
-        }
-        assertWithMessage("never: $what").that(condition()).isTrue()
     }
 
     /** Waits until the thread has ended after it let go of the resolver. */
@@ -346,7 +329,6 @@ class JmDNSDiscoverLoopCharacterizationTest {
     }
 
     private companion object {
-        const val THREAD_NAME = "mDNS Discovery Thread"
         const val SERVICE_TYPE = "_nvstream._tcp.local."
         const val PORT = 47989
         const val RETRY_TIMEOUT_MS = 500L
@@ -356,8 +338,6 @@ class JmDNSDiscoverLoopCharacterizationTest {
 
         /** Short enough that a test waits for a few passes. */
         const val FAST_INTERVAL_MS = 200
-        const val POLL_MS = 10L
-        const val WAIT_NANOS = 5_000_000_000L
 
         const val RETRYING_DEN_PC = "mDNS: Retrying service resolution for machine: Den PC"
     }

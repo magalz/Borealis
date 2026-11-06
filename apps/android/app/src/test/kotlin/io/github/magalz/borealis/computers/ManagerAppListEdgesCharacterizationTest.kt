@@ -3,11 +3,8 @@ package io.github.magalz.borealis.computers
 import com.google.common.truth.Truth.assertThat
 import com.limelight.computers.ComputerManagerService.ApplistPoller
 import com.limelight.nvstream.http.ComputerDetails
-import com.limelight.nvstream.http.PairingManager
-import io.github.magalz.borealis.crypto.TestIdentities
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.nvhttp.NvFakeHost
-import java.io.File
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Rule
 import org.junit.Test
@@ -29,26 +26,12 @@ class ManagerAppListEdgesCharacterizationTest {
     private fun host(reply: HostReply): NvFakeHost =
         rig.reachable(UUID_1).also { it.answer("/applist", reply, "https") }
 
-    /** A host as the library has it once it is paired: online, with its certificate. */
-    private fun paired(host: NvFakeHost) =
-        ComputerDetails().also {
-            it.uuid = UUID_1
-            it.name = "DEN-PC"
-            it.state = ComputerDetails.State.ONLINE
-            it.pairState = PairingManager.PairState.PAIRED
-            it.activeAddress = host.address
-            it.httpsPort = host.httpsPort
-            it.serverCert = TestIdentities.hostRsa.certificate
-        }
-
-    private fun appListRequests(host: NvFakeHost) = host.requests.count { it.path == "/applist" }
-
     @Test
     fun `a poller that runs after polling stopped keeps the app list and tells nobody`() {
         val list =
             "<App><IsHdrSupported>0</IsHdrSupported><AppTitle>Desktop</AppTitle><ID>1</ID></App>"
         val host = host(HostReply.root(list))
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
@@ -59,7 +42,7 @@ class ManagerAppListEdgesCharacterizationTest {
 
         awaitUntil("the app list") { computer.rawAppList != null }
         assertThat(computer.rawAppList).isEqualTo("""<root status_code="200">$list</root>""")
-        assertThat(cacheFile().readText()).isEqualTo(computer.rawAppList)
+        assertThat(rig.appListCache(UUID_1).readText()).isEqualTo(computer.rawAppList)
         assertThat(updates.events).isEmpty()
     }
 
@@ -74,7 +57,7 @@ class ManagerAppListEdgesCharacterizationTest {
                 else -> HostReply.root("")
             }
         }
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
@@ -82,11 +65,11 @@ class ManagerAppListEdgesCharacterizationTest {
 
         // An answer with no body ends in a parse error, as many times as it comes.
         poller.start()
-        awaitUntil("request 1 for the app list") { appListRequests(host) == 1 }
+        awaitUntil("request 1 for the app list") { host.appListRequests() == 1 }
         for (request in 2..EMPTY_LIST_THRESHOLD + 1) askAgain(poller, host, request)
         awaitIdle()
         assertThat(computer.rawAppList).isNull()
-        assertThat(cacheFile().exists()).isFalse()
+        assertThat(rig.appListCache(UUID_1).exists()).isFalse()
         assertThat(updates.events).isEmpty()
 
         // Those answers did not count: an empty list is believed at the third, not before.
@@ -98,29 +81,15 @@ class ManagerAppListEdgesCharacterizationTest {
         assertThat(updates.events).isEmpty()
         poller.nudge()
         updates.awaitOtherThan(Thread.currentThread(), ComputerDetails.State.ONLINE)
-        assertThat(appListRequests(host)).isEqualTo(EMPTY_LIST_THRESHOLD + 4)
+        assertThat(host.appListRequests()).isEqualTo(EMPTY_LIST_THRESHOLD + 4)
         assertThat(computer.rawAppList).isEqualTo("""<root status_code="200"></root>""")
-        assertThat(cacheFile().readText()).isEqualTo(computer.rawAppList)
-    }
-
-    private fun cacheFile() = File(rig.app.cacheDir, "applist/$UUID_1")
-
-    /** Waits until the poller is idle, waiting for its period or for a wake-up. */
-    private fun awaitIdle() =
-        awaitUntil("the app list thread to wait") {
-            liveThreads(APP_LIST_THREAD).singleOrNull()?.state == Thread.State.TIMED_WAITING
-        }
-
-    /** Wakes the poller once it is idle. */
-    private fun ApplistPoller.nudge() {
-        awaitIdle()
-        pollNow()
+        assertThat(rig.appListCache(UUID_1).readText()).isEqualTo(computer.rawAppList)
     }
 
     /** Wakes the poller and waits for its request number [request]. */
     private fun askAgain(poller: ApplistPoller, host: NvFakeHost, request: Int) {
         poller.nudge()
-        awaitUntil("request $request for the app list") { appListRequests(host) == request }
+        awaitUntil("request $request for the app list") { host.appListRequests() == request }
     }
 
     private companion object {

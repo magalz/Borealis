@@ -30,3 +30,13 @@ internal fun RestoreOpenerFocus(open: Boolean, openerListed: Boolean, focus: Foc
         wasOpen = open
     }
 }
+
+/**
+ * The element that takes the place of the first one that [matches] once it is gone: the next one in
+ * the list, or the previous one when it was the last. It is null when nothing matches, and when no
+ * other element is left (the focus then goes where Compose puts it).
+ */
+internal fun <T> List<T>.neighbourOf(matches: (T) -> Boolean): T? {
+    val index = indexOfFirst(matches)
+    return if (index < 0) null else getOrNull(index + 1) ?: getOrNull(index - 1)
+}

@@ -56,6 +56,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.focus.RestoreOpenerFocus
+import io.github.magalz.borealis.library.focus.neighbourOf
 
 /**
  * An outline reaches BorealisDimens.outlineReach outside a tile, thickOutlineReach when it is the
@@ -149,8 +150,10 @@ fun AppsScreen(
             AppActionsSheet(
                 sheet,
                 onChosen = { action ->
-                    if (action == AppAction.HIDE) {
-                        openerId = state.openerAfterHide(sheet.app.id, openerId)
+                    // Hide takes the app off the grid only while the hidden apps are not shown (the
+                    // filter of the ViewModel keeps `showHidden || !hidden`); else its tile stays.
+                    if (action == AppAction.HIDE && !state.showHidden) {
+                        openerId = state.items.openerAfterHide(sheet.app.id, openerId)
                     }
                     onActionChosen(action)
                 },
@@ -168,20 +171,13 @@ fun AppsScreen(
 
 /**
  * The app whose tile has the focus when the windows close after Hide on [appId], given that the app
- * that opened them is [openerId]. While the hidden apps are not shown (the filter of the ViewModel
- * keeps `showHidden || !hidden`), the tile is about to go, and the focus must not wait for it: it
+ * that opened them is [openerId]. That tile is about to go, and the focus must not wait for it: it
  * is the tile that takes its place, the next one in the grid, or the previous one when it was the
- * last. It stays [openerId] when the hidden apps are shown, [appId] is not that app, is not listed
- * or has no neighbour (no tile is left, and the focus goes where Compose puts it).
+ * last. It stays [openerId] when [appId] is not that app, is not listed or has no neighbour (no
+ * tile is left, and the focus goes where Compose puts it).
  */
-private fun AppsUiState.openerAfterHide(appId: Int, openerId: Int?): Int? {
-    val index = items.indexOfFirst { it.id == appId }
-    val neighbour =
-        if (!showHidden && openerId == appId && index >= 0) {
-            items.getOrNull(index + 1) ?: items.getOrNull(index - 1)
-        } else {
-            null
-        }
+private fun List<AppItemUiState>.openerAfterHide(appId: Int, openerId: Int?): Int? {
+    val neighbour = if (openerId == appId) neighbourOf { it.id == appId } else null
     return neighbour?.id ?: openerId
 }
 

@@ -15,6 +15,9 @@ import org.robolectric.annotation.Config
  * Characterizes the Xbox One driver through its public side: the packets it sends to the OUT
  * endpoint, and what reaches the listener from the reports a pad plays on the IN endpoint.
  */
+// One suite for one driver: detekt's size limit is passed, and the helpers are shared by every
+// test.
+@Suppress("LargeClass")
 @RunWith(RobolectricTestRunner::class)
 @Config(
     shadows =
@@ -721,6 +724,67 @@ class XboxOneControllerTest {
         assertThat(pad.usb.closes).isEqualTo(1)
         val removed = pad.listener.next()
         assertThat((removed as PadEvent.Removed).controller).isSameInstanceAs(pad.controller)
+    }
+
+    @Test
+    fun `a pad whose last rumble failed is stopped without another write`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumble(1, 2)
+
+        pad.controller.stop()
+        pad.controller.stop()
+
+        // The 2015 init and the rumble that failed: a stuck pad would block the stop's write for
+        // the whole timeout, so it gets none. The pad is still closed and reported removed once.
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.usb.closes).isEqualTo(1)
+        val removed = pad.listener.next()
+        assertThat((removed as PadEvent.Removed).controller).isSameInstanceAs(pad.controller)
+        assertThat(pad.listener.quietFor(300)).isTrue()
+    }
+
+    @Test
+    fun `a pad whose last trigger rumble failed is stopped without another write`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumbleTriggers(3, 4)
+
+        pad.controller.stop()
+
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.usb.closes).isEqualTo(1)
+        assertThat(pad.listener.next()).isInstanceOf(PadEvent.Removed::class.java)
+    }
+
+    @Test
+    fun `a pad that got no rumble write gets its zero write at the stop`() {
+        val pad = pad()
+        pad.start()
+
+        pad.controller.stop()
+
+        // The 2015 init, then the stop's rumble.
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.writtenBytes().last()).isEqualTo(rumblePacket(1, 0x00, 0x00, 0x00, 0x00))
+        assertThat(pad.usb.closes).isEqualTo(1)
+    }
+
+    @Test
+    fun `a rumble that went through after one that failed keeps the zero write at the stop`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumble(1, 2)
+        pad.controller.rumble(3, 4)
+
+        pad.controller.stop()
+
+        assertThat(pad.usb.writes).hasSize(4)
+        assertThat(pad.writtenBytes().last()).isEqualTo(rumblePacket(3, 0x00, 0x00, 0x00, 0x00))
+        assertThat(pad.usb.closes).isEqualTo(1)
     }
 
     private companion object {

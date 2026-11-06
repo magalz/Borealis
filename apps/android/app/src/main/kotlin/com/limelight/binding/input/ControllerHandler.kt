@@ -1497,6 +1497,7 @@ class ControllerHandler(
         var i = 0
         while (i < contexts.size) {
             deviceListStep?.run()
+            // The snapshot is an Array<Any?> that only publish() writes, with values of type T
             @Suppress("UNCHECKED_CAST") val context = contexts[i] as T
             action(context)
             i++
@@ -3608,9 +3609,10 @@ class ControllerHandler(
     // The pads of one kind by id. A SparseArray is safe only on the thread that writes it: a remove
     // leaves a gc() that moves the entries in place at the next size() or valueAt(), so a thread
     // that reads meanwhile skips a pad or finds a hole. The writers use the SparseArray itself
-    // (put, remove, and get by id on the main thread), one at a time. Every write publishes a
+    // (put, remove, and get by id on the main thread), one at a time. Only put and delete publish a
     // snapshot, an array that nothing changes again, and every other read goes through it, with
-    // no lock and no allocation.
+    // no lock and no allocation. The other mutators of SparseArray (append, clear, removeAt,
+    // setValueAt) do not publish: they must not be used on it.
     private class ContextList<T : GenericControllerContext> : SparseArray<T>() {
         @Volatile
         var snapshot: Array<Any?> = arrayOfNulls(0)
@@ -3634,6 +3636,7 @@ class ControllerHandler(
         // The pad with the id, which is its key, for the threads that do not write
         fun find(id: Int): T? {
             for (candidate in snapshot) {
+                // The snapshot is an Array<Any?> that only publish() writes, with values of type T
                 @Suppress("UNCHECKED_CAST") val context = candidate as T
                 if (context.id == id) {
                     return context

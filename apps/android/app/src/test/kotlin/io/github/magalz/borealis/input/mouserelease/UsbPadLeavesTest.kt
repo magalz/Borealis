@@ -103,7 +103,8 @@ class UsbPadLeavesTest {
         rig.handler.deviceRemoved(sharer)
 
         // The first pad saw the click in the state it fused, so it sends an up of its own when the
-        // second one goes: the PC gets two. The click is up at the end, and an extra up is no harm.
+        // second one goes: the PC gets two. No pad holds the button then, so the extra up is no
+        // harm, and the click is up at the end.
         assertThat(rig.connection.buttonEvents().last()).isEqualTo("up 1")
     }
 }

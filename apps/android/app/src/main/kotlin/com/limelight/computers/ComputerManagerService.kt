@@ -971,16 +971,125 @@ class ComputerManagerService : Service() {
             return null
         }
 
-        // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+        // Polls the app list once, and returns how many empty lists came in a row after the poll.
+        // A poll that fails leaves the count as it was.
         // The stack traces go to the standard error stream, as in the inherited Java. Logging them
-        // instead is a behaviour change.
-        @Suppress(
-            "LongMethod",
-            "CyclomaticComplexMethod",
-            "NestedBlockDepth",
-            "PrintStackTrace",
-            "LoopWithTooManyJumpStatements",
-        )
+        // instead is a behaviour change (Sprint 18c backlog).
+        @Suppress("PrintStackTrace")
+        private fun pollAppList(emptyAppListResponses: Int): Int {
+            if (!canPoll()) {
+                return emptyAppListResponses
+            }
+
+            return try {
+                fetchAppList(emptyAppListResponses)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                emptyAppListResponses
+            } catch (e: XmlPullParserException) {
+                e.printStackTrace()
+                emptyAppListResponses
+            }
+        }
+
+        // A host that is not online or not paired is not polled: the listener is told about it
+        // again, whether or not the poller is still running.
+        private fun canPoll(): Boolean {
+            // Can't poll if it's not online or paired
+            if (
+                computer.state != ComputerDetails.State.ONLINE ||
+                    computer.pairState != PairingManager.PairState.PAIRED
+            ) {
+                listener?.notifyComputerUpdated(computer)
+                return false
+            }
+
+            // Can't poll if there's no UUID yet
+            return computer.uuid != null
+        }
+
+        @Throws(IOException::class, XmlPullParserException::class)
+        private fun fetchAppList(emptyAppListResponses: Int): Int {
+            val tuple = getPollingTuple(computer)
+
+            val http =
+                NvHTTP(
+                    ServerHelper.getCurrentAddressFromComputer(computer),
+                    computer.httpsPort,
+                    idManager.uniqueId,
+                    computer.serverCert,
+                    PlatformBinding.getCryptoProvider(this@ComputerManagerService),
+                )
+
+            val appList =
+                if (tuple != null) {
+                    // If we're polling this machine too, grab the network lock
+                    // while doing the app list request to prevent other
+                    // requests from being issued in the meantime.
+                    synchronized(tuple.networkLock) { http.getAppListRaw() }
+                } else {
+                    // No polling is happening now, so we just call it directly
+                    http.getAppListRaw()
+                }
+
+            var emptyResponses = emptyAppListResponses
+            val list = NvHTTP.getAppListByReader(StringReader(appList))
+            if (list.isEmpty()) {
+                LimeLog.warning("Empty app list received from ${computer.uuid}")
+
+                // The app list might actually be empty, so if we get an empty
+                // response a few times in a row, we'll go ahead and believe it.
+                emptyResponses++
+            }
+            if (
+                appList.isNotEmpty() &&
+                    (list.isNotEmpty() || emptyResponses >= EMPTY_LIST_THRESHOLD)
+            ) {
+                // Reset empty count if it wasn't empty this time
+                if (list.isNotEmpty()) {
+                    emptyResponses = 0
+                }
+
+                keepAppList(appList)
+            } else if (appList.isEmpty()) {
+                LimeLog.warning("Null app list received from ${computer.uuid}")
+            }
+
+            return emptyResponses
+        }
+
+        // Keeps an app list that is believed: in the cache, on the computer and, while the poller
+        // runs, told to the listener.
+        private fun keepAppList(appList: String) {
+            writeAppListCache(appList)
+
+            // Update the computer
+            computer.rawAppList = appList
+            receivedAppList = true
+
+            // Notify that the app list has been updated
+            // and ensure that the thread is still active
+            val notified = listener
+            if (notified != null && thread != null) {
+                notified.notifyComputerUpdated(computer)
+            }
+        }
+
+        // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
+        // instead is a behaviour change (Sprint 18c backlog).
+        @Suppress("PrintStackTrace")
+        private fun writeAppListCache(appList: String) {
+            // Open the cache file
+            try {
+                CacheHelper.openCacheFileForOutput(cacheDir, "applist", computer.uuid).use {
+                    cacheOut ->
+                    CacheHelper.writeStringToOutputStream(cacheOut, appList)
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+
         fun start() {
             // A poller that runs is not started again: the Java started a second thread, and stop
             // ended only the last one, so the first polled for good.
@@ -991,100 +1100,11 @@ class ComputerManagerService : Service() {
             val polling =
                 object : Thread() {
                     override fun run() {
+                        // The count of empty lists in a row belongs to this thread: a poller that
+                        // is stopped and started again counts from zero.
                         var emptyAppListResponses = 0
                         do {
-                            // Can't poll if it's not online or paired
-                            if (
-                                computer.state != ComputerDetails.State.ONLINE ||
-                                    computer.pairState != PairingManager.PairState.PAIRED
-                            ) {
-                                listener?.notifyComputerUpdated(computer)
-                                continue
-                            }
-
-                            // Can't poll if there's no UUID yet
-                            if (computer.uuid == null) {
-                                continue
-                            }
-
-                            val tuple = getPollingTuple(computer)
-
-                            try {
-                                val http =
-                                    NvHTTP(
-                                        ServerHelper.getCurrentAddressFromComputer(computer),
-                                        computer.httpsPort,
-                                        idManager.uniqueId,
-                                        computer.serverCert,
-                                        PlatformBinding.getCryptoProvider(
-                                            this@ComputerManagerService
-                                        ),
-                                    )
-
-                                val appList =
-                                    if (tuple != null) {
-                                        // If we're polling this machine too, grab the network lock
-                                        // while doing the app list request to prevent other
-                                        // requests from being issued in the meantime.
-                                        synchronized(tuple.networkLock) { http.getAppListRaw() }
-                                    } else {
-                                        // No polling is happening now, so we just call it directly
-                                        http.getAppListRaw()
-                                    }
-
-                                val list = NvHTTP.getAppListByReader(StringReader(appList))
-                                if (list.isEmpty()) {
-                                    LimeLog.warning("Empty app list received from ${computer.uuid}")
-
-                                    // The app list might actually be empty, so if we get an empty
-                                    // response a few times in a row, we'll go ahead and believe it.
-                                    emptyAppListResponses++
-                                }
-                                if (
-                                    appList.isNotEmpty() &&
-                                        (list.isNotEmpty() ||
-                                            emptyAppListResponses >= EMPTY_LIST_THRESHOLD)
-                                ) {
-                                    // Open the cache file
-                                    try {
-                                        CacheHelper.openCacheFileForOutput(
-                                                cacheDir,
-                                                "applist",
-                                                computer.uuid,
-                                            )
-                                            .use { cacheOut ->
-                                                CacheHelper.writeStringToOutputStream(
-                                                    cacheOut,
-                                                    appList,
-                                                )
-                                            }
-                                    } catch (e: IOException) {
-                                        e.printStackTrace()
-                                    }
-
-                                    // Reset empty count if it wasn't empty this time
-                                    if (list.isNotEmpty()) {
-                                        emptyAppListResponses = 0
-                                    }
-
-                                    // Update the computer
-                                    computer.rawAppList = appList
-                                    receivedAppList = true
-
-                                    // Notify that the app list has been updated
-                                    // and ensure that the thread is still active
-                                    val notified = listener
-                                    if (notified != null && this@ApplistPoller.thread != null) {
-                                        notified.notifyComputerUpdated(computer)
-                                    }
-                                } else if (appList.isEmpty()) {
-                                    LimeLog.warning("Null app list received from ${computer.uuid}")
-                                }
-                            } catch (e: IOException) {
-                                e.printStackTrace()
-                            } catch (e: XmlPullParserException) {
-                                e.printStackTrace()
-                            }
+                            emptyAppListResponses = pollAppList(emptyAppListResponses)
                         } while (waitPollingDelay())
                     }
                 }

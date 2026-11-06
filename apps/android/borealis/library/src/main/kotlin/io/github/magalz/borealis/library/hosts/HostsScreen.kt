@@ -54,6 +54,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
 import io.github.magalz.borealis.library.focus.RestoreOpenerFocus
+import io.github.magalz.borealis.library.focus.openerAfterRemoval
 
 /**
  * An outline reaches BorealisDimens.outlineReach outside its card, thickOutlineReach when it is the
@@ -84,7 +85,7 @@ private val LOADING_SIZE = 64.dp
  * which host they are open for and calls [onDetails], [onWake] or [onForget] when the user chooses.
  * The details are shown while [HostsUiState.details] is set. When the last of these windows closes,
  * the card that opened the options has the focus again ([RestoreOpenerFocus]); after Forget it is
- * the card that takes the place of the forgotten one ([openerAfterForget]). [snackbarHostState]
+ * the card that takes the place of the forgotten one ([openerAfterRemoval]). [snackbarHostState]
  * shows the messages the route turns the ViewModel's effects into.
  *
  * **Back.** The screen intercepts no Back, so Back still leaves the activity from the home screen:
@@ -151,7 +152,7 @@ fun HostsScreen(
             onDetails = onDetails,
             onWake = onWake,
             onForget = { id ->
-                openerId = state.items.openerAfterForget(id, openerId)
+                openerId = state.items.openerAfterRemoval(id, openerId) { it.id }
                 onForget(id)
             },
             onDetailsDismissed = onDetailsDismissed,

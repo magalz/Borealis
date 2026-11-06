@@ -13,7 +13,6 @@ import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.library.R
-import io.github.magalz.borealis.library.focus.neighbourOf
 
 internal enum class HostOption {
     Details,
@@ -65,18 +64,6 @@ internal fun HostsDialogs(
     state.details?.let { details ->
         DetailsDialog(details, onDetailsDismissed)
     }
-}
-
-/**
- * The host whose card has the focus when the windows close after Forget on [hostId], given that the
- * card that opened them is [openerId]. That card is about to go, and the focus must not wait for
- * it: it is the card that takes its place, the next one in the grid, or the previous one when it
- * was the last. It stays [openerId] when [hostId] is not that card, is not listed or has no
- * neighbour (no card is left, and the focus goes where Compose puts it).
- */
-internal fun List<HostItemUiState>.openerAfterForget(hostId: String, openerId: String?): String? {
-    val neighbour = if (openerId == hostId) neighbourOf { it.id == hostId } else null
-    return neighbour?.id ?: openerId
 }
 
 @Composable

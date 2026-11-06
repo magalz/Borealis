@@ -18,9 +18,9 @@ import androidx.compose.ui.focus.FocusRequester
  * false), and nothing when the screen starts with a window already open: that is not a close. After
  * Forget or Hide the removal is asynchronous (the ViewModel launches it), so the opener may still
  * be listed when the window closes: the screen has made the opener the card or tile that takes its
- * place (`openerAfterForget`, `openerAfterHide`), so the one that asks for the focus is one that
- * stays. A card or tile that the grid does not compose (many hosts or apps, scrolled away while a
- * window was open) has no node for [focus]: Compose logs it and answers false, so nothing fails.
+ * place ([openerAfterRemoval]), so the one that asks for the focus is one that stays. A card or
+ * tile that the grid does not compose (many hosts or apps, scrolled away while a window was open)
+ * has no node for [focus]: Compose logs it and answers false, so nothing fails.
  */
 @Composable
 internal fun RestoreOpenerFocus(open: Boolean, openerListed: Boolean, focus: FocusRequester) {
@@ -29,6 +29,23 @@ internal fun RestoreOpenerFocus(open: Boolean, openerListed: Boolean, focus: Foc
         if (wasOpen && !open && openerListed) focus.requestFocus()
         wasOpen = open
     }
+}
+
+/**
+ * The id of the card or tile that has the focus when the windows close after the element with id
+ * [removedId] is removed (Forget on a host, Hide on an app), given that the one that opened them is
+ * [openerId]. That element is about to go, and the focus must not wait for it: it is the one that
+ * takes its place, the next one in the list, or the previous one when it was the last. It stays
+ * [openerId] when [removedId] is not the opener, is not listed or has no neighbour (nothing is
+ * left, and the focus goes where Compose puts it). [idOf] gives the id of an element.
+ */
+internal fun <T, I : Any> List<T>.openerAfterRemoval(
+    removedId: I,
+    openerId: I?,
+    idOf: (T) -> I,
+): I? {
+    val neighbour = if (openerId == removedId) neighbourOf { idOf(it) == removedId } else null
+    return neighbour?.let(idOf) ?: openerId
 }
 
 /**

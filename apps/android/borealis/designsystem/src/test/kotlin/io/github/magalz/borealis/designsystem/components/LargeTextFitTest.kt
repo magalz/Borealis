@@ -18,13 +18,12 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsValueR
 import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.OnPage
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.assumeNormalSpacing
 import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
-import io.github.magalz.borealis.designsystem.theme.TextSpacing
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,14 +74,14 @@ class LargeTextFitTest(private val case: FitCase) {
     @Test
     @Config(qualifiers = PHONE)
     fun `the rows of the settings on a phone fit at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         assertFits(FormFactor.Phone, largest) { SettingsRows() }
     }
 
     @Test
     @Config(qualifiers = TV)
     fun `the rows of the settings on a TV fit at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         assertFits(FormFactor.Tv, largest) { SettingsRows() }
     }
 
@@ -127,12 +126,6 @@ class LargeTextFitTest(private val case: FitCase) {
 
         composeRule.assertNoClippedText()
     }
-
-    /**
-     * The combined font scale of 2.6 is held at Normal, the spacing that fits there. Wider is drawn
-     * as Wide from 2.0, and Wide above 2.0 is not measured here.
-     */
-    private fun assumeNormalSpacing() = assumeTrue(case.spacing == TextSpacing.Normal)
 
     private fun assertFits(
         formFactor: FormFactor,

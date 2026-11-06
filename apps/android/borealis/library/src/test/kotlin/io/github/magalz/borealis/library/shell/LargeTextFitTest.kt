@@ -12,11 +12,11 @@ import androidx.compose.ui.test.performTouchInput
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.assumeNormalSpacing
 import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
-import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.library.addhost.AddHostError
 import io.github.magalz.borealis.library.addhost.AddHostScreen
 import io.github.magalz.borealis.library.addhost.AddHostUiState
@@ -30,7 +30,6 @@ import io.github.magalz.borealis.library.pairing.PairingUiState
 import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.TV
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,7 +43,9 @@ import org.robolectric.annotation.Config
  * Text spacing of the runs is Normal, Wide or Wider, and the look draws the level that the font
  * scale lets it (ADR 0058, decision 4), so none fails. The Apps screen of a host with a long name
  * also fits at the Text size Largest over the system font of 2.0, a combined font scale of 2.6, at
- * Normal.
+ * Normal. Wider is drawn as Wide from 2.0, and at 2.6 Wide still runs past the screen in 3 of its
+ * 16 runs (a TV in Luciole and in Andika, a phone in Andika; measured once on 2026-11-04, not
+ * fixed).
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 class LargeTextFitTest(private val case: FitCase) {
@@ -86,14 +87,14 @@ class LargeTextFitTest(private val case: FitCase) {
     @Test
     @Config(qualifiers = PHONE, fontScale = SCALE)
     fun `Apps on a phone fit with a long host name at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         assertFits(FormFactor.Phone, look = largest) { Apps(it, LONG_HOST_NAME) }
     }
 
     @Test
     @Config(qualifiers = TV, fontScale = SCALE)
     fun `Apps on a TV fit with a long host name at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         assertFits(FormFactor.Tv, look = largest) { Apps(it, LONG_HOST_NAME) }
     }
 
@@ -130,13 +131,6 @@ class LargeTextFitTest(private val case: FitCase) {
 
         composeRule.assertNoClippedText()
     }
-
-    /**
-     * The combined font scale of 2.6 is held at Normal, the spacing that fits there. Wider is drawn
-     * as Wide from 2.0, and at 2.6 Wide still runs past the screen in 3 of its 16 runs (a TV in
-     * Luciole and in Andika, a phone in Andika; measured once on 2026-11-04, not fixed).
-     */
-    private fun assumeNormalSpacing() = assumeTrue(case.spacing == TextSpacing.Normal)
 
     private fun assertFits(
         formFactor: FormFactor,

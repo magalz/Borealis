@@ -8,18 +8,17 @@ import androidx.compose.ui.test.performScrollTo
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
+import io.github.magalz.borealis.designsystem.testing.assumeNormalSpacing
 import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSize
-import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.settings.privacy.PrivacyActions
 import io.github.magalz.borealis.settings.privacy.PrivacyDialogActions
 import io.github.magalz.borealis.settings.privacy.PrivacyScreenContent
 import io.github.magalz.borealis.settings.privacy.PrivacyUiState
 import io.github.magalz.borealis.settings.testing.InGlassHost
 import java.io.File
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -54,12 +53,6 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
         composeRule.assertNoClippedText()
     }
 
-    /**
-     * The combined font scale of 2.6 is held at Normal, the spacing that fits there. Wider is drawn
-     * as Wide from 2.0, and Wide above 2.0 is not measured here.
-     */
-    private fun assumeNormalSpacing() = assumeTrue(case.spacing == TextSpacing.Normal)
-
     @Test
     @Config(qualifiers = TV, fontScale = SCALE)
     fun `Stream settings on a TV fit`() {
@@ -71,7 +64,7 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     @Test
     @Config(qualifiers = TV, fontScale = SCALE)
     fun `Stream settings on a TV fit at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         showSettings(FormFactor.Tv, SettingsGroupId.STREAM, largest)
         // The Bitrate slider is the row that ran out of height in the components rig at 2.6.
         row("Bitrate").assertExists()
@@ -107,7 +100,7 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     @Test
     @Config(qualifiers = TV, fontScale = SCALE)
     fun `Audio settings on a TV fit at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         showSettings(FormFactor.Tv, SettingsGroupId.AUDIO, largest)
         assertAudioEffectsShown()
 
@@ -126,7 +119,7 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     @Test
     @Config(qualifiers = HANDHELD, fontScale = SCALE)
     fun `Audio settings on a handheld fit at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         showSettings(FormFactor.Handheld, SettingsGroupId.AUDIO, largest)
         assertAudioEffectsShown()
 
@@ -146,7 +139,7 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     @Test
     @Config(qualifiers = PHONE, fontScale = SCALE)
     fun `the Audio section on a phone fits at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         showSettings(FormFactor.Phone, SettingsGroupId.STREAM, largest)
         openAudioSection()
         assertAudioEffectsShown()
@@ -187,7 +180,7 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     @Test
     @Config(qualifiers = TV, fontScale = SCALE)
     fun `the Touch sheet on a TV fits at the largest text size`() {
-        assumeNormalSpacing()
+        case.assumeNormalSpacing()
         showSettings(FormFactor.Tv, SettingsGroupId.INPUT, largest)
         composeRule.onNodeWithText("Touch").performClick()
         composeRule.waitForIdle()

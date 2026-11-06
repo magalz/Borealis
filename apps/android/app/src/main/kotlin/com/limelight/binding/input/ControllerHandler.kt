@@ -4010,19 +4010,37 @@ class ControllerHandler(
             backgroundThreadHandler.removeCallbacks(batteryStateUpdateRunnable)
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("CyclomaticComplexMethod", "LongMethod")
+        // The arrival is told to the host before the pad's first packet: its type, the buttons it
+        // has and what it can do. The battery poll starts after it.
         override fun sendControllerArrival() {
             val device = checkNotNull(inputDevice)
-            val type: Byte
+            val type = controllerTypeOf(device)
+            val supportedButtonFlags = supportedButtonsOf(device, type)
+            val capabilities = capabilitiesOf(device)
+            val reportedType = reportedTypeOf(type)
+
+            conn.sendControllerArrivalEvent(
+                controllerNumber.toByte(),
+                getActiveControllerMask(),
+                reportedType,
+                supportedButtonFlags,
+                capabilities.toShort(),
+            )
+
+            // After reporting arrival to the host, send initial battery state and begin monitoring
+            backgroundThreadHandler.post(batteryStateUpdateRunnable)
+        }
+
+        private fun controllerTypeOf(device: InputDevice): Byte =
             when (device.vendorId) {
-                VENDOR_MICROSOFT -> type = MoonBridge.LI_CTYPE_XBOX // Microsoft
-                VENDOR_SONY -> type = MoonBridge.LI_CTYPE_PS // Sony
-                VENDOR_NINTENDO -> type = MoonBridge.LI_CTYPE_NINTENDO // Nintendo
+                VENDOR_MICROSOFT -> MoonBridge.LI_CTYPE_XBOX // Microsoft
+                VENDOR_SONY -> MoonBridge.LI_CTYPE_PS // Sony
+                VENDOR_NINTENDO -> MoonBridge.LI_CTYPE_NINTENDO // Nintendo
                 // Consult SDL's controller type list to see if it knows
-                else -> type = MoonBridge.guessControllerType(device.vendorId, device.productId)
+                else -> MoonBridge.guessControllerType(device.vendorId, device.productId)
             }
 
+        private fun supportedButtonsOf(device: InputDevice, type: Byte): Int {
             var supportedButtonFlags = 0
             for (entry in ANDROID_TO_LI_BUTTON_MAP.entries) {
                 if (device.hasKeys(entry.key)[0]) {
@@ -4054,19 +4072,53 @@ class ControllerHandler(
                     supportedButtonFlags or ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG
             }
 
-            var capabilities: Short = 0
+            // Use the platform API or internal heuristics to determine if this has a clickpad: a
+            // device without a touchpad has none
+            if (hasButtonUnderTouchpad(device, type)) {
+                supportedButtonFlags = supportedButtonFlags or ControllerPacket.TOUCHPAD_FLAG
+            }
+
+            return supportedButtonFlags
+        }
+
+        // The LI_CCAP_ bits as an Int: the host takes them as a Short
+        private fun capabilitiesOf(device: InputDevice): Int {
+            var capabilities = feedbackCapabilitiesOf(device)
+
+            // Report analog triggers if we have at least one trigger axis
+            if (leftTriggerAxis != -1 || rightTriggerAxis != -1) {
+                capabilities = capabilities or MoonBridge.LI_CCAP_ANALOG_TRIGGERS.toInt()
+            }
+
+            // Report sensors if the input device has them or we're using built-in sensors for a
+            // built-in controller
+            if (sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
+                capabilities = capabilities or MoonBridge.LI_CCAP_ACCEL.toInt()
+            }
+            if (sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null) {
+                capabilities = capabilities or MoonBridge.LI_CCAP_GYRO.toInt()
+            }
+
+            if ((device.sources and InputDevice.SOURCE_TOUCHPAD) == InputDevice.SOURCE_TOUCHPAD) {
+                capabilities = capabilities or MoonBridge.LI_CCAP_TOUCHPAD.toInt()
+            }
+
+            return capabilities
+        }
+
+        // What the host can send to the pad: rumble, and the battery and LED it can report on
+        private fun feedbackCapabilitiesOf(device: InputDevice): Int {
+            var capabilities = 0
 
             // Most of the advanced InputDevice capabilities came in Android S
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (quadVibrators) {
                     capabilities =
-                        (capabilities.toInt() or
-                                MoonBridge.LI_CCAP_RUMBLE.toInt() or
-                                MoonBridge.LI_CCAP_TRIGGER_RUMBLE.toInt())
-                            .toShort()
+                        capabilities or
+                            MoonBridge.LI_CCAP_RUMBLE.toInt() or
+                            MoonBridge.LI_CCAP_TRIGGER_RUMBLE.toInt()
                 } else if (vibratorManager != null || vibrator != null) {
-                    capabilities =
-                        (capabilities.toInt() or MoonBridge.LI_CCAP_RUMBLE.toInt()).toShort()
+                    capabilities = capabilities or MoonBridge.LI_CCAP_RUMBLE.toInt()
                 }
 
                 // Calling InputDevice.getBatteryState() to see if a battery is present
@@ -4075,32 +4127,33 @@ class ControllerHandler(
                 // external gamepad devices on Android S. If it turns out that no battery
                 // is actually present, we'll just report that no battery is present.
                 if (external) {
-                    capabilities =
-                        (capabilities.toInt() or MoonBridge.LI_CCAP_BATTERY_STATE.toInt()).toShort()
+                    capabilities = capabilities or MoonBridge.LI_CCAP_BATTERY_STATE.toInt()
                 }
 
                 if (hasRgbLed) {
-                    capabilities =
-                        (capabilities.toInt() or MoonBridge.LI_CCAP_RGB_LED.toInt()).toShort()
+                    capabilities = capabilities or MoonBridge.LI_CCAP_RGB_LED.toInt()
                 }
             }
 
-            // Report analog triggers if we have at least one trigger axis
-            if (leftTriggerAxis != -1 || rightTriggerAxis != -1) {
+            // We can perform basic rumble with any vibrator
+            if (vibrator != null) {
+                capabilities = capabilities or MoonBridge.LI_CCAP_RUMBLE.toInt()
+            }
+
+            // Shield controllers use special APIs for rumble and battery state
+            if (sceManager.isRecognizedDevice(device)) {
                 capabilities =
-                    (capabilities.toInt() or MoonBridge.LI_CCAP_ANALOG_TRIGGERS.toInt()).toShort()
+                    capabilities or
+                        MoonBridge.LI_CCAP_RUMBLE.toInt() or
+                        MoonBridge.LI_CCAP_BATTERY_STATE.toInt()
             }
 
-            // Report sensors if the input device has them or we're using built-in sensors for a
-            // built-in controller
-            if (sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
-                capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_ACCEL.toInt()).toShort()
-            }
-            if (sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null) {
-                capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_GYRO.toInt()).toShort()
-            }
+            return capabilities
+        }
 
-            val reportedType: Byte
+        // What the host is told the type is: an Xbox pad whose motion sensors are emulated is not
+        // one
+        private fun reportedTypeOf(type: Byte): Byte {
             if (type != MoonBridge.LI_CTYPE_PS && sensorManager != null) {
                 // Override the detected controller type if we're emulating motion sensors on an
                 // Xbox controller
@@ -4110,50 +4163,15 @@ class ControllerHandler(
                         Toast.LENGTH_LONG,
                     )
                     .show()
-                reportedType = MoonBridge.LI_CTYPE_UNKNOWN
 
                 // Remember that we should enable the clickpad emulation combo (Select+LB) for this
                 // device
                 needsClickpadEmulation = true
-            } else {
-                // Report the true type to the host PC if we're not emulating motion sensors
-                reportedType = type
+                return MoonBridge.LI_CTYPE_UNKNOWN
             }
 
-            // We can perform basic rumble with any vibrator
-            if (vibrator != null) {
-                capabilities = (capabilities.toInt() or MoonBridge.LI_CCAP_RUMBLE.toInt()).toShort()
-            }
-
-            // Shield controllers use special APIs for rumble and battery state
-            if (sceManager.isRecognizedDevice(device)) {
-                capabilities =
-                    (capabilities.toInt() or
-                            MoonBridge.LI_CCAP_RUMBLE.toInt() or
-                            MoonBridge.LI_CCAP_BATTERY_STATE.toInt())
-                        .toShort()
-            }
-
-            if ((device.sources and InputDevice.SOURCE_TOUCHPAD) == InputDevice.SOURCE_TOUCHPAD) {
-                capabilities =
-                    (capabilities.toInt() or MoonBridge.LI_CCAP_TOUCHPAD.toInt()).toShort()
-
-                // Use the platform API or internal heuristics to determine if this has a clickpad
-                if (hasButtonUnderTouchpad(device, type)) {
-                    supportedButtonFlags = supportedButtonFlags or ControllerPacket.TOUCHPAD_FLAG
-                }
-            }
-
-            conn.sendControllerArrivalEvent(
-                controllerNumber.toByte(),
-                getActiveControllerMask(),
-                reportedType,
-                supportedButtonFlags,
-                capabilities,
-            )
-
-            // After reporting arrival to the host, send initial battery state and begin monitoring
-            backgroundThreadHandler.post(batteryStateUpdateRunnable)
+            // Report the true type to the host PC if we're not emulating motion sensors
+            return type
         }
 
         fun migrateContext(oldContext: InputDeviceContext) {

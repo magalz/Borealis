@@ -1,11 +1,13 @@
 package com.limelight.utils
 
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.database.sqlite.SQLiteException
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -35,23 +37,49 @@ private fun toValueString(value: Any?): String? = value?.toString()
 
 private fun toUriString(intent: Intent?): String? = intent?.toUri(Intent.URI_INTENT_SCHEME)
 
+// The first result of [rowResult] that is not null, over the rows of the query in order: the rows
+// after it are not visited. None when the provider gives no cursor or no row has one.
+private fun <T : Any> ContentResolver.firstRowResult(
+    uri: Uri,
+    projection: Array<String>,
+    rowResult: (Cursor) -> T?,
+): T? =
+    query(uri, projection, null, null, null).use { cursor ->
+        cursor?.let { rows ->
+            generateSequence { rows.takeIf { it.moveToNext() } }.firstNotNullOfOrNull(rowResult)
+        }
+    }
+
+// The id of the program of the row; none for a program that is not browsable, which is deleted
+// (the user removed it from the home screen) and logged.
+private fun ContentResolver.browsableProgramId(cursor: Cursor): Long? {
+    val id = cursor.getLong(ID_INDEX)
+    val browsable = cursor.getInt(PROGRAM_BROWSABLE_INDEX)
+    if (browsable != 0) {
+        return id
+    }
+
+    val countDeleted = delete(TvContract.buildPreviewProgramUri(id), null, null)
+    if (countDeleted > 0) {
+        LimeLog.info("Preview program has been deleted")
+    } else {
+        LimeLog.warning("Preview program has not been deleted")
+    }
+    return null
+}
+
 class TvChannelHelper(private val context: Context) {
     // BOREALIS: the channel request needs an Activity; an application context only deletes
     // channels.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount", "TooGenericExceptionCaught")
+    // Converted as is from the inherited Java; the catch of every Exception stays, as some devices
+    // throw more than ActivityNotFoundException (Sprint 18c backlog).
+    @Suppress("TooGenericExceptionCaught")
     internal fun requestChannelOnHomeScreen(computer: ComputerDetails) {
-        if (context !is Activity) {
-            return
-        }
-        if (!isAndroidTV()) {
+        if (context !is Activity || !isAndroidTV()) {
             return
         }
 
-        val channelId = getChannelId(computer.uuid)
-        if (channelId == null) {
-            return
-        }
+        val channelId = getChannelId(computer.uuid) ?: return
 
         val intent = Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE)
         intent.putExtra(TvContract.EXTRA_CHANNEL_ID, channelId)
@@ -65,10 +93,9 @@ class TvChannelHelper(private val context: Context) {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    // The Java printed the stack trace of a provider that does not know the channels, as it did
-    // for the programs.
-    @Suppress("ReturnCount", "PrintStackTrace")
+    // Converted as is from the inherited Java; the Java printed the stack trace of a provider that
+    // does not know the channels, as it did for the programs, and that stays (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
     internal fun createTvChannel(computer: ComputerDetails) {
         if (!isAndroidTV()) {
             return
@@ -150,17 +177,15 @@ class TvChannelHelper(private val context: Context) {
         return bitmap
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount", "PrintStackTrace")
+    // Converted as is from the inherited Java; the stack trace of a provider that does not know the
+    // programs is printed, as the Java did, and that stays (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
     internal fun addGameToChannel(computer: ComputerDetails, app: NvApp) {
         if (!isAndroidTV()) {
             return
         }
 
-        val channelId = getChannelId(computer.uuid)
-        if (channelId == null) {
-            return
-        }
+        val channelId = getChannelId(computer.uuid) ?: return
 
         val builder =
             PreviewProgramBuilder()
@@ -187,22 +212,21 @@ class TvChannelHelper(private val context: Context) {
                 null,
                 null,
             )
-            return
-        }
+        } else {
+            try {
+                context.contentResolver.insert(
+                    TvContract.PreviewPrograms.CONTENT_URI,
+                    builder.toContentValues(),
+                )
+            } catch (e: IllegalArgumentException) {
+                // This can happen on HarmonyOS devices which report to
+                // support Leanback APIs, yet don't implement this URI
+                e.printStackTrace()
+                return
+            }
 
-        try {
-            context.contentResolver.insert(
-                TvContract.PreviewPrograms.CONTENT_URI,
-                builder.toContentValues(),
-            )
-        } catch (e: IllegalArgumentException) {
-            // This can happen on HarmonyOS devices which report to
-            // support Leanback APIs, yet don't implement this URI
-            e.printStackTrace()
-            return
+            TvContract.requestChannelBrowsable(context, channelId)
         }
-
-        TvContract.requestChannelBrowsable(context, channelId)
     }
 
     internal fun deleteChannel(computer: ComputerDetails) {
@@ -218,103 +242,39 @@ class TvChannelHelper(private val context: Context) {
         context.contentResolver.delete(TvContract.buildChannelUri(channelId), null, null)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount")
     internal fun deleteProgram(computer: ComputerDetails, app: NvApp) {
         if (!isAndroidTV()) {
             return
         }
 
-        val channelId = getChannelId(computer.uuid)
-        if (channelId == null) {
-            return
-        }
-
-        val programId = getProgramId(channelId, "" + app.appId)
-        if (programId == null) {
-            return
-        }
+        val channelId = getChannelId(computer.uuid) ?: return
+        val programId = getProgramId(channelId, "" + app.appId) ?: return
 
         context.contentResolver.delete(TvContract.buildPreviewProgramUri(programId), null, null)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount")
-    private fun getChannelId(computerUuid: String?): Long? {
-        context.contentResolver
-            .query(
-                TvContract.Channels.CONTENT_URI,
-                arrayOf(TvContract.Channels._ID, TvContract.Channels.COLUMN_INTERNAL_PROVIDER_ID),
-                null,
-                null,
-                null,
-            )
-            .use { cursor ->
-                if (cursor == null) {
-                    return null
-                }
-                if (cursor.count == 0) {
-                    return null
-                }
-                while (cursor.moveToNext()) {
-                    val internalProviderId = cursor.getString(INTERNAL_PROVIDER_ID_INDEX)
-                    if (checkNotNull(computerUuid) == internalProviderId) {
-                        return cursor.getLong(ID_INDEX)
-                    }
-                }
+    private fun getChannelId(computerUuid: String?): Long? =
+        context.contentResolver.firstRowResult(
+            TvContract.Channels.CONTENT_URI,
+            arrayOf(TvContract.Channels._ID, TvContract.Channels.COLUMN_INTERNAL_PROVIDER_ID),
+        ) { cursor ->
+            val internalProviderId = cursor.getString(INTERNAL_PROVIDER_ID_INDEX)
+            if (checkNotNull(computerUuid) == internalProviderId) cursor.getLong(ID_INDEX) else null
+        }
 
-                return null
-            }
-    }
-
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount", "NestedBlockDepth")
-    private fun getProgramId(channelId: Long, appId: String): Long? {
-        context.contentResolver
-            .query(
-                TvContract.buildPreviewProgramsUriForChannel(channelId),
-                arrayOf(
-                    TvContract.PreviewPrograms._ID,
-                    TvContract.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID,
-                    TvContract.PreviewPrograms.COLUMN_BROWSABLE,
-                ),
-                null,
-                null,
-                null,
-            )
-            .use { cursor ->
-                if (cursor == null) {
-                    return null
-                }
-                if (cursor.count == 0) {
-                    return null
-                }
-                while (cursor.moveToNext()) {
-                    val internalProviderId = cursor.getString(INTERNAL_PROVIDER_ID_INDEX)
-                    if (appId == internalProviderId) {
-                        val id = cursor.getLong(ID_INDEX)
-                        val browsable = cursor.getInt(PROGRAM_BROWSABLE_INDEX)
-                        if (browsable != 0) {
-                            return id
-                        } else {
-                            val countDeleted =
-                                context.contentResolver.delete(
-                                    TvContract.buildPreviewProgramUri(id),
-                                    null,
-                                    null,
-                                )
-                            if (countDeleted > 0) {
-                                LimeLog.info("Preview program has been deleted")
-                            } else {
-                                LimeLog.warning("Preview program has not been deleted")
-                            }
-                        }
-                    }
-                }
-
-                return null
-            }
-    }
+    private fun getProgramId(channelId: Long, appId: String): Long? =
+        context.contentResolver.firstRowResult(
+            TvContract.buildPreviewProgramsUriForChannel(channelId),
+            arrayOf(
+                TvContract.PreviewPrograms._ID,
+                TvContract.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID,
+                TvContract.PreviewPrograms.COLUMN_BROWSABLE,
+            ),
+        ) { cursor ->
+            val internalProviderId = cursor.getString(INTERNAL_PROVIDER_ID_INDEX)
+            if (appId == internalProviderId) context.contentResolver.browsableProgramId(cursor)
+            else null
+        }
 
     private fun isAndroidTV(): Boolean =
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)

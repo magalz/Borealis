@@ -67,7 +67,7 @@ class PreferenceConfiguration {
     @JvmField var gamepadTouchpadAsMouse = false
     @JvmField var gamepadMotionSensorsFallbackToDevice = false
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // The keys, defaults and readers of every preference share one companion (Sprint 18d backlog).
     @Suppress("TooManyFunctions")
     companion object {
         private const val LEGACY_RES_FPS_PREF_STRING = "list_resolution_fps"
@@ -289,9 +289,7 @@ class PreferenceConfiguration {
             // An unknown height gives 720p, like the 720p case.
             RESOLUTION_BY_HEIGHT[height] ?: RES_720P
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
         @JvmStatic
-        @Suppress("LoopWithTooManyJumpStatements")
         fun getDefaultBitrate(resString: String, fpsString: String): Int {
             val width = getWidthFromResolutionString(resString)
             val height = getHeightFromResolutionString(resString)
@@ -306,37 +304,28 @@ class PreferenceConfiguration {
                 (if (fps <= MAX_LINEAR_FPS) fps.toDouble()
                 else sqrt((fps / REFERENCE_FPS).toDouble()) * REFERENCE_FPS) / BITRATE_FPS_UNIT
 
-            // Calculate the resolution factor by linear interpolation of the resolution table
-            var resolutionFactor: Float
-            val pixels = width * height
-            var i = 0
-            while (true) {
-                if (pixels == PIXEL_VALS[i]) {
-                    // We can bail immediately for exact matches
-                    resolutionFactor = FACTOR_VALS[i].toFloat()
-                    break
-                } else if (pixels < PIXEL_VALS[i]) {
-                    if (i == 0) {
-                        // Never go below the lowest resolution entry
-                        resolutionFactor = FACTOR_VALS[i].toFloat()
-                    } else {
-                        // Interpolate between the entry greater than the chosen resolution (i) and
-                        // the entry less than the chosen resolution (i-1)
-                        resolutionFactor =
-                            ((pixels - PIXEL_VALS[i - 1]).toFloat() /
-                                (PIXEL_VALS[i] - PIXEL_VALS[i - 1])) *
-                                (FACTOR_VALS[i] - FACTOR_VALS[i - 1]) + FACTOR_VALS[i - 1]
-                    }
-                    break
-                } else if (PIXEL_VALS[i] == -1) {
-                    // Never go above the highest resolution entry
-                    resolutionFactor = FACTOR_VALS[i - 1].toFloat()
-                    break
-                }
-                i++
-            }
+            return Math.round(getResolutionFactor(width * height) * frameRateFactor).toInt() *
+                KBPS_PER_MBPS
+        }
 
-            return Math.round(resolutionFactor * frameRateFactor).toInt() * KBPS_PER_MBPS
+        // Calculate the resolution factor by linear interpolation of the resolution table, whose
+        // last entry (-1) only ends it.
+        private fun getResolutionFactor(pixels: Int): Float {
+            // The first entry that is not below the chosen resolution, or the end of the table
+            val i = PIXEL_VALS.indices.first { PIXEL_VALS[it] == -1 || pixels <= PIXEL_VALS[it] }
+            return when {
+                // We can bail immediately for exact matches
+                pixels == PIXEL_VALS[i] -> FACTOR_VALS[i].toFloat()
+                // Never go above the highest resolution entry
+                PIXEL_VALS[i] == -1 -> FACTOR_VALS[i - 1].toFloat()
+                // Never go below the lowest resolution entry
+                i == 0 -> FACTOR_VALS[i].toFloat()
+                // Interpolate between the entry greater than the chosen resolution (i) and the
+                // entry less than the chosen resolution (i-1)
+                else ->
+                    ((pixels - PIXEL_VALS[i - 1]).toFloat() / (PIXEL_VALS[i] - PIXEL_VALS[i - 1])) *
+                        (FACTOR_VALS[i] - FACTOR_VALS[i - 1]) + FACTOR_VALS[i - 1]
+            }
         }
 
         private fun getVideoFormatValue(context: Context): FormatOption {
@@ -422,53 +411,94 @@ class PreferenceConfiguration {
             Build.MANUFACTURER.equals("NVIDIA", ignoreCase = true) &&
                 Build.FINGERPRINT.contains("PPR1.180610.011/4079208_2235.1395")
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
         @JvmStatic
-        @Suppress("LongMethod")
         fun readPreferences(context: Context): PreferenceConfiguration {
             val prefs = defaultPreferences(context)
             val config = PreferenceConfiguration()
 
             // Migrate legacy preferences to the new locations. The 5.1 surround switch is not one
             // of them: LegacyMigrations moves it when the app starts.
+            readResolutionAndFrameRate(prefs, config)
+            overrideMotionSensorsOnAndroid12(prefs)
+
+            // This must happen after the preferences migration to ensure the preferences are
+            // populated
+            readBitrate(prefs, config)
+            readAudioConfiguration(prefs, config)
+
+            config.videoFormat = getVideoFormatValue(context)
+            config.framePacing = getFramePacingValue(context)
+
+            config.analogStickForScrolling = getAnalogStickForScrollingValue(context)
+
+            readSeekbars(prefs, config)
+
+            // Checkbox preferences, in three runs that keep the order of the original method
+            readStreamSwitches(prefs, config)
+            readInputSwitches(prefs, config)
+            readExtraSwitches(prefs, config)
+
+            return config
+        }
+
+        private fun readResolutionAndFrameRate(
+            prefs: SharedPreferences,
+            config: PreferenceConfiguration,
+        ) {
             val str = prefs.getString(LEGACY_RES_FPS_PREF_STRING, null)
             if (str != null) {
-                // Should never get an unknown string: it means 720p at 60 FPS
-                val (legacyWidth, legacyHeight, legacyFps) =
-                    LEGACY_RESOLUTION_FPS[str] ?: DEFAULT_LEGACY_MODE
-                config.width = legacyWidth
-                config.height = legacyHeight
-                config.fps = legacyFps
-
-                prefs.edit {
-                    remove(LEGACY_RES_FPS_PREF_STRING)
-                    putString(RESOLUTION_PREF_STRING, getResolutionString(config.height))
-                    putString(FPS_PREF_STRING, config.fps.toString())
-                }
+                migrateLegacyResolutionAndFrameRate(prefs, config, str)
             } else {
-                // Use the new preference location
-                var resStr: String =
-                    prefs.getRequiredString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION)
+                readStoredResolutionAndFrameRate(prefs, config)
+            }
+        }
 
-                // Convert legacy resolution strings to the new style. Any other name without an
-                // "x" is not converted or written: it counts as the default one just below.
-                if (!resStr.contains("x")) {
-                    convertFromLegacyResolutionString(resStr)?.let { legacy ->
-                        resStr = legacy
-                        prefs.edit { putString(RESOLUTION_PREF_STRING, legacy) }
-                    }
+        private fun migrateLegacyResolutionAndFrameRate(
+            prefs: SharedPreferences,
+            config: PreferenceConfiguration,
+            legacy: String,
+        ) {
+            // Should never get an unknown string: it means 720p at 60 FPS
+            val (legacyWidth, legacyHeight, legacyFps) =
+                LEGACY_RESOLUTION_FPS[legacy] ?: DEFAULT_LEGACY_MODE
+            config.width = legacyWidth
+            config.height = legacyHeight
+            config.fps = legacyFps
+
+            prefs.edit {
+                remove(LEGACY_RES_FPS_PREF_STRING)
+                putString(RESOLUTION_PREF_STRING, getResolutionString(config.height))
+                putString(FPS_PREF_STRING, config.fps.toString())
+            }
+        }
+
+        private fun readStoredResolutionAndFrameRate(
+            prefs: SharedPreferences,
+            config: PreferenceConfiguration,
+        ) {
+            // Use the new preference location
+            var resStr: String = prefs.getRequiredString(RESOLUTION_PREF_STRING, DEFAULT_RESOLUTION)
+
+            // Convert legacy resolution strings to the new style. Any other name without an
+            // "x" is not converted or written: it counts as the default one just below.
+            if (!resStr.contains("x")) {
+                convertFromLegacyResolutionString(resStr)?.let { legacy ->
+                    resStr = legacy
+                    prefs.edit { putString(RESOLUTION_PREF_STRING, legacy) }
                 }
-
-                // A stored value that is not a size or a number counts as the default one, as the
-                // settings screen reads it. It stays in the file; the stream does not crash on it.
-                val (width, height) = sizeOrNull(resStr) ?: (DEFAULT_WIDTH to DEFAULT_HEIGHT)
-                config.width = width
-                config.height = height
-                config.fps =
-                    prefs.getRequiredString(FPS_PREF_STRING, DEFAULT_FPS).toIntOrNull()
-                        ?: DEFAULT_FPS.toInt()
             }
 
+            // A stored value that is not a size or a number counts as the default one, as the
+            // settings screen reads it. It stays in the file; the stream does not crash on it.
+            val (width, height) = sizeOrNull(resStr) ?: (DEFAULT_WIDTH to DEFAULT_HEIGHT)
+            config.width = width
+            config.height = height
+            config.fps =
+                prefs.getRequiredString(FPS_PREF_STRING, DEFAULT_FPS).toIntOrNull()
+                    ?: DEFAULT_FPS.toInt()
+        }
+
+        private fun overrideMotionSensorsOnAndroid12(prefs: SharedPreferences) {
             if (
                 !prefs.contains(GAMEPAD_MOTION_SENSORS_PREF_STRING) &&
                     Build.VERSION.SDK_INT == Build.VERSION_CODES.S
@@ -481,9 +511,9 @@ class PreferenceConfiguration {
                 // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
                 prefs.edit { putBoolean(GAMEPAD_MOTION_SENSORS_PREF_STRING, false) }
             }
+        }
 
-            // This must happen after the preferences migration to ensure the preferences are
-            // populated
+        private fun readBitrate(prefs: SharedPreferences, config: PreferenceConfiguration) {
             config.bitrate =
                 prefs.getInt(
                     BITRATE_PREF_STRING,
@@ -495,7 +525,12 @@ class PreferenceConfiguration {
                 config.bitrate =
                     getDefaultBitrate("${config.width}x${config.height}", config.fps.toString())
             }
+        }
 
+        private fun readAudioConfiguration(
+            prefs: SharedPreferences,
+            config: PreferenceConfiguration,
+        ) {
             val audioConfig: String =
                 prefs.getRequiredString(AUDIO_CONFIG_PREF_STRING, DEFAULT_AUDIO_CONFIG)
             config.audioConfiguration =
@@ -504,20 +539,18 @@ class PreferenceConfiguration {
                     "51" -> MoonBridge.AUDIO_CONFIGURATION_51_SURROUND
                     else /* "2" */ -> MoonBridge.AUDIO_CONFIGURATION_STEREO
                 }
+        }
 
-            config.videoFormat = getVideoFormatValue(context)
-            config.framePacing = getFramePacingValue(context)
-
-            config.analogStickForScrolling = getAnalogStickForScrollingValue(context)
-
+        private fun readSeekbars(prefs: SharedPreferences, config: PreferenceConfiguration) {
             config.deadzonePercentage = prefs.getInt(DEADZONE_PREF_STRING, DEFAULT_DEADZONE)
 
             config.gamepadMouseSpeed =
                 prefs.getInt(GAMEPAD_MOUSE_SPEED_PREF_STRING, DEFAULT_GAMEPAD_MOUSE_SPEED)
 
             config.oscOpacity = prefs.getInt(OSC_OPACITY_PREF_STRING, DEFAULT_OPACITY)
+        }
 
-            // Checkbox preferences
+        private fun readStreamSwitches(prefs: SharedPreferences, config: PreferenceConfiguration) {
             config.disableWarnings =
                 prefs.getBoolean(DISABLE_TOASTS_PREF_STRING, DEFAULT_DISABLE_TOASTS)
             config.enableSops = prefs.getBoolean(SOPS_PREF_STRING, DEFAULT_SOPS)
@@ -535,6 +568,9 @@ class PreferenceConfiguration {
                 prefs.getBoolean(ENABLE_HDR_PREF_STRING, DEFAULT_ENABLE_HDR) &&
                     !isShieldAtvFirmwareWithBrokenHdr()
             config.enablePip = prefs.getBoolean(ENABLE_PIP_PREF_STRING, DEFAULT_ENABLE_PIP)
+        }
+
+        private fun readInputSwitches(prefs: SharedPreferences, config: PreferenceConfiguration) {
             config.bindAllUsb = prefs.getBoolean(BIND_ALL_USB_STRING, DEFAULT_BIND_ALL_USB)
             config.mouseEmulation =
                 prefs.getBoolean(MOUSE_EMULATION_STRING, DEFAULT_MOUSE_EMULATION)
@@ -555,6 +591,9 @@ class PreferenceConfiguration {
                 prefs.getBoolean(TOUCHSCREEN_TRACKPAD_PREF_STRING, DEFAULT_TOUCHSCREEN_TRACKPAD)
             config.touchscreenNative =
                 prefs.getBoolean(TOUCHSCREEN_NATIVE_PREF_STRING, DEFAULT_TOUCHSCREEN_NATIVE)
+        }
+
+        private fun readExtraSwitches(prefs: SharedPreferences, config: PreferenceConfiguration) {
             config.enableLatencyToast =
                 prefs.getBoolean(LATENCY_TOAST_PREF_STRING, DEFAULT_LATENCY_TOAST)
             config.absoluteMouseMode =
@@ -576,8 +615,6 @@ class PreferenceConfiguration {
                     GAMEPAD_MOTION_FALLBACK_PREF_STRING,
                     DEFAULT_GAMEPAD_MOTION_FALLBACK,
                 )
-
-            return config
         }
     }
 }

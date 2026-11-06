@@ -35,6 +35,7 @@ import io.github.magalz.borealis.library.shell.LibraryScaffold
 import io.github.magalz.borealis.library.shell.RailActions
 import io.github.magalz.borealis.library.shell.RailSelection
 import io.github.magalz.borealis.library.testing.TV
+import io.github.magalz.borealis.library.testing.resetWindowFocus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -164,7 +165,7 @@ class HostsFocusTest {
         show()
         composeRule.onNodeWithTag("host:living").requestFocus()
         openOptions("host:living")
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         Espresso.pressBack()
         composeRule.waitForIdle()
@@ -178,7 +179,7 @@ class HostsFocusTest {
         show()
         composeRule.onNodeWithTag("host:living").requestFocus()
         openOptions("host:living")
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         composeRule.onNodeWithText("Wake").performClick()
         composeRule.waitForIdle()
@@ -195,7 +196,7 @@ class HostsFocusTest {
         composeRule.onNodeWithText("Details").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Close").assertIsDisplayed()
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         composeRule.onNodeWithText("Close").performClick()
         composeRule.waitForIdle()
@@ -212,7 +213,7 @@ class HostsFocusTest {
         composeRule.onNodeWithText("Forget").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Cancel").assertIsFocused()
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         composeRule.onNodeWithText("Cancel").performClick()
         composeRule.waitForIdle()
@@ -227,7 +228,7 @@ class HostsFocusTest {
         show()
         composeRule.onNodeWithTag("host:h04").requestFocus()
         openOptions("host:h04")
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
         // The grid composes only what is in view, and keeps a card that has the focus: the reset
         // gave it to the first card, so the opener, which carries the requester, leaves the grid.
         composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(manyHosts.size)
@@ -342,7 +343,7 @@ class HostsFocusTest {
         composeRule.onNodeWithText("Forget").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Cancel").assertIsFocused()
-        resetWindowFocus()
+        composeRule.resetWindowFocus(window)
 
         composeRule.onNodeWithText("Forget").performClick()
         composeRule.waitForIdle()
@@ -351,17 +352,6 @@ class HostsFocusTest {
 
     private fun removeHost(id: String) {
         state.value = state.value.copy(items = state.value.items.filter { it.id != id })
-    }
-
-    /**
-     * What a window that opens over the screen can do to the one under it (Sprint 14 UAT, U11):
-     * Android takes the focus from its view and gives it back, and Compose then puts the focus on
-     * the first element and not on the one that had it. The dialogs of Robolectric leave the focus
-     * alone, so the test does what the device did.
-     */
-    private fun resetWindowFocus() {
-        composeRule.runOnUiThread { checkNotNull(window).clearFocus() }
-        composeRule.waitForIdle()
     }
 
     @Composable

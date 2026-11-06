@@ -47,7 +47,7 @@ class DeviceListThreadsTest {
      * A host callback that runs on a thread of its own, as the native connection thread runs them.
      * The thread is held when it starts its second step through the pads.
      */
-    private inner class HeldReader(private val read: () -> Unit) {
+    private inner class HeldReader(read: () -> Unit) {
         private val held = CountDownLatch(1)
         private val letGo = CountDownLatch(1)
         private val steps = AtomicInteger()

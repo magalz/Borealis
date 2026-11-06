@@ -114,6 +114,7 @@ class ControllerHandler(
     @Volatile private var pointerSpeedFactor = 1f
     private val inputLock = Any()
     private var controllersWithInput = 0 // guarded by inputLock
+    private val fusedPacket = FusedPacket() // guarded by inputLock
 
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
@@ -1526,8 +1527,29 @@ class ControllerHandler(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
+    // The packet of one controller number: the fusion of the contexts that hold it. There is one
+    // for the handler, filled again for each packet, so that a packet allocates nothing.
+    private class FusedPacket {
+        @JvmField var inputMap = 0
+        @JvmField var leftTrigger: Byte = 0
+        @JvmField var rightTrigger: Byte = 0
+        @JvmField var leftStickX: Short = 0
+        @JvmField var leftStickY: Short = 0
+        @JvmField var rightStickX: Short = 0
+        @JvmField var rightStickY: Short = 0
+
+        fun clear() {
+            inputMap = 0
+            leftTrigger = 0
+            rightTrigger = 0
+            leftStickX = 0
+            leftStickY = 0
+            rightStickX = 0
+            rightStickY = 0
+        }
+    }
+
+    // The caller holds inputLock
     private fun transmitControllerInputLocked(originalContext: GenericControllerContext) {
         assignControllerNumberIfNeeded(originalContext)
         if (!originalContext.assignedControllerNumber) {
@@ -1538,100 +1560,10 @@ class ControllerHandler(
 
         // Take the context's controller number and fuse all inputs with the same number
         val controllerNumber = originalContext.controllerNumber
-        var inputMap = 0
-        var leftTrigger: Byte = 0
-        var rightTrigger: Byte = 0
-        var leftStickX: Short = 0
-        var leftStickY: Short = 0
-        var rightStickX: Short = 0
-        var rightStickY: Short = 0
-
-        // In order to properly handle controllers that are split into multiple devices,
-        // we must aggregate all controllers with the same controller number into a single
-        // device before we send it. The buttons are ORed; each trigger and each stick axis takes
-        // the value of larger magnitude, the later device's on a tie.
-        inputDeviceContexts.forEachValue { context ->
-            if (
-                context.assignedControllerNumber &&
-                    context.controllerNumber == controllerNumber &&
-                    context.mouseEmulationActive == originalContext.mouseEmulationActive
-            ) {
-                inputMap = inputMap or context.sentInputMap()
-                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
-                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
-                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
-                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
-                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
-            }
-        }
-        usbDeviceContexts.forEachValue { context ->
-            if (
-                context.assignedControllerNumber &&
-                    context.controllerNumber == controllerNumber &&
-                    context.mouseEmulationActive == originalContext.mouseEmulationActive
-            ) {
-                inputMap = inputMap or context.sentInputMap()
-                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
-                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
-                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
-                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
-                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
-            }
-        }
-        if (defaultContext.controllerNumber == controllerNumber) {
-            inputMap = inputMap or defaultContext.sentInputMap()
-            leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
-            rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
-            leftStickX = maxByMagnitude(leftStickX, defaultContext.leftStickX)
-            leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
-            rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
-            rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
-        }
+        val fused = fuseControllerInputs(originalContext, controllerNumber)
 
         if (originalContext.mouseEmulationActive) {
-            val changedMask = inputMap xor originalContext.mouseEmulationLastInputMap
-
-            val aDown = (inputMap and ControllerPacket.A_FLAG) != 0
-            val bDown = (inputMap and ControllerPacket.B_FLAG) != 0
-
-            originalContext.mouseEmulationLastInputMap = inputMap
-
-            if ((changedMask and ControllerPacket.A_FLAG) != 0) {
-                if (aDown) {
-                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                } else {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                }
-            }
-            if ((changedMask and ControllerPacket.B_FLAG) != 0) {
-                if (bDown) {
-                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                } else {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                }
-            }
-            if ((changedMask and ControllerPacket.UP_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.UP_FLAG) != 0) {
-                    conn.sendMouseScroll(1)
-                }
-            }
-            if ((changedMask and ControllerPacket.DOWN_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.DOWN_FLAG) != 0) {
-                    conn.sendMouseScroll(-1)
-                }
-            }
-            if ((changedMask and ControllerPacket.RIGHT_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.RIGHT_FLAG) != 0) {
-                    conn.sendMouseHScroll(1)
-                }
-            }
-            if ((changedMask and ControllerPacket.LEFT_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.LEFT_FLAG) != 0) {
-                    conn.sendMouseHScroll(-1)
-                }
-            }
+            sendMouseEmulation(originalContext, fused.inputMap)
 
             conn.sendControllerInput(
                 controllerNumber,
@@ -1648,14 +1580,115 @@ class ControllerHandler(
             conn.sendControllerInput(
                 controllerNumber,
                 getActiveControllerMask(),
-                inputMap,
-                leftTrigger,
-                rightTrigger,
-                leftStickX,
-                leftStickY,
-                rightStickX,
-                rightStickY,
+                fused.inputMap,
+                fused.leftTrigger,
+                fused.rightTrigger,
+                fused.leftStickX,
+                fused.leftStickY,
+                fused.rightStickX,
+                fused.rightStickY,
             )
+        }
+    }
+
+    // In order to properly handle controllers that are split into multiple devices,
+    // we must aggregate all controllers with the same controller number into a single
+    // device before we send it. The buttons are ORed; each trigger and each stick axis takes
+    // the value of larger magnitude, the later device's on a tie.
+    private fun fuseControllerInputs(
+        originalContext: GenericControllerContext,
+        controllerNumber: Short,
+    ): FusedPacket {
+        val fused = fusedPacket
+        fused.clear()
+
+        inputDeviceContexts.forEachValue { fuseIfOnNumber(it, controllerNumber, originalContext) }
+        usbDeviceContexts.forEachValue { fuseIfOnNumber(it, controllerNumber, originalContext) }
+
+        // The on-screen controller is held to the number alone: it has its number from the start,
+        // and its buttons join the packet of a pad in mouse mode as well
+        if (defaultContext.controllerNumber == controllerNumber) {
+            fuse(defaultContext)
+        }
+        return fused
+    }
+
+    // A pad joins the packet when it has a number, the number of the context that sends and its
+    // mouse mode: a pad in mouse mode and one that is not make packets of their own
+    private fun fuseIfOnNumber(
+        context: GenericControllerContext,
+        controllerNumber: Short,
+        originalContext: GenericControllerContext,
+    ) {
+        if (
+            context.assignedControllerNumber &&
+                context.controllerNumber == controllerNumber &&
+                context.mouseEmulationActive == originalContext.mouseEmulationActive
+        ) {
+            fuse(context)
+        }
+    }
+
+    private fun fuse(context: GenericControllerContext) {
+        val fused = fusedPacket
+        fused.inputMap = fused.inputMap or context.sentInputMap()
+        fused.leftTrigger = maxByMagnitude(fused.leftTrigger, context.leftTrigger)
+        fused.rightTrigger = maxByMagnitude(fused.rightTrigger, context.rightTrigger)
+        fused.leftStickX = maxByMagnitude(fused.leftStickX, context.leftStickX)
+        fused.leftStickY = maxByMagnitude(fused.leftStickY, context.leftStickY)
+        fused.rightStickX = maxByMagnitude(fused.rightStickX, context.rightStickX)
+        fused.rightStickY = maxByMagnitude(fused.rightStickY, context.rightStickY)
+    }
+
+    // A pad in mouse mode does not send its buttons as a gamepad: A and B are the left and right
+    // mouse buttons and the D-pad scrolls. [inputMap] is what the pads on its number hold.
+    private fun sendMouseEmulation(originalContext: GenericControllerContext, inputMap: Int) {
+        val changedMask = inputMap xor originalContext.mouseEmulationLastInputMap
+
+        originalContext.mouseEmulationLastInputMap = inputMap
+
+        sendMouseButtons(changedMask, inputMap)
+        sendDpadScroll(changedMask, inputMap)
+    }
+
+    private fun sendMouseButtons(changedMask: Int, inputMap: Int) {
+        if ((changedMask and ControllerPacket.A_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.A_FLAG) != 0) {
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+            } else {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+            }
+        }
+        if ((changedMask and ControllerPacket.B_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.B_FLAG) != 0) {
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+            } else {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+            }
+        }
+    }
+
+    // A direction scrolls one click when it goes down, and nothing when it goes up
+    private fun sendDpadScroll(changedMask: Int, inputMap: Int) {
+        if ((changedMask and ControllerPacket.UP_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.UP_FLAG) != 0) {
+                conn.sendMouseScroll(1)
+            }
+        }
+        if ((changedMask and ControllerPacket.DOWN_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.DOWN_FLAG) != 0) {
+                conn.sendMouseScroll(-1)
+            }
+        }
+        if ((changedMask and ControllerPacket.RIGHT_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.RIGHT_FLAG) != 0) {
+                conn.sendMouseHScroll(1)
+            }
+        }
+        if ((changedMask and ControllerPacket.LEFT_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.LEFT_FLAG) != 0) {
+                conn.sendMouseHScroll(-1)
+            }
         }
     }
 

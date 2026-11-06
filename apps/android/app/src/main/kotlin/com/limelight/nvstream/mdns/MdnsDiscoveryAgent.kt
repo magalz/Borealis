@@ -82,13 +82,6 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
         return null
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress(
-        "LoopWithTooManyJumpStatements",
-        "NestedBlockDepth",
-        "CyclomaticComplexMethod",
-        "ComplexCondition",
-    )
     private fun getBestIpv6Address(addresses: Array<Inet6Address>): Inet6Address? {
         // First try to find a link local address, so we can match the interface identifier
         // with a global address (this will work for SLAAC but not DHCPv6).
@@ -96,68 +89,16 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
 
         // We will try once to match a SLAAC interface suffix, then
         // pick the first matching address
-        for (tries in 0 until BEST_ADDRESS_TRIES) {
+        return (0 until BEST_ADDRESS_TRIES).firstNotNullOfOrNull { tries ->
             // We assume the addresses are already sorted in descending order
             // of preference from Bonjour.
-            for (addr in addresses) {
-                if (addr.isLinkLocalAddress || addr.isSiteLocalAddress || addr.isLoopbackAddress) {
-                    // Link-local, site-local, and loopback aren't global
-                    LimeLog.info("Ignoring non-global address: ${addr.hostAddress}")
-                    continue
-                }
-
-                val addrBytes = addr.address
-
-                // 2002::/16
-                if (
-                    addrBytes[0].toInt() == TUNNEL_FIRST_BYTE &&
-                        addrBytes[1].toInt() == SIX_TO_FOUR_SECOND_BYTE
-                ) {
-                    // 6to4 has horrible performance
-                    LimeLog.info("Ignoring 6to4 address: ${addr.hostAddress}")
-                    continue
-                }
-                // 2001::/32
-                else if (
-                    addrBytes[0].toInt() == TUNNEL_FIRST_BYTE &&
-                        addrBytes[1].toInt() == TEREDO_SECOND_BYTE &&
-                        addrBytes[2].toInt() == 0x00 &&
-                        addrBytes[TEREDO_LAST_PREFIX_INDEX].toInt() == 0x00
-                ) {
-                    // Teredo also has horrible performance
-                    LimeLog.info("Ignoring Teredo address: ${addr.hostAddress}")
-                    continue
-                }
-                // fc00::/7
-                else if ((addrBytes[0].toInt() and ULA_MASK) == ULA_PREFIX) {
-                    // ULAs aren't global
-                    LimeLog.info("Ignoring ULA: ${addr.hostAddress}")
-                    continue
-                }
-
-                // Compare the final 64-bit interface identifier and skip the address
-                // if it doesn't match our link-local address.
-                if (linkLocalAddr != null && tries == 0) {
-                    var matched = true
-
-                    for (i in INTERFACE_IDENTIFIER_START until IPV6_ADDRESS_BYTES) {
-                        if (linkLocalAddr.address[i] != addr.address[i]) {
-                            matched = false
-                            break
-                        }
-                    }
-
-                    if (!matched) {
-                        LimeLog.info("Ignoring non-matching global address: ${addr.hostAddress}")
-                        continue
-                    }
-                }
-
-                return addr
+            addresses.firstOrNull { addr ->
+                isGlobalAddress(addr) &&
+                    (tries > 0 ||
+                        linkLocalAddr == null ||
+                        sharesInterfaceIdentifier(linkLocalAddr, addr))
             }
         }
-
-        return null
     }
 
     private companion object {
@@ -178,5 +119,66 @@ abstract class MdnsDiscoveryAgent(@JvmField protected val listener: MdnsDiscover
 
         // One try to match a SLAAC interface suffix, then one to pick the first matching address
         private const val BEST_ADDRESS_TRIES = 2
+
+        // Logs the reason when the address is not one to connect to from outside the network
+        private fun isGlobalAddress(addr: Inet6Address): Boolean {
+            val addrBytes = addr.address
+            val reason =
+                when {
+                    // Link-local, site-local, and loopback aren't global
+                    addr.isLinkLocalAddress || addr.isSiteLocalAddress || addr.isLoopbackAddress ->
+                        "non-global address"
+                    // 6to4 has horrible performance
+                    isSixToFour(addrBytes) -> "6to4 address"
+                    // Teredo also has horrible performance
+                    isTeredo(addrBytes) -> "Teredo address"
+                    // ULAs aren't global
+                    isUniqueLocal(addrBytes) -> "ULA"
+                    else -> null
+                }
+
+            if (reason != null) {
+                LimeLog.info("Ignoring $reason: ${addr.hostAddress}")
+            }
+            return reason == null
+        }
+
+        // 2002::/16
+        private fun isSixToFour(addrBytes: ByteArray): Boolean =
+            addrBytes[0].toInt() == TUNNEL_FIRST_BYTE &&
+                addrBytes[1].toInt() == SIX_TO_FOUR_SECOND_BYTE
+
+        // 2001::/32
+        private fun isTeredo(addrBytes: ByteArray): Boolean {
+            val inTeredoBlock =
+                addrBytes[0].toInt() == TUNNEL_FIRST_BYTE &&
+                    addrBytes[1].toInt() == TEREDO_SECOND_BYTE
+            return inTeredoBlock &&
+                addrBytes[2].toInt() == 0x00 &&
+                addrBytes[TEREDO_LAST_PREFIX_INDEX].toInt() == 0x00
+        }
+
+        // fc00::/7
+        private fun isUniqueLocal(addrBytes: ByteArray): Boolean =
+            (addrBytes[0].toInt() and ULA_MASK) == ULA_PREFIX
+
+        // Compare the final 64-bit interface identifier and skip the address
+        // if it doesn't match our link-local address.
+        private fun sharesInterfaceIdentifier(
+            linkLocalAddr: Inet6Address,
+            addr: Inet6Address,
+        ): Boolean {
+            val linkLocalBytes = linkLocalAddr.address
+            val addrBytes = addr.address
+            val matched =
+                (INTERFACE_IDENTIFIER_START until IPV6_ADDRESS_BYTES).all {
+                    linkLocalBytes[it] == addrBytes[it]
+                }
+
+            if (!matched) {
+                LimeLog.info("Ignoring non-matching global address: ${addr.hostAddress}")
+            }
+            return matched
+        }
     }
 }

@@ -25,9 +25,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.focus.BorealisPressIndication
 import io.github.magalz.borealis.designsystem.focus.borealisFocusIndication
@@ -82,8 +80,7 @@ fun <T> SegmentedControl(
             .border(1.dp, colors.lineStrong, MaterialTheme.shapes.medium)
             .padding(GROUP_PADDING)
             .selectableGroup()
-            // The segments are read in this group, in the order of their traversalIndex.
-            .semantics { isTraversalGroup = true }
+            .readingOrderGroup()
             .then(
                 if (focusable) Modifier.selectedOnEnter(hasSelected, selectedFocus) else Modifier
             ),
@@ -96,10 +93,8 @@ fun <T> SegmentedControl(
                 (if (isSelected) Modifier.focusRequester(selectedFocus) else Modifier)
                     .semantics {
                         if (groupLabel != null) contentDescription = "${label(option)}, $groupLabel"
-                        // The focused segment is lifted over its neighbours, which moves it to the
-                        // end of the semantics children; its place is the one it has on the screen.
-                        traversalIndex = index.toFloat()
                     }
+                    .readingOrderIndex(index)
                     .liftedWhenFocused()
                     .borealisFocusIndication(shape)
                     .background(if (isSelected) colors.accentTint else Color.Transparent, shape)

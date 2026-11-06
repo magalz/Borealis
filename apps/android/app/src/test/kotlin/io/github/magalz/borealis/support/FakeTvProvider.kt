@@ -29,6 +29,9 @@ class FakeTvProvider : ContentProvider() {
     var insertReturnsNull = false
     var queryReturnsNull = false
 
+    /** Like [queryReturnsNull], for the preview programs only: the channels are found. */
+    var programQueryReturnsNull = false
+
     /** A delete that finds nothing to delete, whatever was stored. */
     var deleteReturnsZero = false
 
@@ -71,7 +74,7 @@ class FakeTvProvider : ContentProvider() {
         sortOrder: String?,
     ): Cursor? {
         queries += uri
-        if (queryReturnsNull) return null
+        if (queryReturnsNull || (programQueryReturnsNull && table(uri) === programs)) return null
         val columns = checkNotNull(projection).toList()
         val cursor = MatrixCursor(columns.toTypedArray())
         val channel = uri.getQueryParameter("channel")?.toLongOrNull()

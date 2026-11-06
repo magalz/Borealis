@@ -10,6 +10,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.io.StringWriter
 import java.math.BigInteger
@@ -69,8 +70,9 @@ class AndroidCryptoProvider(c: Context) : LimelightCryptoProvider {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount", "TooGenericExceptionThrown")
+    // Converted as is from the inherited Java; the RuntimeException that wraps the cause of a
+    // missing algorithm stays as it was (Sprint 18c backlog).
+    @Suppress("TooGenericExceptionThrown")
     private fun loadCertKeyPair(): Boolean {
         val certBytes = loadFileToBytes(certFile)
         val keyBytes = loadFileToBytes(keyFile)
@@ -81,29 +83,29 @@ class AndroidCryptoProvider(c: Context) : LimelightCryptoProvider {
             return false
         }
 
-        try {
+        return try {
             val certFactory = CertificateFactory.getInstance("X.509", bcProvider)
             cert =
                 certFactory.generateCertificate(ByteArrayInputStream(certBytes)) as X509Certificate?
             pemCertBytes = certBytes
             val keyFactory = KeyFactory.getInstance("RSA", bcProvider)
             key = keyFactory.generatePrivate(PKCS8EncodedKeySpec(keyBytes))
+            true
         } catch (expected: CertificateException) {
             // May happen if the cert is corrupt
             LimeLog.warning("Corrupted certificate")
-            return false
+            false
         } catch (e: NoSuchAlgorithmException) {
             throw RuntimeException(e)
         } catch (expected: InvalidKeySpecException) {
             // May happen if the key is corrupt
             LimeLog.warning("Corrupted key")
-            return false
+            false
         }
-
-        return true
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Converted as is from the inherited Java; the TrulyRandom lint suppression and the generic
+    // RuntimeException that wraps every failure stay as they were (Sprint 18c backlog).
     @SuppressLint("TrulyRandom")
     @Suppress("TooGenericExceptionCaught", "TooGenericExceptionThrown")
     private fun generateCertKeyPair(): Boolean {
@@ -166,26 +168,14 @@ class AndroidCryptoProvider(c: Context) : LimelightCryptoProvider {
         return true
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("NestedBlockDepth", "PrintStackTrace")
+    // Converted as is from the inherited Java; the stack trace that it prints to the standard error
+    // stream stays as it was (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
     private fun saveCertKeyPair() {
         try {
             FileOutputStream(certFile).use { certOut ->
                 FileOutputStream(keyFile).use { keyOut ->
-                    // Write the certificate in OpenSSL PEM format (important for the server)
-                    val strWriter = StringWriter()
-                    JcaPEMWriter(strWriter).use { pemWriter -> pemWriter.writeObject(cert) }
-
-                    // Line endings MUST be UNIX for the PC to accept the cert properly
-                    OutputStreamWriter(certOut).use { certWriter ->
-                        val pemStr = strWriter.buffer.toString()
-                        for (i in pemStr.indices) {
-                            val c = pemStr[i]
-                            if (c != '\r') {
-                                certWriter.append(c)
-                            }
-                        }
-                    }
+                    writePemCertificate(certOut)
 
                     // Write the private out in PKCS8 format
                     keyOut.write(checkNotNull(key).encoded)
@@ -197,6 +187,23 @@ class AndroidCryptoProvider(c: Context) : LimelightCryptoProvider {
             // This isn't good because it means we'll have
             // to re-pair next time
             e.printStackTrace()
+        }
+    }
+
+    private fun writePemCertificate(certOut: OutputStream) {
+        // Write the certificate in OpenSSL PEM format (important for the server)
+        val strWriter = StringWriter()
+        JcaPEMWriter(strWriter).use { pemWriter -> pemWriter.writeObject(cert) }
+
+        // Line endings MUST be UNIX for the PC to accept the cert properly
+        OutputStreamWriter(certOut).use { certWriter ->
+            val pemStr = strWriter.buffer.toString()
+            for (i in pemStr.indices) {
+                val c = pemStr[i]
+                if (c != '\r') {
+                    certWriter.append(c)
+                }
+            }
         }
     }
 
@@ -216,61 +223,43 @@ class AndroidCryptoProvider(c: Context) : LimelightCryptoProvider {
                 pemCertBytes
             }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount")
+    /**
+     * Loads the pair from disk or, when that fails, generates one and loads what was generated.
+     * False when there is no pair to use. The caller holds [globalCryptoLock].
+     */
+    private fun loadOrGenerateCertKeyPair(): Boolean {
+        // No loaded pair yet, let's see if we have one on disk
+        if (loadCertKeyPair()) {
+            // Got one
+            return true
+        }
+
+        // Try to generate a new key pair
+        if (!generateCertKeyPair()) {
+            // Failed
+            return false
+        }
+
+        // Load the generated pair
+        loadCertKeyPair()
+        return true
+    }
+
     private fun loadOrGenerateCertificate(): X509Certificate? {
         // Use a lock here to ensure only one guy will be generating or loading
         // the certificate and key at a time
-        synchronized(globalCryptoLock) {
-            // Return a loaded cert if we have one
-            if (cert != null) {
-                return cert
-            }
-
-            // No loaded cert yet, let's see if we have one on disk
-            if (loadCertKeyPair()) {
-                // Got one
-                return cert
-            }
-
-            // Try to generate a new key pair
-            if (!generateCertKeyPair()) {
-                // Failed
-                return null
-            }
-
-            // Load the generated pair
-            loadCertKeyPair()
-            return cert
+        return synchronized(globalCryptoLock) {
+            // Return a loaded cert if we have one, or the one that the pair gives
+            cert ?: if (loadOrGenerateCertKeyPair()) cert else null
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount")
     private fun loadOrGeneratePrivateKey(): PrivateKey? {
         // Use a lock here to ensure only one guy will be generating or loading
         // the certificate and key at a time
-        synchronized(globalCryptoLock) {
-            // Return a loaded key if we have one
-            if (key != null) {
-                return key
-            }
-
-            // No loaded key yet, let's see if we have one on disk
-            if (loadCertKeyPair()) {
-                // Got one
-                return key
-            }
-
-            // Try to generate a new key pair
-            if (!generateCertKeyPair()) {
-                // Failed
-                return null
-            }
-
-            // Load the generated pair
-            loadCertKeyPair()
-            return key
+        return synchronized(globalCryptoLock) {
+            // Return a loaded key if we have one, or the one that the pair gives
+            key ?: if (loadOrGenerateCertKeyPair()) key else null
         }
     }
 

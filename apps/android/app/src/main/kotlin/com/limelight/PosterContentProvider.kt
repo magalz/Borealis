@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import com.limelight.grid.assets.DiskAssetLoader
 import io.github.magalz.borealis.library.PosterRequest
+import java.io.File
 import java.io.FileNotFoundException
 
 class PosterContentProvider : ContentProvider() {
@@ -23,14 +24,17 @@ class PosterContentProvider : ContentProvider() {
         return openBoxArtFile(uri, mode)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ThrowsCount")
     @Throws(FileNotFoundException::class)
     fun openBoxArtFile(uri: Uri, mode: String?): ParcelFileDescriptor {
         if (mode != "r") {
             throw UnsupportedOperationException("This provider is only for read mode")
         }
 
+        return ParcelFileDescriptor.open(boxArtFile(uri), ParcelFileDescriptor.MODE_READ_ONLY)
+    }
+
+    // The cached box art that the URI names, or a FileNotFoundException when it does not name one.
+    private fun boxArtFile(uri: Uri): File {
         val segments = uri.pathSegments
         if (segments.size != BOXART_URI_SEGMENTS) {
             throw FileNotFoundException()
@@ -39,10 +43,10 @@ class PosterContentProvider : ContentProvider() {
         val uuid = segments[COMPUTER_UUID_PATH_INDEX]
         val checkedAppId = PosterRequest.checkedAppId(uuid, appId)
         val file = checkNotNull(diskAssetLoader).getFile(uuid, checkedAppId)
-        if (file.exists()) {
-            return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        if (!file.exists()) {
+            throw FileNotFoundException()
         }
-        throw FileNotFoundException()
+        return file
     }
 
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int =

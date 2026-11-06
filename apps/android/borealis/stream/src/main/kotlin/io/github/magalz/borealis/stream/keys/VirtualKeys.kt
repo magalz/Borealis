@@ -7,6 +7,32 @@ import io.github.magalz.borealis.stream.keys.KeyModifier.CTRL
 import io.github.magalz.borealis.stream.keys.KeyModifier.SHIFT
 import io.github.magalz.borealis.stream.keys.KeyModifier.WIN
 
+// The Windows virtual-key codes the stream module sends, as `KeyboardTranslator` does. The keyboard
+// and the shortcuts read them from here.
+internal const val VK_BACKSPACE = 0x08
+internal const val VK_TAB = 0x09
+internal const val VK_ENTER = 0x0D
+internal const val VK_ESCAPE = 0x1B
+internal const val VK_SPACE = 0x20
+internal const val VK_PAGE_UP = 0x21
+internal const val VK_PAGE_DOWN = 0x22
+internal const val VK_END = 0x23
+internal const val VK_HOME = 0x24
+internal const val VK_LEFT = 0x25
+internal const val VK_UP = 0x26
+internal const val VK_RIGHT = 0x27
+internal const val VK_DOWN = 0x28
+internal const val VK_DELETE = 0x2E
+internal const val VK_0 = 0x30
+internal const val VK_A = 0x41
+internal const val VK_B = 0x42
+internal const val VK_D = 0x44
+internal const val VK_G = 0x47
+internal const val VK_LWIN = 0x5B
+internal const val VK_F1 = 0x70
+internal const val VK_F4 = 0x73
+internal const val VK_F11 = 0x7A
+
 /**
  * A modifier key: [vk] is its Windows virtual-key code, as `KeyboardTranslator` sends it, and
  * [flag] is its bit in `KeyboardPacket.MODIFIER_*`.
@@ -15,7 +41,7 @@ enum class KeyModifier(val vk: Int, val flag: Int) {
     SHIFT(0xA0, 0x01),
     CTRL(0xA2, 0x02),
     ALT(0xA4, 0x04),
-    WIN(0x5B, 0x08),
+    WIN(VK_LWIN, 0x08),
 }
 
 /** A key with the modifiers held while it is pressed. [vk] is a Windows virtual-key code. */
@@ -26,15 +52,6 @@ data class NamedChord(@StringRes val label: Int, val chord: KeyChord)
 
 /** The chords the menu and the keyboard offer. */
 object Shortcuts {
-    private const val VK_TAB = 0x09
-    private const val VK_ESCAPE = 0x1B
-    private const val VK_B = 0x42
-    private const val VK_D = 0x44
-    private const val VK_G = 0x47
-    private const val VK_LWIN = 0x5B
-    private const val VK_F4 = 0x73
-    private const val VK_F11 = 0x7A
-
     private val altTab = NamedChord(R.string.key_alt_tab, KeyChord(VK_TAB, setOf(ALT)))
     private val winTab = NamedChord(R.string.key_win_tab, KeyChord(VK_TAB, setOf(WIN)))
     private val win = NamedChord(R.string.key_win, KeyChord(VK_LWIN))

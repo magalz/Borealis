@@ -113,13 +113,7 @@ class Xbox360Controller(
                 0x00,
                 0x00,
             )
-        val res =
-            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
-        val sent = res == data.size
-        if (!sent) {
-            LimeLog.warning("Rumble transfer failed: $res")
-        }
-        return sent
+        return writeRumble(data)
     }
 
     override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {

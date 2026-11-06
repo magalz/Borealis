@@ -165,13 +165,7 @@ class XboxOneController(
                 0x00,
                 RUMBLE_FULL,
             )
-        val res =
-            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
-        val sent = res == data.size
-        if (!sent) {
-            LimeLog.warning("Rumble transfer failed: $res")
-        }
-        return sent
+        return writeRumble(data)
     }
 
     override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {

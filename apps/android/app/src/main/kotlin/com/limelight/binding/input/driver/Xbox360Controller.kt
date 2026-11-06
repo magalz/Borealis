@@ -1,6 +1,5 @@
 package com.limelight.binding.input.driver
 
-import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import com.limelight.LimeLog
@@ -189,24 +188,13 @@ class Xbox360Controller(
         private const val RUMBLE_REPORT_SIZE: Byte = 0x08
         private const val MOTOR_BYTE_SHIFT = 8
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition")
         @JvmStatic
-        fun canClaimDevice(device: UsbDevice): Boolean {
-            for (supportedVid in SUPPORTED_VENDORS) {
-                if (
-                    device.vendorId == supportedVid &&
-                        device.interfaceCount >= 1 &&
-                        device.getInterface(0).interfaceClass ==
-                            UsbConstants.USB_CLASS_VENDOR_SPEC &&
-                        device.getInterface(0).interfaceSubclass == XB360_IFACE_SUBCLASS &&
-                        device.getInterface(0).interfaceProtocol == XB360_IFACE_PROTOCOL
-                ) {
-                    return true
-                }
-            }
-
-            return false
-        }
+        fun canClaimDevice(device: UsbDevice): Boolean =
+            matchesFirstInterface(
+                device,
+                SUPPORTED_VENDORS,
+                XB360_IFACE_SUBCLASS,
+                XB360_IFACE_PROTOCOL,
+            )
     }
 }

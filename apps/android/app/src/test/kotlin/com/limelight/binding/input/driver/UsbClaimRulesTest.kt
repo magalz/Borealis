@@ -2,6 +2,7 @@ package com.limelight.binding.input.driver
 
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbInterface
 import android.view.InputDevice
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
@@ -160,6 +161,52 @@ class UsbClaimRulesTest {
         val device = UsbPads.device("/dev/x", 0x045E, 0x028E, listOf(other, matching))
 
         assertThat(Xbox360Controller.canClaimDevice(device)).isFalse()
+    }
+
+    @Test
+    fun `each driver is decided by its first interface whatever follows it`() {
+        // 360: 93/1, One: 71/208, dongle: 93/129.
+        val drivers =
+            mapOf<String, Triple<(UsbDevice) -> Boolean, Int, Int>>(
+                "Xbox 360" to
+                    Triple(
+                        { Xbox360Controller.canClaimDevice(it) },
+                        UsbPads.XB360_SUBCLASS,
+                        UsbPads.XB360_PROTOCOL,
+                    ),
+                "Xbox One" to
+                    Triple(
+                        { XboxOneController.canClaimDevice(it) },
+                        UsbPads.XB1_SUBCLASS,
+                        UsbPads.XB1_PROTOCOL,
+                    ),
+                "dongle" to
+                    Triple(
+                        { Xbox360WirelessDongle.canClaimDevice(it) },
+                        UsbPads.XB360_SUBCLASS,
+                        UsbPads.XB360W_PROTOCOL,
+                    ),
+            )
+        val wrong = mutableListOf<String>()
+        for ((name, rule) in drivers) {
+            val (claims, subclass, protocol) = rule
+            fun matching(id: Int) =
+                UsbPads.usbInterface(id, subclass = subclass, protocol = protocol)
+
+            fun other(id: Int) =
+                UsbPads.usbInterface(id, UsbConstants.USB_CLASS_HID, subclass = 0, protocol = 0)
+
+            fun claimed(vararg interfaces: UsbInterface) =
+                claims(UsbPads.device("/dev/x", 0x045E, 0x0001, interfaces.toList()))
+
+            if (!claimed(matching(0))) wrong += "$name: a matching interface alone"
+            if (!claimed(matching(0), other(1))) wrong += "$name: a matching one, then another"
+            if (!claimed(matching(0), matching(1))) wrong += "$name: two matching ones"
+            if (claimed(other(0), matching(1))) wrong += "$name: another one, then a matching one"
+            if (claimed(other(0))) wrong += "$name: another interface alone"
+        }
+
+        assertThat(wrong).isEmpty()
     }
 
     @Test

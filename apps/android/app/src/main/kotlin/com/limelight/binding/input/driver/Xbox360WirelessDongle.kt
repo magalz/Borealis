@@ -139,24 +139,13 @@ class Xbox360WirelessDongle(
         private const val LED_SLOT_COUNT = 4
         private const val LED_TIMEOUT_MS = 3000
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition")
         @JvmStatic
-        fun canClaimDevice(device: UsbDevice): Boolean {
-            for (supportedVid in SUPPORTED_VENDORS) {
-                if (
-                    device.vendorId == supportedVid &&
-                        device.interfaceCount >= 1 &&
-                        device.getInterface(0).interfaceClass ==
-                            UsbConstants.USB_CLASS_VENDOR_SPEC &&
-                        device.getInterface(0).interfaceSubclass == XB360W_IFACE_SUBCLASS &&
-                        device.getInterface(0).interfaceProtocol == XB360W_IFACE_PROTOCOL
-                ) {
-                    return true
-                }
-            }
-
-            return false
-        }
+        fun canClaimDevice(device: UsbDevice): Boolean =
+            matchesFirstInterface(
+                device,
+                SUPPORTED_VENDORS,
+                XB360W_IFACE_SUBCLASS,
+                XB360W_IFACE_PROTOCOL,
+            )
     }
 }

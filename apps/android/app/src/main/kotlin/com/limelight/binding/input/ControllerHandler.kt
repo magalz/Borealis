@@ -1365,21 +1365,24 @@ class ControllerHandler(
         }
     }
 
-    // A pad that leaves, or whose mouse mode goes off, lets go of the buttons it holds and no other
-    // pad on its number holds, and takes them out of the last state of the pads that stay. That is
-    // the fused state of the number, so it holds what this pad held too: left there, the click
-    // would hide the next press of those pads, or go up a second time with them. The stop lets go
-    // of every pad's buttons, so it takes no such care.
+    // A pad that leaves, or whose mouse mode goes off, lets go of the buttons its mouse path
+    // pressed, unless another context still in mouse mode on its number holds them, and takes them
+    // out of the last state of the pads that stay. That is the fused state of the number, so it
+    // holds what this pad held too: left there, the click would hide the next press of those pads,
+    // or go up a second time with them. The on-screen controller is fused in but is a gamepad, so
+    // what it holds does not keep the click down: it goes up here, because its own release sends
+    // no mouse event. The stop lets go of every pad's buttons, so it takes no such care.
     private fun endLeavingMouse(context: GenericControllerContext) {
         synchronized(inputLock) {
             var heldByOthers = 0
-            forEachFusedWith(context) { heldByOthers = heldByOthers or it.sentInputMap() }
+            forEachFusedWith(context) {
+                if (it.mouseEmulationActive) {
+                    heldByOthers = heldByOthers or it.sentInputMap()
+                }
+            }
             val released =
                 if (context.mouseEmulationActive) {
-                    context.mouseEmulationLastInputMap and
-                        context.sentInputMap() and
-                        heldByOthers.inv() and
-                        MOUSE_BUTTON_FLAGS
+                    context.mouseEmulationLastInputMap and heldByOthers.inv() and MOUSE_BUTTON_FLAGS
                 } else {
                     0
                 }

@@ -13,8 +13,9 @@ import org.robolectric.RobolectricTestRunner
 /**
  * Two pads on one controller number (multiple controllers are off), both in mouse mode, send the
  * click of their fused state. When the mouse mode goes off for a pad, the PC's button goes up with
- * the last pad that holds it, as it does when a pad leaves: never for a button another pad holds,
- * and never twice.
+ * the last pad in mouse mode that holds it, as it does when a pad leaves: never for a button
+ * another pad in mouse mode holds, and never twice. The on-screen controller is a gamepad, so it
+ * does not keep a click down.
  */
 @RunWith(RobolectricTestRunner::class)
 class SharedNumberMouseOffTest {
@@ -66,7 +67,7 @@ class SharedNumberMouseOffTest {
     }
 
     @Test
-    fun `a pad that holds nothing ends the mouse while the on-screen controller holds A and sends no up`() {
+    fun `a pad that holds nothing ends the mouse while the on-screen controller holds A and sends one up`() {
         rig.handler.reportOscState(a, 0, 0, 0, 0, 0, 0)
         // The pad sends its state with what the on-screen controller holds in it
         first.report(0, leftStickX = 0.5f)
@@ -75,6 +76,11 @@ class SharedNumberMouseOffTest {
 
         rig.handler.setMouseEmulation(false)
 
-        assertThat(rig.connection.buttonEvents()).isEqualTo(before)
+        assertThat(rig.connection.buttonEvents().drop(before.size)).containsExactly("up 1")
+
+        // The on-screen controller is a gamepad again: its release is no mouse event
+        rig.handler.reportOscState(0, 0, 0, 0, 0, 0, 0)
+
+        assertThat(rig.connection.buttonEvents().drop(before.size)).containsExactly("up 1")
     }
 }

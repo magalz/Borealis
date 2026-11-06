@@ -1125,12 +1125,20 @@ class ControllerHandler(
     }
 
     // This must not be called on the main thread due to risk of ANRs!
-    @SuppressLint("InlinedApi")
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun sendControllerBatteryPacket(context: InputDeviceContext) {
-        val currentBatteryStatus: Int
-        val currentBatteryCapacity: Float
+        val reading = readBattery(context)
+        if (reading == null) {
+            reportNoBattery(context)
+            return
+        }
+        reportBatteryChange(context, reading)
+    }
+
+    // What a battery says: a BatteryState status and a capacity from 0 to 1, NaN when unknown
+    private class BatteryReading(val status: Int, val capacity: Float)
+
+    // The battery of the pad, or null when it has none to read
+    private fun readBattery(context: InputDeviceContext): BatteryReading? {
         val device = context.inputDevice
 
         // Use the BatteryState object introduced in Android S, if it's available and present.
@@ -1138,118 +1146,133 @@ class ControllerHandler(
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                 checkNotNull(device).batteryState.isPresent
         ) {
-            currentBatteryStatus = device.batteryState.status
-            currentBatteryCapacity = device.batteryState.capacity
-        } else if (sceManager.isRecognizedDevice(device)) {
-            // On the SHIELD Android TV, we can use a proprietary API to access battery/charge
-            // state.
-            // We will convert it to the same form used by BatteryState to share code.
-            val batteryPercentage = sceManager.getBatteryPercentage(device)
+            return BatteryReading(device.batteryState.status, device.batteryState.capacity)
+        }
+        return if (sceManager.isRecognizedDevice(device)) readSceBattery(device) else null
+    }
+
+    // On the SHIELD Android TV, we can use a proprietary API to access battery/charge state. We
+    // convert it to the same form used by BatteryState to share code.
+    private fun readSceBattery(device: InputDevice?): BatteryReading {
+        val batteryPercentage = sceManager.getBatteryPercentage(device)
+        val capacity =
             if (batteryPercentage < 0) {
-                currentBatteryCapacity = Float.NaN
+                Float.NaN
             } else {
-                currentBatteryCapacity = batteryPercentage / PERCENT.toFloat()
+                batteryPercentage / PERCENT.toFloat()
             }
 
-            val connectionType = sceManager.getConnectionType(device)
-            val chargingState = sceManager.getChargingState(device)
+        val connectionType = sceManager.getConnectionType(device)
+        val chargingState = sceManager.getChargingState(device)
+        return BatteryReading(
+            sceBatteryStatus(batteryPercentage, connectionType, chargingState),
+            capacity,
+        )
+    }
 
-            // We can make some assumptions about charge state based on the connection type
-            if (
-                connectionType == SceConnectionType.WIRED ||
-                    connectionType == SceConnectionType.BOTH
-            ) {
-                if (batteryPercentage == PERCENT) {
-                    currentBatteryStatus = BatteryState.STATUS_FULL
-                } else if (chargingState == SceChargingState.NOT_CHARGING) {
-                    currentBatteryStatus = BatteryState.STATUS_NOT_CHARGING
-                } else {
-                    currentBatteryStatus = BatteryState.STATUS_CHARGING
-                }
-            } else if (connectionType == SceConnectionType.WIRELESS) {
+    // We can make some assumptions about charge state based on the connection type. The arguments
+    // are nullable because the service is Java: a null is compared like any other answer.
+    //
+    // Converted as is from the inherited Java; InlinedApi stays because the SHIELD service answers
+    // on Android before 12, where the BatteryState statuses are inlined constants (Sprint 18c
+    // backlog).
+    @SuppressLint("InlinedApi")
+    private fun sceBatteryStatus(
+        batteryPercentage: Int,
+        connectionType: SceConnectionType?,
+        chargingState: SceChargingState?,
+    ): Int {
+        val wired =
+            connectionType == SceConnectionType.WIRED || connectionType == SceConnectionType.BOTH
+        return when {
+            wired && batteryPercentage == PERCENT -> BatteryState.STATUS_FULL
+            wired && chargingState == SceChargingState.NOT_CHARGING ->
+                BatteryState.STATUS_NOT_CHARGING
+            wired -> BatteryState.STATUS_CHARGING
+            connectionType == SceConnectionType.WIRELESS ->
                 if (chargingState == SceChargingState.CHARGING) {
-                    currentBatteryStatus = BatteryState.STATUS_CHARGING
+                    BatteryState.STATUS_CHARGING
                 } else {
-                    currentBatteryStatus = BatteryState.STATUS_DISCHARGING
+                    BatteryState.STATUS_DISCHARGING
                 }
-            } else {
-                // If connection type is unknown, just use the charge state
-                if (batteryPercentage == PERCENT) {
-                    currentBatteryStatus = BatteryState.STATUS_FULL
-                } else if (chargingState == SceChargingState.NOT_CHARGING) {
-                    currentBatteryStatus = BatteryState.STATUS_DISCHARGING
-                } else if (chargingState == SceChargingState.CHARGING) {
-                    currentBatteryStatus = BatteryState.STATUS_CHARGING
-                } else {
-                    currentBatteryStatus = BatteryState.STATUS_UNKNOWN
-                }
-            }
-        } else {
-            // From Android S the system says whether the pad has a battery: tell the host that its
-            // number has none, once, if the pad claimed a battery in its arrival (an external pad,
-            // see sendControllerArrival): the host has nothing to correct for a pad that did not.
-            // The same goes for a device without joystick axes, the touchpad of a pad: it takes the
-            // number of its joystick, which owns the battery. With a single controller pads that
-            // claimed one share the number, and the host keeps one battery for it: the pad that
-            // has none stays silent while another one on the number has reported a battery, or it
-            // would wipe it and the poll sends only a change. What the host holds is the number's
-            // state, not the pad's: the first pad polled speaks for the number, a pad without a
-            // battery speaks again when the pad that had one leaves, and not when it takes the
-            // number of a pad that said none. Before S we cannot know, and the pad claims no
-            // battery.
-            val speaksForNumber = claimsBattery(context) && !sharesNumberWithBattery(context)
-            val number = context.controllerNumber.toInt()
-            if (
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    speaksForNumber &&
-                    !numberHasNoBattery[number]
-            ) {
-                conn.sendControllerBatteryEvent(
-                    number.toByte(),
-                    MoonBridge.LI_BATTERY_STATE_NOT_PRESENT,
-                    MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN,
-                )
-                numberHasNoBattery[number] = true
+            // If connection type is unknown, just use the charge state
+            batteryPercentage == PERCENT -> BatteryState.STATUS_FULL
+            chargingState == SceChargingState.NOT_CHARGING -> BatteryState.STATUS_DISCHARGING
+            chargingState == SceChargingState.CHARGING -> BatteryState.STATUS_CHARGING
+            else -> BatteryState.STATUS_UNKNOWN
+        }
+    }
 
-                // A battery that comes back with the status it had is a change to the host
-                context.lastReportedBatteryStatus = BATTERY_STATUS_NOT_PRESENT
-            }
+    // The pad has no battery to read. From Android S the system says whether the pad has a
+    // battery: tell the host that its number has none, once, if the pad claimed a battery in its
+    // arrival (an external pad, see sendControllerArrival): the host has nothing to correct for a
+    // pad that did not. The same goes for a device without joystick axes, the touchpad of a pad: it
+    // takes the number of its joystick, which owns the battery. With a single controller pads that
+    // claimed one share the number, and the host keeps one battery for it: the pad that has none
+    // stays silent while another one on the number has reported a battery, or it would wipe it and
+    // the poll sends only a change. What the host holds is the number's state, not the pad's: the
+    // first pad polled speaks for the number, a pad without a battery speaks again when the pad
+    // that had one leaves, and not when it takes the number of a pad that said none. Before S we
+    // cannot know, and the pad claims no battery.
+    private fun reportNoBattery(context: InputDeviceContext) {
+        val speaksForNumber = claimsBattery(context) && !sharesNumberWithBattery(context)
+        val number = context.controllerNumber.toInt()
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                speaksForNumber &&
+                !numberHasNoBattery[number]
+        ) {
+            conn.sendControllerBatteryEvent(
+                number.toByte(),
+                MoonBridge.LI_BATTERY_STATE_NOT_PRESENT,
+                MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN,
+            )
+            numberHasNoBattery[number] = true
+
+            // A battery that comes back with the status it had is a change to the host
+            context.lastReportedBatteryStatus = BATTERY_STATUS_NOT_PRESENT
+        }
+    }
+
+    // The host hears of a battery only when its status or its capacity changed since the last
+    // report, and only of a status it has a state for
+    private fun reportBatteryChange(context: InputDeviceContext, reading: BatteryReading) {
+        if (
+            reading.status == context.lastReportedBatteryStatus &&
+                areBatteryCapacitiesEqual(reading.capacity, context.lastReportedBatteryCapacity)
+        ) {
             return
         }
 
-        if (
-            currentBatteryStatus != context.lastReportedBatteryStatus ||
-                !areBatteryCapacitiesEqual(
-                    currentBatteryCapacity,
-                    context.lastReportedBatteryCapacity,
-                )
-        ) {
-            val state: Byte
-            val percentage: Byte
-
-            when (currentBatteryStatus) {
-                BatteryState.STATUS_UNKNOWN -> state = MoonBridge.LI_BATTERY_STATE_UNKNOWN
-                BatteryState.STATUS_CHARGING -> state = MoonBridge.LI_BATTERY_STATE_CHARGING
-                BatteryState.STATUS_DISCHARGING -> state = MoonBridge.LI_BATTERY_STATE_DISCHARGING
-                BatteryState.STATUS_NOT_CHARGING -> state = MoonBridge.LI_BATTERY_STATE_NOT_CHARGING
-                BatteryState.STATUS_FULL -> state = MoonBridge.LI_BATTERY_STATE_FULL
-                else -> return
-            }
-
-            if (currentBatteryCapacity.isNaN()) {
-                percentage = MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN
+        val state = batteryStateOf(reading.status) ?: return
+        val percentage =
+            if (reading.capacity.isNaN()) {
+                MoonBridge.LI_BATTERY_PERCENTAGE_UNKNOWN
             } else {
-                percentage =
-                    (currentBatteryCapacity * PERCENT).roundToInt().coerceIn(0, PERCENT).toByte()
+                (reading.capacity * PERCENT).roundToInt().coerceIn(0, PERCENT).toByte()
             }
 
-            conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), state, percentage)
+        conn.sendControllerBatteryEvent(context.controllerNumber.toByte(), state, percentage)
 
-            numberHasNoBattery[context.controllerNumber.toInt()] = false
-            context.lastReportedBatteryStatus = currentBatteryStatus
-            context.lastReportedBatteryCapacity = currentBatteryCapacity
-        }
+        numberHasNoBattery[context.controllerNumber.toInt()] = false
+        context.lastReportedBatteryStatus = reading.status
+        context.lastReportedBatteryCapacity = reading.capacity
     }
+
+    // The state of the host for a BatteryState status, or null for a status it has none for.
+    //
+    // Converted as is from the inherited Java; InlinedApi stays for the same reason as in
+    // sceBatteryStatus (Sprint 18c backlog).
+    @SuppressLint("InlinedApi")
+    private fun batteryStateOf(status: Int): Byte? =
+        when (status) {
+            BatteryState.STATUS_UNKNOWN -> MoonBridge.LI_BATTERY_STATE_UNKNOWN
+            BatteryState.STATUS_CHARGING -> MoonBridge.LI_BATTERY_STATE_CHARGING
+            BatteryState.STATUS_DISCHARGING -> MoonBridge.LI_BATTERY_STATE_DISCHARGING
+            BatteryState.STATUS_NOT_CHARGING -> MoonBridge.LI_BATTERY_STATE_NOT_CHARGING
+            BatteryState.STATUS_FULL -> MoonBridge.LI_BATTERY_STATE_FULL
+            else -> null
+        }
 
     // The pad claimed a battery in its arrival: an external one, not the touchpad of a pad
     private fun claimsBattery(context: InputDeviceContext) =
@@ -2648,12 +2671,6 @@ class ControllerHandler(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-    )
     fun handleRumble(controllerNumber: Short, lowFreqMotor: Short, highFreqMotor: Short) {
         var foundMatchingDevice = false
         var vibrated = false
@@ -2673,47 +2690,8 @@ class ControllerHandler(
                 deviceContext.lowFreqMotor = lowFreqMotor
                 deviceContext.highFreqMotor = highFreqMotor
 
-                val contextVibratorManager = deviceContext.vibratorManager
-                val contextVibrator = deviceContext.vibrator
-
-                // The SHIELD service takes each motor as an unsigned value, like the fallback below
-                val sceLowFreqMotor = deviceContext.lowFreqMotor.toInt() and 0xffff
-                val sceHighFreqMotor = deviceContext.highFreqMotor.toInt() and 0xffff
-
-                // Prefer the documented Android 12 rumble API which can handle dual vibrators on
-                // PS/Xbox controllers
-                if (
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && contextVibratorManager != null
-                ) {
+                if (rumbleInputDevice(deviceContext)) {
                     vibrated = true
-                    if (deviceContext.quadVibrators) {
-                        rumbleQuadVibrators(
-                            contextVibratorManager,
-                            deviceContext.lowFreqMotor,
-                            deviceContext.highFreqMotor,
-                            deviceContext.leftTriggerMotor,
-                            deviceContext.rightTriggerMotor,
-                        )
-                    } else {
-                        rumbleDualVibrators(
-                            contextVibratorManager,
-                            deviceContext.lowFreqMotor,
-                            deviceContext.highFreqMotor,
-                        )
-                    }
-                } else if (
-                    sceManager.rumble(deviceContext.inputDevice, sceLowFreqMotor, sceHighFreqMotor)
-                ) {
-                    // On Shield devices, we can use their special API to rumble Shield controllers
-                    vibrated = true
-                } else if (contextVibrator != null) {
-                    // If all else fails, we have to try the old Vibrator API
-                    vibrated = true
-                    rumbleSingleVibrator(
-                        contextVibrator,
-                        deviceContext.lowFreqMotor,
-                        deviceContext.highFreqMotor,
-                    )
                 }
             }
         }
@@ -2732,29 +2710,87 @@ class ControllerHandler(
 
         // We may decide to rumble the device for player 1
         if (controllerNumber.toInt() == 0) {
-            // If we didn't find a matching device, it must be the on-screen
-            // controls that triggered the rumble. Vibrate the device if
-            // the user has requested that behavior.
-            if (
-                !foundMatchingDevice &&
-                    prefConfig.onscreenController &&
-                    !prefConfig.onlyL3R3 &&
-                    prefConfig.vibrateOsc
-            ) {
-                rumbleSingleVibrator(deviceVibrator, lowFreqMotor, highFreqMotor)
-            } else if (foundMatchingDevice && !vibrated && prefConfig.vibrateFallbackToDevice) {
-                // We found a device to vibrate but it didn't have rumble support. The user
-                // has requested us to vibrate the device in this case.
-
-                val strength = prefConfig.vibrateFallbackToDeviceStrength
-                rumbleSingleVibrator(
-                    deviceVibrator,
-                    scaledFallbackMotor(lowFreqMotor, strength),
-                    scaledFallbackMotor(highFreqMotor, strength),
-                )
-            }
+            rumbleDeviceInstead(lowFreqMotor, highFreqMotor, foundMatchingDevice, vibrated)
         }
     }
+
+    // Rumbles a pad of Android's input devices with the best API it has, and answers whether it
+    // had one: the motors of the context are the values to rumble
+    private fun rumbleInputDevice(deviceContext: InputDeviceContext): Boolean {
+        val contextVibratorManager = deviceContext.vibratorManager
+        val contextVibrator = deviceContext.vibrator
+
+        // The SHIELD service takes each motor as an unsigned value, like the fallback below
+        val sceLowFreqMotor = deviceContext.lowFreqMotor.toInt() and 0xffff
+        val sceHighFreqMotor = deviceContext.highFreqMotor.toInt() and 0xffff
+
+        // Prefer the documented Android 12 rumble API which can handle dual vibrators on PS/Xbox
+        // controllers
+        return if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && contextVibratorManager != null
+        ) {
+            if (deviceContext.quadVibrators) {
+                rumbleQuadVibrators(
+                    contextVibratorManager,
+                    deviceContext.lowFreqMotor,
+                    deviceContext.highFreqMotor,
+                    deviceContext.leftTriggerMotor,
+                    deviceContext.rightTriggerMotor,
+                )
+            } else {
+                rumbleDualVibrators(
+                    contextVibratorManager,
+                    deviceContext.lowFreqMotor,
+                    deviceContext.highFreqMotor,
+                )
+            }
+            true
+        } else if (
+            sceManager.rumble(deviceContext.inputDevice, sceLowFreqMotor, sceHighFreqMotor)
+        ) {
+            // On Shield devices, we can use their special API to rumble Shield controllers
+            true
+        } else if (contextVibrator != null) {
+            // If all else fails, we have to try the old Vibrator API
+            rumbleSingleVibrator(
+                contextVibrator,
+                deviceContext.lowFreqMotor,
+                deviceContext.highFreqMotor,
+            )
+            true
+        } else {
+            false
+        }
+    }
+
+    // The vibrator of the device stands in for the pads of player 1 in two cases: the on-screen
+    // controls rumbled, or a pad answered and had no rumble
+    private fun rumbleDeviceInstead(
+        lowFreqMotor: Short,
+        highFreqMotor: Short,
+        foundMatchingDevice: Boolean,
+        vibrated: Boolean,
+    ) {
+        // If we didn't find a matching device, it must be the on-screen
+        // controls that triggered the rumble. Vibrate the device if
+        // the user has requested that behavior.
+        if (!foundMatchingDevice && vibratesForOnscreenController()) {
+            rumbleSingleVibrator(deviceVibrator, lowFreqMotor, highFreqMotor)
+        } else if (foundMatchingDevice && !vibrated && prefConfig.vibrateFallbackToDevice) {
+            // We found a device to vibrate but it didn't have rumble support. The user
+            // has requested us to vibrate the device in this case.
+
+            val strength = prefConfig.vibrateFallbackToDeviceStrength
+            rumbleSingleVibrator(
+                deviceVibrator,
+                scaledFallbackMotor(lowFreqMotor, strength),
+                scaledFallbackMotor(highFreqMotor, strength),
+            )
+        }
+    }
+
+    private fun vibratesForOnscreenController() =
+        prefConfig.onscreenController && !prefConfig.onlyL3R3 && prefConfig.vibrateOsc
 
     fun handleRumbleTriggers(controllerNumber: Short, leftTrigger: Short, rightTrigger: Short) {
         if (stopped) {
@@ -2807,62 +2843,25 @@ class ControllerHandler(
             // Nothing is equal to NaN, so the first reading is never taken for a repeat
             private val lastValues = FloatArray(3) { Float.NaN }
 
-            // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13
-            // backlog).
-            @Suppress("LongMethod")
+            // The values of the reading as the host takes them: the sensor's own, or turned with
+            // the display for the sensors of the phone. It is kept to send a reading without
+            // allocating one.
+            private val reading = FloatArray(3)
+
             override fun onSensorChanged(sensorEvent: SensorEvent) {
                 if (captured) {
                     return
                 }
 
-                // Android will invoke our callback any time we get a new reading,
-                // even if the values are the same as last time. Don't report a
-                // duplicate set of values to save bandwidth.
-                if (
-                    sensorEvent.values[0] == lastValues[0] &&
-                        sensorEvent.values[1] == lastValues[1] &&
-                        sensorEvent.values[2] == lastValues[2]
-                ) {
+                if (!differsFromLast(sensorEvent.values)) {
                     return
-                } else {
-                    lastValues[0] = sensorEvent.values[0]
-                    lastValues[1] = sensorEvent.values[1]
-                    lastValues[2] = sensorEvent.values[2]
                 }
-
-                var x = 0
-                var y = 1
-                var z = 2
-                var xFactor = 1
-                val yFactor = 1
-                var zFactor = 1
 
                 if (needsDeviceOrientationCorrection) {
                     val deviceRotation = activityContext.windowManager.defaultDisplay.rotation
-                    when (deviceRotation) {
-                        Surface.ROTATION_0,
-                        Surface.ROTATION_180 -> {
-                            x = 0
-                            y = 2
-                            z = 1
-                        }
-                        Surface.ROTATION_90,
-                        Surface.ROTATION_270 -> {
-                            x = 1
-                            y = 2
-                            z = 0
-                        }
-                    }
-
-                    when (deviceRotation) {
-                        Surface.ROTATION_0 -> zFactor = -1
-                        Surface.ROTATION_90 -> {
-                            xFactor = -1
-                            zFactor = -1
-                        }
-                        Surface.ROTATION_180 -> xFactor = -1
-                        Surface.ROTATION_270 -> {}
-                    }
+                    turnWithDisplay(sensorEvent.values, deviceRotation)
+                } else {
+                    setReading(sensorEvent.values[0], sensorEvent.values[1], sensorEvent.values[2])
                 }
 
                 if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
@@ -2870,20 +2869,58 @@ class ControllerHandler(
                     conn.sendControllerMotionEvent(
                         controllerNumber.toByte(),
                         motionType,
-                        sensorEvent.values[x] * xFactor * RAD_TO_DEG,
-                        sensorEvent.values[y] * yFactor * RAD_TO_DEG,
-                        sensorEvent.values[z] * zFactor * RAD_TO_DEG,
+                        reading[0] * RAD_TO_DEG,
+                        reading[1] * RAD_TO_DEG,
+                        reading[2] * RAD_TO_DEG,
                     )
                 } else {
                     // Pass m/s^2 directly without conversion
                     conn.sendControllerMotionEvent(
                         controllerNumber.toByte(),
                         motionType,
-                        sensorEvent.values[x] * xFactor,
-                        sensorEvent.values[y] * yFactor,
-                        sensorEvent.values[z] * zFactor,
+                        reading[0],
+                        reading[1],
+                        reading[2],
                     )
                 }
+            }
+
+            // Android will invoke our callback any time we get a new reading,
+            // even if the values are the same as last time. Don't report a
+            // duplicate set of values to save bandwidth. The values that differ replace the last
+            // ones.
+            private fun differsFromLast(values: FloatArray): Boolean {
+                if (
+                    values[0] == lastValues[0] &&
+                        values[1] == lastValues[1] &&
+                        values[2] == lastValues[2]
+                ) {
+                    return false
+                }
+
+                lastValues[0] = values[0]
+                lastValues[1] = values[1]
+                lastValues[2] = values[2]
+                return true
+            }
+
+            // The sensors of the phone give their axes for the phone held upright. The host takes
+            // the axes of a pad, so with the display turned two axes swap and the sign of one or
+            // two changes.
+            private fun turnWithDisplay(values: FloatArray, rotation: Int) {
+                when (rotation) {
+                    Surface.ROTATION_0 -> setReading(values[0], values[2], -values[1])
+                    Surface.ROTATION_90 -> setReading(-values[1], values[2], -values[0])
+                    Surface.ROTATION_180 -> setReading(-values[0], values[2], values[1])
+                    Surface.ROTATION_270 -> setReading(values[1], values[2], values[0])
+                    else -> setReading(values[0], values[1], values[2])
+                }
+            }
+
+            private fun setReading(x: Float, y: Float, z: Float) {
+                reading[0] = x
+                reading[1] = y
+                reading[2] = z
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
@@ -2892,11 +2929,6 @@ class ControllerHandler(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress(
-        "CyclomaticComplexMethod",
-        "LongMethod",
-    )
     fun handleSetMotionEventState(controllerNumber: Short, motionType: Byte, reportRateHz: Short) {
         if (stopped) {
             return
@@ -2925,75 +2957,85 @@ class ControllerHandler(
                 deviceContext.assignedControllerNumber &&
                     deviceContext.controllerNumber == controllerNumber
             ) {
-                // Store the desired report rate even if we don't have sensors. In some cases,
-                // input devices can be reconfigured at runtime which results in a change where
-                // sensors disappear and reappear. By storing the desired report rate, we can
-                // reapply the desired motion sensor configuration after they reappear.
-                when (motionType) {
-                    MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = rateHz
-                    MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = rateHz
-                }
-
-                backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
-
-                val sm = deviceContext.sensorManager
-                if (sm == null) {
-                    return@forEachValue
-                }
-
-                when (motionType) {
-                    MoonBridge.LI_MOTION_TYPE_ACCEL -> {
-                        val oldAccelListener = deviceContext.accelListener
-                        if (oldAccelListener != null) {
-                            sm.unregisterListener(oldAccelListener)
-                            deviceContext.accelListener = null
-                        }
-
-                        // Enable the accelerometer if requested
-                        val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                        if (
-                            rateHz.toInt() != 0 && accelSensor != null && deviceContext === source
-                        ) {
-                            val accelListener =
-                                createSensorListener(
-                                    controllerNumber,
-                                    motionType,
-                                    sm === deviceSensorManager,
-                                )
-                            deviceContext.accelListener = accelListener
-                            sm.registerListener(
-                                accelListener,
-                                accelSensor,
-                                MICROSECONDS_PER_SECOND / rateHz,
-                            )
-                        }
-                    }
-                    MoonBridge.LI_MOTION_TYPE_GYRO -> {
-                        val oldGyroListener = deviceContext.gyroListener
-                        if (oldGyroListener != null) {
-                            sm.unregisterListener(oldGyroListener)
-                            deviceContext.gyroListener = null
-                        }
-
-                        // Enable the gyroscope if requested
-                        val gyroSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-                        if (rateHz.toInt() != 0 && gyroSensor != null && deviceContext === source) {
-                            val gyroListener =
-                                createSensorListener(
-                                    controllerNumber,
-                                    motionType,
-                                    sm === deviceSensorManager,
-                                )
-                            deviceContext.gyroListener = gyroListener
-                            sm.registerListener(
-                                gyroListener,
-                                gyroSensor,
-                                MICROSECONDS_PER_SECOND / rateHz,
-                            )
-                        }
-                    }
-                }
+                setMotionState(
+                    deviceContext,
+                    controllerNumber,
+                    motionType,
+                    rateHz,
+                    deviceContext === source,
+                )
             }
+        }
+    }
+
+    // The request of the host for a motion type, as it reaches one pad of the controller number:
+    // [reports] is whether the pad is the one that reports the type to the host
+    private fun setMotionState(
+        deviceContext: InputDeviceContext,
+        controllerNumber: Short,
+        motionType: Byte,
+        rateHz: Short,
+        reports: Boolean,
+    ) {
+        // Store the desired report rate even if we don't have sensors. In some cases,
+        // input devices can be reconfigured at runtime which results in a change where
+        // sensors disappear and reappear. By storing the desired report rate, we can
+        // reapply the desired motion sensor configuration after they reappear.
+        when (motionType) {
+            MoonBridge.LI_MOTION_TYPE_ACCEL -> deviceContext.accelReportRateHz = rateHz
+            MoonBridge.LI_MOTION_TYPE_GYRO -> deviceContext.gyroReportRateHz = rateHz
+        }
+
+        backgroundThreadHandler.removeCallbacks(deviceContext.enableSensorRunnable)
+
+        val sm = deviceContext.sensorManager
+        if (sm == null) {
+            return
+        }
+
+        if (
+            motionType == MoonBridge.LI_MOTION_TYPE_ACCEL ||
+                motionType == MoonBridge.LI_MOTION_TYPE_GYRO
+        ) {
+            // A pad that does not report the type registers nothing: its rate here is 0
+            val registeredRateHz = if (reports) rateHz.toInt() else 0
+            replaceMotionListener(deviceContext, sm, controllerNumber, motionType, registeredRateHz)
+        }
+    }
+
+    // The listener of the accelerometer or the gyroscope of a pad goes, and a new one comes if the
+    // sensor exists and [rateHz] is not 0
+    private fun replaceMotionListener(
+        deviceContext: InputDeviceContext,
+        sm: SensorManager,
+        controllerNumber: Short,
+        motionType: Byte,
+        rateHz: Int,
+    ) {
+        val gyro = motionType == MoonBridge.LI_MOTION_TYPE_GYRO
+
+        val oldListener = if (gyro) deviceContext.gyroListener else deviceContext.accelListener
+        if (oldListener != null) {
+            sm.unregisterListener(oldListener)
+            if (gyro) {
+                deviceContext.gyroListener = null
+            } else {
+                deviceContext.accelListener = null
+            }
+        }
+
+        // Enable the sensor if requested
+        val sensor =
+            sm.getDefaultSensor(if (gyro) Sensor.TYPE_GYROSCOPE else Sensor.TYPE_ACCELEROMETER)
+        if (rateHz != 0 && sensor != null) {
+            val listener =
+                createSensorListener(controllerNumber, motionType, sm === deviceSensorManager)
+            if (gyro) {
+                deviceContext.gyroListener = listener
+            } else {
+                deviceContext.accelListener = listener
+            }
+            sm.registerListener(listener, sensor, MICROSECONDS_PER_SECOND / rateHz)
         }
     }
 

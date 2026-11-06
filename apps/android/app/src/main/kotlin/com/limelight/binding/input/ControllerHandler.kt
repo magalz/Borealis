@@ -33,6 +33,7 @@ import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
+import androidx.core.util.size
 import com.limelight.LimeLog
 import com.limelight.R
 import com.limelight.binding.input.driver.AbstractController
@@ -3580,7 +3581,7 @@ class ControllerHandler(
         }
 
         private fun publish() {
-            snapshot = Array<Any?>(size()) { valueAt(it) }
+            snapshot = Array<Any?>(size) { valueAt(it) }
         }
 
         // The pad with the id, which is its key, for the threads that do not write

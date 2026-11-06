@@ -38,9 +38,10 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import org.xmlpull.v1.XmlPullParserException
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-// Object.wait and Object.notify are not members of Kotlin's Any, so the monitors are cast to
-// java.lang.Object, as the Java used them.
+// Converted as is from the inherited Java; the rest is for later sprints:
+// - TooManyFunctions: the service waits for its split (Sprint 18d backlog).
+// - PLATFORM_CLASS_MAPPED_TO_KOTLIN: Object.wait and Object.notify are not members of Kotlin's
+//   Any, so the monitors are cast to java.lang.Object, as the Java used them (Sprint 18c backlog).
 @Suppress("TooManyFunctions", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 class ComputerManagerService : Service() {
     private val binder = ComputerManagerBinder()
@@ -124,17 +125,43 @@ class ComputerManagerService : Service() {
         }
     }
 
-    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // Two things differ from the Java: runPoll gives the reference back (the Java kept it when the
     // database or the listener threw), and a host that is offline already is not told again (the
     // Java told it every fourth failed poll).
-    @Suppress("ReturnCount", "CyclomaticComplexMethod", "NestedBlockDepth")
     @Throws(InterruptedException::class)
     private fun pollAndReport(
         details: ComputerDetails,
         newPc: Boolean,
         offlineCount: Int,
     ): PollResult {
+        val wasOffline = pollForVerdict(details, newPc, offlineCount) ?: return PollResult.UNDECIDED
+
+        // If it's online, update our persistent state
+        if (details.state == ComputerDetails.State.ONLINE && !saveOnlineComputer(details, newPc)) {
+            return PollResult.UNDECIDED
+        }
+
+        // Don't call the listener if this is a failed lookup of a new PC, or if the host was
+        // offline already: it was told, and its state did not change.
+        val online = details.state == ComputerDetails.State.ONLINE
+        if (online || (!newPc && !wasOffline)) {
+            listener?.notifyComputerUpdated(details)
+        }
+
+        return if (online) PollResult.ONLINE else PollResult.OFFLINE
+    }
+
+    // Polls the machine, and counts the poll as active while it runs and while it decides. A poll
+    // that found no host is a verdict only after enough of them failed in a row, or for a new host
+    // at once: then the host is offline, and the result says whether it was offline already (a host
+    // that answered was not). The result is null when there is no verdict yet; the host is left as
+    // it was.
+    @Throws(InterruptedException::class)
+    private fun pollForVerdict(
+        details: ComputerDetails,
+        newPc: Boolean,
+        offlineCount: Int,
+    ): Boolean? {
         val pollTriesBeforeOffline =
             if (details.state == ComputerDetails.State.UNKNOWN) {
                 INITIAL_POLL_TRIES
@@ -150,7 +177,7 @@ class ComputerManagerService : Service() {
             if (!pollComputer(details)) {
                 if (!newPc && offlineCount < pollTriesBeforeOffline) {
                     // Return without calling the listener
-                    return PollResult.UNDECIDED
+                    return null
                 }
 
                 wasOffline = details.state == ComputerDetails.State.OFFLINE
@@ -160,52 +187,50 @@ class ComputerManagerService : Service() {
             activePolls.decrementAndGet()
         }
 
-        // If it's online, update our persistent state
-        if (details.state == ComputerDetails.State.ONLINE) {
-            val existingComputer = dbManager.getComputerByUUID(details.uuid)
+        return wasOffline
+    }
 
-            // Check if it's in the database because it could have been
-            // removed after this was issued
-            if (!newPc && existingComputer == null) {
-                // It's gone
-                return PollResult.UNDECIDED
-            }
+    // Saves a host that answered, and says whether it was saved: a host that is not new and is not
+    // in the database any more was removed after the poll was issued, and is left alone.
+    private fun saveOnlineComputer(details: ComputerDetails, newPc: Boolean): Boolean {
+        val existingComputer = dbManager.getComputerByUUID(details.uuid)
 
-            // If we already have an entry for this computer in the DB, we must
-            // combine the existing data with this new data (which may be partially available
-            // due to detecting the PC via mDNS) without the saved external address. If we
-            // write to the DB without doing this first, we can overwrite our existing data.
-            if (existingComputer != null) {
-                existingComputer.update(details)
-                dbManager.updateComputer(existingComputer)
-            } else {
-                try {
-                    // If the active address is a site-local address (RFC 1918),
-                    // then use STUN to populate the external address field if
-                    // it's not set already.
-                    if (details.remoteAddress == null) {
-                        // The Java dereferenced the active address here, so a host without one
-                        // threw a NullPointerException.
-                        val addr =
-                            InetAddress.getByName(checkNotNull(details.activeAddress).address)
-                        if (addr.isSiteLocalAddress) {
-                            populateExternalAddress(details)
-                        }
-                    }
-                } catch (ignored: UnknownHostException) {}
-
-                dbManager.updateComputer(details)
-            }
+        // Check if it's in the database because it could have been
+        // removed after this was issued
+        if (!newPc && existingComputer == null) {
+            // It's gone
+            return false
         }
 
-        // Don't call the listener if this is a failed lookup of a new PC, or if the host was
-        // offline already: it was told, and its state did not change.
-        val online = details.state == ComputerDetails.State.ONLINE
-        if (online || (!newPc && !wasOffline)) {
-            listener?.notifyComputerUpdated(details)
+        // If we already have an entry for this computer in the DB, we must
+        // combine the existing data with this new data (which may be partially available
+        // due to detecting the PC via mDNS) without the saved external address. If we
+        // write to the DB without doing this first, we can overwrite our existing data.
+        if (existingComputer != null) {
+            existingComputer.update(details)
+            dbManager.updateComputer(existingComputer)
+        } else {
+            populateExternalAddressOfSiteLocalHost(details)
+            dbManager.updateComputer(details)
         }
 
-        return if (online) PollResult.ONLINE else PollResult.OFFLINE
+        return true
+    }
+
+    // If the active address is a site-local address (RFC 1918),
+    // then use STUN to populate the external address field if
+    // it's not set already.
+    private fun populateExternalAddressOfSiteLocalHost(details: ComputerDetails) {
+        try {
+            if (details.remoteAddress == null) {
+                // The Java dereferenced the active address here, so a host without one
+                // threw a NullPointerException.
+                val addr = InetAddress.getByName(checkNotNull(details.activeAddress).address)
+                if (addr.isSiteLocalAddress) {
+                    populateExternalAddress(details)
+                }
+            }
+        } catch (ignored: UnknownHostException) {}
     }
 
     private fun createPollingThread(tuple: PollingTuple): Thread {
@@ -288,7 +313,7 @@ class ComputerManagerService : Service() {
         }
 
         // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
-        // instead is a behaviour change (Sprint 12 backlog).
+        // instead is a behaviour change (Sprint 18c backlog).
         @Suppress("PrintStackTrace")
         fun waitForReady() {
             synchronized(discoveryServiceConnection) {
@@ -385,10 +410,11 @@ class ComputerManagerService : Service() {
         return false
     }
 
-    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The Java called getAllNetworks, which is deprecated since Android 12 and is still the call
     // that finds the network under a VPN. It unlocked the network state without a finally, so a
     // call that threw kept the lock for good, and the process bound to its network.
+    // The deprecated call stays on purpose, and the nesting of the code around it (the loop over
+    // the networks) goes with the change that replaces it (Sprint 18c backlog).
     @Suppress("DEPRECATION", "NestedBlockDepth")
     private fun populateExternalAddress(details: ComputerDetails) {
         val activeNetworkIsVpn = NetHelper.isActiveNetworkVpn(this)
@@ -453,7 +479,7 @@ class ComputerManagerService : Service() {
     }
 
     // The stack trace of a failed discovery goes to the standard error stream, as in the inherited
-    // Java. Logging it instead is a behaviour change (Sprint 12 backlog).
+    // Java. Logging it instead is a behaviour change (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     private fun createDiscoveryListener(): MdnsDiscoveryListener =
         object : MdnsDiscoveryListener {
@@ -660,14 +686,13 @@ class ComputerManagerService : Service() {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
-    // instead is a behaviour change.
-    @Suppress("PrintStackTrace", "ReturnCount")
+    // instead is a behaviour change (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
     private fun tryPollIp(
         details: ComputerDetails,
         address: ComputerDetails.AddressTuple,
-    ): ComputerDetails? {
+    ): ComputerDetails? =
         try {
             // If the current address's port number matches the active address's port number, we
             // can also assume the HTTPS port will also match. This assumption is currently safe
@@ -696,24 +721,25 @@ class ComputerManagerService : Service() {
             val newDetails = http.getComputerDetails(isLikelyOnline)
 
             // Check if this is the PC we expected
-            if (newDetails.uuid == null) {
-                LimeLog.severe("Polling returned no UUID!")
-                return null
-            } else if (details.uuid != null && details.uuid != newDetails.uuid) {
-                // details.uuid can be null on initial PC add
-                // We got the wrong PC!
-                LimeLog.info("Polling returned the wrong PC!")
-                return null
+            when {
+                newDetails.uuid == null -> {
+                    LimeLog.severe("Polling returned no UUID!")
+                    null
+                }
+                details.uuid != null && details.uuid != newDetails.uuid -> {
+                    // details.uuid can be null on initial PC add
+                    // We got the wrong PC!
+                    LimeLog.info("Polling returned the wrong PC!")
+                    null
+                }
+                else -> newDetails
             }
-
-            return newDetails
         } catch (e: XmlPullParserException) {
             e.printStackTrace()
-            return null
+            null
         } catch (ignored: IOException) {
-            return null
+            null
         }
-    }
 
     private class ParallelPollTuple(
         val address: ComputerDetails.AddressTuple?,
@@ -759,8 +785,18 @@ class ComputerManagerService : Service() {
         polling.start()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("LongMethod", "CyclomaticComplexMethod", "ReturnCount")
+    // Waits until the poll of one address has ended. What it found is returned with the address
+    // that it was found at, or null when that address gave no answer.
+    @Throws(InterruptedException::class)
+    private fun awaitParallelPoll(tuple: ParallelPollTuple): ComputerDetails? =
+        synchronized(tuple) {
+            while (!tuple.complete) {
+                (tuple as Object).wait()
+            }
+
+            tuple.returnedDetails?.also { it.activeAddress = tuple.address }
+        }
+
     @Throws(InterruptedException::class)
     private fun parallelPollPc(details: ComputerDetails): ComputerDetails? {
         val localInfo = ParallelPollTuple(details.localAddress, details)
@@ -777,57 +813,12 @@ class ComputerManagerService : Service() {
         startParallelPollThread(ipv6Info, uniqueAddresses)
 
         try {
-            // Check local first
-            synchronized(localInfo) {
-                while (!localInfo.complete) {
-                    (localInfo as Object).wait()
-                }
-
-                val returned = localInfo.returnedDetails
-                if (returned != null) {
-                    returned.activeAddress = localInfo.address
-                    return returned
-                }
-            }
-
-            // Now manual
-            synchronized(manualInfo) {
-                while (!manualInfo.complete) {
-                    (manualInfo as Object).wait()
-                }
-
-                val returned = manualInfo.returnedDetails
-                if (returned != null) {
-                    returned.activeAddress = manualInfo.address
-                    return returned
-                }
-            }
-
-            // Now remote IPv4
-            synchronized(remoteInfo) {
-                while (!remoteInfo.complete) {
-                    (remoteInfo as Object).wait()
-                }
-
-                val returned = remoteInfo.returnedDetails
-                if (returned != null) {
-                    returned.activeAddress = remoteInfo.address
-                    return returned
-                }
-            }
-
-            // Now global IPv6
-            synchronized(ipv6Info) {
-                while (!ipv6Info.complete) {
-                    (ipv6Info as Object).wait()
-                }
-
-                val returned = ipv6Info.returnedDetails
-                if (returned != null) {
-                    returned.activeAddress = ipv6Info.address
-                    return returned
-                }
-            }
+            // Check local first, then manual, then remote IPv4 and then global IPv6: the first
+            // that has an answer is the one, and the others are not waited for.
+            return awaitParallelPoll(localInfo)
+                ?: awaitParallelPoll(manualInfo)
+                ?: awaitParallelPoll(remoteInfo)
+                ?: awaitParallelPoll(ipv6Info)
         } finally {
             // Stop any further polling if we've found a working address or we've been
             // interrupted by an attempt to stop polling.
@@ -836,8 +827,6 @@ class ComputerManagerService : Service() {
             remoteInfo.interrupt()
             ipv6Info.interrupt()
         }
-
-        return null
     }
 
     @Throws(InterruptedException::class)
@@ -984,16 +973,125 @@ class ComputerManagerService : Service() {
             return null
         }
 
-        // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+        // Polls the app list once, and returns how many empty lists came in a row after the poll.
+        // A poll that fails leaves the count as it was.
         // The stack traces go to the standard error stream, as in the inherited Java. Logging them
-        // instead is a behaviour change.
-        @Suppress(
-            "LongMethod",
-            "CyclomaticComplexMethod",
-            "NestedBlockDepth",
-            "PrintStackTrace",
-            "LoopWithTooManyJumpStatements",
-        )
+        // instead is a behaviour change (Sprint 18c backlog).
+        @Suppress("PrintStackTrace")
+        private fun pollAppList(emptyAppListResponses: Int): Int {
+            if (!canPoll()) {
+                return emptyAppListResponses
+            }
+
+            return try {
+                fetchAppList(emptyAppListResponses)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                emptyAppListResponses
+            } catch (e: XmlPullParserException) {
+                e.printStackTrace()
+                emptyAppListResponses
+            }
+        }
+
+        // A host that is not online or not paired is not polled: the listener is told about it
+        // again, whether or not the poller is still running.
+        private fun canPoll(): Boolean {
+            // Can't poll if it's not online or paired
+            if (
+                computer.state != ComputerDetails.State.ONLINE ||
+                    computer.pairState != PairingManager.PairState.PAIRED
+            ) {
+                listener?.notifyComputerUpdated(computer)
+                return false
+            }
+
+            // Can't poll if there's no UUID yet
+            return computer.uuid != null
+        }
+
+        @Throws(IOException::class, XmlPullParserException::class)
+        private fun fetchAppList(emptyAppListResponses: Int): Int {
+            val tuple = getPollingTuple(computer)
+
+            val http =
+                NvHTTP(
+                    ServerHelper.getCurrentAddressFromComputer(computer),
+                    computer.httpsPort,
+                    idManager.uniqueId,
+                    computer.serverCert,
+                    PlatformBinding.getCryptoProvider(this@ComputerManagerService),
+                )
+
+            val appList =
+                if (tuple != null) {
+                    // If we're polling this machine too, grab the network lock
+                    // while doing the app list request to prevent other
+                    // requests from being issued in the meantime.
+                    synchronized(tuple.networkLock) { http.getAppListRaw() }
+                } else {
+                    // No polling is happening now, so we just call it directly
+                    http.getAppListRaw()
+                }
+
+            var emptyResponses = emptyAppListResponses
+            val list = NvHTTP.getAppListByReader(StringReader(appList))
+            if (list.isEmpty()) {
+                LimeLog.warning("Empty app list received from ${computer.uuid}")
+
+                // The app list might actually be empty, so if we get an empty
+                // response a few times in a row, we'll go ahead and believe it.
+                emptyResponses++
+            }
+            if (
+                appList.isNotEmpty() &&
+                    (list.isNotEmpty() || emptyResponses >= EMPTY_LIST_THRESHOLD)
+            ) {
+                // Reset empty count if it wasn't empty this time
+                if (list.isNotEmpty()) {
+                    emptyResponses = 0
+                }
+
+                keepAppList(appList)
+            } else if (appList.isEmpty()) {
+                LimeLog.warning("Null app list received from ${computer.uuid}")
+            }
+
+            return emptyResponses
+        }
+
+        // Keeps an app list that is believed: in the cache, on the computer and, while the poller
+        // runs, told to the listener.
+        private fun keepAppList(appList: String) {
+            writeAppListCache(appList)
+
+            // Update the computer
+            computer.rawAppList = appList
+            receivedAppList = true
+
+            // Notify that the app list has been updated
+            // and ensure that the thread is still active
+            val notified = listener
+            if (notified != null && thread != null) {
+                notified.notifyComputerUpdated(computer)
+            }
+        }
+
+        // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
+        // instead is a behaviour change (Sprint 18c backlog).
+        @Suppress("PrintStackTrace")
+        private fun writeAppListCache(appList: String) {
+            // Open the cache file
+            try {
+                CacheHelper.openCacheFileForOutput(cacheDir, "applist", computer.uuid).use {
+                    cacheOut ->
+                    CacheHelper.writeStringToOutputStream(cacheOut, appList)
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+
         fun start() {
             // A poller that runs is not started again: the Java started a second thread, and stop
             // ended only the last one, so the first polled for good.
@@ -1004,100 +1102,11 @@ class ComputerManagerService : Service() {
             val polling =
                 object : Thread() {
                     override fun run() {
+                        // The count of empty lists in a row belongs to this thread: a poller that
+                        // is stopped and started again counts from zero.
                         var emptyAppListResponses = 0
                         do {
-                            // Can't poll if it's not online or paired
-                            if (
-                                computer.state != ComputerDetails.State.ONLINE ||
-                                    computer.pairState != PairingManager.PairState.PAIRED
-                            ) {
-                                listener?.notifyComputerUpdated(computer)
-                                continue
-                            }
-
-                            // Can't poll if there's no UUID yet
-                            if (computer.uuid == null) {
-                                continue
-                            }
-
-                            val tuple = getPollingTuple(computer)
-
-                            try {
-                                val http =
-                                    NvHTTP(
-                                        ServerHelper.getCurrentAddressFromComputer(computer),
-                                        computer.httpsPort,
-                                        idManager.uniqueId,
-                                        computer.serverCert,
-                                        PlatformBinding.getCryptoProvider(
-                                            this@ComputerManagerService
-                                        ),
-                                    )
-
-                                val appList =
-                                    if (tuple != null) {
-                                        // If we're polling this machine too, grab the network lock
-                                        // while doing the app list request to prevent other
-                                        // requests from being issued in the meantime.
-                                        synchronized(tuple.networkLock) { http.getAppListRaw() }
-                                    } else {
-                                        // No polling is happening now, so we just call it directly
-                                        http.getAppListRaw()
-                                    }
-
-                                val list = NvHTTP.getAppListByReader(StringReader(appList))
-                                if (list.isEmpty()) {
-                                    LimeLog.warning("Empty app list received from ${computer.uuid}")
-
-                                    // The app list might actually be empty, so if we get an empty
-                                    // response a few times in a row, we'll go ahead and believe it.
-                                    emptyAppListResponses++
-                                }
-                                if (
-                                    appList.isNotEmpty() &&
-                                        (list.isNotEmpty() ||
-                                            emptyAppListResponses >= EMPTY_LIST_THRESHOLD)
-                                ) {
-                                    // Open the cache file
-                                    try {
-                                        CacheHelper.openCacheFileForOutput(
-                                                cacheDir,
-                                                "applist",
-                                                computer.uuid,
-                                            )
-                                            .use { cacheOut ->
-                                                CacheHelper.writeStringToOutputStream(
-                                                    cacheOut,
-                                                    appList,
-                                                )
-                                            }
-                                    } catch (e: IOException) {
-                                        e.printStackTrace()
-                                    }
-
-                                    // Reset empty count if it wasn't empty this time
-                                    if (list.isNotEmpty()) {
-                                        emptyAppListResponses = 0
-                                    }
-
-                                    // Update the computer
-                                    computer.rawAppList = appList
-                                    receivedAppList = true
-
-                                    // Notify that the app list has been updated
-                                    // and ensure that the thread is still active
-                                    val notified = listener
-                                    if (notified != null && this@ApplistPoller.thread != null) {
-                                        notified.notifyComputerUpdated(computer)
-                                    }
-                                } else if (appList.isEmpty()) {
-                                    LimeLog.warning("Null app list received from ${computer.uuid}")
-                                }
-                            } catch (e: IOException) {
-                                e.printStackTrace()
-                            } catch (e: XmlPullParserException) {
-                                e.printStackTrace()
-                            }
+                            emptyAppListResponses = pollAppList(emptyAppListResponses)
                         } while (waitPollingDelay())
                     }
                 }

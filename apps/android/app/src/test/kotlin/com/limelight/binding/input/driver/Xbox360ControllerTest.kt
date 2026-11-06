@@ -519,6 +519,25 @@ class Xbox360ControllerTest {
     }
 
     @Test
+    fun `a pad whose last rumble failed is stopped without another write`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumble(1, 2)
+
+        pad.controller.stop()
+        pad.controller.stop()
+
+        // The LED command and the rumble that failed: a stuck pad would block the stop's write for
+        // the whole timeout, so it gets none. The pad is still closed and reported removed once.
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.usb.closes).isEqualTo(1)
+        val removed = pad.listener.next()
+        assertThat((removed as PadEvent.Removed).controller).isSameInstanceAs(pad.controller)
+        assertThat(pad.listener.quietFor(300)).isTrue()
+    }
+
+    @Test
     fun `a pad whose last rumble went through gets its zero write at the stop`() {
         val pad = pad()
         pad.start()

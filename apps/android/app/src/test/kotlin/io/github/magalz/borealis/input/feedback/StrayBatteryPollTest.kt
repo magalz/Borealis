@@ -110,10 +110,42 @@ class StrayBatteryPollTest : FeedbackTestBase() {
         assertThat(events()).containsExactly(NO_BATTERY, NO_BATTERY)
     }
 
+    @Test
+    fun `a poll that runs after stop sends nothing and does not come back`() {
+        val rig = rig()
+        val battery = battery()
+        val pad = padWith(rig, battery, id = FeedbackRig.PAD_ID)
+        val poll = pollOf(rig, pad)
+
+        rig.handler.stop()
+        // A poll that ran now would report the new capacity
+        Hardware.batteryState(battery).batteryCapacity = 0.25f
+        runOnBackground(rig, poll)
+        nextTurn(rig)
+
+        assertThat(events()).containsExactly(HALF_FULL)
+    }
+
+    @Test
+    fun `a poll that runs after destroy sends nothing`() {
+        val rig = rig()
+        val battery = battery()
+        val pad = padWith(rig, battery, id = FeedbackRig.PAD_ID)
+        val poll = pollOf(rig, pad)
+
+        rig.destroy()
+        Hardware.batteryState(battery).batteryCapacity = 0.25f
+        // The handler's thread is gone: this one runs the poll, as the thread would have
+        poll.run()
+
+        assertThat(events()).containsExactly(HALF_FULL)
+    }
+
     private companion object {
         const val POLL_MS = 120_000L
         const val WAIT_SECONDS = 10L
         const val DISCHARGING = android.hardware.BatteryState.STATUS_DISCHARGING
         val NO_BATTERY = BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_NOT_PRESENT.toInt(), -1)
+        val HALF_FULL = BatteryEvent(0, MoonBridge.LI_BATTERY_STATE_DISCHARGING.toInt(), 50)
     }
 }

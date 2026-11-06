@@ -169,8 +169,10 @@ From Sprint 17b the work of Borealis is tracked in the itsaplan project `ignis-d
 - **Wrapped markers.** Four markers were wrapped over two comment lines (`...(Sprint 13` and, on the next line,
   `// backlog).`), so the one-line search that counted 158 markers missed four of the 162. Search with
   `rg -n -U "Sprint 1[234][ \t]*(\n[ \t]*//[ \t]*)?backlog" apps/android`, and write a relabeled marker on one
-  line. A marker sweep also finds only the places that carry a marker: six structural suppressions in the network
-  code had none, and went to a card of their own (BORE-92).
+  line. A marker sweep also finds only the places that carry a marker: six suppressions in the network
+  code had none. Only one of them is structural (`NvConnection.quitAndLaunch`, `ReturnCount`); the other five
+  suppress `PrintStackTrace`, generic exceptions, `UNUSED_PARAMETER` and `VarCouldBeVal`. The card BORE-92 named
+  all six as examples, but its scope is the structural rules only.
 - **Lint was not in the task checks.** One `UseKtx` error (`SparseArray.size()` in the `ContextList.publish()` of
   BORE-90) failed the Android job on every push from `395178097` to `b98a57f49`, 9 runs, because the pushes went
   out without a look at the results. Check the CI result of each wave before the next push. `lintDebug` of every

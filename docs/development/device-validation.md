@@ -5916,7 +5916,7 @@ on 2026-10-30. No step failed outright. Every step of the UAT passed except two 
 three decisions of the owner, which changed the code afterwards (see the UAT below). The head of the phase,
 `4429af309`, holds those three changes, and its only device check so far is a look at the Appearance rows on the
 TV. The findings went to [Sprint 17](../roadmap.md#sprint-17-general-fixes) and
-[Sprint 18](../roadmap.md#sprint-18-refactor-of-the-converted-code), and the host data to the
+[Sprint 18b](../roadmap.md#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling), and the host data to the
 [host-side items](../roadmap.md#host-side-items-luminalshine) of the roadmap.
 
 ### Setup
@@ -6078,11 +6078,11 @@ reviews of the phase. Each one says where it went in the [roadmap](../roadmap.md
   [Sprint 17](../roadmap.md#sprint-17-general-fixes), Input.
 - **(c) Two flaky tests, seen once each under load.** `StreamChromeHostFrozenFrameTest` (a Robolectric
   `NullPointerException` before the body of the test) and `StreamBackTest` "back opens the menu…" (the timing of
-  `menuHintShown`). Roadmap, [Sprint 18](../roadmap.md#sprint-18-refactor-of-the-converted-code), test and
+  `menuHintShown`). Roadmap, [Sprint 18b](../roadmap.md#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling), test and
   tooling items.
 - **(d) Duplicated pixel helpers in the tests.** `ui/glass/PixelSupport.kt` and the private copies in
   `DialogOverBackgroundTest` and `DialogOverBackgroundApi30Test`, and the copies of `assertNear`. Roadmap,
-  Sprint 18, test and tooling items.
+  [Sprint 18b](../roadmap.md#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling), test and tooling items.
 - **(e) The orphan DataStore key of the dropped option.** `borealis_stream_background` stays in the file where an
   earlier build stored it, and nothing reads it. Roadmap, [Sprint 17](../roadmap.md#sprint-17-general-fixes),
   Library and Settings.
@@ -6657,19 +6657,20 @@ sections 22 and 23 do.
 
 | Step | Device | Result | Notes |
 | --- | --- | --- | --- |
-| A1 Strong rumble | S22 (USB) | pending | An Xbox One pad on the USB driver: a strong rumble of 0x8000 or more runs at full. BORE-39. |
+| A1 Strong rumble | S22 (USB) | pending | An Xbox One pad on the USB driver: a strong rumble of 0x8000 or more is felt as strong (the driver sends 0x40 to 0x7F for it), never weak and never wrapped to a low value. BORE-39. |
 | A2 Rumble stops when the stream ends | S22 (USB) | pending | A wired Xbox One pad: end a stream while the main and the trigger motors rumble. Both stop. BORE-63. |
 | A3 Unbind with a stuck pad | S22 (USB) | pending | The unbind adds no second 100 ms wait for each pad on the main thread, and the pads that are fine stop rumbling at the unbind. BORE-42, BORE-63. |
 | A4 A pad leaves while A is held in the gamepad mouse | S22 (USB, Bluetooth) | pending | Hold A in the gamepad mouse, then unplug a USB pad, drop a Bluetooth pad, or put the app in the background: the PC's button comes up. A device change while A is held keeps the click. BORE-54. |
 | A5 The gamepad mouse turned off with A or B held | S22 (USB, system pad) | pending | Turn the gamepad mouse off with a Start hold while A or B is held, on a pad of the system and on a USB pad: the PC's button comes up once. BORE-89. |
 | A6 A pad in mouse mode and the on-screen controller | S22 | pending | A pad in mouse mode while the on-screen controller holds A. End the mouse mode with the menu row, with the Start hold and by the pad leaving: the PC gets one button up each time. BORE-95. |
-| A7 Start hold, shoulder buttons and the quit combo | S22 | pending | A Start hold of more than 750 ms toggles the gamepad mouse, and a shorter one does not. Start with LB acts as Select. Select with LB acts as the clickpad on a PS4 pad. The gamepad mouse with RB held, under each scroll setting. The quit combo. BORE-66. |
-| A8 Touchpad of a DualShock | S22 | pending | The touchpad touches and the clickpad, with the touchpad as a mouse on and off. BORE-66. |
-| A9 Keys held through the capture, and a hat | S22 | pending | A key held through the capture, and the D-pad keys of a pad with a hat, behave as before the sprint. BORE-66. |
-| A10 Battery | S22 (USB, Bluetooth) | pending | A pad that reports a battery still sends it to the host while it is connected, and a pad that has left sends nothing more. No task report holds a device note for this: the row comes from the plan of the round (battery) and from BORE-43 and BORE-68. |
-| A11 Xbox One S init | S22 (USB) | pending | The init of the Xbox One S pad and the acknowledgement of the Guide mode report. BORE-81. |
-| A12 Xbox 360 wireless dongle | S22 (USB) | pending | The LED shows the slot of each pad. BORE-81. |
-| A13 Attach and unplug of wired pads | S22 (USB) | pending | A wired Xbox 360 and a wired Xbox One pad are announced about 1 s after they are attached, input flows, and the unplug gives one removal. BORE-80. |
+| A7 A pad that reports as device 0, in the gamepad mouse | S22 | pending | A pad that Android reports as device 0, or with no device: a Start hold turns the gamepad mouse on, A is held, and a Start hold turns the mouse off. The PC's left button comes up once. BORE-95, the fix that came out of the whole-phase review: the default context's own held click was counted as held by others, so the click stayed down. |
+| A8 Start hold, shoulder buttons and the quit combo | S22 | pending | A Start hold of more than 750 ms toggles the gamepad mouse, and a shorter one does not. Start with LB acts as Select. Select with LB acts as the clickpad on a PS4 pad. The gamepad mouse with RB held, under each scroll setting. The quit combo. BORE-66. |
+| A9 Touchpad of a DualShock | S22 | pending | The touchpad touches and the clickpad, with the touchpad as a mouse on and off. BORE-66. |
+| A10 Keys held through the capture, and a hat | S22 | pending | A key held through the capture, and the D-pad keys of a pad with a hat, behave as before the sprint. BORE-66. |
+| A11 Battery | S22 (USB, Bluetooth) | pending | A pad that reports a battery still sends it to the host while it is connected, and a pad that has left sends nothing more. No task report holds a device note for this: the row comes from the plan of the round (battery) and from BORE-43 and BORE-68. |
+| A12 Xbox One S init | S22 (USB) | pending | The init of the Xbox One S pad and the acknowledgement of the Guide mode report. BORE-81. |
+| A13 Xbox 360 wireless dongle | S22 (USB) | pending | The LED shows the slot of each pad. BORE-81. |
+| A14 Attach and unplug of wired pads | S22 (USB) | pending | A wired Xbox 360 and a wired Xbox One pad are announced about 1 s after they are attached, input flows, and the unplug gives one removal. BORE-80. |
 
 ### B. The on-screen controller
 

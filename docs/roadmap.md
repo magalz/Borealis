@@ -1970,9 +1970,10 @@ that name a sprint are scheduled in that sprint; the others are not scheduled.
 **Status: Done in the phase, pending the device round and the merge.** Planned and started on
 2026-11-05, and run to 2026-11-06. Phase card BORE-60, draft pull request
 [#129](https://github.com/magalz/Borealis/pull/129) from `phase/s18a-refactor-network-input`. Every
-task card listed under "Cards delivered" is merged into the phase at its head `66f61bde8`, except
-BORE-84 (the relabel sweep) and BORE-85 (these docs), which join when their tasks merge; BORE-62 only ran a
-proof and has no commit. The figures below are at `66f61bde8`. The device round has not run: its checklist is
+task card listed under "Cards delivered" is merged into the phase at its head `91ad89148`; BORE-62
+only ran a proof and has no commit. The marker counts below are at `91ad89148`: the multi-line search
+for `Sprint 1[23]` finds no `(Sprint 12 backlog)` or `(Sprint 13 backlog)` marker, and 52
+`(Sprint 18c backlog)` and 13 `(Sprint 18d backlog)` labels stand. The device round has not run: its checklist is
 [section 24 of the device validation](development/device-validation.md#24-results-sprint-18a), with
 every row pending.
 
@@ -2004,18 +2005,19 @@ The numbers of the later sprints do not change.
   `PLATFORM_CLASS_MAPPED_TO_KOTLIN`), and 16 are whole-class `LargeClass` and `TooManyFunctions`.
   The exit check is now a multi-line search:
   `rg -n -U "Sprint 1[234][ \t]*(\n[ \t]*//[ \t]*)?backlog" apps/android`.
-- **Markers left at the phase head `66f61bde8`**, by the same multi-line search for each label:
-  - 14 `(Sprint 12 backlog)` and `(Sprint 13 backlog)` markers are still open. BORE-84, the relabel
-    sweep, takes exactly these 14: it moves 10 to 18c (the three `ComputerDatabaseManager`
-    places, the `ControllerHandler` `init` block, `VideoDecoderRenderer` and the five
-    `@SuppressLint("ViewConstructor")` virtual-controller elements) and 4 to 18d (`ShortcutHelper`,
-    `NvConnectionListener`, `RelativeTouchContext` and `AbsoluteTouchContext`), and it moves
-    `ControllerHandler.handleAxisSet` from 18c to 18d (decision D13). Count again after BORE-84
-    merges: the exit check is zero `(Sprint 12 backlog)` and `(Sprint 13 backlog)` markers.
+- **Markers left at the phase head `91ad89148`**, by the same multi-line search for each label:
+  - No `(Sprint 12 backlog)` or `(Sprint 13 backlog)` marker is left: the multi-line search for
+    `Sprint 1[23]` finds nothing.
+    BORE-84, the relabel sweep, took the last 14 (at `66f61bde8`): it moved 10 to 18c (the three
+    `ComputerDatabaseManager` places, the `ControllerHandler` `init` block, `VideoDecoderRenderer`
+    and the five `@SuppressLint("ViewConstructor")` virtual-controller elements) and 4 to 18d
+    (`ShortcutHelper`, `NvConnectionListener`, `RelativeTouchContext` and `AbsoluteTouchContext`),
+    and it moved `ControllerHandler.handleAxisSet` from 18c to 18d (decision D13).
   - 51 `(Sprint 14 backlog)` markers, none touched by 18a: they are the work of
     [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling).
-  - 43 `(Sprint 18c backlog)` and 8 `(Sprint 18d backlog)` labels, placed by the 18a tasks and
-    counted as label occurrences (a comment that names both labels counts in both). They wait for
+  - 52 `(Sprint 18c backlog)` and 13 `(Sprint 18d backlog)` labels, placed by the 18a tasks and
+    counted as label occurrences (a comment that names both labels counts in both; none does at
+    this head). They wait for
     [Sprint 18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code) and
     [Sprint 18d](#sprint-18d-splitting-the-large-converted-classes).
 - **Marker rule** (applies to 18a and 18b): each place a task touches ends done (its structural
@@ -2071,8 +2073,7 @@ The numbers of the later sprints do not change.
     private nested `Chord`.
 - **Method:** behaviour does not change outside wave 0. Characterization tests come first where a
   refactored method has none. A refactored place loses its suppression and its marker.
-- **Cards delivered** (subtasks of BORE-60; all but BORE-84 and BORE-85 are merged into the phase at
-  `66f61bde8`, and those two join when their tasks merge):
+- **Cards delivered** (subtasks of BORE-60; all are merged into the phase at `91ad89148`):
   - The roadmap split of Sprint 18: BORE-61.
   - Wave 0 fixes: BORE-54, BORE-51, BORE-39, BORE-43, BORE-42 (the driver side, in two parts) and
     BORE-63 (the handler side of BORE-42), and, found on the way, BORE-90, BORE-62 (the proof of
@@ -2127,9 +2128,10 @@ The numbers of the later sprints do not change.
     for 18c, because removing it is a refactor and returning null is a behaviour change.
   - **D6, BORE-91:** two more unreachable checks (`tryPollIp`, "Polling returned no UUID!", and
     `ApplistPoller`, "Null app list received") join the same 18c card.
-  - **D7, BORE-92:** unmarked structural suppressions in `NvConnection`, `NvHTTP` and
-    `ComputerManagerService` escape the marker sweeps. They get an 18b sweep card, and 18a stays at
-    its marker scope.
+  - **D7, BORE-92:** unmarked suppressions in `NvConnection`, `NvHTTP` and `ComputerManagerService`
+    escape the marker sweeps. Only one of the six is structural (`NvConnection.quitAndLaunch`,
+    `ReturnCount`); the other five suppress other rules (see the 18b entry for BORE-92). The
+    structural kind gets an 18b sweep card, and 18a stays at its marker scope.
   - **D8, BORE-93, BORE-94:** the identity-loss bugs and the crypto load oddities that BORE-77
     found go to 18c, where changing behaviour is the point, and not into 18a.
   - **D9, BORE-95:** an on-screen-controller click that stays down when a pad's mouse mode ends is
@@ -2162,7 +2164,7 @@ The numbers of the later sprints do not change.
   (BORE-92 and the test notes on BORE-86),
   [18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code) (BORE-91, BORE-93 and
   BORE-94), [18d](#sprint-18d-splitting-the-large-converted-classes) (the notes on BORE-88) and
-  [Sprint 19](#sprint-19-secops) (BORE-50 and the CodeQL alerts of `PosterContentProvider`).
+  [Sprint 19](#sprint-19-secops) (BORE-50, BORE-97 and the CodeQL alerts of `PosterContentProvider`).
 - **Ends with a device round** on the controls and the host flows: pads on USB and Bluetooth,
   rumble, mouse emulation, touch, the on-screen controller, the keyboard, the menu chord, the TV
   focus after Hide and Forget, Add host, pairing, wake and shortcuts. The round has not run. Its
@@ -2183,15 +2185,20 @@ Planned, not started. Phase card BORE-86. Split from Sprint 18 by the owner on 2
   `nvstream/av/video/VideoDecoderRenderer.kt`, 1 place) are bound to the JNI, so they are relabeled
   `(Sprint 18c backlog)` and not refactored. See [Sprint 18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code).
   The `VideoDecoderRenderer` marker is a `(Sprint 12 backlog)` one, so the relabel sweep of
-  [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (BORE-84) takes it.
+  [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (BORE-84) took it.
 - **The count.** 51 `(Sprint 14 backlog)` markers are left at the end of 18a, none touched by it (the
   multi-line search of the [recount](#sprint-18a-refactor-of-the-converted-code-network-host-and-input)).
-- **BORE-92: the structural suppressions that carry no marker.** Sprint 18a found them in the network
-  code (decision D7): `NvConnection.quitAndLaunch` (`ReturnCount`), two more places in `NvConnection`,
-  two in `NvHTTP` and one in `ComputerManagerService`, at lines 777, 371 and 1342 of
+- **BORE-92: the structural suppressions that carry no marker.** Sprint 18a found six suppressions in
+  the network code that no marker sweep sees (decision D7), at lines 777, 371 and 1342 of
   `NvConnection.kt`, 69 and 895 of `NvHTTP.kt` and 528 of `ComputerManagerService.kt` when lane B found
-  them (read them again: 18a moved lines). No marker sweep finds them, so sweep every unmarked
-  structural suppression in `:app`, under the marker rule.
+  them (still at those lines at `91ad89148`; read them again). Only one is structural:
+  `NvConnection.quitAndLaunch` (`ReturnCount`). The other five suppress rules that are not structural,
+  so the card's scope does not take them: `PrintStackTrace` in `NvConnection.resolveServerAddress`,
+  `PrintStackTrace` and `TooGenericExceptionThrown` in `NvConnection.generateRiAesKey`,
+  `UNUSED_PARAMETER` and `UnusedPrivateProperty` on the `uniqueId` parameter of the `NvHTTP`
+  constructor, `VarCouldBeVal` on `NvHTTP.verbose`, and `TooGenericExceptionCaught` in
+  `ComputerManagerService.addDiscoveredComputer`. No marker sweep finds the structural kind, so sweep
+  every unmarked structural suppression in `:app`, under the marker rule.
 - **A8**, moved here by Sprint 16: a comment on the 7.1 mask `0x18FC` of `AndroidAudioRenderer`
   still says that the constant is hardcoded for Lollipop. Only the value is pinned, by
   `AudioRendererSetupCharacterizationTest`, "8 channels ask for the 7 point 1 surround mask".
@@ -2354,6 +2361,11 @@ release. Sprint 19 is hardening and security testing.
 - **BORE-50, from Sprint 17b: "already paired" cannot be reached with LuminalShine.** The owner's
   choice, a reworded message or a pairing over HTTPS on re-add, is weighed with the pairing review
   of this sprint (owner, 2026-11-05). See [section 23](development/device-validation.md#23-results-sprint-17b), finding 1.
+- **BORE-97, from the Sprint 18a phase review: `IdentityManager` logs the client's unique id at INFO.**
+  The `init` block of `IdentityManager` writes `UID is now: <id>`, so the client's unique id reaches
+  the log. It predates Sprint 18a (the line is inherited), and the review found it at `91ad89148`.
+  Acceptance: no log line holds the unique id, and a test covers it. It is the "UID is now"
+  observation listed below.
 - **Security observations from the Sprint 12 conversion.** Paths are under
   `apps/android/app/src/main/kotlin/`. Each one is a finding to audit, not a fix.
   - Pinning accepts any certificate the platform trusts; the pin only limits the
@@ -2369,7 +2381,8 @@ release. Sprint 19 is hardening and security testing.
     (`com/limelight/nvstream/http/NvHTTP.kt`).
   - A failed HTTPS serverinfo for a pinned host falls back to plain HTTP
     (`com/limelight/nvstream/http/NvHTTP.kt`).
-  - The client id is logged at INFO with "UID is now" (`com/limelight/computers/IdentityManager.kt`).
+  - The client id is logged at INFO with "UID is now" (`com/limelight/computers/IdentityManager.kt`;
+    BORE-97).
     Sprint 16 did not change that line, which still holds the whole id; the warning that P14 added
     does not hold it.
   - `printStackTrace` writes to stderr, and can carry host names or addresses; the

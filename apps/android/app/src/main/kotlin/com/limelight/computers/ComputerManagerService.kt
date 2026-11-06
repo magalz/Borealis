@@ -124,17 +124,43 @@ class ComputerManagerService : Service() {
         }
     }
 
-    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // Two things differ from the Java: runPoll gives the reference back (the Java kept it when the
     // database or the listener threw), and a host that is offline already is not told again (the
     // Java told it every fourth failed poll).
-    @Suppress("ReturnCount", "CyclomaticComplexMethod", "NestedBlockDepth")
     @Throws(InterruptedException::class)
     private fun pollAndReport(
         details: ComputerDetails,
         newPc: Boolean,
         offlineCount: Int,
     ): PollResult {
+        val wasOffline = pollForVerdict(details, newPc, offlineCount) ?: return PollResult.UNDECIDED
+
+        // If it's online, update our persistent state
+        if (details.state == ComputerDetails.State.ONLINE && !saveOnlineComputer(details, newPc)) {
+            return PollResult.UNDECIDED
+        }
+
+        // Don't call the listener if this is a failed lookup of a new PC, or if the host was
+        // offline already: it was told, and its state did not change.
+        val online = details.state == ComputerDetails.State.ONLINE
+        if (online || (!newPc && !wasOffline)) {
+            listener?.notifyComputerUpdated(details)
+        }
+
+        return if (online) PollResult.ONLINE else PollResult.OFFLINE
+    }
+
+    // Polls the machine, and counts the poll as active while it runs and while it decides. A poll
+    // that found no host is a verdict only after enough of them failed in a row, or for a new host
+    // at once: then the host is offline, and the result says whether it was offline already (a host
+    // that answered was not). The result is null when there is no verdict yet; the host is left as
+    // it was.
+    @Throws(InterruptedException::class)
+    private fun pollForVerdict(
+        details: ComputerDetails,
+        newPc: Boolean,
+        offlineCount: Int,
+    ): Boolean? {
         val pollTriesBeforeOffline =
             if (details.state == ComputerDetails.State.UNKNOWN) {
                 INITIAL_POLL_TRIES
@@ -150,7 +176,7 @@ class ComputerManagerService : Service() {
             if (!pollComputer(details)) {
                 if (!newPc && offlineCount < pollTriesBeforeOffline) {
                     // Return without calling the listener
-                    return PollResult.UNDECIDED
+                    return null
                 }
 
                 wasOffline = details.state == ComputerDetails.State.OFFLINE
@@ -160,52 +186,50 @@ class ComputerManagerService : Service() {
             activePolls.decrementAndGet()
         }
 
-        // If it's online, update our persistent state
-        if (details.state == ComputerDetails.State.ONLINE) {
-            val existingComputer = dbManager.getComputerByUUID(details.uuid)
+        return wasOffline
+    }
 
-            // Check if it's in the database because it could have been
-            // removed after this was issued
-            if (!newPc && existingComputer == null) {
-                // It's gone
-                return PollResult.UNDECIDED
-            }
+    // Saves a host that answered, and says whether it was saved: a host that is not new and is not
+    // in the database any more was removed after the poll was issued, and is left alone.
+    private fun saveOnlineComputer(details: ComputerDetails, newPc: Boolean): Boolean {
+        val existingComputer = dbManager.getComputerByUUID(details.uuid)
 
-            // If we already have an entry for this computer in the DB, we must
-            // combine the existing data with this new data (which may be partially available
-            // due to detecting the PC via mDNS) without the saved external address. If we
-            // write to the DB without doing this first, we can overwrite our existing data.
-            if (existingComputer != null) {
-                existingComputer.update(details)
-                dbManager.updateComputer(existingComputer)
-            } else {
-                try {
-                    // If the active address is a site-local address (RFC 1918),
-                    // then use STUN to populate the external address field if
-                    // it's not set already.
-                    if (details.remoteAddress == null) {
-                        // The Java dereferenced the active address here, so a host without one
-                        // threw a NullPointerException.
-                        val addr =
-                            InetAddress.getByName(checkNotNull(details.activeAddress).address)
-                        if (addr.isSiteLocalAddress) {
-                            populateExternalAddress(details)
-                        }
-                    }
-                } catch (ignored: UnknownHostException) {}
-
-                dbManager.updateComputer(details)
-            }
+        // Check if it's in the database because it could have been
+        // removed after this was issued
+        if (!newPc && existingComputer == null) {
+            // It's gone
+            return false
         }
 
-        // Don't call the listener if this is a failed lookup of a new PC, or if the host was
-        // offline already: it was told, and its state did not change.
-        val online = details.state == ComputerDetails.State.ONLINE
-        if (online || (!newPc && !wasOffline)) {
-            listener?.notifyComputerUpdated(details)
+        // If we already have an entry for this computer in the DB, we must
+        // combine the existing data with this new data (which may be partially available
+        // due to detecting the PC via mDNS) without the saved external address. If we
+        // write to the DB without doing this first, we can overwrite our existing data.
+        if (existingComputer != null) {
+            existingComputer.update(details)
+            dbManager.updateComputer(existingComputer)
+        } else {
+            populateExternalAddressOfSiteLocalHost(details)
+            dbManager.updateComputer(details)
         }
 
-        return if (online) PollResult.ONLINE else PollResult.OFFLINE
+        return true
+    }
+
+    // If the active address is a site-local address (RFC 1918),
+    // then use STUN to populate the external address field if
+    // it's not set already.
+    private fun populateExternalAddressOfSiteLocalHost(details: ComputerDetails) {
+        try {
+            if (details.remoteAddress == null) {
+                // The Java dereferenced the active address here, so a host without one
+                // threw a NullPointerException.
+                val addr = InetAddress.getByName(checkNotNull(details.activeAddress).address)
+                if (addr.isSiteLocalAddress) {
+                    populateExternalAddress(details)
+                }
+            }
+        } catch (ignored: UnknownHostException) {}
     }
 
     private fun createPollingThread(tuple: PollingTuple): Thread {

@@ -77,6 +77,29 @@ class HandlerStopTest {
     }
 
     @Test
+    fun `a pad whose motor write failed is not sent the trigger motors`() {
+        val pad = ZeroingPad(1, rig.handler, motorsWritten = false)
+        rig.handler.deviceAdded(pad)
+
+        rig.handler.stop()
+
+        assertThat(pad.writes).containsExactly("motors 0 0")
+    }
+
+    @Test
+    fun `a pad whose write failed at once leaves the pads after it zeroed`() {
+        val failing = ZeroingPad(1, rig.handler, motorsWritten = false)
+        val answering = ZeroingPad(2, rig.handler)
+        rig.handler.deviceAdded(failing)
+        rig.handler.deviceAdded(answering)
+
+        rig.handler.stop()
+
+        assertThat(failing.writes).containsExactly("motors 0 0")
+        assertThat(answering.writes).containsExactly("motors 0 0", "triggers 0 0").inOrder()
+    }
+
+    @Test
     fun `a pad that is slow to answer still gets the trigger motors zeroed`() {
         val pad = ZeroingPad(1, rig.handler, writeMs = 10)
         rig.handler.deviceAdded(pad)
@@ -115,11 +138,13 @@ class HandlerStopTest {
 /**
  * A pad the USB driver holds, with the writes it got. Each write takes [writeMs] on the clock of
  * the test: nothing for a pad that answers, the bulk timeout of the drivers for one that does not.
+ * The motor write reports [motorsWritten], the result of a driver's write.
  */
 private class ZeroingPad(
     id: Int,
     listener: UsbDriverListener,
     private val writeMs: Long = 0,
+    private val motorsWritten: Boolean = true,
 ) : AbstractController(id, listener, 0x045e, 0x028e) {
     val writes = mutableListOf<String>()
 
@@ -132,7 +157,7 @@ private class ZeroingPad(
     override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         writes += "motors $lowFreqMotor $highFreqMotor"
         write()
-        return true
+        return motorsWritten
     }
 
     override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {

@@ -3727,10 +3727,9 @@ class ControllerHandler(
             return hasSelect
         }
 
-        // Set once the pad has left. A poll that the thread had already taken cannot be cancelled
-        // and
-        // runs once more: it finds this set, so it neither reports for a number that is no longer
-        // the pad's nor queues its next turn
+        // Set when the pad leaves or the handler stops. A poll that the thread had already taken
+        // cannot be cancelled and runs once more: it finds this set, so it neither reports for a
+        // number that is no longer the pad's nor queues its next turn
         @JvmField @Volatile var retired = false
 
         @JvmField
@@ -3804,6 +3803,7 @@ class ControllerHandler(
         // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
         @Suppress("TooGenericExceptionCaught")
         override fun destroy() {
+            retired = true
             super.destroy()
 
             val contextVibratorManager = vibratorManager

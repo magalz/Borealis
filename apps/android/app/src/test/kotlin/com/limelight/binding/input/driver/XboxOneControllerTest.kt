@@ -573,11 +573,29 @@ class XboxOneControllerTest {
             .containsExactly(
                 rumblePacket(1, 0x00, 0x00, 0x3F, 0x20),
                 rumblePacket(2, 0x3F, 0x01, 0x3F, 0x20),
-                rumblePacket(3, 0x3F, 0x01, 0xC0, 0xFF),
+                rumblePacket(3, 0x3F, 0x01, 0x40, 0x7F),
                 rumblePacket(4, 0x3F, 0x01, 0x02, 0x01),
             )
             .inOrder()
         assertThat(pad.usb.writes.drop(1).map { it.timeoutMs }.toSet()).containsExactly(100)
+    }
+
+    @Test
+    fun `a motor of 0x8000 or more goes out as 0x40 to 0x7F, the trigger motors too`() {
+        val pad = pad()
+        pad.start()
+
+        // The motor bytes take 0 to 0x7F: the shift is unsigned, so a motor with its top bit set
+        // does not sign-extend into 0xC0 or 0xFF.
+        pad.controller.rumbleTriggers(0x8000.toShort(), 0xFFFF.toShort())
+        pad.controller.rumble(0xFFFF.toShort(), 0x8000.toShort())
+
+        assertThat(pad.writtenBytes().drop(1))
+            .containsExactly(
+                rumblePacket(1, 0x40, 0x7F, 0x00, 0x00),
+                rumblePacket(2, 0x40, 0x7F, 0x7F, 0x40),
+            )
+            .inOrder()
     }
 
     @Test
@@ -624,6 +642,18 @@ class XboxOneControllerTest {
     }
 
     @Test
+    fun `a rumble write waits 100 ms at most`() {
+        val pad = pad()
+        pad.start()
+        val initWrites = pad.usb.writes.size
+
+        pad.controller.rumble(1, 2)
+        pad.controller.rumbleTriggers(3, 4)
+
+        assertThat(pad.usb.writes.drop(initWrites).map { it.timeoutMs }).containsExactly(100, 100)
+    }
+
+    @Test
     fun `a rumble that does not go through is not an error`() {
         val pad = pad()
         pad.start()
@@ -633,6 +663,42 @@ class XboxOneControllerTest {
 
         assertThat(pad.usb.writes).hasSize(2)
         assertThat(log.warnings()).containsExactly("Rumble transfer failed: -1")
+    }
+
+    @Test
+    fun `a rumble that went through reports success, the trigger motors too`() {
+        val pad = pad()
+        pad.start()
+
+        assertThat(pad.controller.rumble(1, 2)).isTrue()
+        assertThat(pad.controller.rumbleTriggers(3, 4)).isTrue()
+    }
+
+    @Test
+    fun `a rumble reports a write that fails, times out or falls short`() {
+        // The rumble packet is 13 bytes.
+        val results =
+            listOf(-1, 0, 12).associateWith { written ->
+                val pad = pad()
+                pad.start()
+                pad.usb.writeResults.add(written)
+                pad.controller.rumble(1, 2)
+            }
+
+        assertThat(results).containsExactly(-1, false, 0, false, 12, false)
+    }
+
+    @Test
+    fun `a trigger rumble reports a write that fails, times out or falls short`() {
+        val results =
+            listOf(-1, 0, 12).associateWith { written ->
+                val pad = pad()
+                pad.start()
+                pad.usb.writeResults.add(written)
+                pad.controller.rumbleTriggers(3, 4)
+            }
+
+        assertThat(results).containsExactly(-1, false, 0, false, 12, false)
     }
 
     @Test

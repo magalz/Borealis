@@ -101,34 +101,30 @@ class Xbox360Controller(
         return true
     }
 
-    // The high byte of a motor, but never 0 for a motor that is not zero, so a weak rumble is not
-    // lost and only a real zero stops the motor.
-    private fun motorByte(motor: Short): Byte {
-        val byte = (motor.toInt() shr MOTOR_BYTE_SHIFT).toByte()
-        return if (byte.toInt() == 0 && motor.toInt() != 0) 1 else byte
-    }
-
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         val data =
             byteArrayOf(
                 0x00,
                 RUMBLE_REPORT_SIZE,
                 0x00,
-                motorByte(lowFreqMotor),
-                motorByte(highFreqMotor),
+                motorByte(lowFreqMotor, MOTOR_BYTE_SHIFT),
+                motorByte(highFreqMotor, MOTOR_BYTE_SHIFT),
                 0x00,
                 0x00,
                 0x00,
             )
         val res =
-            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, RUMBLE_TIMEOUT_MS)
-        if (res != data.size) {
+            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
+        val sent = res == data.size
+        if (!sent) {
             LimeLog.warning("Rumble transfer failed: $res")
         }
+        return sent
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         // Trigger motors not present on Xbox 360 controllers
+        return true
     }
 
     companion object {
@@ -198,7 +194,6 @@ class Xbox360Controller(
         private const val LED_TIMEOUT_MS = 3000
         private const val RUMBLE_REPORT_SIZE: Byte = 0x08
         private const val MOTOR_BYTE_SHIFT = 8
-        private const val RUMBLE_TIMEOUT_MS = 100
 
         // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
         @Suppress("ComplexCondition")

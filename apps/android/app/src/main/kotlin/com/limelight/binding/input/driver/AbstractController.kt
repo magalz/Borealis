@@ -53,9 +53,15 @@ abstract class AbstractController(
 
     abstract fun stop()
 
-    abstract fun rumble(lowFreqMotor: Short, highFreqMotor: Short)
+    /**
+     * Sets the two main motors. Returns true when the write went through, and false when the
+     * transfer ended with anything but the whole packet (a timeout, a failure or a short write). A
+     * pad with nothing to write returns true: nothing failed.
+     */
+    abstract fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean
 
-    abstract fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short)
+    /** Sets the trigger motors. The result means what the result of [rumble] means. */
+    abstract fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean
 
     protected fun notifyDeviceRemoved() {
         listener.deviceRemoved(this)
@@ -63,5 +69,10 @@ abstract class AbstractController(
 
     protected fun notifyDeviceAdded() {
         listener.deviceAdded(this)
+    }
+
+    companion object {
+        // The bulk write of a rumble gives up after this long (milliseconds)
+        const val USB_WRITE_TIMEOUT_MS = 100
     }
 }

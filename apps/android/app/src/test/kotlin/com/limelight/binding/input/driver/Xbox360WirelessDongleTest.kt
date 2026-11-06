@@ -200,4 +200,13 @@ class Xbox360WirelessDongleTest {
         assertThat(pad.usb.closes).isEqualTo(0)
         assertThat(pad.listener.quietFor(50)).isTrue()
     }
+
+    @Test
+    fun `a rumble that does nothing is not a failed rumble`() {
+        val pad = dongle(wireless(0))
+        pad.start()
+
+        assertThat(pad.controller.rumble(0x7FFF, 0x7FFF)).isTrue()
+        assertThat(pad.controller.rumbleTriggers(0x7FFF, 0x7FFF)).isTrue()
+    }
 }

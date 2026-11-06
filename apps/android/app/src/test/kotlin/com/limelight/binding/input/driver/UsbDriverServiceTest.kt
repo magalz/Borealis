@@ -136,12 +136,14 @@ class UsbDriverServiceTest {
             // Nothing is held open.
         }
 
-        override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+        override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
             // The stub has no motors.
+            return true
         }
 
-        override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+        override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
             // The stub has no motors.
+            return true
         }
     }
 

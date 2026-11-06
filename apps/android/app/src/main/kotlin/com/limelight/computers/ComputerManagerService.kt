@@ -38,9 +38,10 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import org.xmlpull.v1.XmlPullParserException
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-// Object.wait and Object.notify are not members of Kotlin's Any, so the monitors are cast to
-// java.lang.Object, as the Java used them.
+// Converted as is from the inherited Java; the rest is for later sprints:
+// - TooManyFunctions: the service waits for its split (Sprint 18d backlog).
+// - PLATFORM_CLASS_MAPPED_TO_KOTLIN: Object.wait and Object.notify are not members of Kotlin's
+//   Any, so the monitors are cast to java.lang.Object, as the Java used them (Sprint 18c backlog).
 @Suppress("TooManyFunctions", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 class ComputerManagerService : Service() {
     private val binder = ComputerManagerBinder()
@@ -312,7 +313,7 @@ class ComputerManagerService : Service() {
         }
 
         // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
-        // instead is a behaviour change (Sprint 12 backlog).
+        // instead is a behaviour change (Sprint 18c backlog).
         @Suppress("PrintStackTrace")
         fun waitForReady() {
             synchronized(discoveryServiceConnection) {
@@ -409,10 +410,11 @@ class ComputerManagerService : Service() {
         return false
     }
 
-    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The Java called getAllNetworks, which is deprecated since Android 12 and is still the call
     // that finds the network under a VPN. It unlocked the network state without a finally, so a
     // call that threw kept the lock for good, and the process bound to its network.
+    // The deprecated call stays on purpose, and the nesting of the code around it (the loop over
+    // the networks) goes with the change that replaces it (Sprint 18c backlog).
     @Suppress("DEPRECATION", "NestedBlockDepth")
     private fun populateExternalAddress(details: ComputerDetails) {
         val activeNetworkIsVpn = NetHelper.isActiveNetworkVpn(this)
@@ -477,7 +479,7 @@ class ComputerManagerService : Service() {
     }
 
     // The stack trace of a failed discovery goes to the standard error stream, as in the inherited
-    // Java. Logging it instead is a behaviour change (Sprint 12 backlog).
+    // Java. Logging it instead is a behaviour change (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     private fun createDiscoveryListener(): MdnsDiscoveryListener =
         object : MdnsDiscoveryListener {

@@ -250,44 +250,19 @@ class XboxOneControllerTest {
             }
             .also(pads::add)
 
-    private fun startFailsWith(
-        warning: String,
-        vararg endpoints: android.hardware.usb.UsbEndpoint,
-    ) {
-        val pad = padWithEndpoints(*endpoints)
-
-        assertThat(pad.start()).isFalse()
-        assertThat(pad.usb.writes).isEmpty()
-        assertThat(log.warnings()).containsExactly(warning)
-    }
-
-    // The second endpoint of a direction ends the search: the pad is not then reported as one that
-    // misses an endpoint.
+    // The claim and the search for the endpoints are AbstractXboxController's, and
+    // Xbox360ControllerTest pins what this class would pin again: a missing IN endpoint, and a pad
+    // that cannot be claimed. The second endpoint of a direction ends the search: the pad is not
+    // then reported as one that misses an endpoint.
     @Test
     fun `start fails on a second IN endpoint`() =
-        startFailsWith("Found duplicate IN endpoint", UsbPads.inEndpoint(1), UsbPads.inEndpoint(2))
+        padWithEndpoints(UsbPads.inEndpoint(1), UsbPads.inEndpoint(2))
+            .assertStartFails(log, "Found duplicate IN endpoint")
 
     @Test
     fun `start fails on a second OUT endpoint`() =
-        startFailsWith(
-            "Found duplicate OUT endpoint",
-            UsbPads.outEndpoint(1),
-            UsbPads.outEndpoint(2),
-        )
-
-    @Test
-    fun `start fails without an IN endpoint`() =
-        startFailsWith("Missing required endpoint", UsbPads.outEndpoint(1))
-
-    @Test
-    fun `a pad that cannot be claimed is not looked at for its endpoints`() {
-        val pad = padWithEndpoints(UsbPads.outEndpoint(1))
-        pad.usb.claimResults.add(false)
-
-        assertThat(pad.start()).isFalse()
-
-        assertThat(log.warnings()).containsExactly("Failed to claim interfaces")
-    }
+        padWithEndpoints(UsbPads.outEndpoint(1), UsbPads.outEndpoint(2))
+            .assertStartFails(log, "Found duplicate OUT endpoint")
 
     @Test
     fun `an init that fails starts no input thread`() {

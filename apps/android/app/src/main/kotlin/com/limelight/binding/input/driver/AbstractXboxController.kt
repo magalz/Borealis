@@ -189,6 +189,13 @@ abstract class AbstractXboxController(
         notifyDeviceRemoved()
     }
 
+    // A motor shifted down as an unsigned number, but never to 0 for a motor that is not zero, so
+    // a weak rumble is not lost and only a real zero stops the motor.
+    protected fun motorByte(motor: Short, shift: Int): Byte {
+        val byte = ((motor.toInt() and UNSIGNED_SHORT_MASK) shr shift).toByte()
+        return if (byte.toInt() == 0 && motor.toInt() != 0) 1 else byte
+    }
+
     protected abstract fun handleRead(buffer: ByteBuffer): Boolean
 
     protected abstract fun doInit(): Boolean
@@ -198,5 +205,6 @@ abstract class AbstractXboxController(
         private const val READ_BUFFER_SIZE = 64
         private const val READ_TIMEOUT_MS = 3000
         private const val IO_ERROR_WINDOW_MS = 1000L
+        private const val UNSIGNED_SHORT_MASK = 0xFFFF
     }
 }

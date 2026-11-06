@@ -148,13 +148,6 @@ class XboxOneController(
         return true
     }
 
-    // A motor shifted down, but never to 0 for a motor that is not zero, so a weak rumble is not
-    // lost and only a real zero stops the motor.
-    private fun motorByte(motor: Short): Byte {
-        val byte = (motor.toInt() shr MOTOR_SHIFT).toByte()
-        return if (byte.toInt() == 0 && motor.toInt() != 0) 1 else byte
-    }
-
     private fun sendRumblePacket() {
         val data =
             byteArrayOf(
@@ -164,10 +157,10 @@ class XboxOneController(
                 RUMBLE_REPORT_LENGTH,
                 0x00,
                 RUMBLE_MOTOR_MASK,
-                motorByte(leftTriggerMotor),
-                motorByte(rightTriggerMotor),
-                motorByte(lowFreqMotor),
-                motorByte(highFreqMotor),
+                motorByte(leftTriggerMotor, MOTOR_SHIFT),
+                motorByte(rightTriggerMotor, MOTOR_SHIFT),
+                motorByte(lowFreqMotor, MOTOR_SHIFT),
+                motorByte(highFreqMotor, MOTOR_SHIFT),
                 RUMBLE_FULL,
                 0x00,
                 RUMBLE_FULL,
@@ -330,6 +323,8 @@ class XboxOneController(
         private const val RUMBLE_REPORT_LENGTH: Byte = 0x09
         private const val RUMBLE_MOTOR_MASK: Byte = 0x0F
         private const val RUMBLE_FULL: Byte = 0xFF.toByte()
+
+        // A motor is 16 bits and the rumble report takes 0 to 0x7F.
         private const val MOTOR_SHIFT = 9
         private const val INIT_TIMEOUT_MS = 3000
         private const val ACK_TIMEOUT_MS = 3000

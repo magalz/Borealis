@@ -573,11 +573,29 @@ class XboxOneControllerTest {
             .containsExactly(
                 rumblePacket(1, 0x00, 0x00, 0x3F, 0x20),
                 rumblePacket(2, 0x3F, 0x01, 0x3F, 0x20),
-                rumblePacket(3, 0x3F, 0x01, 0xC0, 0xFF),
+                rumblePacket(3, 0x3F, 0x01, 0x40, 0x7F),
                 rumblePacket(4, 0x3F, 0x01, 0x02, 0x01),
             )
             .inOrder()
         assertThat(pad.usb.writes.drop(1).map { it.timeoutMs }.toSet()).containsExactly(100)
+    }
+
+    @Test
+    fun `a motor of 0x8000 or more goes out as 0x40 to 0x7F, the trigger motors too`() {
+        val pad = pad()
+        pad.start()
+
+        // The motor bytes take 0 to 0x7F: the shift is unsigned, so a motor with its top bit set
+        // does not sign-extend into 0xC0 or 0xFF.
+        pad.controller.rumbleTriggers(0x8000.toShort(), 0xFFFF.toShort())
+        pad.controller.rumble(0xFFFF.toShort(), 0x8000.toShort())
+
+        assertThat(pad.writtenBytes().drop(1))
+            .containsExactly(
+                rumblePacket(1, 0x40, 0x7F, 0x00, 0x00),
+                rumblePacket(2, 0x40, 0x7F, 0x7F, 0x40),
+            )
+            .inOrder()
     }
 
     @Test

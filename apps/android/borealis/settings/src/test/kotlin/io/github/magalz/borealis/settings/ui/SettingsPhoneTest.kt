@@ -325,12 +325,7 @@ class SettingsPhoneTest : PhoneSettingsTestBase() {
         sheetOption("Trackpad").assertIsDisplayed()
         sheetOption("Direct").assertIsDisplayed()
         sheetOption("Native").assertIsDisplayed()
-        composeRule
-            .onNodeWithText(
-                "Sends real touch to the PC, as on a touchscreen. " +
-                    "Needs a host with touch support."
-            )
-            .assertIsDisplayed()
+        composeRule.onNodeWithText(NATIVE_SUMMARY).assertIsDisplayed()
         sheetOption("Direct").performClick()
         composeRule.waitForIdle()
 

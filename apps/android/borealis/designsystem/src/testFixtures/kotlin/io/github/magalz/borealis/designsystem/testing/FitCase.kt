@@ -6,6 +6,7 @@ import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FontChoice
 import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
+import org.junit.Assume.assumeTrue
 
 /**
  * One run of a fit test: the screens in [font] at [spacing] (ADR 0058, decisions 2 and 4), with the
@@ -29,6 +30,13 @@ fun fitCases(): List<FitCase> =
     FontChoice.entries.map { FitCase(it, TextSpacing.Normal) } +
         FitCase(FontChoice.Plex, TextSpacing.Wide) +
         FontChoice.entries.map { FitCase(it, TextSpacing.Wider) }
+
+/**
+ * Skips the test when the run is not at Normal. The combined font scale of 2.6 is held at Normal,
+ * the spacing that fits there. Wider is drawn as Wide from 2.0, and Wide above 2.0 is not measured
+ * here.
+ */
+fun FitCase.assumeNormalSpacing() = assumeTrue(spacing == TextSpacing.Normal)
 
 /**
  * The runs of the fit tests of the card grids: [fitCases], and the denser layouts (Compact and

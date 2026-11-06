@@ -84,8 +84,9 @@ private const val STACKED_HEADER_FONT_SCALE = 2f
  * the system Back there is handled by the navigation of the shell. Above a font scale of 2.0 the
  * title takes the whole width: under the bar of a phone, above the toggle of a TV or handheld
  * ([STACKED_HEADER_FONT_SCALE]). When the last of these windows closes, the tile of the app they
- * were for has the focus again ([RestoreOpenerFocus]). Messages go through [snackbarHostState].
- * Provides its own theme for [formFactor].
+ * were for has the focus again ([RestoreOpenerFocus]); after Hide, which takes the app off the
+ * grid, it is the tile that takes its place ([openerAfterHide]). Messages go through
+ * [snackbarHostState]. Provides its own theme for [formFactor].
  */
 @Composable
 fun AppsScreen(
@@ -103,8 +104,8 @@ fun AppsScreen(
 ) {
     BorealisTheme(formFactor) {
         // The app that the last window over the grid was for, whichever way it opened: a tap or OK
-        // on an app that asks, X or a long press, or a launch request. A phone starts with no
-        // focus, so there is nothing to give back.
+        // on an app that asks, X or a long press, or a launch request; after Hide, the tile that
+        // takes its place. A phone starts with no focus, so there is nothing to give back.
         var openerId by remember { mutableStateOf<Int?>(null) }
         val windowAppId = state.actions?.app?.id ?: state.details?.id
         LaunchedEffect(windowAppId) { if (windowAppId != null) openerId = windowAppId }
@@ -143,7 +144,18 @@ fun AppsScreen(
                 Modifier.align(Alignment.BottomCenter).padding(SNACKBAR_PADDING),
             )
         }
-        state.actions?.let { AppActionsSheet(it, onActionChosen, onActionsDismissed) }
+        state.actions?.let { sheet ->
+            AppActionsSheet(
+                sheet,
+                onChosen = { action ->
+                    if (action == AppAction.HIDE) {
+                        openerId = state.openerAfterHide(sheet.app.id, openerId)
+                    }
+                    onActionChosen(action)
+                },
+                onDismiss = onActionsDismissed,
+            )
+        }
         state.details?.let { AppDetailsDialog(it, onDetailsDismissed) }
         RestoreOpenerFocus(
             open = state.actions != null || state.details != null,
@@ -161,10 +173,11 @@ fun AppsScreen(
  * it. Nothing happens when the app is already gone from the grid ([openerListed] is false), and
  * nothing when the screen starts with a window already open: that is not a close. After Hide the
  * removal is asynchronous (the ViewModel launches it), so the app may still be in the grid when the
- * sheet closes, and its tile, about to go, asks for the focus. A tile that the grid does not
- * compose (many apps, scrolled away while a window was open) has no node for [focus]: Compose logs
- * it and answers false, so nothing fails. This is the effect of `RestoreOpenerFocus` of the hosts
- * screen, written for apps because that one takes the host list and ids.
+ * sheet closes: the screen has made the app that opened the windows the tile that takes its place
+ * ([openerAfterHide]), so the tile that asks for the focus is one that stays. A tile that the grid
+ * does not compose (many apps, scrolled away while a window was open) has no node for [focus]:
+ * Compose logs it and answers false, so nothing fails. This is the effect of `RestoreOpenerFocus`
+ * of the hosts screen, written for apps because that one takes the host list and ids.
  */
 @Composable
 private fun RestoreOpenerFocus(open: Boolean, openerListed: Boolean, focus: FocusRequester) {
@@ -173,6 +186,25 @@ private fun RestoreOpenerFocus(open: Boolean, openerListed: Boolean, focus: Focu
         if (wasOpen && !open && openerListed) focus.requestFocus()
         wasOpen = open
     }
+}
+
+/**
+ * The app whose tile has the focus when the windows close after Hide on [appId], given that the app
+ * that opened them is [openerId]. While the hidden apps are not shown (the filter of the ViewModel
+ * keeps `showHidden || !hidden`), the tile is about to go, and the focus must not wait for it: it
+ * is the tile that takes its place, the next one in the grid, or the previous one when it was the
+ * last. It stays [openerId] when the hidden apps are shown, [appId] is not that app, is not listed
+ * or has no neighbour (no tile is left, and the focus goes where Compose puts it).
+ */
+private fun AppsUiState.openerAfterHide(appId: Int, openerId: Int?): Int? {
+    val index = items.indexOfFirst { it.id == appId }
+    val neighbour =
+        if (!showHidden && openerId == appId && index >= 0) {
+            items.getOrNull(index + 1) ?: items.getOrNull(index - 1)
+        } else {
+            null
+        }
+    return neighbour?.id ?: openerId
 }
 
 /** The toggle of the phone bar, as an icon: a TV or handheld has a button in [Header]. */

@@ -79,9 +79,10 @@ internal fun HostsDialogs(
  * the screen and that Compose gave it back to the first card, not to the one that had it. Nothing
  * happens when that host is already gone, and nothing when the screen starts with a window already
  * open: that is not a close. After Forget the removal is asynchronous (the ViewModel launches it),
- * so the host may still be in [hosts] when the confirmation closes, and its card, about to go, asks
- * for the focus. A card that the grid does not compose (many hosts, scrolled away while a window
- * was open) has no node for [focus]: Compose logs it and answers false, so nothing fails.
+ * so the host may still be in [hosts] when the confirmation closes: the screen has made [openerId]
+ * the card that takes its place ([openerAfterForget]), so the card that asks for the focus is one
+ * that stays. A card that the grid does not compose (many hosts, scrolled away while a window was
+ * open) has no node for [focus]: Compose logs it and answers false, so nothing fails.
  */
 @Composable
 internal fun RestoreOpenerFocus(
@@ -95,6 +96,20 @@ internal fun RestoreOpenerFocus(
         if (wasOpen && !open && hosts.any { it.id == openerId }) focus.requestFocus()
         wasOpen = open
     }
+}
+
+/**
+ * The host whose card has the focus when the windows close after Forget on [hostId], given that the
+ * card that opened them is [openerId]. That card is about to go, and the focus must not wait for
+ * it: it is the card that takes its place, the next one in the grid, or the previous one when it
+ * was the last. It stays [openerId] when [hostId] is not that card, is not listed or has no
+ * neighbour (no card is left, and the focus goes where Compose puts it).
+ */
+internal fun List<HostItemUiState>.openerAfterForget(hostId: String, openerId: String?): String? {
+    val index = indexOfFirst { it.id == hostId }
+    val neighbour =
+        if (openerId == hostId && index >= 0) getOrNull(index + 1) ?: getOrNull(index - 1) else null
+    return neighbour?.id ?: openerId
 }
 
 @Composable

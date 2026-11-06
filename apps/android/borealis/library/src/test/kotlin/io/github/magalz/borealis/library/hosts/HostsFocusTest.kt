@@ -49,6 +49,11 @@ class HostsFocusTest {
     private val state = mutableStateOf(withHosts)
     private val selected = mutableListOf<String>()
     private val woken = mutableListOf<String>()
+    private val forgotten = mutableListOf<String>()
+    /**
+     * True when the host leaves the list in the callback of Forget, false when a test removes it.
+     */
+    private var removeOnForget = false
     private var window: View? = null
     private val aardvark =
         HostItemUiState("aard", "Aardvark", Reachability.ONLINE, true, null, HostAction.OPEN)
@@ -261,6 +266,60 @@ class HostsFocusTest {
         composeRule.onNodeWithTag("continue:desk").assertIsFocused()
     }
 
+    @Test
+    fun `after Forget the focus goes to the next card when the host leaves after the window closed`() {
+        show()
+
+        confirmForget("host:living")
+        // The ViewModel launches the removal: the host is still listed when the window has closed.
+        composeRule.onNodeWithTag("host:living").assertIsDisplayed()
+        removeHost("living")
+        composeRule.waitForIdle()
+
+        assertThat(forgotten).containsExactly("living")
+        composeRule.onNodeWithTag("host:living").assertDoesNotExist()
+        composeRule.onNodeWithTag("host:studio").assertIsFocused()
+    }
+
+    @Test
+    fun `after Forget the focus goes to the next card when the host leaves with the confirmation`() {
+        removeOnForget = true
+        show()
+
+        confirmForget("host:living")
+
+        assertThat(forgotten).containsExactly("living")
+        composeRule.onNodeWithTag("host:living").assertDoesNotExist()
+        composeRule.onNodeWithTag("host:studio").assertIsFocused()
+    }
+
+    @Test
+    fun `after Forget of the last card the focus goes to the previous card`() {
+        show()
+
+        confirmForget("host:studio")
+        removeHost("studio")
+        composeRule.waitForIdle()
+
+        assertThat(forgotten).containsExactly("studio")
+        composeRule.onNodeWithTag("host:studio").assertDoesNotExist()
+        composeRule.onNodeWithTag("host:living").assertIsFocused()
+    }
+
+    @Test
+    fun `after Forget of the only host the screen has no card left and stays usable`() {
+        state.value = withHostsNoContinue.copy(items = listOf(deskPc))
+        show()
+
+        confirmForget("host:desk")
+        removeHost("desk")
+        composeRule.waitForIdle()
+
+        assertThat(forgotten).containsExactly("desk")
+        composeRule.onNodeWithTag("host:desk").assertDoesNotExist()
+        composeRule.onNodeWithText("Cancel").assertDoesNotExist()
+    }
+
     private fun focusedTag(): String? =
         composeRule.onAllNodes(isFocused()).fetchSemanticsNodes().firstNotNullOfOrNull {
             it.config.getOrNull(SemanticsProperties.TestTag)
@@ -271,6 +330,27 @@ class HostsFocusTest {
         composeRule.onNodeWithTag(tag).performKeyInput { pressKey(Key.ButtonX) }
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Details").assertIsDisplayed()
+    }
+
+    /**
+     * Options, Forget and its confirmation on the card [tag], as on the device: the window that
+     * opens over the screen takes the focus, and the confirmation closes with it gone.
+     */
+    private fun confirmForget(tag: String) {
+        composeRule.onNodeWithTag(tag).requestFocus()
+        openOptions(tag)
+        composeRule.onNodeWithText("Forget").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Cancel").assertIsFocused()
+        resetWindowFocus()
+
+        composeRule.onNodeWithText("Forget").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Cancel").assertDoesNotExist()
+    }
+
+    private fun removeHost(id: String) {
+        state.value = state.value.copy(items = state.value.items.filter { it.id != id })
     }
 
     /**
@@ -294,7 +374,10 @@ class HostsFocusTest {
             onHostSelected = { selected += it },
             onContinue = {},
             onWake = { woken += it },
-            onForget = {},
+            onForget = {
+                forgotten += it
+                if (removeOnForget) removeHost(it)
+            },
             onDetails = { state.value = state.value.copy(details = DETAILS) },
             onDetailsDismissed = { state.value = state.value.copy(details = null) },
             onAddHost = {},

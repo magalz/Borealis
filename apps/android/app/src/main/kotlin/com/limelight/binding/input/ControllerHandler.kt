@@ -1365,11 +1365,11 @@ class ControllerHandler(
         }
     }
 
-    // A pad that leaves lets go of the buttons it holds and no other pad on its number holds, and
-    // takes them out of the last state of the pads that stay. That is the fused state of the
-    // number, so it holds what this pad held too: left there, the click would hide the next press
-    // of those pads, or go up a second time with them. The stop lets go of every pad's buttons, so
-    // it takes no such care.
+    // A pad that leaves, or whose mouse mode goes off, lets go of the buttons it holds and no other
+    // pad on its number holds, and takes them out of the last state of the pads that stay. That is
+    // the fused state of the number, so it holds what this pad held too: left there, the click
+    // would hide the next press of those pads, or go up a second time with them. The stop lets go
+    // of every pad's buttons, so it takes no such care.
     private fun endLeavingMouse(context: GenericControllerContext) {
         synchronized(inputLock) {
             var heldByOthers = 0
@@ -3601,6 +3601,11 @@ class ControllerHandler(
         }
 
         fun setMouseEmulation(enabled: Boolean, notify: Boolean) {
+            // The buttons the pad holds in mouse mode would stay down on the PC: they go up in the
+            // lock section that ends the mode
+            if (!enabled) {
+                endLeavingMouse(this)
+            }
             mainThreadHandler.removeCallbacks(mouseEmulationRunnable)
             mouseEmulationActive = enabled
             leftStickMotion.reset()

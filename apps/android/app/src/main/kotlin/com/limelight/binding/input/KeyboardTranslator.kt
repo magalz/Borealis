@@ -82,9 +82,6 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
      * @param deviceId InputDevice.getId() or -1 if unknown
      * @return a GFE keycode for the given keycode
      */
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
-    @SuppressLint("InlinedApi")
     fun translate(keycode: Int, deviceId: Int): Short {
         var code = keycode
 
@@ -101,70 +98,10 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
             }
         }
 
-        // This is a poor man's mapping between Android key codes
-        // and Windows VK_* codes. For all defined VK_ codes, see:
-        // https://msdn.microsoft.com/en-us/library/windows/desktop/dd375731(v=vs.85).aspx
-        val translated =
-            when (code) {
-                in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> (code - KeyEvent.KEYCODE_0) + VK_0
-                in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z -> (code - KeyEvent.KEYCODE_A) + VK_A
-                in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 ->
-                    (code - KeyEvent.KEYCODE_NUMPAD_0) + VK_NUMPAD0
-                in KeyEvent.KEYCODE_F1..KeyEvent.KEYCODE_F12 -> (code - KeyEvent.KEYCODE_F1) + VK_F1
-                in KeyEvent.KEYCODE_F13..KeyEvent.KEYCODE_F24 ->
-                    (code - KeyEvent.KEYCODE_F13) + VK_F13
-                KeyEvent.KEYCODE_ALT_LEFT -> VK_LMENU
-                KeyEvent.KEYCODE_ALT_RIGHT -> VK_RMENU
-                KeyEvent.KEYCODE_BACKSLASH -> VK_OEM_5
-                KeyEvent.KEYCODE_CAPS_LOCK -> VK_CAPS_LOCK
-                KeyEvent.KEYCODE_CLEAR -> VK_CLEAR
-                KeyEvent.KEYCODE_COMMA -> VK_OEM_COMMA
-                KeyEvent.KEYCODE_CTRL_LEFT -> VK_LCONTROL
-                KeyEvent.KEYCODE_CTRL_RIGHT -> VK_RCONTROL
-                KeyEvent.KEYCODE_DEL -> VK_BACK_SPACE
-                KeyEvent.KEYCODE_ENTER -> VK_RETURN
-                KeyEvent.KEYCODE_PLUS,
-                KeyEvent.KEYCODE_EQUALS -> VK_OEM_PLUS
-                KeyEvent.KEYCODE_ESCAPE -> VK_ESCAPE
-                KeyEvent.KEYCODE_FORWARD_DEL -> VK_DELETE
-                KeyEvent.KEYCODE_INSERT -> VK_INSERT
-                KeyEvent.KEYCODE_LEFT_BRACKET -> VK_OEM_4
-                KeyEvent.KEYCODE_META_LEFT -> VK_LWIN
-                KeyEvent.KEYCODE_META_RIGHT -> VK_RWIN
-                KeyEvent.KEYCODE_MENU -> VK_APPS
-                KeyEvent.KEYCODE_MINUS -> VK_OEM_MINUS
-                KeyEvent.KEYCODE_MOVE_END -> VK_END
-                KeyEvent.KEYCODE_MOVE_HOME -> VK_HOME
-                KeyEvent.KEYCODE_NUM_LOCK -> VK_NUM_LOCK
-                KeyEvent.KEYCODE_PAGE_DOWN -> VK_PAGE_DOWN
-                KeyEvent.KEYCODE_PAGE_UP -> VK_PAGE_UP
-                KeyEvent.KEYCODE_PERIOD -> VK_OEM_PERIOD
-                KeyEvent.KEYCODE_RIGHT_BRACKET -> VK_OEM_6
-                KeyEvent.KEYCODE_SCROLL_LOCK -> VK_SCROLL_LOCK
-                KeyEvent.KEYCODE_SEMICOLON -> VK_OEM_1
-                KeyEvent.KEYCODE_SHIFT_LEFT -> VK_LSHIFT
-                KeyEvent.KEYCODE_SHIFT_RIGHT -> VK_RSHIFT
-                KeyEvent.KEYCODE_SLASH -> VK_OEM_2
-                KeyEvent.KEYCODE_SPACE -> VK_SPACE
-                // Android defines this as SysRq/PrntScrn
-                KeyEvent.KEYCODE_SYSRQ -> VK_PRINTSCREEN
-                KeyEvent.KEYCODE_TAB -> VK_TAB
-                KeyEvent.KEYCODE_DPAD_LEFT -> VK_LEFT
-                KeyEvent.KEYCODE_DPAD_RIGHT -> VK_RIGHT
-                KeyEvent.KEYCODE_DPAD_UP -> VK_UP
-                KeyEvent.KEYCODE_DPAD_DOWN -> VK_DOWN
-                KeyEvent.KEYCODE_GRAVE -> VK_BACK_QUOTE
-                KeyEvent.KEYCODE_APOSTROPHE -> VK_OEM_7
-                KeyEvent.KEYCODE_BREAK -> VK_PAUSE
-                KeyEvent.KEYCODE_NUMPAD_DIVIDE -> VK_DIVIDE
-                KeyEvent.KEYCODE_NUMPAD_MULTIPLY -> VK_MULTIPLY
-                KeyEvent.KEYCODE_NUMPAD_SUBTRACT -> VK_SUBTRACT
-                KeyEvent.KEYCODE_NUMPAD_ADD -> VK_ADD
-                KeyEvent.KEYCODE_NUMPAD_DOT -> VK_DECIMAL
-                KeyEvent.KEYCODE_PRINT -> VK_PRINT
-                KeyEvent.KEYCODE_SCREENSHOT -> VK_SNAPSHOT
-                else -> return 0
-            }
+        val translated = VIRTUAL_KEYS.getOrElse(code) { 0 }
+        if (translated == 0) {
+            return 0
+        }
 
         return ((KEY_PREFIX.toInt() shl BITS_PER_BYTE) or translated).toShort()
     }
@@ -255,5 +192,82 @@ class KeyboardTranslator : InputManager.InputDeviceListener {
         private const val VK_OEM_5 = 0xdc
         private const val VK_OEM_6 = 0xdd
         private const val VK_OEM_7 = 0xde
+
+        // This is a poor man's mapping between Android key codes
+        // and Windows VK_* codes. For all defined VK_ codes, see:
+        // https://msdn.microsoft.com/en-us/library/windows/desktop/dd375731(v=vs.85).aspx
+        // It is indexed by Android key code, up to the highest of them (F24), and built once; a key
+        // that is not in it has 0, which is no Windows virtual-key code.
+        // Converted as is from the inherited Java; InlinedApi stays because some of these key
+        // codes are newer than the minimum SDK (Sprint 18c backlog).
+        @SuppressLint("InlinedApi")
+        private val VIRTUAL_KEYS =
+            IntArray(KeyEvent.KEYCODE_F24 + 1).apply {
+                putRange(KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9, VK_0)
+                putRange(KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z, VK_A)
+                putRange(KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9, VK_NUMPAD0)
+                putRange(KeyEvent.KEYCODE_F1..KeyEvent.KEYCODE_F12, VK_F1)
+                putRange(KeyEvent.KEYCODE_F13..KeyEvent.KEYCODE_F24, VK_F13)
+                this[KeyEvent.KEYCODE_ALT_LEFT] = VK_LMENU
+                this[KeyEvent.KEYCODE_ALT_RIGHT] = VK_RMENU
+                this[KeyEvent.KEYCODE_BACKSLASH] = VK_OEM_5
+                this[KeyEvent.KEYCODE_CAPS_LOCK] = VK_CAPS_LOCK
+                this[KeyEvent.KEYCODE_CLEAR] = VK_CLEAR
+                this[KeyEvent.KEYCODE_COMMA] = VK_OEM_COMMA
+                this[KeyEvent.KEYCODE_CTRL_LEFT] = VK_LCONTROL
+                this[KeyEvent.KEYCODE_CTRL_RIGHT] = VK_RCONTROL
+                this[KeyEvent.KEYCODE_DEL] = VK_BACK_SPACE
+                this[KeyEvent.KEYCODE_ENTER] = VK_RETURN
+                this[KeyEvent.KEYCODE_PLUS] = VK_OEM_PLUS
+                this[KeyEvent.KEYCODE_EQUALS] = VK_OEM_PLUS
+                this[KeyEvent.KEYCODE_ESCAPE] = VK_ESCAPE
+                this[KeyEvent.KEYCODE_FORWARD_DEL] = VK_DELETE
+                this[KeyEvent.KEYCODE_INSERT] = VK_INSERT
+                this[KeyEvent.KEYCODE_LEFT_BRACKET] = VK_OEM_4
+                this[KeyEvent.KEYCODE_META_LEFT] = VK_LWIN
+                this[KeyEvent.KEYCODE_META_RIGHT] = VK_RWIN
+                this[KeyEvent.KEYCODE_MENU] = VK_APPS
+                this[KeyEvent.KEYCODE_MINUS] = VK_OEM_MINUS
+                this[KeyEvent.KEYCODE_MOVE_END] = VK_END
+                this[KeyEvent.KEYCODE_MOVE_HOME] = VK_HOME
+                this[KeyEvent.KEYCODE_NUM_LOCK] = VK_NUM_LOCK
+                this[KeyEvent.KEYCODE_PAGE_DOWN] = VK_PAGE_DOWN
+                this[KeyEvent.KEYCODE_PAGE_UP] = VK_PAGE_UP
+                this[KeyEvent.KEYCODE_PERIOD] = VK_OEM_PERIOD
+                this[KeyEvent.KEYCODE_RIGHT_BRACKET] = VK_OEM_6
+                this[KeyEvent.KEYCODE_SCROLL_LOCK] = VK_SCROLL_LOCK
+                this[KeyEvent.KEYCODE_SEMICOLON] = VK_OEM_1
+                this[KeyEvent.KEYCODE_SHIFT_LEFT] = VK_LSHIFT
+                this[KeyEvent.KEYCODE_SHIFT_RIGHT] = VK_RSHIFT
+                this[KeyEvent.KEYCODE_SLASH] = VK_OEM_2
+                this[KeyEvent.KEYCODE_SPACE] = VK_SPACE
+                // Android defines this as SysRq/PrntScrn
+                this[KeyEvent.KEYCODE_SYSRQ] = VK_PRINTSCREEN
+                this[KeyEvent.KEYCODE_TAB] = VK_TAB
+                this[KeyEvent.KEYCODE_DPAD_LEFT] = VK_LEFT
+                this[KeyEvent.KEYCODE_DPAD_RIGHT] = VK_RIGHT
+                this[KeyEvent.KEYCODE_DPAD_UP] = VK_UP
+                this[KeyEvent.KEYCODE_DPAD_DOWN] = VK_DOWN
+                this[KeyEvent.KEYCODE_GRAVE] = VK_BACK_QUOTE
+                this[KeyEvent.KEYCODE_APOSTROPHE] = VK_OEM_7
+                this[KeyEvent.KEYCODE_BREAK] = VK_PAUSE
+                this[KeyEvent.KEYCODE_NUMPAD_DIVIDE] = VK_DIVIDE
+                this[KeyEvent.KEYCODE_NUMPAD_MULTIPLY] = VK_MULTIPLY
+                this[KeyEvent.KEYCODE_NUMPAD_SUBTRACT] = VK_SUBTRACT
+                this[KeyEvent.KEYCODE_NUMPAD_ADD] = VK_ADD
+                this[KeyEvent.KEYCODE_NUMPAD_DOT] = VK_DECIMAL
+                this[KeyEvent.KEYCODE_PRINT] = VK_PRINT
+                this[KeyEvent.KEYCODE_SCREENSHOT] = VK_SNAPSHOT
+            }
+
+        /**
+         * Maps the key codes of [keyCodes] to the virtual keys that count up from
+         * [firstVirtualKey].
+         */
+        private fun IntArray.putRange(keyCodes: IntRange, firstVirtualKey: Int) {
+            for (keyCode in keyCodes) {
+                this[keyCode] = firstVirtualKey + (keyCode - keyCodes.first)
+            }
+        }
     }
 }

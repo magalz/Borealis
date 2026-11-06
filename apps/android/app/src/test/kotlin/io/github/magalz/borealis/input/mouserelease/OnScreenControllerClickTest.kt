@@ -1,13 +1,10 @@
 package io.github.magalz.borealis.input.mouserelease
 
 import android.view.KeyEvent.KEYCODE_BUTTON_A
-import android.view.KeyEvent.KEYCODE_BUTTON_START
 import android.view.KeyEvent.KEYCODE_BUTTON_X
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
-import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import io.github.magalz.borealis.input.ControllerHandlerRig
-import io.github.magalz.borealis.input.FakeUsbController
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,30 +26,6 @@ class OnScreenControllerClickTest {
 
     private fun oscHolds(buttons: Int) = rig.handler.reportOscState(buttons, 0, 0, 0, 0, 0, 0)
 
-    private fun usbPadInMouseMode() =
-        FakeUsbController(1, rig.handler).also {
-            rig.handler.deviceAdded(it)
-            rig.handler.setMouseEmulation(true)
-        }
-
-    private fun systemPadInMouseMode() {
-        rig.useSystemPad()
-        rig.handler.setMouseEmulation(true)
-    }
-
-    /** A Start hold on top of what the USB pad holds, long enough, and let go. */
-    private fun FakeUsbController.holdStartAndLetGo(held: Int = 0) {
-        report(held or PLAY_FLAG)
-        rig.advanceBy(800)
-        report(held)
-    }
-
-    private fun systemPadHoldsStartAndLetsGo() {
-        rig.press(KEYCODE_BUTTON_START)
-        rig.advanceBy(800)
-        rig.release(KEYCODE_BUTTON_START)
-    }
-
     /**
      * The PC got one down and one up of [button], in that order, and the release of the on-screen
      * controller adds no mouse event.
@@ -69,7 +42,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a USB pad that holds nothing ends the mouse with the menu row while the on-screen controller holds A`() {
         oscHolds(a)
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         // The pad sends its state with what the on-screen controller holds in it
         pad.report(0, leftStickX = 0.5f)
 
@@ -81,10 +54,10 @@ class OnScreenControllerClickTest {
     @Test
     fun `a USB pad that holds nothing ends the mouse with the Start hold while the on-screen controller holds A`() {
         oscHolds(a)
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(0, leftStickX = 0.5f)
 
-        pad.holdStartAndLetGo()
+        rig.holdStartOnUsbPadAndLetGo(pad)
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         assertClickEndedOnce()
@@ -93,7 +66,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a USB pad that holds nothing leaves while the on-screen controller holds A`() {
         oscHolds(a)
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(0, leftStickX = 0.5f)
 
         rig.handler.deviceRemoved(pad)
@@ -104,7 +77,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a USB pad that holds A ends the mouse with the menu row while the on-screen controller holds A`() {
         oscHolds(a)
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(a)
 
         rig.handler.setMouseEmulation(false)
@@ -115,7 +88,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a USB pad that holds A leaves while the on-screen controller holds A`() {
         oscHolds(a)
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(a)
 
         rig.handler.deviceRemoved(pad)
@@ -126,7 +99,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a USB pad that holds nothing ends the mouse while the on-screen controller holds B`() {
         oscHolds(b)
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(0, leftStickX = 0.5f)
 
         rig.handler.setMouseEmulation(false)
@@ -137,7 +110,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a system pad that holds nothing ends the mouse with the menu row while the on-screen controller holds A`() {
         oscHolds(a)
-        systemPadInMouseMode()
+        rig.systemPadInMouseMode()
         // The pad sends its state with what the on-screen controller holds in it
         rig.press(KEYCODE_BUTTON_X)
 
@@ -149,10 +122,10 @@ class OnScreenControllerClickTest {
     @Test
     fun `a system pad that holds nothing ends the mouse with the Start hold while the on-screen controller holds A`() {
         oscHolds(a)
-        systemPadInMouseMode()
+        rig.systemPadInMouseMode()
         rig.press(KEYCODE_BUTTON_X)
 
-        systemPadHoldsStartAndLetsGo()
+        rig.holdStartOnSystemPadAndLetGo()
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         assertClickEndedOnce()
@@ -161,7 +134,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a system pad that holds nothing leaves while the on-screen controller holds A`() {
         oscHolds(a)
-        systemPadInMouseMode()
+        rig.systemPadInMouseMode()
         rig.press(KEYCODE_BUTTON_X)
 
         rig.handler.onInputDeviceRemoved(rig.padDeviceId)
@@ -172,7 +145,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a system pad that holds A leaves while the on-screen controller holds A`() {
         oscHolds(a)
-        systemPadInMouseMode()
+        rig.systemPadInMouseMode()
         rig.press(KEYCODE_BUTTON_A)
 
         rig.handler.onInputDeviceRemoved(rig.padDeviceId)
@@ -183,7 +156,7 @@ class OnScreenControllerClickTest {
     @Test
     fun `a click the pad sent for the on-screen controller goes up with the mouse mode after its A went up`() {
         oscHolds(a)
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(0, leftStickX = 0.5f)
         // A gamepad packet only: the pad still holds the click it sent
         oscHolds(0)

@@ -2,12 +2,10 @@ package io.github.magalz.borealis.input.mouserelease
 
 import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_B
-import android.view.KeyEvent.KEYCODE_BUTTON_START
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.ControllerPacket.PLAY_FLAG
 import io.github.magalz.borealis.input.ControllerHandlerRig
-import io.github.magalz.borealis.input.FakeUsbController
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,36 +21,12 @@ class StartHoldMouseOffTest {
     private val a = ControllerPacket.A_FLAG
     private val b = ControllerPacket.B_FLAG
 
-    private fun usbPadInMouseMode() =
-        FakeUsbController(1, rig.handler).also {
-            rig.handler.deviceAdded(it)
-            rig.handler.setMouseEmulation(true)
-        }
-
-    private fun systemPadInMouseMode() {
-        rig.useSystemPad()
-        rig.handler.setMouseEmulation(true)
-    }
-
-    /** Holds Start on top of what the pad holds, long enough, and lets it go, keeping the rest. */
-    private fun FakeUsbController.holdStartAndLetGo(held: Int) {
-        report(held or PLAY_FLAG)
-        rig.advanceBy(800)
-        report(held)
-    }
-
-    private fun holdStartOnSystemPadAndLetGo() {
-        rig.press(KEYCODE_BUTTON_START)
-        rig.advanceBy(800)
-        rig.release(KEYCODE_BUTTON_START)
-    }
-
     @Test
     fun `a USB pad that ends the mouse with the Start hold while it holds A lets the left button go`() {
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(a)
 
-        pad.holdStartAndLetGo(a)
+        rig.holdStartOnUsbPadAndLetGo(pad, a)
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         assertThat(rig.connection.buttonEvents()).containsExactly("down 1", "up 1").inOrder()
@@ -60,10 +34,10 @@ class StartHoldMouseOffTest {
 
     @Test
     fun `a USB pad that ends the mouse with the Start hold while it holds B lets the right button go`() {
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(b)
 
-        pad.holdStartAndLetGo(b)
+        rig.holdStartOnUsbPadAndLetGo(pad, b)
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         assertThat(rig.connection.buttonEvents()).containsExactly("down 3", "up 3").inOrder()
@@ -71,10 +45,10 @@ class StartHoldMouseOffTest {
 
     @Test
     fun `a USB pad that ends the mouse while it holds both lets each button go once`() {
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(a or b)
 
-        pad.holdStartAndLetGo(a or b)
+        rig.holdStartOnUsbPadAndLetGo(pad, a or b)
 
         val events = rig.connection.buttonEvents()
         assertThat(events.filter { it == "up 1" }).hasSize(1)
@@ -83,7 +57,7 @@ class StartHoldMouseOffTest {
 
     @Test
     fun `a USB pad that lets go of A with Start sends one up`() {
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(a)
         pad.report(a or PLAY_FLAG)
         rig.advanceBy(800)
@@ -96,7 +70,7 @@ class StartHoldMouseOffTest {
 
     @Test
     fun `the driver thread turns the mouse off on the main thread and the button goes up there`() {
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
         pad.report(a)
         pad.report(a or PLAY_FLAG)
         rig.advanceBy(800)
@@ -115,9 +89,9 @@ class StartHoldMouseOffTest {
 
     @Test
     fun `a USB pad that ends the mouse with no button held sends no mouse event`() {
-        val pad = usbPadInMouseMode()
+        val pad = rig.usbPadInMouseMode()
 
-        pad.holdStartAndLetGo(0)
+        rig.holdStartOnUsbPadAndLetGo(pad)
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         assertThat(rig.connection.mouse).isEmpty()
@@ -125,10 +99,10 @@ class StartHoldMouseOffTest {
 
     @Test
     fun `a system pad that ends the mouse with the Start hold while it holds A lets the left button go`() {
-        systemPadInMouseMode()
+        rig.systemPadInMouseMode()
         rig.press(KEYCODE_BUTTON_A)
 
-        holdStartOnSystemPadAndLetGo()
+        rig.holdStartOnSystemPadAndLetGo()
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         assertThat(rig.connection.buttonEvents()).containsExactly("down 1", "up 1").inOrder()
@@ -136,10 +110,10 @@ class StartHoldMouseOffTest {
 
     @Test
     fun `a system pad that ends the mouse with the Start hold while it holds B lets the right button go`() {
-        systemPadInMouseMode()
+        rig.systemPadInMouseMode()
         rig.press(KEYCODE_BUTTON_B)
 
-        holdStartOnSystemPadAndLetGo()
+        rig.holdStartOnSystemPadAndLetGo()
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         assertThat(rig.connection.buttonEvents()).containsExactly("down 3", "up 3").inOrder()
@@ -147,9 +121,9 @@ class StartHoldMouseOffTest {
 
     @Test
     fun `a system pad that ends the mouse with no button held sends no mouse event`() {
-        systemPadInMouseMode()
+        rig.systemPadInMouseMode()
 
-        holdStartOnSystemPadAndLetGo()
+        rig.holdStartOnSystemPadAndLetGo()
 
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isFalse()
         assertThat(rig.connection.mouse).isEmpty()

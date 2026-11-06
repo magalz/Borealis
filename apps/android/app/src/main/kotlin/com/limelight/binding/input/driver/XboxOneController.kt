@@ -172,16 +172,18 @@ class XboxOneController(
         }
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         this.lowFreqMotor = lowFreqMotor
         this.highFreqMotor = highFreqMotor
         sendRumblePacket()
+        return true
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         this.leftTriggerMotor = leftTrigger
         this.rightTriggerMotor = rightTrigger
         sendRumblePacket()
+        return true
     }
 
     override fun stop() {

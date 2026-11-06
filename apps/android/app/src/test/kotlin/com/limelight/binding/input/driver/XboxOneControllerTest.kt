@@ -666,6 +666,42 @@ class XboxOneControllerTest {
     }
 
     @Test
+    fun `a rumble that went through reports success, the trigger motors too`() {
+        val pad = pad()
+        pad.start()
+
+        assertThat(pad.controller.rumble(1, 2)).isTrue()
+        assertThat(pad.controller.rumbleTriggers(3, 4)).isTrue()
+    }
+
+    @Test
+    fun `a rumble reports a write that fails, times out or falls short`() {
+        // The rumble packet is 13 bytes.
+        val results =
+            listOf(-1, 0, 12).associateWith { written ->
+                val pad = pad()
+                pad.start()
+                pad.usb.writeResults.add(written)
+                pad.controller.rumble(1, 2)
+            }
+
+        assertThat(results).containsExactly(-1, false, 0, false, 12, false)
+    }
+
+    @Test
+    fun `a trigger rumble reports a write that fails, times out or falls short`() {
+        val results =
+            listOf(-1, 0, 12).associateWith { written ->
+                val pad = pad()
+                pad.start()
+                pad.usb.writeResults.add(written)
+                pad.controller.rumbleTriggers(3, 4)
+            }
+
+        assertThat(results).containsExactly(-1, false, 0, false, 12, false)
+    }
+
+    @Test
     fun `stopping the pad cuts every motor, the trigger motors too, and closes it`() {
         val pad = pad()
         pad.start()

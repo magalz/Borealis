@@ -597,6 +597,28 @@ class Xbox360ControllerTest {
     }
 
     @Test
+    fun `a rumble that went through reports success`() {
+        val pad = pad()
+        pad.start()
+
+        assertThat(pad.controller.rumble(1, 2)).isTrue()
+    }
+
+    @Test
+    fun `a rumble reports a write that fails, times out or falls short`() {
+        // The rumble packet is eight bytes.
+        val results =
+            listOf(-1, 0, 7).associateWith { written ->
+                val pad = pad()
+                pad.start()
+                pad.usb.writeResults.add(written)
+                pad.controller.rumble(1, 2)
+            }
+
+        assertThat(results).containsExactly(-1, false, 0, false, 7, false)
+    }
+
+    @Test
     fun `the Xbox 360 pad has no trigger motors`() {
         val pad = pad()
         pad.start()
@@ -605,6 +627,14 @@ class Xbox360ControllerTest {
 
         // Only the LED command was written.
         assertThat(pad.usb.writes).hasSize(1)
+    }
+
+    @Test
+    fun `the missing trigger motors are not a failed rumble`() {
+        val pad = pad()
+        pad.start()
+
+        assertThat(pad.controller.rumbleTriggers(0x7FFF, 0x7FFF)).isTrue()
     }
 
     private companion object {

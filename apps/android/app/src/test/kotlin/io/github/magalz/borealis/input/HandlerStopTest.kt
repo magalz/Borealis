@@ -129,14 +129,16 @@ private class ZeroingPad(
         // Nothing is held open.
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         writes += "motors $lowFreqMotor $highFreqMotor"
         write()
+        return true
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         writes += "triggers $leftTrigger $rightTrigger"
         write()
+        return true
     }
 
     private fun write() = ShadowSystemClock.advanceBy(Duration.ofMillis(writeMs))

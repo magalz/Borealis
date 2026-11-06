@@ -101,7 +101,7 @@ class Xbox360Controller(
         return true
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         val data =
             byteArrayOf(
                 0x00,
@@ -118,10 +118,12 @@ class Xbox360Controller(
         if (res != data.size) {
             LimeLog.warning("Rumble transfer failed: $res")
         }
+        return true
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         // Trigger motors not present on Xbox 360 controllers
+        return true
     }
 
     companion object {

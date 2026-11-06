@@ -298,12 +298,14 @@ class FakeUsbController(id: Int, listener: UsbDriverListener) :
         // Nothing is held open.
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         // The fake has no motors.
+        return true
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         // The fake has no motors.
+        return true
     }
 
     fun report(

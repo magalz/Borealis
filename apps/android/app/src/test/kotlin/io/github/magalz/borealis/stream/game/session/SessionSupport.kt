@@ -131,12 +131,14 @@ internal class RecordingPad(id: Int, listener: UsbDriverListener) :
 
     override fun stop() = Unit
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         rumbles += lowFreqMotor to highFreqMotor
+        return true
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         triggerRumbles += leftTrigger to rightTrigger
+        return true
     }
 
     private companion object {

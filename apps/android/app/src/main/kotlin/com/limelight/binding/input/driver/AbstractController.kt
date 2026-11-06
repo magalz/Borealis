@@ -53,9 +53,9 @@ abstract class AbstractController(
 
     abstract fun stop()
 
-    abstract fun rumble(lowFreqMotor: Short, highFreqMotor: Short)
+    abstract fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean
 
-    abstract fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short)
+    abstract fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean
 
     protected fun notifyDeviceRemoved() {
         listener.deviceRemoved(this)

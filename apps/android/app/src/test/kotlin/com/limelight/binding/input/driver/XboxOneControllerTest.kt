@@ -723,6 +723,34 @@ class XboxOneControllerTest {
         assertThat((removed as PadEvent.Removed).controller).isSameInstanceAs(pad.controller)
     }
 
+    @Test
+    fun `a pad that got no rumble write gets its zero write at the stop`() {
+        val pad = pad()
+        pad.start()
+
+        pad.controller.stop()
+
+        // The 2015 init, then the stop's rumble.
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.writtenBytes().last()).isEqualTo(rumblePacket(1, 0x00, 0x00, 0x00, 0x00))
+        assertThat(pad.usb.closes).isEqualTo(1)
+    }
+
+    @Test
+    fun `a rumble that went through after one that failed keeps the zero write at the stop`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumble(1, 2)
+        pad.controller.rumble(3, 4)
+
+        pad.controller.stop()
+
+        assertThat(pad.usb.writes).hasSize(4)
+        assertThat(pad.writtenBytes().last()).isEqualTo(rumblePacket(3, 0x00, 0x00, 0x00, 0x00))
+        assertThat(pad.usb.closes).isEqualTo(1)
+    }
+
     private companion object {
         const val GUIDE = ControllerPacket.SPECIAL_BUTTON_FLAG
 

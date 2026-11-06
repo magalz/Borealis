@@ -642,6 +642,18 @@ class XboxOneControllerTest {
     }
 
     @Test
+    fun `a rumble write waits 100 ms at most`() {
+        val pad = pad()
+        pad.start()
+        val initWrites = pad.usb.writes.size
+
+        pad.controller.rumble(1, 2)
+        pad.controller.rumbleTriggers(3, 4)
+
+        assertThat(pad.usb.writes.drop(initWrites).map { it.timeoutMs }).containsExactly(100, 100)
+    }
+
+    @Test
     fun `a rumble that does not go through is not an error`() {
         val pad = pad()
         pad.start()

@@ -2016,8 +2016,8 @@ The numbers of the later sprints do not change.
   - 51 `(Sprint 14 backlog)` markers, none touched by 18a: they are the work of
     [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling).
   - 52 `(Sprint 18c backlog)` and 13 `(Sprint 18d backlog)` labels, placed by the 18a tasks and
-    counted as label occurrences (a comment that names both labels counts in both; none does at
-    this head). They wait for
+    counted as label occurrences (a comment that names both labels counts in both: four class-header
+    comments do, one bullet for each label, so those four places are counted twice). They wait for
     [Sprint 18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code) and
     [Sprint 18d](#sprint-18d-splitting-the-large-converted-classes).
 - **Marker rule** (applies to 18a and 18b): each place a task touches ends done (its structural

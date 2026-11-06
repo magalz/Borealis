@@ -4,6 +4,8 @@ import android.view.KeyEvent.KEYCODE_BUTTON_A
 import android.view.KeyEvent.KEYCODE_BUTTON_B
 import android.view.KeyEvent.KEYCODE_BUTTON_START
 import com.google.common.truth.Truth.assertThat
+import com.limelight.binding.input.driver.AbstractController
+import com.limelight.binding.input.driver.UsbDriverListener
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.input.ControllerHandlerRig
 import io.github.magalz.borealis.input.FakeUsbController
@@ -130,5 +132,42 @@ class StopReleasesMouseTest {
         rig.handler.stop()
 
         assertThat(rig.connection.mouse).isEmpty()
+    }
+
+    @Test
+    fun `a report that arrives while the stop zeroes the pad does not put the click down again`() {
+        val pad = StillHeldPad(1, rig.handler, a).also { rig.handler.deviceAdded(it) }
+        rig.handler.setMouseEmulation(true)
+        pad.report()
+
+        // The pad keeps reporting A on its own thread while the stop writes its motors, which is
+        // what its motor write stands in for here
+        rig.handler.stop()
+
+        assertThat(rig.connection.buttonEvents()).containsExactly("down 1", "up 1").inOrder()
+    }
+}
+
+/**
+ * A USB pad that holds [held] and reports it again when its motors are written, as the report of
+ * its input thread would arrive in the middle of the stop.
+ */
+private class StillHeldPad(id: Int, listener: UsbDriverListener, private val held: Int) :
+    AbstractController(id, listener, 0x045e, 0x028e) {
+    override fun start() = true
+
+    override fun stop() {
+        // Nothing is held open.
+    }
+
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) = report()
+
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+        // The motors are written first.
+    }
+
+    fun report() {
+        buttonFlags = held
+        reportInput()
     }
 }

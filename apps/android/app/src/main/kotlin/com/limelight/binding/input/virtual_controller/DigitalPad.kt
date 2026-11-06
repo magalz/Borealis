@@ -8,8 +8,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.view.MotionEvent
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-// The elements have no (Context) constructor on purpose: they need their controller and their id.
+// ViewConstructor lint: the elements have no (Context) constructor on purpose, they need their
+// controller and their id (Sprint 18c backlog).
 @SuppressLint("ViewConstructor")
 class DigitalPad(controller: VirtualController, context: Context) :
     VirtualControllerElement(controller, context, EID_DPAD) {

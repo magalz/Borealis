@@ -389,7 +389,7 @@ object VirtualControllerConfigurationLoader {
         controller.setOpacity(config.oscOpacity)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // PrintStackTrace: a JSONException goes to stderr as in the Java (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     @JvmStatic
     fun saveProfile(controller: VirtualController, context: Context) {
@@ -405,7 +405,7 @@ object VirtualControllerConfigurationLoader {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+    // PrintStackTrace: a corrupt element goes to stderr as in the Java (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     @JvmStatic
     fun loadFromPreferences(controller: VirtualController, context: Context) {

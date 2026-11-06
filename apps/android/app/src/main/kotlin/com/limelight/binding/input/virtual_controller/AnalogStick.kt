@@ -10,8 +10,8 @@ import android.view.MotionEvent
 import kotlin.math.atan
 
 /** This is a analog stick on screen element. It is used to get 2-Axis user input. */
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-// The elements have no (Context) constructor on purpose: they need their controller and their id.
+// ViewConstructor lint: the elements have no (Context) constructor on purpose, they need their
+// controller and their id (Sprint 18c backlog).
 @SuppressLint("ViewConstructor")
 open class AnalogStick(controller: VirtualController, context: Context, elementId: Int) :
     VirtualControllerElement(controller, context, elementId) {

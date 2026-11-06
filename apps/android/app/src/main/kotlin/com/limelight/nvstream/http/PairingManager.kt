@@ -21,9 +21,10 @@ import org.bouncycastle.crypto.engines.AESLightEngine
 import org.bouncycastle.crypto.params.KeyParameter
 import org.xmlpull.v1.XmlPullParserException
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-// The stack traces that the Java prints to stderr and the RuntimeException that wraps their cause
-// stay as they were: PrintStackTrace and TooGenericExceptionThrown are suppressed for that.
+// Converted as is from the inherited Java; the rest is for later sprints:
+// - TooManyFunctions: the class waits for its split (Sprint 18d backlog).
+// - PrintStackTrace and TooGenericExceptionThrown: the stack traces that the Java prints to stderr
+//   and the RuntimeException that wraps their cause stay as they were (Sprint 18c backlog).
 @Suppress("TooManyFunctions", "PrintStackTrace", "TooGenericExceptionThrown")
 class PairingManager(private val http: NvHTTP, cryptoProvider: LimelightCryptoProvider) {
     private val cert: X509Certificate? = cryptoProvider.clientCertificate

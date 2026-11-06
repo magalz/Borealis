@@ -64,7 +64,8 @@ class StreamConfiguration private constructor() {
     var resumeChosen = false
         private set
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Converted as is from the inherited Java; TooManyFunctions stays until the builder is split
+    // (Sprint 18d backlog): it has one setter for each setting of the stream.
     @Suppress("TooManyFunctions")
     class Builder {
         private val config = StreamConfiguration()

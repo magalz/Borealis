@@ -197,6 +197,7 @@ class ControllerHandler(
 
             // destroy() takes the listeners away
             val reportedMotion = context.gyroListener != null || context.accelListener != null
+            releaseMouseButtons(context)
             releaseControllerNumber(context)
             context.destroy()
             inputDeviceContexts.remove(deviceId)
@@ -1313,19 +1314,28 @@ class ControllerHandler(
         }
     }
 
-    private fun releaseContextInput(context: GenericControllerContext) {
-        // Mouse buttons held by a pad in mouse mode would stay down on the PC
-        if (context.mouseEmulationActive) {
-            if ((context.mouseEmulationLastInputMap and ControllerPacket.A_FLAG) != 0) {
-                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+    // Mouse buttons held by a pad in mouse mode would stay down on the PC. A pad that leaves
+    // releases them here too, but destroy() does not: a changed device destroys its old context and
+    // the new one carries the click over. The lock is the packet send's, so no packet follows the
+    // release, and a second release finds the buttons let go.
+    private fun releaseMouseButtons(context: GenericControllerContext) {
+        synchronized(inputLock) {
+            if (context.mouseEmulationActive) {
+                if ((context.mouseEmulationLastInputMap and ControllerPacket.A_FLAG) != 0) {
+                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+                }
+                if ((context.mouseEmulationLastInputMap and ControllerPacket.B_FLAG) != 0) {
+                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+                }
             }
-            if ((context.mouseEmulationLastInputMap and ControllerPacket.B_FLAG) != 0) {
-                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-            }
+            context.mouseEmulationLastInputMap = 0
         }
+    }
+
+    private fun releaseContextInput(context: GenericControllerContext) {
+        releaseMouseButtons(context)
 
         context.clearPacketState()
-        context.mouseEmulationLastInputMap = 0
         context.leftStickMotion.reset()
         context.rightStickMotion.reset()
         context.menuChord.reset()

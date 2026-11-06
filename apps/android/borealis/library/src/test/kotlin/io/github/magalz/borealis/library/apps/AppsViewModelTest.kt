@@ -3,48 +3,23 @@ package io.github.magalz.borealis.library.apps
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.library.domain.App
-import io.github.magalz.borealis.library.domain.AppsSnapshot
-import io.github.magalz.borealis.library.domain.Host
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.Reachability
-import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
-import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostShortcuts
-import io.github.magalz.borealis.library.testing.MainDispatcherRule
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
 import io.github.magalz.borealis.library.testing.subscribe
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Rule
 import org.junit.Test
 
-class AppsViewModelTest {
-    @get:Rule val mainDispatcher = MainDispatcherRule()
-
-    private val repository = FakeAppRepository()
-    private val shortcuts = FakeHostShortcuts(canPinApps = false)
-    // Lazy: a ViewModel must be created after the rule has set the main dispatcher.
-    private val viewModel by lazy { AppsViewModel("host-1", repository, shortcuts) }
-
+class AppsViewModelTest : AppsViewModelTestBase() {
     private val desktop = anApp(id = 1, name = "Desktop")
     private val steam = anApp(id = 2, name = "steam", hdrSupported = true)
     private val zelda = anApp(id = 3, name = "Zelda")
     private val secret = anApp(id = 4, name = "Secret", hidden = true)
-
-    private fun snapshot(
-        vararg apps: App,
-        running: App? = null,
-        host: Host? =
-            aHost(
-                id = "host-1",
-                name = "Desk PC",
-                runningApp = running?.let { RunningApp(it.id, it.name) },
-            ),
-        loading: Boolean = false,
-    ) = AppsSnapshot(host = host, apps = apps.toList(), loading = loading)
 
     private fun item(app: App, running: Boolean = false) =
         AppItemUiState(app.id, app.name, running, app.hidden, app.hdrSupported)

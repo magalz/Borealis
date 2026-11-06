@@ -116,30 +116,27 @@ class XboxOneController(
             else -> false
         }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount", "LoopWithTooManyJumpStatements")
     override fun doInit(): Boolean {
         // Send all applicable init packets
         for (pkt in INIT_PKTS) {
-            if (pkt.vendorId != 0 && device.vendorId != pkt.vendorId) {
-                continue
-            }
+            if (pkt.appliesTo(device)) {
+                val data = pkt.data.copyOf(pkt.data.size)
 
-            if (pkt.productId != 0 && device.productId != pkt.productId) {
-                continue
-            }
+                // Populate sequence number
+                data[2] = seqNum++
 
-            val data = pkt.data.copyOf(pkt.data.size)
-
-            // Populate sequence number
-            data[2] = seqNum++
-
-            // Send the initialization packet
-            val res =
-                connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, INIT_TIMEOUT_MS)
-            if (res != data.size) {
-                LimeLog.warning("Initialization transfer failed: $res")
-                return false
+                // Send the initialization packet
+                val res =
+                    connection.bulkTransfer(
+                        checkNotNull(outEndpt),
+                        data,
+                        data.size,
+                        INIT_TIMEOUT_MS,
+                    )
+                if (res != data.size) {
+                    LimeLog.warning("Initialization transfer failed: $res")
+                    return false
+                }
             }
         }
 
@@ -185,7 +182,12 @@ class XboxOneController(
         super.stop()
     }
 
-    private class InitPacket(val vendorId: Int, val productId: Int, val data: ByteArray)
+    private class InitPacket(val vendorId: Int, val productId: Int, val data: ByteArray) {
+        // A vendor or product of 0 means any.
+        fun appliesTo(device: UsbDevice): Boolean =
+            (vendorId == 0 || device.vendorId == vendorId) &&
+                (productId == 0 || device.productId == productId)
+    }
 
     companion object {
         private const val XB1_IFACE_SUBCLASS = 71

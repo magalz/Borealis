@@ -53,6 +53,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
+import io.github.magalz.borealis.library.focus.RestoreOpenerFocus
 
 /**
  * An outline reaches BorealisDimens.outlineReach outside its card, thickOutlineReach when it is the
@@ -157,8 +158,7 @@ fun HostsScreen(
         )
         RestoreOpenerFocus(
             open = optionsHostId != null || forgetHostId != null || state.details != null,
-            openerId = options.hostId,
-            hosts = state.items,
+            openerListed = state.items.any { it.id == options.hostId },
             focus = openerFocus,
         )
     }

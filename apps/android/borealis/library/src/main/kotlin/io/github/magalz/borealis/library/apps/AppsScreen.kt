@@ -55,6 +55,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
+import io.github.magalz.borealis.library.focus.RestoreOpenerFocus
 
 /**
  * An outline reaches BorealisDimens.outlineReach outside a tile, thickOutlineReach when it is the
@@ -162,29 +163,6 @@ fun AppsScreen(
             openerListed = state.items.any { it.id == opener },
             focus = openerFocus,
         )
-    }
-}
-
-/**
- * Asks for [focus], the requester of the tile of the app that opened the windows, once the last
- * window over the grid has closed: the actions, the quit confirmation inside them or the details.
- * On the TV the focus was lost after Back (Sprint 14 UAT, U11); the tests assume that the window
- * took it from the screen and that Compose gave it back to the first tile, not to the one that had
- * it. Nothing happens when the app is already gone from the grid ([openerListed] is false), and
- * nothing when the screen starts with a window already open: that is not a close. After Hide the
- * removal is asynchronous (the ViewModel launches it), so the app may still be in the grid when the
- * sheet closes: the screen has made the app that opened the windows the tile that takes its place
- * ([openerAfterHide]), so the tile that asks for the focus is one that stays. A tile that the grid
- * does not compose (many apps, scrolled away while a window was open) has no node for [focus]:
- * Compose logs it and answers false, so nothing fails. This is the effect of `RestoreOpenerFocus`
- * of the hosts screen, written for apps because that one takes the host list and ids.
- */
-@Composable
-private fun RestoreOpenerFocus(open: Boolean, openerListed: Boolean, focus: FocusRequester) {
-    var wasOpen by remember { mutableStateOf(open) }
-    LaunchedEffect(open) {
-        if (wasOpen && !open && openerListed) focus.requestFocus()
-        wasOpen = open
     }
 }
 

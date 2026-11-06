@@ -783,8 +783,18 @@ class ComputerManagerService : Service() {
         polling.start()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("LongMethod", "CyclomaticComplexMethod", "ReturnCount")
+    // Waits until the poll of one address has ended. What it found is returned with the address
+    // that it was found at, or null when that address gave no answer.
+    @Throws(InterruptedException::class)
+    private fun awaitParallelPoll(tuple: ParallelPollTuple): ComputerDetails? =
+        synchronized(tuple) {
+            while (!tuple.complete) {
+                (tuple as Object).wait()
+            }
+
+            tuple.returnedDetails?.also { it.activeAddress = tuple.address }
+        }
+
     @Throws(InterruptedException::class)
     private fun parallelPollPc(details: ComputerDetails): ComputerDetails? {
         val localInfo = ParallelPollTuple(details.localAddress, details)
@@ -801,57 +811,12 @@ class ComputerManagerService : Service() {
         startParallelPollThread(ipv6Info, uniqueAddresses)
 
         try {
-            // Check local first
-            synchronized(localInfo) {
-                while (!localInfo.complete) {
-                    (localInfo as Object).wait()
-                }
-
-                val returned = localInfo.returnedDetails
-                if (returned != null) {
-                    returned.activeAddress = localInfo.address
-                    return returned
-                }
-            }
-
-            // Now manual
-            synchronized(manualInfo) {
-                while (!manualInfo.complete) {
-                    (manualInfo as Object).wait()
-                }
-
-                val returned = manualInfo.returnedDetails
-                if (returned != null) {
-                    returned.activeAddress = manualInfo.address
-                    return returned
-                }
-            }
-
-            // Now remote IPv4
-            synchronized(remoteInfo) {
-                while (!remoteInfo.complete) {
-                    (remoteInfo as Object).wait()
-                }
-
-                val returned = remoteInfo.returnedDetails
-                if (returned != null) {
-                    returned.activeAddress = remoteInfo.address
-                    return returned
-                }
-            }
-
-            // Now global IPv6
-            synchronized(ipv6Info) {
-                while (!ipv6Info.complete) {
-                    (ipv6Info as Object).wait()
-                }
-
-                val returned = ipv6Info.returnedDetails
-                if (returned != null) {
-                    returned.activeAddress = ipv6Info.address
-                    return returned
-                }
-            }
+            // Check local first, then manual, then remote IPv4 and then global IPv6: the first
+            // that has an answer is the one, and the others are not waited for.
+            return awaitParallelPoll(localInfo)
+                ?: awaitParallelPoll(manualInfo)
+                ?: awaitParallelPoll(remoteInfo)
+                ?: awaitParallelPoll(ipv6Info)
         } finally {
             // Stop any further polling if we've found a working address or we've been
             // interrupted by an attempt to stop polling.
@@ -860,8 +825,6 @@ class ComputerManagerService : Service() {
             remoteInfo.interrupt()
             ipv6Info.interrupt()
         }
-
-        return null
     }
 
     @Throws(InterruptedException::class)

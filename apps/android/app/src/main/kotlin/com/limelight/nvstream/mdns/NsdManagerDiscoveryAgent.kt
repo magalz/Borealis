@@ -35,26 +35,10 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
             ThreadPoolExecutor.DiscardPolicy(),
         )
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("LongMethod")
     private fun createDiscoveryListener(): NsdManager.DiscoveryListener =
         object : NsdManager.DiscoveryListener {
-            override fun onStartDiscoveryFailed(serviceType: String?, errorCode: Int) {
-                LimeLog.severe("NSD: Service discovery start failed: $errorCode")
-
-                // This listener is no longer pending after this failure
-                synchronized(listenerLock) {
-                    if (pendingListener !== this) {
-                        return
-                    }
-
-                    pendingListener = null
-                }
-
-                listener.notifyDiscoveryFailure(
-                    RuntimeException("onStartDiscoveryFailed(): $errorCode")
-                )
-            }
+            override fun onStartDiscoveryFailed(serviceType: String?, errorCode: Int) =
+                handleStartFailed(this, errorCode)
 
             override fun onStopDiscoveryFailed(serviceType: String?, errorCode: Int) {
                 LimeLog.severe("NSD: Service discovery stop failed: $errorCode")
@@ -69,21 +53,7 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
                 }
             }
 
-            override fun onDiscoveryStarted(serviceType: String?) {
-                LimeLog.info("NSD: Service discovery started")
-
-                synchronized(listenerLock) {
-                    if (pendingListener !== this) {
-                        // If we registered another discovery listener in the meantime, stop this
-                        // one
-                        nsdManager.stopServiceDiscovery(this)
-                        return
-                    }
-
-                    pendingListener = null
-                    activeListener = this
-                }
-            }
+            override fun onDiscoveryStarted(serviceType: String?) = handleStarted(this)
 
             override fun onDiscoveryStopped(serviceType: String?) {
                 LimeLog.info("NSD: Service discovery stopped")
@@ -97,93 +67,126 @@ class NsdManagerDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener
                 }
             }
 
-            override fun onServiceFound(nsdServiceInfo: NsdServiceInfo) {
-                // Protect against racing stopDiscovery() call
-                synchronized(listenerLock) {
-                    // Ignore callbacks if we're not the active listener
-                    if (activeListener !== this) {
-                        return
-                    }
+            override fun onServiceFound(nsdServiceInfo: NsdServiceInfo) =
+                handleServiceFound(this, nsdServiceInfo)
 
-                    LimeLog.info("NSD: Machine appeared: " + nsdServiceInfo.serviceName)
+            override fun onServiceLost(nsdServiceInfo: NsdServiceInfo) =
+                handleServiceLost(this, nsdServiceInfo)
+        }
 
-                    val serviceInfoCallback =
-                        object : NsdManager.ServiceInfoCallback {
-                            override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {
-                                LimeLog.severe(
-                                    "NSD: Service info callback registration failed: $errorCode"
-                                )
+    // The bodies of the callbacks of the discovery listener: [discovery] is the listener called.
+    private fun handleStartFailed(discovery: NsdManager.DiscoveryListener, errorCode: Int) {
+        LimeLog.severe("NSD: Service discovery start failed: $errorCode")
 
-                                // The platform dropped this callback before it reported the
-                                // failure, and it refuses to unregister a callback it no longer
-                                // holds, so the agent forgets it too. The callback that replaced
-                                // this one, if any, is registered and stays.
-                                synchronized(listenerLock) {
-                                    if (serviceCallbacks[nsdServiceInfo.serviceName] === this) {
-                                        serviceCallbacks.remove(nsdServiceInfo.serviceName)
-                                    }
-                                }
-                                listener.notifyDiscoveryFailure(
-                                    RuntimeException(
-                                        "onServiceInfoCallbackRegistrationFailed(): $errorCode"
-                                    )
-                                )
-                            }
-
-                            override fun onServiceUpdated(serviceInfo: NsdServiceInfo) {
-                                LimeLog.info("NSD: Machine resolved: " + serviceInfo.serviceName)
-                                reportNewComputer(
-                                    serviceInfo.serviceName,
-                                    serviceInfo.port,
-                                    serviceInfo.hostAddresses
-                                        .filterIsInstance<Inet4Address>()
-                                        .toTypedArray(),
-                                    serviceInfo.hostAddresses
-                                        .filterIsInstance<Inet6Address>()
-                                        .toTypedArray(),
-                                )
-                            }
-
-                            override fun onServiceLost() = Unit
-
-                            override fun onServiceInfoCallbackUnregistered() = Unit
-                        }
-
-                    // A service that is found again replaces its callback in the map, so the old
-                    // one is unregistered first, or nothing would unregister it later
-                    serviceCallbacks.remove(nsdServiceInfo.serviceName)?.let {
-                        unregisterServiceInfoCallback(nsdServiceInfo.serviceName, it)
-                    }
-
-                    nsdManager.registerServiceInfoCallback(
-                        nsdServiceInfo,
-                        executor,
-                        serviceInfoCallback,
-                    )
-                    serviceCallbacks[nsdServiceInfo.serviceName] = serviceInfoCallback
-                }
+        // This listener is no longer pending after this failure
+        synchronized(listenerLock) {
+            if (pendingListener !== discovery) {
+                return
             }
 
-            override fun onServiceLost(nsdServiceInfo: NsdServiceInfo) {
-                // Protect against racing stopDiscovery() call
+            pendingListener = null
+        }
+
+        listener.notifyDiscoveryFailure(RuntimeException("onStartDiscoveryFailed(): $errorCode"))
+    }
+
+    private fun handleStarted(discovery: NsdManager.DiscoveryListener) {
+        LimeLog.info("NSD: Service discovery started")
+
+        synchronized(listenerLock) {
+            if (pendingListener !== discovery) {
+                // If we registered another discovery listener in the meantime, stop this
+                // one
+                nsdManager.stopServiceDiscovery(discovery)
+                return
+            }
+
+            pendingListener = null
+            activeListener = discovery
+        }
+    }
+
+    private fun handleServiceFound(
+        discovery: NsdManager.DiscoveryListener,
+        nsdServiceInfo: NsdServiceInfo,
+    ) {
+        // Protect against racing stopDiscovery() call
+        synchronized(listenerLock) {
+            // Ignore callbacks if we're not the active listener
+            if (activeListener !== discovery) {
+                return
+            }
+
+            LimeLog.info("NSD: Machine appeared: " + nsdServiceInfo.serviceName)
+
+            val serviceInfoCallback = createServiceInfoCallback(nsdServiceInfo)
+
+            // A service that is found again replaces its callback in the map, so the old
+            // one is unregistered first, or nothing would unregister it later
+            serviceCallbacks.remove(nsdServiceInfo.serviceName)?.let {
+                unregisterServiceInfoCallback(nsdServiceInfo.serviceName, it)
+            }
+
+            nsdManager.registerServiceInfoCallback(nsdServiceInfo, executor, serviceInfoCallback)
+            serviceCallbacks[nsdServiceInfo.serviceName] = serviceInfoCallback
+        }
+    }
+
+    private fun createServiceInfoCallback(
+        nsdServiceInfo: NsdServiceInfo
+    ): NsdManager.ServiceInfoCallback =
+        object : NsdManager.ServiceInfoCallback {
+            override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {
+                LimeLog.severe("NSD: Service info callback registration failed: $errorCode")
+
+                // The platform dropped this callback before it reported the
+                // failure, and it refuses to unregister a callback it no longer
+                // holds, so the agent forgets it too. The callback that replaced
+                // this one, if any, is registered and stays.
                 synchronized(listenerLock) {
-                    // Ignore callbacks if we're not the active listener
-                    if (activeListener !== this) {
-                        return
-                    }
-
-                    LimeLog.info("NSD: Machine lost: " + nsdServiceInfo.serviceName)
-
-                    val serviceInfoCallback = serviceCallbacks.remove(nsdServiceInfo.serviceName)
-                    if (serviceInfoCallback != null) {
-                        unregisterServiceInfoCallback(
-                            nsdServiceInfo.serviceName,
-                            serviceInfoCallback,
-                        )
+                    if (serviceCallbacks[nsdServiceInfo.serviceName] === this) {
+                        serviceCallbacks.remove(nsdServiceInfo.serviceName)
                     }
                 }
+                listener.notifyDiscoveryFailure(
+                    RuntimeException("onServiceInfoCallbackRegistrationFailed(): $errorCode")
+                )
+            }
+
+            override fun onServiceUpdated(serviceInfo: NsdServiceInfo) {
+                LimeLog.info("NSD: Machine resolved: " + serviceInfo.serviceName)
+                reportNewComputer(
+                    serviceInfo.serviceName,
+                    serviceInfo.port,
+                    serviceInfo.hostAddresses.filterIsInstance<Inet4Address>().toTypedArray(),
+                    serviceInfo.hostAddresses.filterIsInstance<Inet6Address>().toTypedArray(),
+                )
+            }
+
+            override fun onServiceLost() = Unit
+
+            override fun onServiceInfoCallbackUnregistered() = Unit
+        }
+
+    private fun handleServiceLost(
+        discovery: NsdManager.DiscoveryListener,
+        nsdServiceInfo: NsdServiceInfo,
+    ) {
+        // Protect against racing stopDiscovery() call
+        synchronized(listenerLock) {
+            // Ignore callbacks if we're not the active listener
+            if (activeListener !== discovery) {
+                return
+            }
+
+            LimeLog.info("NSD: Machine lost: " + nsdServiceInfo.serviceName)
+
+            val serviceInfoCallback = serviceCallbacks.remove(nsdServiceInfo.serviceName)
+            if (serviceInfoCallback != null) {
+                unregisterServiceInfoCallback(nsdServiceInfo.serviceName, serviceInfoCallback)
             }
         }
+    }
 
     override fun startDiscovery(discoveryIntervalMs: Int) {
         synchronized(listenerLock) {

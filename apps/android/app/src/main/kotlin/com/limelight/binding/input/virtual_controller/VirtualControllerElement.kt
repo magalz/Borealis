@@ -10,7 +10,8 @@ import android.widget.FrameLayout
 import org.json.JSONException
 import org.json.JSONObject
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// TooManyFunctions: the base of every element holds the touch, move, resize and configuration code
+// they share (Sprint 18d backlog).
 @Suppress("TooManyFunctions")
 abstract class VirtualControllerElement
 protected constructor(

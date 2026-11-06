@@ -2134,8 +2134,6 @@ class ControllerHandler(
         ) != MoonBridge.LI_ERR_UNSUPPORTED
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     fun tryHandleTouchpadEvent(event: MotionEvent): Boolean {
         // Bail if this is not a touchpad or mouse event
         if (
@@ -2147,112 +2145,125 @@ class ControllerHandler(
         // Only get a context if one already exists. We want to ensure we don't report non-gamepads.
         val context = inputDeviceContexts.get(event.deviceId) ?: return false
 
-        // The touchpad of a pad the chrome owns reaches neither the controller nor the mouse
-        if (captured) {
-            return true
+        return when {
+            // The touchpad of a pad the chrome owns reaches neither the controller nor the mouse
+            captured -> true
+            event.source == InputDevice.SOURCE_MOUSE -> handleMouseSourceEvent(context, event)
+            else -> handleTouchpadSourceEvent(context, event)
         }
+    }
 
-        // When we're working with a mouse source instead of a touchpad, we're quite limited in
-        // what useful input we can provide via the controller API. The ABS_X/ABS_Y values are
-        // screen coordinates rather than touchpad coordinates. For now, we will just support
-        // the clickpad button and nothing else.
-        if (event.source == InputDevice.SOURCE_MOUSE) {
-            // Unlike the touchpad where down and up refer to individual touches on the touchpad,
-            // down and up on a mouse indicates the state of the left mouse button.
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    context.inputMap = context.inputMap or ControllerPacket.TOUCHPAD_FLAG
-                    sendControllerInputPacket(context)
-                }
-                MotionEvent.ACTION_UP,
-                MotionEvent.ACTION_CANCEL -> {
-                    context.inputMap = context.inputMap and ControllerPacket.TOUCHPAD_FLAG.inv()
-                    sendControllerInputPacket(context)
-                }
-                else -> {}
-            }
-
-            return !prefConfig.gamepadTouchpadAsMouse
-        }
-
-        val touchType: Byte
+    // When we're working with a mouse source instead of a touchpad, we're quite limited in
+    // what useful input we can provide via the controller API. The ABS_X/ABS_Y values are
+    // screen coordinates rather than touchpad coordinates. For now, we will just support
+    // the clickpad button and nothing else.
+    private fun handleMouseSourceEvent(context: InputDeviceContext, event: MotionEvent): Boolean {
+        // Unlike the touchpad where down and up refer to individual touches on the touchpad,
+        // down and up on a mouse indicates the state of the left mouse button.
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN,
-            MotionEvent.ACTION_POINTER_DOWN -> touchType = MoonBridge.LI_TOUCH_EVENT_DOWN
+            MotionEvent.ACTION_DOWN -> setTouchpadButton(context, down = true)
             MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_POINTER_UP -> {
-                if ((event.flags and MotionEvent.FLAG_CANCELED) != 0) {
-                    touchType = MoonBridge.LI_TOUCH_EVENT_CANCEL
-                } else {
-                    touchType = MoonBridge.LI_TOUCH_EVENT_UP
-                }
-            }
-            MotionEvent.ACTION_MOVE -> touchType = MoonBridge.LI_TOUCH_EVENT_MOVE
-            MotionEvent.ACTION_CANCEL ->
-                // ACTION_CANCEL applies to *all* pointers in the gesture, so it maps to CANCEL_ALL
-                // rather than CANCEL. For a single pointer cancellation, that's indicated via
-                // FLAG_CANCELED on a ACTION_POINTER_UP.
-                // https://developer.android.com/develop/ui/views/touch-and-input/gestures/multi
-                touchType = MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL
-            MotionEvent.ACTION_BUTTON_PRESS -> {
-                if (event.actionButton == MotionEvent.BUTTON_PRIMARY) {
-                    context.inputMap = context.inputMap or ControllerPacket.TOUCHPAD_FLAG
-                    sendControllerInputPacket(context)
-                    // Report as unhandled event to trigger mouse handling
-                    return !prefConfig.gamepadTouchpadAsMouse
-                }
-                return false
-            }
-            MotionEvent.ACTION_BUTTON_RELEASE -> {
-                if (event.actionButton == MotionEvent.BUTTON_PRIMARY) {
-                    context.inputMap = context.inputMap and ControllerPacket.TOUCHPAD_FLAG.inv()
-                    sendControllerInputPacket(context)
-                    // Report as unhandled event to trigger mouse handling
-                    return !prefConfig.gamepadTouchpadAsMouse
-                }
-                return false
-            }
-            else -> return false
+            MotionEvent.ACTION_CANCEL -> setTouchpadButton(context, down = false)
+            else -> {}
         }
 
+        return !prefConfig.gamepadTouchpadAsMouse
+    }
+
+    private fun handleTouchpadSourceEvent(context: InputDeviceContext, event: MotionEvent) =
+        when (event.actionMasked) {
+            MotionEvent.ACTION_BUTTON_PRESS -> handleClickpadButton(context, event, down = true)
+            MotionEvent.ACTION_BUTTON_RELEASE -> handleClickpadButton(context, event, down = false)
+            else -> sendTouchpadTouch(context, event)
+        }
+
+    // The primary button of a touchpad is the touchpad button of the pad
+    private fun handleClickpadButton(
+        context: InputDeviceContext,
+        event: MotionEvent,
+        down: Boolean,
+    ): Boolean {
+        if (event.actionButton != MotionEvent.BUTTON_PRIMARY) {
+            return false
+        }
+
+        setTouchpadButton(context, down)
+        // Report as unhandled event to trigger mouse handling
+        return !prefConfig.gamepadTouchpadAsMouse
+    }
+
+    private fun setTouchpadButton(context: InputDeviceContext, down: Boolean) {
+        setButtons(context, ControllerPacket.TOUCHPAD_FLAG, down)
+        sendControllerInputPacket(context)
+    }
+
+    private fun sendTouchpadTouch(context: InputDeviceContext, event: MotionEvent): Boolean {
         // Bail if the user wants gamepad touchpads to control the mouse
         //
         // NB: We do this after processing ACTION_BUTTON_PRESS and ACTION_BUTTON_RELEASE
         // because we want to still send the touchpad button via the gamepad even when
         // configured to use the touchpad for mouse control.
-        if (prefConfig.gamepadTouchpadAsMouse) {
+        //
+        // If we don't have X and Y ranges, we can't process this event either
+        if (
+            prefConfig.gamepadTouchpadAsMouse ||
+                context.touchpadXRange == null ||
+                context.touchpadYRange == null
+        ) {
             return false
         }
 
-        // If we don't have X and Y ranges, we can't process this event
-        if (context.touchpadXRange == null || context.touchpadYRange == null) {
-            return false
-        }
-
-        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
-            // Move events may impact all active pointers
-            for (i in 0 until event.pointerCount) {
-                if (!sendTouchpadEventForPointer(context, event, touchType, i)) {
-                    // Controller touch events are not supported by the host
-                    return false
-                }
-            }
-            return true
-        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-            // Cancel impacts all active pointers
-            return conn.sendControllerTouchEvent(
-                context.controllerNumber.toByte(),
-                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
-                0,
-                0f,
-                0f,
-                0f,
-            ) != MoonBridge.LI_ERR_UNSUPPORTED
-        } else {
-            // Down and Up events impact the action index pointer
-            return sendTouchpadEventForPointer(context, event, touchType, event.actionIndex)
+        // Down and Up events impact the action index pointer
+        return when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_POINTER_DOWN ->
+                sendTouchpadEventForPointer(
+                    context,
+                    event,
+                    MoonBridge.LI_TOUCH_EVENT_DOWN,
+                    event.actionIndex,
+                )
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_POINTER_UP ->
+                sendTouchpadEventForPointer(context, event, touchUpType(event), event.actionIndex)
+            MotionEvent.ACTION_MOVE -> sendTouchpadMoves(context, event)
+            MotionEvent.ACTION_CANCEL -> sendTouchpadCancelAll(context)
+            // Another action is no touch: it is left to the system
+            else -> false
         }
     }
+
+    private fun touchUpType(event: MotionEvent): Byte =
+        if ((event.flags and MotionEvent.FLAG_CANCELED) != 0) {
+            MoonBridge.LI_TOUCH_EVENT_CANCEL
+        } else {
+            MoonBridge.LI_TOUCH_EVENT_UP
+        }
+
+    // Move events may impact all active pointers
+    private fun sendTouchpadMoves(context: InputDeviceContext, event: MotionEvent): Boolean {
+        for (i in 0 until event.pointerCount) {
+            if (!sendTouchpadEventForPointer(context, event, MoonBridge.LI_TOUCH_EVENT_MOVE, i)) {
+                // Controller touch events are not supported by the host
+                return false
+            }
+        }
+        return true
+    }
+
+    // ACTION_CANCEL applies to *all* pointers in the gesture, so it is CANCEL_ALL rather than
+    // CANCEL. For a single pointer cancellation, that's indicated via FLAG_CANCELED on a
+    // ACTION_POINTER_UP.
+    // https://developer.android.com/develop/ui/views/touch-and-input/gestures/multi
+    private fun sendTouchpadCancelAll(context: InputDeviceContext): Boolean =
+        conn.sendControllerTouchEvent(
+            context.controllerNumber.toByte(),
+            MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+            0,
+            0f,
+            0f,
+            0f,
+        ) != MoonBridge.LI_ERR_UNSUPPORTED
 
     fun handleMotionEvent(event: MotionEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
@@ -2968,30 +2979,121 @@ class ControllerHandler(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "PrintStackTrace",
-        "ReturnCount",
-    )
+    // What a key event did to the pad, for handleButtonDown and handleButtonUp: it changed the
+    // buttons, it is a duplicate of an axis that the pad reports (the hat, an analog trigger), or
+    // it
+    // is none of the buttons the handler knows
+    private enum class KeyStep {
+        APPLIED,
+        SUPPRESSED,
+        UNHANDLED,
+    }
+
     fun handleButtonUp(event: KeyEvent): Boolean {
         val context = getContextForEvent(event) ?: return true
         val stateBefore = keyState(context)
 
-        var keyCode = handleRemapping(context, event)
+        val keyCode = buttonKeyCode(context, event)
         if (keyCode < 0) {
             return (keyCode == REMAP_CONSUME)
         }
 
-        if (prefConfig.flipFaceButtons) {
-            keyCode = handleFlipFaceButtons(keyCode)
+        waitBeforeRelease(event)
+
+        val step = releaseKey(context, event, keyCode)
+        if (step == KeyStep.APPLIED) {
+            endEmulatedSelect(context)
+
+            // Check if we're emulating the special button
+            val special = GuideChord.onButtonUp(context.inputMap, context.emulatingButtonFlags)
+            context.inputMap = special.inputMap
+            context.emulatingButtonFlags = special.emulatingFlags
+
+            endEmulatedClickpad(context)
+
+            sendControllerInputPacket(context, event.eventTime, keyState(context) != stateBefore)
+
+            if (context.pendingExit && context.inputMap == 0) {
+                // All buttons from the quit combo are lifted. Finish the activity now.
+                activityContext.finish()
+            }
         }
 
-        // If the button hasn't been down long enough, sleep for a bit before sending the up event
-        // This allows "instant" button presses (like OUYA's virtual menu button) to work. This
-        // path should not be triggered during normal usage.
+        // A suppressed key is taken and sends nothing; a key that is none of the buttons goes on to
+        // the system
+        return step != KeyStep.UNHANDLED
+    }
+
+    fun handleButtonDown(event: KeyEvent): Boolean {
+        val context = getContextForEvent(event) ?: return true
+        val stateBefore = keyState(context)
+
+        // A key that went down while the chrome had the input does nothing until it is let go
+        val keyCode =
+            if (captureEnd.began(event.downTime)) REMAP_CONSUME else buttonKeyCode(context, event)
+        if (keyCode < 0) {
+            return (keyCode == REMAP_CONSUME)
+        }
+
+        val step = pressKey(context, event, keyCode)
+        if (step == KeyStep.APPLIED) {
+            // Start+Back+LB+RB is the quit combo
+            if (
+                context.inputMap ==
+                    (ControllerPacket.BACK_FLAG or
+                        ControllerPacket.PLAY_FLAG or
+                        ControllerPacket.LB_FLAG or
+                        ControllerPacket.RB_FLAG)
+            ) {
+                // Wait for the combo to lift and then finish the activity
+                context.pendingExit = true
+            }
+
+            emulateSelectOrClickpad(context, event)
+
+            // If there is a physical select button, we'll use Start+Select as the special button
+            // combo otherwise we'll use Start+RB.
+            val special =
+                GuideChord.onButtonDown(
+                    ButtonState(context.inputMap, context.emulatingButtonFlags),
+                    context.hasSelect,
+                    context.hasMode,
+                    event.eventTime,
+                    context.lastRbUpTime,
+                )
+            context.inputMap = special.inputMap
+            context.emulatingButtonFlags = special.emulatingFlags
+
+            // A repeat sends nothing when it changes nothing. The platform also sends events that
+            // claim to be repeats but come from different devices: each device has its own context,
+            // so its first event changes that context.
+            sendControllerInputPacket(context, event.eventTime, keyState(context) != stateBefore)
+        }
+
+        // A suppressed key is taken and sends nothing; a key that is none of the buttons goes on to
+        // the system
+        return step != KeyStep.UNHANDLED
+    }
+
+    // The key code of an event once the remapping tables and the swap of the face buttons have had
+    // it, or a negative REMAP_ value when the event is not a button of the pad
+    private fun buttonKeyCode(context: InputDeviceContext, event: KeyEvent): Int {
+        val keyCode = handleRemapping(context, event)
+        if (keyCode >= 0 && prefConfig.flipFaceButtons) {
+            return handleFlipFaceButtons(keyCode)
+        }
+        return keyCode
+    }
+
+    // If the button hasn't been down long enough, sleep for a bit before sending the up event.
+    // This allows "instant" button presses (like OUYA's virtual menu button) to work. This path
+    // should not be triggered during normal usage.
+    //
+    // Converted as is from the inherited Java; PrintStackTrace stays because the interrupt is
+    // written to the standard error stream, as in the inherited Java, and a test reads it there
+    // (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun waitBeforeRelease(event: KeyEvent) {
         val waitMs = waitBeforeReleaseMs(event.eventTime - event.downTime)
         if (waitMs > 0) {
             // Since our sleep time is so short (<= 25 ms), it shouldn't cause a problem doing this
@@ -3007,163 +3109,167 @@ class ControllerHandler(
                 Thread.currentThread().interrupt()
             }
         }
+    }
 
+    private fun pressKey(context: InputDeviceContext, event: KeyEvent, keyCode: Int): KeyStep =
         when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_MODE ->
-                context.inputMap = context.inputMap and ControllerPacket.SPECIAL_BUTTON_FLAG.inv()
-            KeyEvent.KEYCODE_BUTTON_START,
-            KeyEvent.KEYCODE_MENU -> {
-                // Sometimes we'll get a spurious key up event on controller disconnect.
-                // Make sure it's real by checking that the key is actually down before taking
-                // any action.
-                if (
-                    (context.inputMap and ControllerPacket.PLAY_FLAG) != 0 &&
-                        event.eventTime - context.startDownTime > START_DOWN_TIME_MOUSE_MODE_MS &&
-                        prefConfig.mouseEmulation &&
-                        !captured &&
-                        !context.pendingExit &&
-                        !context.menuChord.claims(ControllerPacket.PLAY_FLAG)
-                ) {
-                    context.toggleMouseEmulation()
-                }
-                context.inputMap = context.inputMap and ControllerPacket.PLAY_FLAG.inv()
-            }
-            KeyEvent.KEYCODE_BACK,
-            KeyEvent.KEYCODE_BUTTON_SELECT ->
-                context.inputMap = context.inputMap and ControllerPacket.BACK_FLAG.inv()
-            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (context.hatXAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap = context.inputMap and ControllerPacket.LEFT_FLAG.inv()
-            }
-            KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (context.hatXAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap = context.inputMap and ControllerPacket.RIGHT_FLAG.inv()
-            }
-            KeyEvent.KEYCODE_DPAD_UP -> {
-                if (context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap = context.inputMap and ControllerPacket.UP_FLAG.inv()
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                if (context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap = context.inputMap and ControllerPacket.DOWN_FLAG.inv()
-            }
-            KeyEvent.KEYCODE_DPAD_UP_LEFT -> {
-                if (context.hatXAxisUsed && context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap =
-                    context.inputMap and
-                        (ControllerPacket.UP_FLAG or ControllerPacket.LEFT_FLAG).inv()
-            }
-            KeyEvent.KEYCODE_DPAD_UP_RIGHT -> {
-                if (context.hatXAxisUsed && context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap =
-                    context.inputMap and
-                        (ControllerPacket.UP_FLAG or ControllerPacket.RIGHT_FLAG).inv()
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN_LEFT -> {
-                if (context.hatXAxisUsed && context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap =
-                    context.inputMap and
-                        (ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG).inv()
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN_RIGHT -> {
-                if (context.hatXAxisUsed && context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap =
-                    context.inputMap and
-                        (ControllerPacket.DOWN_FLAG or ControllerPacket.RIGHT_FLAG).inv()
-            }
-            KeyEvent.KEYCODE_BUTTON_B ->
-                context.inputMap = context.inputMap and ControllerPacket.B_FLAG.inv()
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_BUTTON_A ->
-                context.inputMap = context.inputMap and ControllerPacket.A_FLAG.inv()
-            KeyEvent.KEYCODE_BUTTON_X ->
-                context.inputMap = context.inputMap and ControllerPacket.X_FLAG.inv()
-            KeyEvent.KEYCODE_BUTTON_Y ->
-                context.inputMap = context.inputMap and ControllerPacket.Y_FLAG.inv()
-            KeyEvent.KEYCODE_BUTTON_L1 -> {
-                context.inputMap = context.inputMap and ControllerPacket.LB_FLAG.inv()
-                context.lastLbUpTime = event.eventTime
-            }
-            KeyEvent.KEYCODE_BUTTON_R1 -> {
-                context.inputMap = context.inputMap and ControllerPacket.RB_FLAG.inv()
-                context.lastRbUpTime = event.eventTime
-            }
-            KeyEvent.KEYCODE_BUTTON_THUMBL ->
-                context.inputMap = context.inputMap and ControllerPacket.LS_CLK_FLAG.inv()
-            KeyEvent.KEYCODE_BUTTON_THUMBR ->
-                context.inputMap = context.inputMap and ControllerPacket.RS_CLK_FLAG.inv()
-            // Xbox Series X Share button
-            KeyEvent.KEYCODE_MEDIA_RECORD ->
-                context.inputMap = context.inputMap and ControllerPacket.MISC_FLAG.inv()
-            // PS4/PS5 touchpad button (prior to 4.10)
-            KeyEvent.KEYCODE_BUTTON_1 ->
-                context.inputMap = context.inputMap and ControllerPacket.TOUCHPAD_FLAG.inv()
-            KeyEvent.KEYCODE_BUTTON_L2 -> {
-                if (context.leftTriggerAxisUsed) {
-                    // Suppress this digital event if an analog trigger is active
-                    return true
-                }
-                context.leftTrigger = 0
-            }
-            KeyEvent.KEYCODE_BUTTON_R2 -> {
-                if (context.rightTriggerAxisUsed) {
-                    // Suppress this digital event if an analog trigger is active
-                    return true
-                }
-                context.rightTrigger = 0
-            }
-            KeyEvent.KEYCODE_UNKNOWN -> {
-                // Paddles aren't mapped in any of the Android key layout files,
-                // so we need to handle the evdev key codes directly.
-                if (context.hasPaddles) {
-                    when (event.scanCode) {
-                        BTN_TRIGGER_HAPPY5 ->
-                            context.inputMap =
-                                context.inputMap and ControllerPacket.PADDLE1_FLAG.inv()
-                        BTN_TRIGGER_HAPPY6 ->
-                            context.inputMap =
-                                context.inputMap and ControllerPacket.PADDLE2_FLAG.inv()
-                        BTN_TRIGGER_HAPPY7 ->
-                            context.inputMap =
-                                context.inputMap and ControllerPacket.PADDLE3_FLAG.inv()
-                        BTN_TRIGGER_HAPPY8 ->
-                            context.inputMap =
-                                context.inputMap and ControllerPacket.PADDLE4_FLAG.inv()
-                        // Another scan code is no paddle: it is ignored and the event goes on
-                        else -> {}
-                    }
-                } else {
-                    return false
-                }
-            }
-            else -> return false
+            KeyEvent.KEYCODE_BUTTON_L2,
+            KeyEvent.KEYCODE_BUTTON_R2 -> setDigitalTrigger(context, keyCode, 0xFF.toByte())
+            KeyEvent.KEYCODE_UNKNOWN -> setPaddle(context, event.scanCode, down = true)
+            else -> pressButton(context, event, keyCode)
         }
 
-        // Check if we're emulating the select button
+    private fun releaseKey(context: InputDeviceContext, event: KeyEvent, keyCode: Int): KeyStep =
+        when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_L2,
+            KeyEvent.KEYCODE_BUTTON_R2 -> setDigitalTrigger(context, keyCode, 0)
+            KeyEvent.KEYCODE_UNKNOWN -> setPaddle(context, event.scanCode, down = false)
+            else -> releaseButton(context, event, keyCode)
+        }
+
+    private fun pressButton(context: InputDeviceContext, event: KeyEvent, keyCode: Int): KeyStep {
+        val flag = buttonFlag(keyCode)
+        if (flag == 0) {
+            return KeyStep.UNHANDLED
+        }
+        if (hatReports(context, keyCode)) {
+            // Suppress this duplicate event if we have a hat
+            return KeyStep.SUPPRESSED
+        }
+
+        notePress(context, event, keyCode)
+        setButtons(context, flag, down = true)
+        return KeyStep.APPLIED
+    }
+
+    private fun releaseButton(context: InputDeviceContext, event: KeyEvent, keyCode: Int): KeyStep {
+        val flag = buttonFlag(keyCode)
+        if (flag == 0) {
+            return KeyStep.UNHANDLED
+        }
+        if (hatReports(context, keyCode)) {
+            // Suppress this duplicate event if we have a hat
+            return KeyStep.SUPPRESSED
+        }
+
+        if (startUpTogglesMouse(context, event, keyCode)) {
+            context.toggleMouseEmulation()
+        }
+        setButtons(context, flag, down = false)
+        noteBumperUp(context, event, keyCode)
+        return KeyStep.APPLIED
+    }
+
+    private fun setButtons(context: InputDeviceContext, flags: Int, down: Boolean) {
+        context.inputMap = if (down) context.inputMap or flags else context.inputMap and flags.inv()
+    }
+
+    // Paddles aren't mapped in any of the Android key layout files, so we need to handle the evdev
+    // key codes directly. Another scan code is no paddle: it is ignored and the event goes on.
+    private fun setPaddle(context: InputDeviceContext, scanCode: Int, down: Boolean): KeyStep {
+        if (!context.hasPaddles) {
+            return KeyStep.UNHANDLED
+        }
+
+        setButtons(context, paddleFlag(scanCode), down)
+        return KeyStep.APPLIED
+    }
+
+    private fun setDigitalTrigger(context: InputDeviceContext, keyCode: Int, value: Byte): KeyStep {
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_L2) {
+            if (context.leftTriggerAxisUsed) {
+                // Suppress this digital event if an analog trigger is active
+                return KeyStep.SUPPRESSED
+            }
+            context.leftTrigger = value
+        } else {
+            if (context.rightTriggerAxisUsed) {
+                // Suppress this digital event if an analog trigger is active
+                return KeyStep.SUPPRESSED
+            }
+            context.rightTrigger = value
+        }
+        return KeyStep.APPLIED
+    }
+
+    // What a key down tells the context about the pad: it has a Mode or a Select button, and when
+    // Start went down
+    private fun notePress(context: InputDeviceContext, event: KeyEvent, keyCode: Int) {
+        when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_MODE -> context.hasMode = true
+            KeyEvent.KEYCODE_BUTTON_START,
+            KeyEvent.KEYCODE_MENU -> {
+                if (event.repeatCount == 0) {
+                    context.startDownTime = event.eventTime
+                }
+            }
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_BUTTON_SELECT -> context.hasSelect = true
+        }
+    }
+
+    private fun noteBumperUp(context: InputDeviceContext, event: KeyEvent, keyCode: Int) {
+        when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_L1 -> context.lastLbUpTime = event.eventTime
+            KeyEvent.KEYCODE_BUTTON_R1 -> context.lastRbUpTime = event.eventTime
+        }
+    }
+
+    // A Start let go after a long hold turns the gamepad mouse on or off, when the setting is on,
+    // unless the chrome has the input, the quit combo is armed or the menu chord holds that Start
+    private fun startUpTogglesMouse(
+        context: InputDeviceContext,
+        event: KeyEvent,
+        keyCode: Int,
+    ): Boolean =
+        (keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU) &&
+            startHeldLongEnough(context, event) &&
+            mouseEmulationMayToggle(context)
+
+    // Sometimes we'll get a spurious key up event on controller disconnect. Make sure it's real by
+    // checking that the key is actually down before taking any action.
+    private fun startHeldLongEnough(context: InputDeviceContext, event: KeyEvent): Boolean =
+        (context.inputMap and ControllerPacket.PLAY_FLAG) != 0 &&
+            event.eventTime - context.startDownTime > START_DOWN_TIME_MOUSE_MODE_MS
+
+    private fun mouseEmulationMayToggle(context: InputDeviceContext): Boolean =
+        prefConfig.mouseEmulation &&
+            !captured &&
+            !context.pendingExit &&
+            !context.menuChord.claims(ControllerPacket.PLAY_FLAG)
+
+    // Start+LB acts like select for controllers with one button, and Select+LB acts like the
+    // clickpad when we're faking a PS4 controller for motion support
+    private fun emulateSelectOrClickpad(context: InputDeviceContext, event: KeyEvent) {
+        if (!context.hasSelect) {
+            if (withLeftBumper(context, ControllerPacket.PLAY_FLAG, event.eventTime)) {
+                context.inputMap =
+                    context.inputMap and
+                        (ControllerPacket.PLAY_FLAG or ControllerPacket.LB_FLAG).inv()
+                context.inputMap = context.inputMap or ControllerPacket.BACK_FLAG
+
+                context.emulatingButtonFlags = context.emulatingButtonFlags or EMULATING_SELECT
+            }
+        } else if (context.needsClickpadEmulation) {
+            if (withLeftBumper(context, ControllerPacket.BACK_FLAG, event.eventTime)) {
+                context.inputMap =
+                    context.inputMap and
+                        (ControllerPacket.BACK_FLAG or ControllerPacket.LB_FLAG).inv()
+                context.inputMap = context.inputMap or ControllerPacket.TOUCHPAD_FLAG
+
+                context.emulatingButtonFlags = context.emulatingButtonFlags or EMULATING_TOUCHPAD
+            }
+        }
+    }
+
+    // [button] held with the left bumper, or alone just after the bumper was let go
+    private fun withLeftBumper(context: InputDeviceContext, button: Int, eventTime: Long): Boolean =
+        context.inputMap == (button or ControllerPacket.LB_FLAG) ||
+            (context.inputMap == button &&
+                eventTime - context.lastLbUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS)
+
+    // Check if we're emulating the select button
+    private fun endEmulatedSelect(context: InputDeviceContext) {
         if ((context.emulatingButtonFlags and EMULATING_SELECT) != 0) {
             // If either start or LB is up, select comes up too
             if (
@@ -3176,13 +3282,10 @@ class ControllerHandler(
                     context.emulatingButtonFlags and EMULATING_SELECT.inv()
             }
         }
+    }
 
-        // Check if we're emulating the special button
-        val special = GuideChord.onButtonUp(context.inputMap, context.emulatingButtonFlags)
-        context.inputMap = special.inputMap
-        context.emulatingButtonFlags = special.emulatingFlags
-
-        // Check if we're emulating the touchpad button
+    // Check if we're emulating the touchpad button
+    private fun endEmulatedClickpad(context: InputDeviceContext) {
         if ((context.emulatingButtonFlags and EMULATING_TOUCHPAD) != 0) {
             // If either select or LB is up, touchpad comes up too
             if (
@@ -3195,236 +3298,78 @@ class ControllerHandler(
                     context.emulatingButtonFlags and EMULATING_TOUCHPAD.inv()
             }
         }
-
-        sendControllerInputPacket(context, event.eventTime, keyState(context) != stateBefore)
-
-        if (context.pendingExit && context.inputMap == 0) {
-            // All buttons from the quit combo are lifted. Finish the activity now.
-            activityContext.finish()
-        }
-
-        return true
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
-    fun handleButtonDown(event: KeyEvent): Boolean {
-        val context = getContextForEvent(event) ?: return true
-        val stateBefore = keyState(context)
-
-        // A key that went down while the chrome had the input does nothing until it is let go
-        if (captureEnd.began(event.downTime)) {
-            return true
-        }
-
-        var keyCode = handleRemapping(context, event)
-        if (keyCode < 0) {
-            return (keyCode == REMAP_CONSUME)
-        }
-
-        if (prefConfig.flipFaceButtons) {
-            keyCode = handleFlipFaceButtons(keyCode)
-        }
-
+    // The buttons of a key code that is one button or two D-pad directions, 0 for the other keys:
+    // the face buttons, the bumpers and the stick clicks here, the buttons in the middle of the pad
+    // and the D-pad in the next two
+    private fun buttonFlag(keyCode: Int): Int =
         when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_MODE -> {
-                context.hasMode = true
-                context.inputMap = context.inputMap or ControllerPacket.SPECIAL_BUTTON_FLAG
-            }
-            KeyEvent.KEYCODE_BUTTON_START,
-            KeyEvent.KEYCODE_MENU -> {
-                if (event.repeatCount == 0) {
-                    context.startDownTime = event.eventTime
-                }
-                context.inputMap = context.inputMap or ControllerPacket.PLAY_FLAG
-            }
-            KeyEvent.KEYCODE_BACK,
-            KeyEvent.KEYCODE_BUTTON_SELECT -> {
-                context.hasSelect = true
-                context.inputMap = context.inputMap or ControllerPacket.BACK_FLAG
-            }
-            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (context.hatXAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap = context.inputMap or ControllerPacket.LEFT_FLAG
-            }
-            KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (context.hatXAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap = context.inputMap or ControllerPacket.RIGHT_FLAG
-            }
-            KeyEvent.KEYCODE_DPAD_UP -> {
-                if (context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap = context.inputMap or ControllerPacket.UP_FLAG
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                if (context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap = context.inputMap or ControllerPacket.DOWN_FLAG
-            }
-            KeyEvent.KEYCODE_DPAD_UP_LEFT -> {
-                if (context.hatXAxisUsed && context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap =
-                    context.inputMap or ControllerPacket.UP_FLAG or ControllerPacket.LEFT_FLAG
-            }
-            KeyEvent.KEYCODE_DPAD_UP_RIGHT -> {
-                if (context.hatXAxisUsed && context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap =
-                    context.inputMap or ControllerPacket.UP_FLAG or ControllerPacket.RIGHT_FLAG
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN_LEFT -> {
-                if (context.hatXAxisUsed && context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap =
-                    context.inputMap or ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN_RIGHT -> {
-                if (context.hatXAxisUsed && context.hatYAxisUsed) {
-                    // Suppress this duplicate event if we have a hat
-                    return true
-                }
-                context.inputMap =
-                    context.inputMap or ControllerPacket.DOWN_FLAG or ControllerPacket.RIGHT_FLAG
-            }
-            KeyEvent.KEYCODE_BUTTON_B ->
-                context.inputMap = context.inputMap or ControllerPacket.B_FLAG
+            KeyEvent.KEYCODE_BUTTON_B -> ControllerPacket.B_FLAG
             KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_BUTTON_A ->
-                context.inputMap = context.inputMap or ControllerPacket.A_FLAG
-            KeyEvent.KEYCODE_BUTTON_X ->
-                context.inputMap = context.inputMap or ControllerPacket.X_FLAG
-            KeyEvent.KEYCODE_BUTTON_Y ->
-                context.inputMap = context.inputMap or ControllerPacket.Y_FLAG
-            KeyEvent.KEYCODE_BUTTON_L1 ->
-                context.inputMap = context.inputMap or ControllerPacket.LB_FLAG
-            KeyEvent.KEYCODE_BUTTON_R1 ->
-                context.inputMap = context.inputMap or ControllerPacket.RB_FLAG
-            KeyEvent.KEYCODE_BUTTON_THUMBL ->
-                context.inputMap = context.inputMap or ControllerPacket.LS_CLK_FLAG
-            KeyEvent.KEYCODE_BUTTON_THUMBR ->
-                context.inputMap = context.inputMap or ControllerPacket.RS_CLK_FLAG
+            KeyEvent.KEYCODE_BUTTON_A -> ControllerPacket.A_FLAG
+            KeyEvent.KEYCODE_BUTTON_X -> ControllerPacket.X_FLAG
+            KeyEvent.KEYCODE_BUTTON_Y -> ControllerPacket.Y_FLAG
+            KeyEvent.KEYCODE_BUTTON_L1 -> ControllerPacket.LB_FLAG
+            KeyEvent.KEYCODE_BUTTON_R1 -> ControllerPacket.RB_FLAG
+            KeyEvent.KEYCODE_BUTTON_THUMBL -> ControllerPacket.LS_CLK_FLAG
+            KeyEvent.KEYCODE_BUTTON_THUMBR -> ControllerPacket.RS_CLK_FLAG
+            else -> centerButtonFlag(keyCode)
+        }
+
+    private fun centerButtonFlag(keyCode: Int): Int =
+        when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_MODE -> ControllerPacket.SPECIAL_BUTTON_FLAG
+            KeyEvent.KEYCODE_BUTTON_START,
+            KeyEvent.KEYCODE_MENU -> ControllerPacket.PLAY_FLAG
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_BUTTON_SELECT -> ControllerPacket.BACK_FLAG
             // Xbox Series X Share button
-            KeyEvent.KEYCODE_MEDIA_RECORD ->
-                context.inputMap = context.inputMap or ControllerPacket.MISC_FLAG
+            KeyEvent.KEYCODE_MEDIA_RECORD -> ControllerPacket.MISC_FLAG
             // PS4/PS5 touchpad button (prior to 4.10)
-            KeyEvent.KEYCODE_BUTTON_1 ->
-                context.inputMap = context.inputMap or ControllerPacket.TOUCHPAD_FLAG
-            KeyEvent.KEYCODE_BUTTON_L2 -> {
-                if (context.leftTriggerAxisUsed) {
-                    // Suppress this digital event if an analog trigger is active
-                    return true
-                }
-                context.leftTrigger = 0xFF.toByte()
-            }
-            KeyEvent.KEYCODE_BUTTON_R2 -> {
-                if (context.rightTriggerAxisUsed) {
-                    // Suppress this digital event if an analog trigger is active
-                    return true
-                }
-                context.rightTrigger = 0xFF.toByte()
-            }
-            KeyEvent.KEYCODE_UNKNOWN -> {
-                // Paddles aren't mapped in any of the Android key layout files,
-                // so we need to handle the evdev key codes directly.
-                if (context.hasPaddles) {
-                    when (event.scanCode) {
-                        BTN_TRIGGER_HAPPY5 ->
-                            context.inputMap = context.inputMap or ControllerPacket.PADDLE1_FLAG
-                        BTN_TRIGGER_HAPPY6 ->
-                            context.inputMap = context.inputMap or ControllerPacket.PADDLE2_FLAG
-                        BTN_TRIGGER_HAPPY7 ->
-                            context.inputMap = context.inputMap or ControllerPacket.PADDLE3_FLAG
-                        BTN_TRIGGER_HAPPY8 ->
-                            context.inputMap = context.inputMap or ControllerPacket.PADDLE4_FLAG
-                        // Another scan code is no paddle: it is ignored and the event goes on
-                        else -> {}
-                    }
-                } else {
-                    return false
-                }
-            }
-            else -> return false
+            KeyEvent.KEYCODE_BUTTON_1 -> ControllerPacket.TOUCHPAD_FLAG
+            else -> dpadFlag(keyCode)
         }
 
-        // Start+Back+LB+RB is the quit combo
-        if (
-            context.inputMap ==
-                (ControllerPacket.BACK_FLAG or
-                    ControllerPacket.PLAY_FLAG or
-                    ControllerPacket.LB_FLAG or
-                    ControllerPacket.RB_FLAG)
-        ) {
-            // Wait for the combo to lift and then finish the activity
-            context.pendingExit = true
+    private fun dpadFlag(keyCode: Int): Int =
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> ControllerPacket.LEFT_FLAG
+            KeyEvent.KEYCODE_DPAD_RIGHT -> ControllerPacket.RIGHT_FLAG
+            KeyEvent.KEYCODE_DPAD_UP -> ControllerPacket.UP_FLAG
+            KeyEvent.KEYCODE_DPAD_DOWN -> ControllerPacket.DOWN_FLAG
+            KeyEvent.KEYCODE_DPAD_UP_LEFT -> ControllerPacket.UP_FLAG or ControllerPacket.LEFT_FLAG
+            KeyEvent.KEYCODE_DPAD_UP_RIGHT ->
+                ControllerPacket.UP_FLAG or ControllerPacket.RIGHT_FLAG
+            KeyEvent.KEYCODE_DPAD_DOWN_LEFT ->
+                ControllerPacket.DOWN_FLAG or ControllerPacket.LEFT_FLAG
+            KeyEvent.KEYCODE_DPAD_DOWN_RIGHT ->
+                ControllerPacket.DOWN_FLAG or ControllerPacket.RIGHT_FLAG
+            else -> 0
         }
 
-        // Start+LB acts like select for controllers with one button
-        if (!context.hasSelect) {
-            if (
-                context.inputMap == (ControllerPacket.PLAY_FLAG or ControllerPacket.LB_FLAG) ||
-                    (context.inputMap == ControllerPacket.PLAY_FLAG &&
-                        event.eventTime - context.lastLbUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS)
-            ) {
-                context.inputMap =
-                    context.inputMap and
-                        (ControllerPacket.PLAY_FLAG or ControllerPacket.LB_FLAG).inv()
-                context.inputMap = context.inputMap or ControllerPacket.BACK_FLAG
-
-                context.emulatingButtonFlags = context.emulatingButtonFlags or EMULATING_SELECT
-            }
-        } else if (context.needsClickpadEmulation) {
-            // Select+LB acts like the clickpad when we're faking a PS4 controller for motion
-            // support
-            if (
-                context.inputMap == (ControllerPacket.BACK_FLAG or ControllerPacket.LB_FLAG) ||
-                    (context.inputMap == ControllerPacket.BACK_FLAG &&
-                        event.eventTime - context.lastLbUpTime <= MAXIMUM_BUMPER_UP_DELAY_MS)
-            ) {
-                context.inputMap =
-                    context.inputMap and
-                        (ControllerPacket.BACK_FLAG or ControllerPacket.LB_FLAG).inv()
-                context.inputMap = context.inputMap or ControllerPacket.TOUCHPAD_FLAG
-
-                context.emulatingButtonFlags = context.emulatingButtonFlags or EMULATING_TOUCHPAD
-            }
+    // Whether the hat of the pad already reports the direction of a D-pad key: the key is a
+    // duplicate of it
+    private fun hatReports(context: InputDeviceContext, keyCode: Int): Boolean =
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT -> context.hatXAxisUsed
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN -> context.hatYAxisUsed
+            KeyEvent.KEYCODE_DPAD_UP_LEFT,
+            KeyEvent.KEYCODE_DPAD_UP_RIGHT,
+            KeyEvent.KEYCODE_DPAD_DOWN_LEFT,
+            KeyEvent.KEYCODE_DPAD_DOWN_RIGHT -> context.hatXAxisUsed && context.hatYAxisUsed
+            else -> false
         }
 
-        // If there is a physical select button, we'll use Start+Select as the special button combo
-        // otherwise we'll use Start+RB.
-        val special =
-            GuideChord.onButtonDown(
-                ButtonState(context.inputMap, context.emulatingButtonFlags),
-                context.hasSelect,
-                context.hasMode,
-                event.eventTime,
-                context.lastRbUpTime,
-            )
-        context.inputMap = special.inputMap
-        context.emulatingButtonFlags = special.emulatingFlags
-
-        // A repeat sends nothing when it changes nothing. The platform also sends events that claim
-        // to be repeats but come from different devices: each device has its own context, so its
-        // first event changes that context.
-        sendControllerInputPacket(context, event.eventTime, keyState(context) != stateBefore)
-        return true
-    }
+    private fun paddleFlag(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_TRIGGER_HAPPY5 -> ControllerPacket.PADDLE1_FLAG
+            BTN_TRIGGER_HAPPY6 -> ControllerPacket.PADDLE2_FLAG
+            BTN_TRIGGER_HAPPY7 -> ControllerPacket.PADDLE3_FLAG
+            BTN_TRIGGER_HAPPY8 -> ControllerPacket.PADDLE4_FLAG
+            else -> 0
+        }
 
     // Converted as is from the inherited Java; LongParameterList stays because the on-screen
     // controller calls this method with this signature (Sprint 18c backlog).
@@ -3624,9 +3569,6 @@ class ControllerHandler(
         @JvmField
         val mouseEmulationRunnable: Runnable =
             object : Runnable {
-                // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13
-                // backlog).
-                @Suppress("LongMethod")
                 override fun run() {
                     if (!mouseEmulationActive) {
                         return
@@ -3640,64 +3582,56 @@ class ControllerHandler(
                     // the PC
                     val precision = (mouseEmulationLastInputMap and ControllerPacket.RB_FLAG) != 0
 
-                    // Send mouse events from analog sticks
-                    if (
-                        prefConfig.analogStickForScrolling ==
-                            PreferenceConfiguration.AnalogStickForScrolling.RIGHT
-                    ) {
-                        sendEmulatedMouseMove(
-                            leftStickMotion,
-                            leftStickX,
-                            leftStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                        sendEmulatedMouseScroll(
-                            rightStickMotion,
-                            rightStickX,
-                            rightStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                    } else if (
-                        prefConfig.analogStickForScrolling ==
-                            PreferenceConfiguration.AnalogStickForScrolling.LEFT
-                    ) {
-                        sendEmulatedMouseMove(
-                            rightStickMotion,
-                            rightStickX,
-                            rightStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                        sendEmulatedMouseScroll(
-                            leftStickMotion,
-                            leftStickX,
-                            leftStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                    } else {
-                        sendEmulatedMouseMove(
-                            leftStickMotion,
-                            leftStickX,
-                            leftStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                        sendEmulatedMouseMove(
-                            rightStickMotion,
-                            rightStickX,
-                            rightStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                    }
+                    sendEmulatedMouseFromSticks(elapsedMs, precision)
 
                     // Requeue the callback
                     mainThreadHandler.postDelayed(this, mouseEmulationReportPeriod.toLong())
                 }
             }
+
+        // Send mouse events from analog sticks
+        private fun sendEmulatedMouseFromSticks(elapsedMs: Long, precision: Boolean) {
+            if (
+                prefConfig.analogStickForScrolling ==
+                    PreferenceConfiguration.AnalogStickForScrolling.RIGHT
+            ) {
+                sendEmulatedMouseMove(leftStickMotion, leftStickX, leftStickY, elapsedMs, precision)
+                sendEmulatedMouseScroll(
+                    rightStickMotion,
+                    rightStickX,
+                    rightStickY,
+                    elapsedMs,
+                    precision,
+                )
+            } else if (
+                prefConfig.analogStickForScrolling ==
+                    PreferenceConfiguration.AnalogStickForScrolling.LEFT
+            ) {
+                sendEmulatedMouseMove(
+                    rightStickMotion,
+                    rightStickX,
+                    rightStickY,
+                    elapsedMs,
+                    precision,
+                )
+                sendEmulatedMouseScroll(
+                    leftStickMotion,
+                    leftStickX,
+                    leftStickY,
+                    elapsedMs,
+                    precision,
+                )
+            } else {
+                sendEmulatedMouseMove(leftStickMotion, leftStickX, leftStickY, elapsedMs, precision)
+                sendEmulatedMouseMove(
+                    rightStickMotion,
+                    rightStickX,
+                    rightStickY,
+                    elapsedMs,
+                    precision,
+                )
+            }
+        }
 
         fun toggleMouseEmulation() {
             setMouseEmulation(!mouseEmulationActive, true)

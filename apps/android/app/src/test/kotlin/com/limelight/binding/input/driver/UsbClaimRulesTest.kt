@@ -301,6 +301,88 @@ class UsbClaimRulesTest {
         assertThat(UsbDriverService.shouldClaimDevice(unknownVendor, true)).isFalse()
     }
 
+    // What the claim decision is by the rules of the three drivers. Of the kernels the tests use,
+    // only 5.10 is fine for the Xbox One driver, and the dongle's LED is lit from 4.2 on.
+    private fun expectedClaim(
+        kind: String,
+        version: String,
+        androidHandles: Boolean,
+        claimAll: Boolean,
+    ): Boolean {
+        val oneIsFine = version == "5.10.0"
+        val wirelessLedIsLit = version != "3.10.0"
+        return when (kind) {
+            "Xbox One" -> !oneIsFine || !androidHandles || claimAll
+            "Xbox 360" -> !androidHandles || claimAll
+            "dongle" -> !wirelessLedIsLit || claimAll
+            else -> false
+        }
+    }
+
+    private fun wrongClaims(
+        devices: Map<String, UsbDevice>,
+        version: String,
+        androidHandles: Boolean,
+    ) =
+        listOf(false, true).flatMap { claimAll ->
+            devices
+                .filter { (kind, device) ->
+                    UsbDriverService.shouldClaimDevice(device, claimAll) !=
+                        expectedClaim(kind, version, androidHandles, claimAll)
+                }
+                .map { (kind, _) ->
+                    "$kind, kernel $version, handled $androidHandles, all $claimAll"
+                }
+        }
+
+    @Test
+    fun `the claim decision for each kind of device, kernel, view of Android and setting`() {
+        val devices =
+            mapOf(
+                "Xbox One" to xboxOne(),
+                "Xbox 360" to xbox360(),
+                "dongle" to dongle(),
+                "unknown" to UsbPads.device("/dev/x", 0x1234, 0x0001, emptyList()),
+            )
+        val wrong = mutableListOf<String>()
+        for (androidHandles in listOf(false, true)) {
+            if (androidHandles) {
+                PadInputDevices.add(0x045E, 0x02EA, PadInputDevices.GAMEPAD)
+                PadInputDevices.add(0x045E, 0x028E, PadInputDevices.GAMEPAD)
+                // The dongle shows the same: wireless pads have other product IDs.
+                PadInputDevices.add(0x045E, 0x0291, PadInputDevices.GAMEPAD)
+            }
+            for (version in listOf("3.10.0", "4.9.186", "5.10.0")) {
+                kernel(version)
+                wrong += wrongClaims(devices, version, androidHandles)
+            }
+        }
+
+        assertThat(wrong).isEmpty()
+    }
+
+    @Test
+    fun `a claim decision reads the kernel version once, whatever the device and the setting`() {
+        kernel("5.10.0")
+        val devices =
+            listOf(
+                xboxOne(),
+                xbox360(),
+                dongle(),
+                UsbPads.device("/dev/x", 0x1234, 0x0001, emptyList()),
+            )
+
+        for (device in devices) {
+            for (claimAll in listOf(false, true)) {
+                val before = log.messages.size
+
+                UsbDriverService.shouldClaimDevice(device, claimAll)
+
+                assertThat(log.messages.drop(before)).containsExactly("Kernel Version: 5.10.0")
+            }
+        }
+    }
+
     @Test
     fun `isRecognizedInputDevice reads the vendor and product of the device only`() {
         // A keyboard with a gamepad-like source is no pad; this only checks the plumbing.

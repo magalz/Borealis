@@ -168,4 +168,25 @@ class UsbDriverServiceSystemCallsTest {
         assertThat(replay.drain()).isEmpty()
         assertThat(log.warnings()).containsExactly("Unable to open USB device: /dev/xbox360")
     }
+
+    @Test
+    fun `a device the system cannot open takes no controller id`() {
+        val device = UsbPads.xbox360Pad()
+        shadowUsb.addOrUpdateUsbDevice(device, true)
+        shadowUsb.openFails = true
+        binder.start()
+        shadowUsb.openFails = false
+
+        context.sendBroadcast(
+            Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+                .setPackage(context.packageName)
+                .putExtra(UsbManager.EXTRA_DEVICE, device)
+        )
+        idle(1_100)
+
+        val replay = RecordingListener()
+        binder.setListener(replay)
+        assertThat(replay.drain().map { (it as PadEvent.Added).controller.controllerId })
+            .containsExactly(0)
+    }
 }

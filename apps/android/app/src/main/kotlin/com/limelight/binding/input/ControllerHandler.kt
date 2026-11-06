@@ -273,19 +273,20 @@ class ControllerHandler(
     }
 
     // The host may never send a zero for the motors at the end of the stream. A write to a pad that
-    // does not answer blocks for the timeout of the driver and only logs, and the stop runs on the
-    // main thread: a pad whose motor write took the better part of that gets no trigger write, and
-    // no pad is started once the zeroing has used up its time. The Xbox drivers zero the motors
-    // again when the USB driver service stops them, which the unbind of the activity does.
+    // does not answer blocks for the timeout of the driver, and the stop runs on the main thread: a
+    // pad whose motor write failed or took the better part of that timeout gets no trigger write,
+    // and no pad is started once the zeroing has used up its time. The Xbox drivers zero the motors
+    // again when the USB driver service stops them, which the unbind of the activity does, unless
+    // the last rumble write of the pad failed: a pad that does not answer is left as it is.
     private fun zeroMotors(pad: AbstractController, zeroingStarted: Long) {
         val started = SystemClock.uptimeMillis()
         if (started - zeroingStarted >= USB_ZERO_BUDGET_MS) {
             LimeLog.warning("USB pad ${pad.controllerId} is left to its driver: no time to zero it")
             return
         }
-        pad.rumble(0, 0)
-        if (SystemClock.uptimeMillis() - started >= USB_WRITE_STUCK_MS) {
-            LimeLog.warning("USB pad ${pad.controllerId} did not answer the zero of its motors")
+        val motorsWritten = pad.rumble(0, 0)
+        if (!motorsWritten || SystemClock.uptimeMillis() - started >= USB_WRITE_STUCK_MS) {
+            LimeLog.warning("USB pad ${pad.controllerId} did not take the zero of its motors")
         } else {
             pad.rumbleTriggers(0, 0)
         }

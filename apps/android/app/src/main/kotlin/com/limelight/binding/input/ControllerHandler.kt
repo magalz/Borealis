@@ -32,6 +32,7 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.annotation.VisibleForTesting
 import androidx.core.util.isNotEmpty
 import androidx.core.util.size
 import com.limelight.LimeLog
@@ -83,6 +84,10 @@ class ControllerHandler(
 
     private val inputDeviceContexts = SparseArray<InputDeviceContext>()
     private val usbDeviceContexts = SparseArray<UsbDeviceContext>()
+
+    // A test runs this at each step of a loop over the contexts, before the step reads its context,
+    // to hold a reader there; it is null in the app
+    @VisibleForTesting internal var deviceListStep: Runnable? = null
 
     private val stickDeadzone: Double
     private val defaultContext = InputDeviceContext()
@@ -1381,6 +1386,16 @@ class ControllerHandler(
                 it.mouseEmulationLastInputMap = it.mouseEmulationLastInputMap and released.inv()
             }
             endMouse(context, released)
+        }
+    }
+
+    // A SparseArray loop that reads size() at each step, as the for loops of the Java did
+    private inline fun <T : Any> SparseArray<T>.forEachValue(action: (T) -> Unit) {
+        var i = 0
+        while (i < size) {
+            deviceListStep?.run()
+            action(valueAt(i))
+            i++
         }
     }
 
@@ -4254,15 +4269,6 @@ class ControllerHandler(
 
                 // FIXME Paddles?
             )
-
-        // A SparseArray loop that reads size() at each step, as the for loops of the Java did
-        private inline fun <T> SparseArray<T>.forEachValue(action: (T) -> Unit) {
-            var i = 0
-            while (i < size) {
-                action(valueAt(i))
-                i++
-            }
-        }
 
         // How long a key held for heldMs still waits before its release goes out: what is missing
         // of 25 ms, whatever the times of the event say (a key can come up before it went down)

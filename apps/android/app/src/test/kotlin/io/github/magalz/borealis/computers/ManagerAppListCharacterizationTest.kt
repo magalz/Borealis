@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.computers
 
 import com.google.common.truth.Truth.assertThat
-import com.limelight.computers.ComputerManagerService.ApplistPoller
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.PairingManager
 import io.github.magalz.borealis.crypto.TestIdentities
@@ -40,39 +39,11 @@ class ManagerAppListCharacterizationTest {
     private fun host(list: String): NvFakeHost =
         rig.reachable(UUID_1).also { it.answer("/applist", HostReply.root(list), "https") }
 
-    /** A host as the library has it once it is paired: online, with its certificate. */
-    private fun paired(host: NvFakeHost) =
-        ComputerDetails().also {
-            it.uuid = UUID_1
-            it.name = "DEN-PC"
-            it.state = ComputerDetails.State.ONLINE
-            it.pairState = PairingManager.PairState.PAIRED
-            it.activeAddress = host.address
-            it.httpsPort = host.httpsPort
-            it.serverCert = TestIdentities.hostRsa.certificate
-        }
-
-    private fun cacheFile() = File(rig.app.cacheDir, "applist/$UUID_1")
-
-    private fun appListRequests(host: NvFakeHost) = host.requests.count { it.path == "/applist" }
-
-    /** Waits until the poller is idle, waiting for its period or for a wake-up. */
-    private fun awaitIdle() =
-        awaitUntil("the app list thread to wait") {
-            liveThreads(APP_LIST_THREAD).singleOrNull()?.state == Thread.State.TIMED_WAITING
-        }
-
-    /** Wakes the poller once it is idle. */
-    private fun ApplistPoller.nudge() {
-        awaitIdle()
-        pollNow()
-    }
-
     @Test
     fun `an app list is fetched over TLS, cached as it came, kept on the host and told to the listener`() {
         val list = apps("Desktop", "Steam")
         val host = host(list)
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
@@ -84,7 +55,7 @@ class ManagerAppListCharacterizationTest {
         assertThat(raw.scheme).isEqualTo("https")
         assertThat(raw.clientCertificates).isNotEmpty()
         assertThat(computer.rawAppList).isEqualTo("""<root status_code="200">$list</root>""")
-        assertThat(cacheFile().readText()).isEqualTo(computer.rawAppList)
+        assertThat(rig.appListCache(UUID_1).readText()).isEqualTo(computer.rawAppList)
         val told = updates.events.single { it.thread !== Thread.currentThread() }
         assertThat(told.details).isSameInstanceAs(computer)
         assertThat(told.rawAppList).isEqualTo(computer.rawAppList)
@@ -94,7 +65,7 @@ class ManagerAppListCharacterizationTest {
     @Test
     fun `a host that is not online or not paired is reported again instead of polled`() {
         val host = host(apps("Desktop"))
-        val computer = paired(host).also { it.state = ComputerDetails.State.OFFLINE }
+        val computer = paired(host, UUID_1).also { it.state = ComputerDetails.State.OFFLINE }
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
@@ -114,7 +85,7 @@ class ManagerAppListCharacterizationTest {
         awaitIdle()
 
         assertThat(updates.events.filter { it.thread !== Thread.currentThread() }).hasSize(2)
-        assertThat(appListRequests(host)).isEqualTo(0)
+        assertThat(host.appListRequests()).isEqualTo(0)
 
         computer.state = ComputerDetails.State.ONLINE
         computer.pairState = PairingManager.PairState.NOT_PAIRED
@@ -122,13 +93,13 @@ class ManagerAppListCharacterizationTest {
         awaitUntil("a third report", PROMPT_MS) {
             updates.events.count { it.thread !== Thread.currentThread() } == 3
         }
-        assertThat(appListRequests(host)).isEqualTo(0)
+        assertThat(host.appListRequests()).isEqualTo(0)
     }
 
     @Test
     fun `stopping a poller that waits for its next poll ends its thread at once`() {
         val host = host(apps("Desktop"))
-        val computer = paired(host).also { it.state = ComputerDetails.State.OFFLINE }
+        val computer = paired(host, UUID_1).also { it.state = ComputerDetails.State.OFFLINE }
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
@@ -148,7 +119,7 @@ class ManagerAppListCharacterizationTest {
     @Test
     fun `a second start of a poller that runs starts no second thread, so one stop ends it all`() {
         val host = host(apps("Desktop"))
-        val computer = paired(host).also { it.state = ComputerDetails.State.OFFLINE }
+        val computer = paired(host, UUID_1).also { it.state = ComputerDetails.State.OFFLINE }
         rig.start()
         rig.binder.startPolling(Updates())
         val poller = rig.appListPoller(computer)
@@ -164,7 +135,7 @@ class ManagerAppListCharacterizationTest {
     @Test
     fun `a poller that was stopped starts a thread again when it is started`() {
         val host = host(apps("Desktop"))
-        val computer = paired(host).also { it.state = ComputerDetails.State.OFFLINE }
+        val computer = paired(host, UUID_1).also { it.state = ComputerDetails.State.OFFLINE }
         rig.start()
         rig.binder.startPolling(Updates())
         val poller = rig.appListPoller(computer)
@@ -181,7 +152,7 @@ class ManagerAppListCharacterizationTest {
     fun `a host without an id or without an address is skipped and polled once it has them`() {
         val list = apps("Desktop")
         val host = host(list)
-        val computer = paired(host).also { it.uuid = null }
+        val computer = paired(host, UUID_1).also { it.uuid = null }
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
@@ -189,50 +160,50 @@ class ManagerAppListCharacterizationTest {
 
         poller.start()
         awaitIdle()
-        assertThat(appListRequests(host)).isEqualTo(0)
+        assertThat(host.appListRequests()).isEqualTo(0)
         assertThat(updates.events).isEmpty()
 
         computer.uuid = UUID_1
         computer.activeAddress = null
         poller.nudge()
         awaitIdle()
-        assertThat(appListRequests(host)).isEqualTo(0)
+        assertThat(host.appListRequests()).isEqualTo(0)
         assertThat(computer.rawAppList).isNull()
 
         computer.activeAddress = host.address
         poller.nudge()
         updates.awaitOtherThan(Thread.currentThread(), ComputerDetails.State.ONLINE)
-        assertThat(appListRequests(host)).isEqualTo(1)
-        assertThat(cacheFile().exists()).isTrue()
+        assertThat(host.appListRequests()).isEqualTo(1)
+        assertThat(rig.appListCache(UUID_1).exists()).isTrue()
     }
 
     @Test
     fun `an empty app list is believed only when it comes three times in a row`() {
         val host = host("")
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
         val poller = rig.appListPoller(computer)
 
         poller.start()
-        awaitUntil("the first empty list") { appListRequests(host) == 1 }
+        awaitUntil("the first empty list") { host.appListRequests() == 1 }
         awaitIdle()
         assertThat(computer.rawAppList).isNull()
-        assertThat(cacheFile().exists()).isFalse()
+        assertThat(rig.appListCache(UUID_1).exists()).isFalse()
 
         poller.nudge()
-        awaitUntil("the second empty list") { appListRequests(host) == 2 }
+        awaitUntil("the second empty list") { host.appListRequests() == 2 }
         awaitIdle()
         assertThat(computer.rawAppList).isNull()
-        assertThat(cacheFile().exists()).isFalse()
+        assertThat(rig.appListCache(UUID_1).exists()).isFalse()
         assertThat(updates.events).isEmpty()
 
         poller.nudge()
         updates.awaitOtherThan(Thread.currentThread(), ComputerDetails.State.ONLINE)
-        assertThat(appListRequests(host)).isEqualTo(3)
+        assertThat(host.appListRequests()).isEqualTo(3)
         assertThat(computer.rawAppList).isEqualTo("""<root status_code="200"></root>""")
-        assertThat(cacheFile().readText()).isEqualTo(computer.rawAppList)
+        assertThat(rig.appListCache(UUID_1).readText()).isEqualTo(computer.rawAppList)
         assertThat(log.lines().count { it == "WARNING: Empty app list received from $UUID_1" })
             .isEqualTo(3)
     }
@@ -241,7 +212,7 @@ class ManagerAppListCharacterizationTest {
     fun `a cache that cannot be written does not keep the app list from the host`() {
         val list = apps("Desktop")
         val host = host(list)
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         // A file where the folder of the cache should be.
         File(rig.app.cacheDir, "applist").also {
             it.parentFile?.mkdirs()
@@ -255,7 +226,7 @@ class ManagerAppListCharacterizationTest {
         updates.awaitOtherThan(Thread.currentThread(), ComputerDetails.State.ONLINE)
 
         assertThat(computer.rawAppList).isEqualTo("""<root status_code="200">$list</root>""")
-        assertThat(cacheFile().exists()).isFalse()
+        assertThat(rig.appListCache(UUID_1).exists()).isFalse()
     }
 
     @Test
@@ -270,14 +241,14 @@ class ManagerAppListCharacterizationTest {
                 else -> HostReply.root(list)
             }
         }
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
         val poller = rig.appListPoller(computer)
 
         poller.start()
-        awaitUntil("the first empty list") { appListRequests(host) == 1 }
+        awaitUntil("the first empty list") { host.appListRequests() == 1 }
         awaitIdle()
         mode.set("apps")
         poller.nudge()
@@ -285,22 +256,22 @@ class ManagerAppListCharacterizationTest {
         awaitIdle()
         mode.set("empty")
         poller.nudge()
-        awaitUntil("the second empty list") { appListRequests(host) == 3 }
+        awaitUntil("the second empty list") { host.appListRequests() == 3 }
         awaitIdle()
         poller.nudge()
-        awaitUntil("the third empty list") { appListRequests(host) == 4 }
+        awaitUntil("the third empty list") { host.appListRequests() == 4 }
         awaitIdle()
 
         // Three empty lists were asked for in all, but only two in a row.
         val expected = """<root status_code="200">$list</root>"""
         assertThat(computer.rawAppList).isEqualTo(expected)
-        assertThat(cacheFile().readText()).isEqualTo(expected)
+        assertThat(rig.appListCache(UUID_1).readText()).isEqualTo(expected)
     }
 
     @Test
     fun `a poller that has an app list waits for its long period, not for the retry period`() {
         val host = host(apps("Desktop"))
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
@@ -311,7 +282,7 @@ class ManagerAppListCharacterizationTest {
         // A poller that has no list yet asks again after two seconds.
         Thread.sleep(RETRY_PERIOD_MS + SETTLE_MS)
 
-        assertThat(appListRequests(host)).isEqualTo(1)
+        assertThat(host.appListRequests()).isEqualTo(1)
     }
 
     @Test
@@ -327,19 +298,19 @@ class ManagerAppListCharacterizationTest {
                 else -> HostReply.root(list)
             }
         }
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
         val poller = rig.appListPoller(computer)
 
         poller.start()
-        awaitUntil("a failed request") { appListRequests(host) >= 1 }
+        awaitUntil("a failed request") { host.appListRequests() >= 1 }
         awaitIdle()
-        val failed = appListRequests(host)
+        val failed = host.appListRequests()
         mode.set("garbage")
         poller.nudge()
-        awaitUntil("an answer that is not XML") { appListRequests(host) > failed }
+        awaitUntil("an answer that is not XML") { host.appListRequests() > failed }
         awaitIdle()
         assertThat(computer.rawAppList).isNull()
         assertThat(updates.events).isEmpty()
@@ -348,7 +319,7 @@ class ManagerAppListCharacterizationTest {
         updates.awaitOtherThan(Thread.currentThread(), ComputerDetails.State.ONLINE)
 
         assertThat(computer.rawAppList).isEqualTo("""<root status_code="200">$list</root>""")
-        assertThat(cacheFile().readText()).isEqualTo(computer.rawAppList)
+        assertThat(rig.appListCache(UUID_1).readText()).isEqualTo(computer.rawAppList)
     }
 
     @Test
@@ -383,11 +354,11 @@ class ManagerAppListCharacterizationTest {
 
         rig.appListPoller(live).start()
         Thread.sleep(SETTLE_MS)
-        assertThat(appListRequests(host)).isEqualTo(0)
+        assertThat(host.appListRequests()).isEqualTo(0)
 
         // Stopping the polling ends the poll that holds the lock.
         rig.binder.stopPolling()
-        awaitUntil("the app list request") { appListRequests(host) == 1 }
+        awaitUntil("the app list request") { host.appListRequests() == 1 }
         awaitUntil("the app list") { live.rawAppList != null }
     }
 
@@ -400,13 +371,13 @@ class ManagerAppListCharacterizationTest {
             if (request.path == "/applist") answerNow.await()
             HostReply.root(list)
         }
-        val computer = paired(host)
+        val computer = paired(host, UUID_1)
         rig.start()
         val updates = Updates()
         rig.binder.startPolling(updates)
         val poller = rig.appListPoller(computer)
         poller.start()
-        awaitUntil("the request in flight") { appListRequests(host) == 1 }
+        awaitUntil("the request in flight") { host.appListRequests() == 1 }
         assertThat(liveThreads(APP_LIST_THREAD)).hasSize(1)
 
         poller.stop()

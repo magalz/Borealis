@@ -1,9 +1,7 @@
 package io.github.magalz.borealis.computers
 
 import android.net.ConnectivityManager
-import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkInfo
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
@@ -23,8 +21,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowNetwork
-import org.robolectric.shadows.ShadowNetworkCapabilities
-import org.robolectric.shadows.ShadowNetworkInfo
 
 /**
  * The poll that saves a new host in the inherited `ComputerManagerService`: when the host is
@@ -65,42 +61,19 @@ class ManagerSiteLocalStunCharacterizationTest {
 
     /** The device is on a VPN (its active network) that runs over a Wi-Fi network. */
     private fun vpnOverWifi() {
-        network(
+        connectivity.connectNetwork(
             VPN_ID,
             ConnectivityManager.TYPE_VPN,
             listOf(NetworkCapabilities.TRANSPORT_VPN),
             emptyList(),
             active = true,
         )
-        network(
+        connectivity.connectNetwork(
             WIFI_ID,
             WIFI_ID,
             listOf(NetworkCapabilities.TRANSPORT_WIFI),
             listOf(NetworkCapabilities.NET_CAPABILITY_NOT_VPN),
         )
-    }
-
-    private fun network(
-        netId: Int,
-        type: Int,
-        transports: List<Int>,
-        capabilities: List<Int>,
-        active: Boolean = false,
-    ): Network {
-        val info =
-            ShadowNetworkInfo.newInstance(NetworkInfo.DetailedState.CONNECTED, type, 0, true, true)
-        val network = ShadowNetwork.newInstance(netId)
-        connectivity.addNetwork(network, info)
-        if (active) {
-            connectivity.setActiveNetworkInfo(info)
-            connectivity.setDefaultNetworkActive(true)
-        }
-        val netCaps = ShadowNetworkCapabilities.newInstance()
-        shadowOf(netCaps).clearCapabilities()
-        for (transport in transports) shadowOf(netCaps).addTransportType(transport)
-        for (capability in capabilities) shadowOf(netCaps).addCapability(capability)
-        connectivity.setNetworkCapabilities(network, netCaps)
-        return network
     }
 
     /**

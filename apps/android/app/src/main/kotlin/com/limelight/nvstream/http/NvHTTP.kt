@@ -48,6 +48,7 @@ import okhttp3.ConnectionPool
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.ResponseBody
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
@@ -406,8 +407,6 @@ constructor(
     // The initial pair query does require outside action (user entering a PIN) but subsequent
     // pairing
     // queries do not.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ThrowsCount")
     @Throws(IOException::class)
     private fun openHttpConnection(
         client: OkHttpClient,
@@ -426,10 +425,11 @@ constructor(
                 performAndroidTlsHack(client).newCall(request).execute()
             } catch (e: SSLHandshakeException) {
                 // BOREALIS: surface a pinned-certificate mismatch as its own type (host.failure)
-                if (certificateMismatch && e.cause is CertificateException) {
-                    throw CertificateMismatchException(e)
+                throw if (certificateMismatch && e.cause is CertificateException) {
+                    CertificateMismatchException(e)
+                } else {
+                    e
                 }
-                throw e
             }
 
         val body = response.body
@@ -441,12 +441,15 @@ constructor(
         // Unsuccessful, so close the response body
         body.close()
 
-        if (response.code == HTTP_NOT_FOUND) {
-            throw FileNotFoundException(completeUrl.toString())
-        } else {
-            throw HostHttpResponseException(response.code, response.message)
-        }
+        throw failureOf(response, completeUrl)
     }
+
+    private fun failureOf(response: Response, url: HttpUrl): IOException =
+        if (response.code == HTTP_NOT_FOUND) {
+            FileNotFoundException(url.toString())
+        } else {
+            HostHttpResponseException(response.code, response.message)
+        }
 
     @Throws(IOException::class)
     private fun openHttpConnectionToString(

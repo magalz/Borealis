@@ -135,29 +135,45 @@ class Xbox360ControllerTest {
         assertThat(log.warnings()).containsExactly("Failed to claim interfaces")
     }
 
+    private fun padWithEndpoints(
+        vararg endpoints: android.hardware.usb.UsbEndpoint
+    ): Pad<Xbox360Controller> =
+        pad(
+            device =
+                UsbPads.device(
+                    "/dev/odd",
+                    0x045E,
+                    0x028E,
+                    listOf(
+                        UsbPads.usbInterface(
+                            0,
+                            subclass = UsbPads.XB360_SUBCLASS,
+                            protocol = UsbPads.XB360_PROTOCOL,
+                            endpoints = endpoints.toList(),
+                        )
+                    ),
+                )
+        )
+
     private fun startFailsWith(
         warning: String,
         vararg endpoints: android.hardware.usb.UsbEndpoint,
     ) {
-        val device =
-            UsbPads.device(
-                "/dev/odd",
-                0x045E,
-                0x028E,
-                listOf(
-                    UsbPads.usbInterface(
-                        0,
-                        subclass = UsbPads.XB360_SUBCLASS,
-                        protocol = UsbPads.XB360_PROTOCOL,
-                        endpoints = endpoints.toList(),
-                    )
-                ),
-            )
-        val pad = pad(device = device)
+        val pad = padWithEndpoints(*endpoints)
 
         assertThat(pad.start()).isFalse()
         assertThat(pad.usb.writes).isEmpty()
         assertThat(log.warnings()).containsExactly(warning)
+    }
+
+    @Test
+    fun `a pad that cannot be claimed is not looked at for its endpoints`() {
+        val pad = padWithEndpoints(UsbPads.outEndpoint(1))
+        pad.usb.claimResults.add(false)
+
+        assertThat(pad.start()).isFalse()
+
+        assertThat(log.warnings()).containsExactly("Failed to claim interfaces")
     }
 
     @Test
@@ -423,6 +439,29 @@ class Xbox360ControllerTest {
         assertThat(thread.priority).isEqualTo(Thread.NORM_PRIORITY)
         assertThat(pad.usb.readTimeouts.toSet()).containsExactly(3000)
         assertThat(thread).isNotSameInstanceAs(Thread.currentThread())
+    }
+
+    // The thread start() made to read the pad: the controller keeps it for its stop.
+    private fun Xbox360Controller.readerThread(): Thread {
+        val field = AbstractXboxController::class.java.getDeclaredField("inputThread")
+        field.isAccessible = true
+        return field.get(this) as Thread
+    }
+
+    @Test
+    fun `an interrupt in the first second ends the reading thread before it announces the pad`() {
+        val pad = pad()
+        pad.start()
+
+        // The thread sleeps through its first second before it announces the pad: an interrupt
+        // there is a thread that is told to end, and nothing more.
+        val reader = pad.controller.readerThread()
+        reader.interrupt()
+        reader.join(5_000)
+
+        assertThat(reader.isAlive).isFalse()
+        assertThat(pad.listener.quietFor(300)).isTrue()
+        assertThat(pad.usb.closes).isEqualTo(0)
     }
 
     @Test

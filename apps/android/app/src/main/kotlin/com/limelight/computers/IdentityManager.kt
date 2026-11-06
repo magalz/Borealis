@@ -6,6 +6,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.io.Reader
 import java.util.Locale
 import java.util.Random
 
@@ -22,41 +23,46 @@ class IdentityManager(c: Context) {
         private const val UNIQUE_ID_FILE_NAME = "uniqueid"
         private const val UID_SIZE_IN_BYTES = 8
 
-        // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog). The
-        // stack trace goes to the standard error stream, as in the inherited Java. Logging it
-        // instead is a behaviour change. The saved id is kept when it is not hex (Sprint 16):
-        // generating a new one would unpair the client from every host. The warning must not
-        // hold the id, which is the identity of the client toward every host.
-        @Suppress("ReturnCount", "PrintStackTrace")
+        // Converted from the inherited Java; the stack trace goes to the standard error stream as
+        // it did, and logging it instead is a behaviour change (Sprint 18c backlog). The saved id
+        // is kept when it is not hex (Sprint 16): generating a new one would unpair the client
+        // from every host. The warning must not hold the id, which is the identity of the client
+        // toward every host.
+        @Suppress("PrintStackTrace")
         fun loadUniqueId(c: Context): String? {
-            // 2 Hex digits per byte
-            val uid = CharArray(UID_SIZE_IN_BYTES * 2)
             LimeLog.info("Reading UID from disk")
-            try {
+            return try {
                 InputStreamReader(c.openFileInput(UNIQUE_ID_FILE_NAME)).use { reader ->
-                    if (reader.read(uid) != UID_SIZE_IN_BYTES * 2) {
-                        LimeLog.severe("UID file data is truncated")
-                        return null
-                    }
-                    if (!uid.all { isHexDigit(it) }) {
-                        LimeLog.warning("UID file data is not hex digits, the saved id is kept")
-                    }
-                    return String(uid)
+                    readUniqueId(reader)
                 }
             } catch (ignored: FileNotFoundException) {
                 LimeLog.info("No UID file found")
-                return null
+                null
             } catch (e: IOException) {
                 LimeLog.severe("Error while reading UID file")
                 e.printStackTrace()
+                null
+            }
+        }
+
+        /** The id in [reader], or null when it holds fewer characters than an id. */
+        private fun readUniqueId(reader: Reader): String? {
+            // 2 Hex digits per byte
+            val uid = CharArray(UID_SIZE_IN_BYTES * 2)
+            if (reader.read(uid) != UID_SIZE_IN_BYTES * 2) {
+                LimeLog.severe("UID file data is truncated")
                 return null
             }
+            if (!uid.all { isHexDigit(it) }) {
+                LimeLog.warning("UID file data is not hex digits, the saved id is kept")
+            }
+            return String(uid)
         }
 
         private fun isHexDigit(ch: Char) = ch in '0'..'9' || ch in 'a'..'f' || ch in 'A'..'F'
 
         // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
-        // instead is a behaviour change (Sprint 12 backlog).
+        // instead is a behaviour change (Sprint 18c backlog).
         @Suppress("PrintStackTrace")
         fun generateNewUniqueId(c: Context): String {
             // Generate a new UID hex string

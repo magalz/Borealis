@@ -60,12 +60,6 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
      */
     private fun assumeNormalSpacing() = assumeTrue(case.spacing == TextSpacing.Normal)
 
-    /** The row of Audio effects with its whole summary is on the screen, so the fit covers it. */
-    private fun assertAudioEffectsShown() {
-        row("Audio effects").assertExists()
-        composeRule.onNodeWithText(AUDIO_EFFECTS_SUMMARY).assertExists()
-    }
-
     @Test
     @Config(qualifiers = TV, fontScale = SCALE)
     fun `Stream settings on a TV fit`() {
@@ -160,11 +154,6 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
         assertFits()
     }
 
-    private fun openAudioSection() {
-        composeRule.onAllNodesWithText("AUDIO")[0].performScrollTo().performClick()
-        composeRule.waitForIdle()
-    }
-
     @Test
     @Config(qualifiers = HANDHELD, fontScale = SCALE)
     fun `Appearance settings on a handheld fit`() {
@@ -251,10 +240,5 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
         fun cases(): List<FitCase> = fitCases()
 
         private const val SCALE = 2f
-        private const val NATIVE_SUMMARY =
-            "Sends real touch to the PC, as on a touchscreen. Needs a host with touch support."
-        private const val AUDIO_EFFECTS_SUMMARY =
-            "Lets the device's equalizer and sound effects change the stream's sound. " +
-                "Uses a slower audio path, which adds latency."
     }
 }

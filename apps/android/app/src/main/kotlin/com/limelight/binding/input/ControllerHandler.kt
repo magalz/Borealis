@@ -1325,7 +1325,7 @@ class ControllerHandler(
     // second release finds the buttons let go.
     private fun releaseMouseButtons(
         context: GenericControllerContext,
-        only: Int = ControllerPacket.A_FLAG or ControllerPacket.B_FLAG,
+        only: Int = MOUSE_BUTTON_FLAGS,
     ) {
         synchronized(inputLock) {
             if (context.mouseEmulationActive) {
@@ -1347,7 +1347,7 @@ class ControllerHandler(
     // destroys its old context and the new one carries the click and the mode over.
     private fun endMouse(
         context: GenericControllerContext,
-        only: Int = ControllerPacket.A_FLAG or ControllerPacket.B_FLAG,
+        only: Int = MOUSE_BUTTON_FLAGS,
     ) {
         synchronized(inputLock) {
             releaseMouseButtons(context, only)
@@ -1355,36 +1355,49 @@ class ControllerHandler(
         }
     }
 
-    // A pad that leaves lets go of the buttons it holds and no other pad on its number holds: its
-    // last state is the fused state of the number, so it holds what the others hold too. The stop
-    // lets go of every pad's buttons, so it takes no such care.
+    // A pad that leaves lets go of the buttons it holds and no other pad on its number holds, and
+    // takes them out of the last state of the pads that stay. That is the fused state of the
+    // number, so it holds what this pad held too: left there, the click would hide the next press
+    // of those pads, or go up a second time with them. The stop lets go of every pad's buttons, so
+    // it takes no such care.
     private fun endLeavingMouse(context: GenericControllerContext) {
         synchronized(inputLock) {
-            endMouse(context, context.sentInputMap() and heldByOthers(context).inv())
+            var heldByOthers = 0
+            forEachFusedWith(context) { heldByOthers = heldByOthers or it.sentInputMap() }
+            val released =
+                if (context.mouseEmulationActive) {
+                    context.mouseEmulationLastInputMap and
+                        context.sentInputMap() and
+                        heldByOthers.inv() and
+                        MOUSE_BUTTON_FLAGS
+                } else {
+                    0
+                }
+            forEachFusedWith(context) {
+                it.mouseEmulationLastInputMap = it.mouseEmulationLastInputMap and released.inv()
+            }
+            endMouse(context, released)
         }
     }
 
-    // What the contexts that transmitControllerInputLocked fuses into the number of the context
-    // hold, in the way it picks them
-    private fun heldByOthers(context: GenericControllerContext): Int {
-        var held = 0
-        fun fold(other: GenericControllerContext) {
-            val fused =
-                other !== context &&
-                    other.assignedControllerNumber &&
-                    other.controllerNumber == context.controllerNumber &&
-                    other.mouseEmulationActive == context.mouseEmulationActive
-            if (fused) {
-                held = held or other.sentInputMap()
-            }
-        }
-        inputDeviceContexts.forEachValue { fold(it) }
-        usbDeviceContexts.forEachValue { fold(it) }
+    // The contexts that transmitControllerInputLocked fuses into the number of the context, in the
+    // way it picks them
+    private inline fun forEachFusedWith(
+        context: GenericControllerContext,
+        action: (GenericControllerContext) -> Unit,
+    ) {
+        inputDeviceContexts.forEachValue { if (isFusedWith(context, it)) action(it) }
+        usbDeviceContexts.forEachValue { if (isFusedWith(context, it)) action(it) }
         if (defaultContext.controllerNumber == context.controllerNumber) {
-            held = held or defaultContext.sentInputMap()
+            action(defaultContext)
         }
-        return held
     }
+
+    private fun isFusedWith(context: GenericControllerContext, other: GenericControllerContext) =
+        other !== context &&
+            other.assignedControllerNumber &&
+            other.controllerNumber == context.controllerNumber &&
+            other.mouseEmulationActive == context.mouseEmulationActive
 
     private fun releaseContextInput(context: GenericControllerContext) {
         releaseMouseButtons(context)
@@ -4097,6 +4110,8 @@ class ControllerHandler(
         private const val EMULATING_TOUCHPAD = 0x4
 
         private const val MAX_GAMEPADS: Short = 16 // Limited by bits in activeGamepadMask
+
+        private const val MOUSE_BUTTON_FLAGS = ControllerPacket.A_FLAG or ControllerPacket.B_FLAG
 
         private const val BATTERY_RECHECK_INTERVAL_MS = 120 * 1000
 

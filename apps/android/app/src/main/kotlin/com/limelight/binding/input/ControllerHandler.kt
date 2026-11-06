@@ -1990,12 +1990,9 @@ class ControllerHandler(
         // evaluates the deadzone.
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress(
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "LongParameterList",
-    )
+    // Converted as is from the inherited Java; LongParameterList stays because the only caller,
+    // handleMotionEvent, passes the eight axis values as separate floats (Sprint 18c backlog).
+    @Suppress("LongParameterList")
     private fun handleAxisSet(
         context: InputDeviceContext,
         lsX: Float,
@@ -2007,9 +2004,6 @@ class ControllerHandler(
         hatX: Float,
         hatY: Float,
     ) {
-        var leftTriggerValue = lt
-        var rightTriggerValue = rt
-
         if (context.leftStickXAxis != -1 && context.leftStickYAxis != -1) {
             val leftStickVector = populateCachedVector(lsX, lsY)
 
@@ -2029,60 +2023,70 @@ class ControllerHandler(
         }
 
         if (context.leftTriggerAxis != -1 && context.rightTriggerAxis != -1) {
-            // Android sends an initial 0 value for trigger axes even if the trigger
-            // should be negative when idle. After the first touch, the axes will go back
-            // to normal behavior, so ignore triggersIdleNegative for each trigger until
-            // first touch.
-            if (leftTriggerValue != 0f) {
-                context.leftTriggerAxisUsed = true
-            }
-            if (rightTriggerValue != 0f) {
-                context.rightTriggerAxisUsed = true
-            }
-            if (context.triggersIdleNegative) {
-                if (context.leftTriggerAxisUsed) {
-                    leftTriggerValue = (leftTriggerValue + 1) / 2
-                }
-                if (context.rightTriggerAxisUsed) {
-                    rightTriggerValue = (rightTriggerValue + 1) / 2
-                }
-            }
-
-            if (leftTriggerValue <= context.triggerDeadzone) {
-                leftTriggerValue = 0f
-            }
-            if (rightTriggerValue <= context.triggerDeadzone) {
-                rightTriggerValue = 0f
-            }
-
-            context.leftTrigger = triggerByte(leftTriggerValue)
-            context.rightTrigger = triggerByte(rightTriggerValue)
+            setTriggerValues(context, lt, rt)
         }
 
         if (context.hatXAxis != -1 && context.hatYAxis != -1) {
-            context.inputMap =
-                context.inputMap and
-                    (ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG).inv()
-            if (hatX < -HAT_THRESHOLD) {
-                context.inputMap = context.inputMap or ControllerPacket.LEFT_FLAG
-                context.hatXAxisUsed = true
-            } else if (hatX > HAT_THRESHOLD) {
-                context.inputMap = context.inputMap or ControllerPacket.RIGHT_FLAG
-                context.hatXAxisUsed = true
-            }
-
-            context.inputMap =
-                context.inputMap and (ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG).inv()
-            if (hatY < -HAT_THRESHOLD) {
-                context.inputMap = context.inputMap or ControllerPacket.UP_FLAG
-                context.hatYAxisUsed = true
-            } else if (hatY > HAT_THRESHOLD) {
-                context.inputMap = context.inputMap or ControllerPacket.DOWN_FLAG
-                context.hatYAxisUsed = true
-            }
+            setHatButtons(context, hatX, hatY)
         }
 
         sendControllerInputPacket(context)
+    }
+
+    private fun setTriggerValues(context: InputDeviceContext, lt: Float, rt: Float) {
+        var leftTriggerValue = lt
+        var rightTriggerValue = rt
+
+        // Android sends an initial 0 value for trigger axes even if the trigger
+        // should be negative when idle. After the first touch, the axes will go back
+        // to normal behavior, so ignore triggersIdleNegative for each trigger until
+        // first touch.
+        if (leftTriggerValue != 0f) {
+            context.leftTriggerAxisUsed = true
+        }
+        if (rightTriggerValue != 0f) {
+            context.rightTriggerAxisUsed = true
+        }
+        if (context.triggersIdleNegative) {
+            if (context.leftTriggerAxisUsed) {
+                leftTriggerValue = (leftTriggerValue + 1) / 2
+            }
+            if (context.rightTriggerAxisUsed) {
+                rightTriggerValue = (rightTriggerValue + 1) / 2
+            }
+        }
+
+        if (leftTriggerValue <= context.triggerDeadzone) {
+            leftTriggerValue = 0f
+        }
+        if (rightTriggerValue <= context.triggerDeadzone) {
+            rightTriggerValue = 0f
+        }
+
+        context.leftTrigger = triggerByte(leftTriggerValue)
+        context.rightTrigger = triggerByte(rightTriggerValue)
+    }
+
+    private fun setHatButtons(context: InputDeviceContext, hatX: Float, hatY: Float) {
+        context.inputMap =
+            context.inputMap and (ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG).inv()
+        if (hatX < -HAT_THRESHOLD) {
+            context.inputMap = context.inputMap or ControllerPacket.LEFT_FLAG
+            context.hatXAxisUsed = true
+        } else if (hatX > HAT_THRESHOLD) {
+            context.inputMap = context.inputMap or ControllerPacket.RIGHT_FLAG
+            context.hatXAxisUsed = true
+        }
+
+        context.inputMap =
+            context.inputMap and (ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG).inv()
+        if (hatY < -HAT_THRESHOLD) {
+            context.inputMap = context.inputMap or ControllerPacket.UP_FLAG
+            context.hatYAxisUsed = true
+        } else if (hatY > HAT_THRESHOLD) {
+            context.inputMap = context.inputMap or ControllerPacket.DOWN_FLAG
+            context.hatYAxisUsed = true
+        }
     }
 
     // Normalize the given raw float value into a 0.0-1.0f range; a range with no width puts every

@@ -4183,17 +4183,14 @@ class ControllerHandler(
 
         private const val BATTERY_RECHECK_INTERVAL_MS = 120 * 1000
 
-        // The bulk writes of the USB drivers give up after 100 ms
-        private const val USB_WRITE_TIMEOUT_MS = 100L
-
-        // A write that took this long got no answer: one that times out can come back some
-        // milliseconds early, and a pad that answers takes a few
-        private const val USB_WRITE_STUCK_MS = USB_WRITE_TIMEOUT_MS / 2
+        // A write that took this long got no answer: the bulk write of a USB driver gives up after
+        // its timeout and can come back some milliseconds early, and a pad that answers takes a few
+        private const val USB_WRITE_STUCK_MS = AbstractController.USB_WRITE_TIMEOUT_MS / 2L
 
         // The stop starts no USB pad once its zeroing has taken this long: the time of two writes
         // that time out, so a pad that does not answer does not take the pads after it with it. The
         // pad started last still makes its writes: the stop takes this time and that pad's.
-        private const val USB_ZERO_BUDGET_MS = 2 * USB_WRITE_TIMEOUT_MS
+        private const val USB_ZERO_BUDGET_MS = 2L * AbstractController.USB_WRITE_TIMEOUT_MS
 
         // Not a BatteryState status: marks a pad that reported that it has no battery
         private const val BATTERY_STATUS_NOT_PRESENT = -1

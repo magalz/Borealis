@@ -1,11 +1,10 @@
 package io.github.magalz.borealis.input.feedback
 
 import android.os.Handler
-import android.util.SparseArray
 import android.view.KeyEvent
 import com.google.common.truth.Truth.assertThat
-import com.limelight.binding.input.ControllerHandler
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.testing.contextField
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Test
@@ -41,20 +40,8 @@ class StrayBatteryPollTest : FeedbackTestBase() {
     }
 
     /** The poll of [pad], the runnable that the handler's thread runs every 120 seconds. */
-    private fun pollOf(rig: FeedbackRig, pad: Pad): Runnable {
-        @Suppress("UNCHECKED_CAST") // The field holds the handler's contexts by construction.
-        val contexts =
-            ControllerHandler::class
-                .java
-                .getDeclaredField("inputDeviceContexts")
-                .apply { isAccessible = true }
-                .get(rig.handler) as SparseArray<Any>
-        val context = contexts.get(pad.id)
-        return context.javaClass
-            .getDeclaredField("batteryStateUpdateRunnable")
-            .apply { isAccessible = true }
-            .get(context) as Runnable
-    }
+    private fun pollOf(rig: FeedbackRig, pad: Pad): Runnable =
+        rig.handler.contextField(pad.id, "batteryStateUpdateRunnable") as Runnable
 
     /** Runs [poll] on the handler's thread, behind what the handler posted before. */
     private fun runOnBackground(rig: FeedbackRig, poll: Runnable) {

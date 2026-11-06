@@ -25,10 +25,22 @@ fun ControllerHandler.addInputDeviceContext(deviceId: Int, fields: Map<String, A
             ClassParameter.from(ControllerHandler::class.java, this),
         )
     fields.forEach { (name, value) -> ReflectionHelpers.setField(context, name, value) }
-    ReflectionHelpers.getField<SparseArray<Any?>>(this, "inputDeviceContexts")
-        .put(deviceId, context)
+    inputDeviceContexts().put(deviceId, context)
     return context
 }
+
+/** The handler's contexts by device id: the pads Android reports, as the handler keeps them. */
+fun ControllerHandler.inputDeviceContexts(): SparseArray<Any?> =
+    ReflectionHelpers.getField(this, "inputDeviceContexts")
+
+/** The field [name] of the context of the pad with [deviceId], which the handler has made. */
+fun ControllerHandler.contextField(deviceId: Int, name: String): Any? =
+    ReflectionHelpers.getField(
+        checkNotNull(inputDeviceContexts().get(deviceId)) {
+            "The handler has no context for $deviceId"
+        },
+        name,
+    )
 
 /** An input device named [name] with the id [deviceId], which the input manager lists. */
 @Suppress("DEPRECATION") // Robolectric offers no other way to make an input device.

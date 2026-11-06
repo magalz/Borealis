@@ -1,11 +1,9 @@
 package io.github.magalz.borealis.input.mouserelease
 
 import android.view.KeyEvent.KEYCODE_BUTTON_A
-import android.view.KeyEvent.KEYCODE_BUTTON_START
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.ControllerPacket
 import io.github.magalz.borealis.input.ControllerHandlerRig
-import io.github.magalz.borealis.input.FakeUsbController
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,20 +23,13 @@ class DefaultContextMouseOffTest {
     @get:Rule val rig = ControllerHandlerRig()
     private val a = ControllerPacket.A_FLAG
 
-    /** A Start hold, long enough, and its release: it flips the mouse mode of the pad. */
-    private fun holdStartAndLetGo() {
-        rig.press(KEYCODE_BUTTON_START)
-        rig.advanceBy(800)
-        rig.release(KEYCODE_BUTTON_START)
-    }
-
     @Test
     fun `a default-context pad that ends its mouse with Start while it holds A lets the left button go once`() {
-        holdStartAndLetGo()
+        rig.holdStartOnSystemPadAndLetGo()
         rig.press(KEYCODE_BUTTON_A)
         assertThat(rig.connection.buttonEvents()).containsExactly("down 1")
 
-        holdStartAndLetGo()
+        rig.holdStartOnSystemPadAndLetGo()
 
         assertThat(rig.connection.buttonEvents()).containsExactly("down 1", "up 1").inOrder()
 
@@ -50,16 +41,15 @@ class DefaultContextMouseOffTest {
 
     @Test
     fun `a default-context pad that ends its mouse while a mouse-mode pad on its number holds A sends no up`() {
-        holdStartAndLetGo()
-        val other = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
-        rig.handler.setMouseEmulation(true)
+        rig.holdStartOnSystemPadAndLetGo()
+        val other = rig.usbPadInMouseMode()
         assertThat(rig.handler.isMouseEmulationOnAnyPad).isTrue()
         rig.press(KEYCODE_BUTTON_A)
         other.report(a)
         val before = rig.connection.buttonEvents()
         assertThat(before).contains("down 1")
 
-        holdStartAndLetGo()
+        rig.holdStartOnSystemPadAndLetGo()
 
         assertThat(rig.connection.buttonEvents()).isEqualTo(before)
     }

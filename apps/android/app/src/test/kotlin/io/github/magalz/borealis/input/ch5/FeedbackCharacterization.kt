@@ -22,9 +22,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The base of the Sprint 18a CH-5 tests (battery, rumble and motion): the feedback rig with the
- * shadows of its hardware. The shadows are listed here because `robolectric.properties` gives them
- * to the `feedback` package alone; the list is that file's.
+ * The base of the Sprint 18a CH-5 tests (battery, rumble and motion) and of the CH-1 quad rumble
+ * test: the feedback rig with the shadows of its hardware. The shadows are listed here because
+ * `robolectric.properties` gives them to the `feedback` package alone, and one for `ch1` would give
+ * them to its other tests too; the list is that file's.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(

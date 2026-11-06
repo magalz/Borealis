@@ -301,6 +301,50 @@ class UsbDriverServiceTest {
     }
 
     @Test
+    fun `a pad that cannot start still takes its controller id`() {
+        // An interface without an OUT endpoint: the driver cannot find its endpoints.
+        val broken =
+            UsbPads.device(
+                "/dev/broken",
+                0x045E,
+                0x028E,
+                listOf(
+                    UsbPads.usbInterface(
+                        0,
+                        subclass = UsbPads.XB360_SUBCLASS,
+                        protocol = UsbPads.XB360_PROTOCOL,
+                        endpoints = listOf(UsbPads.inEndpoint()),
+                    )
+                ),
+            )
+        plugIn(broken)
+        createService()
+        binder.start()
+        val good = xbox360()
+        plugIn(good)
+
+        sendAttach(good)
+        idle(1_000)
+
+        assertThat(heldControllers().map { it.controllerId }).containsExactly(1)
+    }
+
+    @Test
+    fun `a device that is skipped before its driver is built takes no controller id`() {
+        val mouse = UsbPads.device("/dev/mouse", 0x1234, 0x0001, emptyList())
+        val pad = xbox360()
+        plugIn(mouse)
+        plugIn(pad, permission = false)
+        createService()
+        binder.start()
+
+        plugIn(pad, permission = true)
+        sendPermissionResult(pad, granted = true)
+
+        assertThat(heldControllers().map { it.controllerId }).containsExactly(0)
+    }
+
+    @Test
     fun `a listener set later hears about the pads already claimed`() {
         plugIn(xboxOne())
         createService()

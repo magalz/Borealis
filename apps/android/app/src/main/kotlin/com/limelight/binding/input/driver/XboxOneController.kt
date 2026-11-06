@@ -1,6 +1,5 @@
 package com.limelight.binding.input.driver
 
-import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import com.limelight.LimeLog
@@ -79,69 +78,65 @@ class XboxOneController(
         connection.bulkTransfer(checkNotNull(outEndpt), payload, payload.size, ACK_TIMEOUT_MS)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount")
-    override fun handleRead(buffer: ByteBuffer): Boolean {
-        when (buffer.get().toInt()) {
-            BUTTONS_REPORT -> {
-                if (buffer.remaining() < BUTTONS_REPORT_MIN_SIZE) {
-                    LimeLog.severe("XBone button/axis read too small: " + buffer.remaining())
-                    return false
-                }
-
-                buffer.position(buffer.position() + BUTTONS_REPORT_SKIP)
-                processButtons(buffer)
-                return true
-            }
-            MODE_REPORT -> {
-                if (buffer.remaining() < MODE_REPORT_MIN_SIZE) {
-                    LimeLog.severe("XBone mode read too small: " + buffer.remaining())
-                    return false
-                }
-
-                // The Xbox One S controller needs acks for mode reports otherwise
-                // it retransmits them forever.
-                if (buffer.get().toInt() == MODE_REPORT_ACK_FLAGS) {
-                    ackModeReport(buffer.get())
-                    buffer.position(buffer.position() + 1)
-                } else {
-                    buffer.position(buffer.position() + 2)
-                }
-                setButtonFlag(
-                    ControllerPacket.SPECIAL_BUTTON_FLAG,
-                    buffer.get().toInt() and GUIDE_BIT,
-                )
-                return true
-            }
+    // Reads a buttons report after its type byte. Returns false when the report is too short.
+    private fun readButtonsReport(buffer: ByteBuffer): Boolean {
+        if (buffer.remaining() < BUTTONS_REPORT_MIN_SIZE) {
+            LimeLog.severe("XBone button/axis read too small: " + buffer.remaining())
+            return false
         }
 
-        return false
+        buffer.position(buffer.position() + BUTTONS_REPORT_SKIP)
+        processButtons(buffer)
+        return true
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount", "LoopWithTooManyJumpStatements")
+    // Reads a mode report after its type byte. Returns false when the report is too short.
+    private fun readModeReport(buffer: ByteBuffer): Boolean {
+        if (buffer.remaining() < MODE_REPORT_MIN_SIZE) {
+            LimeLog.severe("XBone mode read too small: " + buffer.remaining())
+            return false
+        }
+
+        // The Xbox One S controller needs acks for mode reports otherwise
+        // it retransmits them forever.
+        if (buffer.get().toInt() == MODE_REPORT_ACK_FLAGS) {
+            ackModeReport(buffer.get())
+            buffer.position(buffer.position() + 1)
+        } else {
+            buffer.position(buffer.position() + 2)
+        }
+        setButtonFlag(ControllerPacket.SPECIAL_BUTTON_FLAG, buffer.get().toInt() and GUIDE_BIT)
+        return true
+    }
+
+    override fun handleRead(buffer: ByteBuffer): Boolean =
+        when (buffer.get().toInt()) {
+            BUTTONS_REPORT -> readButtonsReport(buffer)
+            MODE_REPORT -> readModeReport(buffer)
+            else -> false
+        }
+
     override fun doInit(): Boolean {
         // Send all applicable init packets
         for (pkt in INIT_PKTS) {
-            if (pkt.vendorId != 0 && device.vendorId != pkt.vendorId) {
-                continue
-            }
+            if (pkt.appliesTo(device)) {
+                val data = pkt.data.copyOf(pkt.data.size)
 
-            if (pkt.productId != 0 && device.productId != pkt.productId) {
-                continue
-            }
+                // Populate sequence number
+                data[2] = seqNum++
 
-            val data = pkt.data.copyOf(pkt.data.size)
-
-            // Populate sequence number
-            data[2] = seqNum++
-
-            // Send the initialization packet
-            val res =
-                connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, INIT_TIMEOUT_MS)
-            if (res != data.size) {
-                LimeLog.warning("Initialization transfer failed: $res")
-                return false
+                // Send the initialization packet
+                val res =
+                    connection.bulkTransfer(
+                        checkNotNull(outEndpt),
+                        data,
+                        data.size,
+                        INIT_TIMEOUT_MS,
+                    )
+                if (res != data.size) {
+                    LimeLog.warning("Initialization transfer failed: $res")
+                    return false
+                }
             }
         }
 
@@ -187,7 +182,12 @@ class XboxOneController(
         super.stop()
     }
 
-    private class InitPacket(val vendorId: Int, val productId: Int, val data: ByteArray)
+    private class InitPacket(val vendorId: Int, val productId: Int, val data: ByteArray) {
+        // A vendor or product of 0 means any.
+        fun appliesTo(device: UsbDevice): Boolean =
+            (vendorId == 0 || device.vendorId == vendorId) &&
+                (productId == 0 || device.productId == productId)
+    }
 
     companion object {
         private const val XB1_IFACE_SUBCLASS = 71
@@ -325,24 +325,8 @@ class XboxOneController(
         private const val INIT_TIMEOUT_MS = 3000
         private const val ACK_TIMEOUT_MS = 3000
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition")
         @JvmStatic
-        fun canClaimDevice(device: UsbDevice): Boolean {
-            for (supportedVid in SUPPORTED_VENDORS) {
-                if (
-                    device.vendorId == supportedVid &&
-                        device.interfaceCount >= 1 &&
-                        device.getInterface(0).interfaceClass ==
-                            UsbConstants.USB_CLASS_VENDOR_SPEC &&
-                        device.getInterface(0).interfaceSubclass == XB1_IFACE_SUBCLASS &&
-                        device.getInterface(0).interfaceProtocol == XB1_IFACE_PROTOCOL
-                ) {
-                    return true
-                }
-            }
-
-            return false
-        }
+        fun canClaimDevice(device: UsbDevice): Boolean =
+            matchesFirstInterface(device, SUPPORTED_VENDORS, XB1_IFACE_SUBCLASS, XB1_IFACE_PROTOCOL)
     }
 }

@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.stream.game.motion
 
 import android.view.MotionEvent
-import android.view.View
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.jni.MoonBridge
@@ -20,20 +19,6 @@ import org.junit.Test
  */
 internal class NativeTouchTest : MotionTestBase() {
     private fun native() = rig.session.setTouchMode(TouchMode.NATIVE)
-
-    private fun touch(view: View, event: MotionEvent) = rig.game.onTouch(view, event)
-
-    private fun finger(
-        action: Int,
-        x: Float,
-        y: Float,
-        at: Long = TIME,
-        build: MotionSpec.() -> Unit = {},
-    ) =
-        fingerEvent(action, listOf(x to y)) {
-            eventTime = at
-            build()
-        }
 
     // Two fingers; the action is for the pointer [index].
     private fun twoFingers(action: Int, index: Int, build: MotionSpec.() -> Unit = {}) =
@@ -434,7 +419,6 @@ internal class NativeTouchTest : MotionTestBase() {
     }
 
     private companion object {
-        const val TIME = 10_000L
         const val EPSILON = 1e-6f
         val CANCEL_ALL = MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL.toInt()
         val DOWN = MoonBridge.LI_TOUCH_EVENT_DOWN.toInt()

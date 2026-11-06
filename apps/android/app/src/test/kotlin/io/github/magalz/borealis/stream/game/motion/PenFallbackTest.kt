@@ -273,8 +273,4 @@ internal class PenFallbackTest : MotionTestBase() {
 
         assertThat(calls).containsExactly(position(105, 100))
     }
-
-    private companion object {
-        const val TIME = 10_000L
-    }
 }

@@ -78,10 +78,9 @@ class ComputerDatabaseManager(c: Context) {
     // A host without a name or without an id is refused, with a log: the name column is NOT NULL,
     // so the insert would throw, and a row without an id could not be deleted by its id.
     //
-    // Converted from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    // The JSON failure is still rethrown as a RuntimeException, and the stack trace of a
-    // certificate that cannot be encoded still goes to the standard error stream. Logging it
-    // instead is a behaviour change.
+    // Converted from the inherited Java; kept as it was: the JSON failure is still rethrown as a
+    // RuntimeException, and the stack trace of a certificate that cannot be encoded still goes to
+    // the standard error stream. Logging it instead is a behaviour change (Sprint 18c backlog).
     @Suppress("TooGenericExceptionThrown", "PrintStackTrace")
     fun updateComputer(details: ComputerDetails): Boolean {
         val uuid = details.uuid
@@ -133,8 +132,8 @@ class ComputerDatabaseManager(c: Context) {
 
     // The lookups by id and by name still throw a RuntimeException caused by the JSON one for a row
     // whose addresses are bad, and the IllegalArgumentException of the address tuple itself, not
-    // wrapped, for a port that is not positive (Sprint 12 backlog); the list leaves such a row out
-    // (see getAllComputers).
+    // wrapped, for a port that is not positive; the list leaves such a row out (see
+    // getAllComputers). Throwing something else instead is a behaviour change (Sprint 18c backlog).
     @Suppress("TooGenericExceptionThrown")
     private fun getComputerFromCursor(c: Cursor): ComputerDetails =
         try {
@@ -146,9 +145,9 @@ class ComputerDatabaseManager(c: Context) {
     // Throws the JSONException of addresses that are not what updateComputer writes, and the
     // IllegalArgumentException of an address tuple that is not valid.
     //
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    // The stack trace of a bad certificate still goes to the standard error stream (the host is
-    // returned without it).
+    // Converted as is from the inherited Java; kept as it was: the stack trace of a bad certificate
+    // still goes to the standard error stream (the host is returned without it). Logging it
+    // instead is a behaviour change (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     private fun readComputer(c: Cursor): ComputerDetails {
         val details = ComputerDetails()

@@ -3,7 +3,8 @@ package com.limelight.nvstream
 import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.host.launch.ConflictChoice
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+// Converted as is from the inherited Java; TooManyFunctions stays: splitting the listener changes
+// Game and HeldStageFailures, which implement it, and is a class split (Sprint 18d backlog).
 @Suppress("TooManyFunctions")
 interface NvConnectionListener {
     fun stageStarting(stage: String?)

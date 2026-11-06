@@ -255,8 +255,6 @@ constructor(
         this.pairingManager = PairingManager(this, cryptoProvider)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ThrowsCount")
     @Throws(IOException::class, XmlPullParserException::class)
     fun getServerInfo(likelyOnline: Boolean): String {
         // If we believe the PC is online, give it a little extra time to respond
@@ -269,54 +267,60 @@ constructor(
         // like there are extra request headers required to make this stuff work over HTTP.
         //
 
+        // No pinned cert, so use HTTP
+        if (serverCert == null) {
+            return openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
+        }
+
         // When we have a pinned cert, use HTTPS to fetch serverinfo and fall back on cert mismatch
-        if (serverCert != null) {
-            try {
-                val resp =
-                    try {
-                        openHttpConnectionToString(client, getHttpsUrl(likelyOnline), "serverinfo")
-                    } catch (e: SSLHandshakeException) {
-                        // Detect if we failed due to a server cert mismatch
-                        if (e.cause is CertificateException) {
-                            // Jump to the GfeHttpResponseException exception handler to retry
-                            // over HTTP which will allow us to pair again to update the cert
-                            throw HostHttpResponseException(
-                                HTTP_UNAUTHORIZED,
-                                "Server certificate mismatch",
-                            )
-                        } else {
-                            // BOREALIS: audit trail
-                            TlsAudit.failure(baseUrlHttp.host, e)
-                            throw e
-                        }
-                    } catch (ignored: CertificateMismatchException) {
-                        // BOREALIS: the mismatch is typed now, the fallback is the same
-                        throw HostHttpResponseException(
-                            HTTP_UNAUTHORIZED,
-                            "Server certificate mismatch",
-                        )
-                    }
-
-                // This will throw an exception if the request came back with a failure status.
-                // We want this because it will throw us into the HTTP case if the client is
-                // unpaired.
-                getServerVersion(resp)
-
-                return resp
-            } catch (e: HostHttpResponseException) {
-                if (e.errorCode == HTTP_UNAUTHORIZED) {
-                    // Cert validation error - fall back to HTTP
-                    return openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
-                }
-
-                // If it's not a cert validation error, throw it
+        try {
+            return getServerInfoOverHttps(client, likelyOnline)
+        } catch (e: HostHttpResponseException) {
+            if (e.errorCode != HTTP_UNAUTHORIZED) {
+                // It's not a cert validation error, throw it
                 throw e
             }
-        } else {
-            // No pinned cert, so use HTTP
+
+            // Cert validation error - fall back to HTTP
             return openHttpConnectionToString(client, baseUrlHttp, "serverinfo")
         }
     }
+
+    // A server cert mismatch comes out as the HostHttpResponseException that sends getServerInfo to
+    // retry over HTTP, which will allow us to pair again to update the cert.
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun getServerInfoOverHttps(client: OkHttpClient, likelyOnline: Boolean): String {
+        val resp =
+            try {
+                openHttpConnectionToString(client, getHttpsUrl(likelyOnline), "serverinfo")
+            } catch (e: SSLHandshakeException) {
+                throw handshakeFailure(e)
+            } catch (ignored: CertificateMismatchException) {
+                // BOREALIS: the mismatch is typed now, the fallback is the same
+                throw certificateMismatchResponse()
+            }
+
+        // This will throw an exception if the request came back with a failure status.
+        // We want this because it will throw us into the HTTP case if the client is
+        // unpaired.
+        getServerVersion(resp)
+
+        return resp
+    }
+
+    private fun handshakeFailure(e: SSLHandshakeException): IOException {
+        // Detect if we failed due to a server cert mismatch
+        if (e.cause is CertificateException) {
+            return certificateMismatchResponse()
+        }
+
+        // BOREALIS: audit trail
+        TlsAudit.failure(baseUrlHttp.host, e)
+        return e
+    }
+
+    private fun certificateMismatchResponse(): HostHttpResponseException =
+        HostHttpResponseException(HTTP_UNAUTHORIZED, "Server certificate mismatch")
 
     @Throws(IOException::class, XmlPullParserException::class)
     fun getComputerDetails(serverInfo: String): ComputerDetails {

@@ -113,12 +113,14 @@ class Xbox360WirelessDongle(
         // Nothing to do
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         // Unreachable.
+        return true
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         // Unreachable.
+        return true
     }
 
     companion object {

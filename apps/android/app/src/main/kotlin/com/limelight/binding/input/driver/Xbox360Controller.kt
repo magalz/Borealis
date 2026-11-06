@@ -101,7 +101,7 @@ class Xbox360Controller(
         return true
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         val data =
             byteArrayOf(
                 0x00,
@@ -114,14 +114,17 @@ class Xbox360Controller(
                 0x00,
             )
         val res =
-            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, RUMBLE_TIMEOUT_MS)
-        if (res != data.size) {
+            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
+        val sent = res == data.size
+        if (!sent) {
             LimeLog.warning("Rumble transfer failed: $res")
         }
+        return sent
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         // Trigger motors not present on Xbox 360 controllers
+        return true
     }
 
     companion object {
@@ -191,7 +194,6 @@ class Xbox360Controller(
         private const val LED_TIMEOUT_MS = 3000
         private const val RUMBLE_REPORT_SIZE: Byte = 0x08
         private const val MOTOR_BYTE_SHIFT = 8
-        private const val RUMBLE_TIMEOUT_MS = 100
 
         // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
         @Suppress("ComplexCondition")

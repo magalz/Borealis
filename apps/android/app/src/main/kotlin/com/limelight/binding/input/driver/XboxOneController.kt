@@ -148,7 +148,7 @@ class XboxOneController(
         return true
     }
 
-    private fun sendRumblePacket() {
+    private fun sendRumblePacket(): Boolean {
         val data =
             byteArrayOf(
                 RUMBLE_REPORT_ID,
@@ -166,22 +166,24 @@ class XboxOneController(
                 RUMBLE_FULL,
             )
         val res =
-            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, RUMBLE_TIMEOUT_MS)
-        if (res != data.size) {
+            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
+        val sent = res == data.size
+        if (!sent) {
             LimeLog.warning("Rumble transfer failed: $res")
         }
+        return sent
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         this.lowFreqMotor = lowFreqMotor
         this.highFreqMotor = highFreqMotor
-        sendRumblePacket()
+        return sendRumblePacket()
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         this.leftTriggerMotor = leftTrigger
         this.rightTriggerMotor = rightTrigger
-        sendRumblePacket()
+        return sendRumblePacket()
     }
 
     override fun stop() {
@@ -328,7 +330,6 @@ class XboxOneController(
         private const val MOTOR_SHIFT = 9
         private const val INIT_TIMEOUT_MS = 3000
         private const val ACK_TIMEOUT_MS = 3000
-        private const val RUMBLE_TIMEOUT_MS = 100
 
         // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
         @Suppress("ComplexCondition")

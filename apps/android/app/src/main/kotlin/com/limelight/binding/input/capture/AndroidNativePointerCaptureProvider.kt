@@ -10,6 +10,12 @@ import android.view.View
 /** How long after focus is regained the pointer is captured again. */
 private const val RECAPTURE_DELAY_MS = 500L
 
+/** Whether [device] is a mouse, a mouse that reports relative motion, or a touchpad. */
+private fun hasCaptureSource(device: InputDevice): Boolean =
+    device.supportsSource(InputDevice.SOURCE_MOUSE) ||
+        device.supportsSource(InputDevice.SOURCE_MOUSE_RELATIVE) ||
+        device.supportsSource(InputDevice.SOURCE_TOUCHPAD)
+
 // We extend AndroidPointerIconCaptureProvider because we want to also get the
 // pointer icon hiding behavior over our stream view just in case pointer capture
 // is unavailable on this system (ex: DeX, ChromeOS)
@@ -21,40 +27,25 @@ class AndroidNativePointerCaptureProvider(activity: Activity, private val target
     // present. This is a workaround for an Android 12 regression causing
     // incorrect mouse input when using the SPen.
     // https://github.com/moonlight-stream/moonlight-android/issues/1030
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("LoopWithTooManyJumpStatements")
-    private fun hasCaptureCompatibleInputDevice(): Boolean {
-        for (id in InputDevice.getDeviceIds()) {
-            val device = InputDevice.getDevice(id) ?: continue
-
-            // Skip touchscreens when considering compatible capture devices.
-            // Samsung devices on Android 12 will report a sec_touchpad device
-            // with SOURCE_TOUCHSCREEN, SOURCE_KEYBOARD, and SOURCE_MOUSE.
-            // Upon enabling pointer capture, that device will switch to
-            // SOURCE_KEYBOARD and SOURCE_TOUCHPAD.
-            // Only skip on non ChromeOS devices cause the ChromeOS pointer else
-            // gets disabled removing relative mouse capabilities
-            // on Chromebooks with touchscreens
-            if (
-                device.supportsSource(InputDevice.SOURCE_TOUCHSCREEN) &&
-                    !targetView.context.packageManager.hasSystemFeature(
-                        "org.chromium.arc.device_management"
-                    )
-            ) {
-                continue
-            }
-
-            if (
-                device.supportsSource(InputDevice.SOURCE_MOUSE) ||
-                    device.supportsSource(InputDevice.SOURCE_MOUSE_RELATIVE) ||
-                    device.supportsSource(InputDevice.SOURCE_TOUCHPAD)
-            ) {
-                return true
-            }
+    private fun hasCaptureCompatibleInputDevice(): Boolean =
+        InputDevice.getDeviceIds().any { id ->
+            val device = InputDevice.getDevice(id)
+            device != null && !isSkippedTouchscreen(device) && hasCaptureSource(device)
         }
 
-        return false
-    }
+    // Skip touchscreens when considering compatible capture devices.
+    // Samsung devices on Android 12 will report a sec_touchpad device
+    // with SOURCE_TOUCHSCREEN, SOURCE_KEYBOARD, and SOURCE_MOUSE.
+    // Upon enabling pointer capture, that device will switch to
+    // SOURCE_KEYBOARD and SOURCE_TOUCHPAD.
+    // Only skip on non ChromeOS devices cause the ChromeOS pointer else
+    // gets disabled removing relative mouse capabilities
+    // on Chromebooks with touchscreens
+    private fun isSkippedTouchscreen(device: InputDevice): Boolean =
+        device.supportsSource(InputDevice.SOURCE_TOUCHSCREEN) &&
+            !targetView.context.packageManager.hasSystemFeature(
+                "org.chromium.arc.device_management"
+            )
 
     // Whether hideCursor registered the device listener; showCursor undoes only what it did.
     private var listeningForDevices = false

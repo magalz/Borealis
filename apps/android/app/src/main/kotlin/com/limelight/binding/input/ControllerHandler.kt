@@ -114,6 +114,7 @@ class ControllerHandler(
     @Volatile private var pointerSpeedFactor = 1f
     private val inputLock = Any()
     private var controllersWithInput = 0 // guarded by inputLock
+    private val fusedPacket = FusedPacket() // guarded by inputLock
 
     private var currentControllers: Short = 0
     private var initialControllers: Short = 0
@@ -439,103 +440,19 @@ class ControllerHandler(
 
     // Called before sending input but after we've determined that this
     // is definitely a controller (not a keyboard, mouse, or something else)
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun assignControllerNumberIfNeeded(context: GenericControllerContext) {
         if (context.assignedControllerNumber) {
             return
         }
 
-        // Set when all MAX_GAMEPADS numbers are taken: the pad gets none, and the host hears
+        // Refused when all MAX_GAMEPADS numbers are taken: the pad gets none, and the host hears
         // nothing of it, until one frees up
-        var refused = false
-
-        if (context is InputDeviceContext) {
-            val devContext: InputDeviceContext = context
-
-            if (!context.refusedControllerNumber) {
-                LimeLog.info(
-                    "${devContext.name} (${context.id}) needs a controller number assigned"
-                )
-            }
-            if (!devContext.external) {
-                LimeLog.info("Built-in buttons hardcoded as controller 0")
-                context.controllerNumber = 0
-            } else if (prefConfig.multiController && devContext.hasJoystickAxes) {
-                context.controllerNumber = 0
-
-                refused = !reserveControllerNumber(context)
-            } else if (!devContext.hasJoystickAxes) {
-                // If this device doesn't have joystick axes, it may be an input device associated
-                // with another joystick (like a PS4 touchpad). We'll propagate that joystick's
-                // controller number to this associated device.
-
-                context.controllerNumber = 0
-
-                // For the DS4 case, the associated joystick is the next device after the touchpad.
-                // We'll try the opposite case too, just to be a little future-proof.
-                var associatedDevice = InputDevice.getDevice(devContext.id + 1)
-                if (!isAssociatedJoystick(devContext.inputDevice, associatedDevice)) {
-                    associatedDevice = InputDevice.getDevice(devContext.id - 1)
-                    if (!isAssociatedJoystick(devContext.inputDevice, associatedDevice)) {
-                        LimeLog.info("No associated joystick device found")
-                        associatedDevice = null
-                    }
-                }
-
-                if (associatedDevice != null) {
-                    var associatedDeviceContext = inputDeviceContexts.get(associatedDevice.id)
-
-                    // Create a new context for the associated device if one doesn't exist
-                    if (associatedDeviceContext == null) {
-                        associatedDeviceContext =
-                            createInputDeviceContextForDevice(associatedDevice)
-                        inputDeviceContexts.put(associatedDevice.id, associatedDeviceContext)
-                    }
-
-                    // Assign a controller number for the associated device if one isn't assigned
-                    if (!associatedDeviceContext.assignedControllerNumber) {
-                        assignControllerNumberIfNeeded(associatedDeviceContext)
-                    }
-
-                    if (associatedDeviceContext.assignedControllerNumber) {
-                        // Propagate the associated controller number
-                        context.controllerNumber = associatedDeviceContext.controllerNumber
-
-                        LimeLog.info(
-                            "Propagated controller number from ${associatedDeviceContext.name}"
-                        )
-                    } else {
-                        // The joystick has none, so the touchpad waits for one as well
-                        refused = true
-                    }
-                }
+        val refused =
+            if (context is InputDeviceContext) {
+                takeInputDeviceNumber(context)
             } else {
-                LimeLog.info("Not reserving a controller number")
-                context.controllerNumber = 0
+                takeOtherContextNumber(context)
             }
-
-            // If the gamepad doesn't have motion sensors, use the on-device sensors as a fallback
-            // for player 1. A pad that waits for a number is not player 1
-            if (!refused) {
-                if (
-                    prefConfig.gamepadMotionSensorsFallbackToDevice &&
-                        context.controllerNumber.toInt() == 0 &&
-                        devContext.sensorManager == null
-                ) {
-                    devContext.sensorManager = deviceSensorManager
-                }
-            }
-        } else {
-            if (prefConfig.multiController) {
-                context.controllerNumber = 0
-
-                refused = !reserveControllerNumber(context)
-            } else {
-                LimeLog.info("Not reserving a controller number")
-                context.controllerNumber = 0
-            }
-        }
 
         if (refused) {
             if (!context.refusedControllerNumber) {
@@ -553,6 +470,117 @@ class ControllerHandler(
 
         // Report attributes of this new controller to the host
         context.sendControllerArrival()
+    }
+
+    // Gives the context of an Android input device its controller number. True when it has to
+    // wait for one.
+    private fun takeInputDeviceNumber(context: InputDeviceContext): Boolean {
+        if (!context.refusedControllerNumber) {
+            LimeLog.info("${context.name} (${context.id}) needs a controller number assigned")
+        }
+
+        val refused =
+            when {
+                !context.external -> {
+                    LimeLog.info("Built-in buttons hardcoded as controller 0")
+                    context.controllerNumber = 0
+                    false
+                }
+                prefConfig.multiController && context.hasJoystickAxes -> {
+                    context.controllerNumber = 0
+                    !reserveControllerNumber(context)
+                }
+                !context.hasJoystickAxes -> takeAssociatedNumber(context)
+                else -> {
+                    LimeLog.info("Not reserving a controller number")
+                    context.controllerNumber = 0
+                    false
+                }
+            }
+
+        // A pad that waits for a number is not player 1
+        if (!refused) {
+            borrowPhoneSensors(context)
+        }
+        return refused
+    }
+
+    // If the gamepad doesn't have motion sensors, use the on-device sensors as a fallback
+    // for player 1
+    private fun borrowPhoneSensors(context: InputDeviceContext) {
+        if (
+            prefConfig.gamepadMotionSensorsFallbackToDevice &&
+                context.controllerNumber.toInt() == 0 &&
+                context.sensorManager == null
+        ) {
+            context.sensorManager = deviceSensorManager
+        }
+    }
+
+    // If this device doesn't have joystick axes, it may be an input device associated
+    // with another joystick (like a PS4 touchpad). We'll propagate that joystick's
+    // controller number to this associated device. True when the joystick has none yet.
+    private fun takeAssociatedNumber(context: InputDeviceContext): Boolean {
+        context.controllerNumber = 0
+
+        val associatedDevice = findAssociatedJoystick(context) ?: return false
+        val associatedDeviceContext = associatedJoystickContext(associatedDevice)
+        if (!associatedDeviceContext.assignedControllerNumber) {
+            // The joystick has none, so the touchpad waits for one as well
+            return true
+        }
+
+        // Propagate the associated controller number
+        context.controllerNumber = associatedDeviceContext.controllerNumber
+
+        LimeLog.info("Propagated controller number from ${associatedDeviceContext.name}")
+        return false
+    }
+
+    // For the DS4 case, the associated joystick is the next device after the touchpad.
+    // We'll try the opposite case too, just to be a little future-proof.
+    private fun findAssociatedJoystick(context: InputDeviceContext): InputDevice? {
+        val next = InputDevice.getDevice(context.id + 1)
+        if (isAssociatedJoystick(context.inputDevice, next)) {
+            return next
+        }
+
+        val previous = InputDevice.getDevice(context.id - 1)
+        if (isAssociatedJoystick(context.inputDevice, previous)) {
+            return previous
+        }
+
+        LimeLog.info("No associated joystick device found")
+        return null
+    }
+
+    // The context of the associated joystick, with a controller number if one is free. It is made
+    // here when the joystick has none yet.
+    private fun associatedJoystickContext(device: InputDevice): InputDeviceContext {
+        var associatedDeviceContext = inputDeviceContexts.get(device.id)
+
+        // Create a new context for the associated device if one doesn't exist
+        if (associatedDeviceContext == null) {
+            associatedDeviceContext = createInputDeviceContextForDevice(device)
+            inputDeviceContexts.put(device.id, associatedDeviceContext)
+        }
+
+        // Assign a controller number for the associated device if one isn't assigned
+        assignControllerNumberIfNeeded(associatedDeviceContext)
+        return associatedDeviceContext
+    }
+
+    // Gives a USB pad, or any context that is not an Android input device, its controller number.
+    // True when it has to wait for one.
+    private fun takeOtherContextNumber(context: GenericControllerContext): Boolean {
+        if (!prefConfig.multiController) {
+            LimeLog.info("Not reserving a controller number")
+            context.controllerNumber = 0
+            return false
+        }
+
+        context.controllerNumber = 0
+        return !reserveControllerNumber(context)
     }
 
     private fun createUsbDeviceContextForDevice(device: AbstractController): UsbDeviceContext {
@@ -1499,8 +1527,29 @@ class ControllerHandler(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
+    // The packet of one controller number: the fusion of the contexts that hold it. There is one
+    // for the handler, filled again for each packet, so that a packet allocates nothing.
+    private class FusedPacket {
+        @JvmField var inputMap = 0
+        @JvmField var leftTrigger: Byte = 0
+        @JvmField var rightTrigger: Byte = 0
+        @JvmField var leftStickX: Short = 0
+        @JvmField var leftStickY: Short = 0
+        @JvmField var rightStickX: Short = 0
+        @JvmField var rightStickY: Short = 0
+
+        fun clear() {
+            inputMap = 0
+            leftTrigger = 0
+            rightTrigger = 0
+            leftStickX = 0
+            leftStickY = 0
+            rightStickX = 0
+            rightStickY = 0
+        }
+    }
+
+    // The caller holds inputLock
     private fun transmitControllerInputLocked(originalContext: GenericControllerContext) {
         assignControllerNumberIfNeeded(originalContext)
         if (!originalContext.assignedControllerNumber) {
@@ -1511,100 +1560,10 @@ class ControllerHandler(
 
         // Take the context's controller number and fuse all inputs with the same number
         val controllerNumber = originalContext.controllerNumber
-        var inputMap = 0
-        var leftTrigger: Byte = 0
-        var rightTrigger: Byte = 0
-        var leftStickX: Short = 0
-        var leftStickY: Short = 0
-        var rightStickX: Short = 0
-        var rightStickY: Short = 0
-
-        // In order to properly handle controllers that are split into multiple devices,
-        // we must aggregate all controllers with the same controller number into a single
-        // device before we send it. The buttons are ORed; each trigger and each stick axis takes
-        // the value of larger magnitude, the later device's on a tie.
-        inputDeviceContexts.forEachValue { context ->
-            if (
-                context.assignedControllerNumber &&
-                    context.controllerNumber == controllerNumber &&
-                    context.mouseEmulationActive == originalContext.mouseEmulationActive
-            ) {
-                inputMap = inputMap or context.sentInputMap()
-                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
-                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
-                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
-                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
-                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
-            }
-        }
-        usbDeviceContexts.forEachValue { context ->
-            if (
-                context.assignedControllerNumber &&
-                    context.controllerNumber == controllerNumber &&
-                    context.mouseEmulationActive == originalContext.mouseEmulationActive
-            ) {
-                inputMap = inputMap or context.sentInputMap()
-                leftTrigger = maxByMagnitude(leftTrigger, context.leftTrigger)
-                rightTrigger = maxByMagnitude(rightTrigger, context.rightTrigger)
-                leftStickX = maxByMagnitude(leftStickX, context.leftStickX)
-                leftStickY = maxByMagnitude(leftStickY, context.leftStickY)
-                rightStickX = maxByMagnitude(rightStickX, context.rightStickX)
-                rightStickY = maxByMagnitude(rightStickY, context.rightStickY)
-            }
-        }
-        if (defaultContext.controllerNumber == controllerNumber) {
-            inputMap = inputMap or defaultContext.sentInputMap()
-            leftTrigger = maxByMagnitude(leftTrigger, defaultContext.leftTrigger)
-            rightTrigger = maxByMagnitude(rightTrigger, defaultContext.rightTrigger)
-            leftStickX = maxByMagnitude(leftStickX, defaultContext.leftStickX)
-            leftStickY = maxByMagnitude(leftStickY, defaultContext.leftStickY)
-            rightStickX = maxByMagnitude(rightStickX, defaultContext.rightStickX)
-            rightStickY = maxByMagnitude(rightStickY, defaultContext.rightStickY)
-        }
+        val fused = fuseControllerInputs(originalContext, controllerNumber)
 
         if (originalContext.mouseEmulationActive) {
-            val changedMask = inputMap xor originalContext.mouseEmulationLastInputMap
-
-            val aDown = (inputMap and ControllerPacket.A_FLAG) != 0
-            val bDown = (inputMap and ControllerPacket.B_FLAG) != 0
-
-            originalContext.mouseEmulationLastInputMap = inputMap
-
-            if ((changedMask and ControllerPacket.A_FLAG) != 0) {
-                if (aDown) {
-                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                } else {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                }
-            }
-            if ((changedMask and ControllerPacket.B_FLAG) != 0) {
-                if (bDown) {
-                    conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                } else {
-                    conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                }
-            }
-            if ((changedMask and ControllerPacket.UP_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.UP_FLAG) != 0) {
-                    conn.sendMouseScroll(1)
-                }
-            }
-            if ((changedMask and ControllerPacket.DOWN_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.DOWN_FLAG) != 0) {
-                    conn.sendMouseScroll(-1)
-                }
-            }
-            if ((changedMask and ControllerPacket.RIGHT_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.RIGHT_FLAG) != 0) {
-                    conn.sendMouseHScroll(1)
-                }
-            }
-            if ((changedMask and ControllerPacket.LEFT_FLAG) != 0) {
-                if ((inputMap and ControllerPacket.LEFT_FLAG) != 0) {
-                    conn.sendMouseHScroll(-1)
-                }
-            }
+            sendMouseEmulation(originalContext, fused.inputMap)
 
             conn.sendControllerInput(
                 controllerNumber,
@@ -1621,216 +1580,376 @@ class ControllerHandler(
             conn.sendControllerInput(
                 controllerNumber,
                 getActiveControllerMask(),
-                inputMap,
-                leftTrigger,
-                rightTrigger,
-                leftStickX,
-                leftStickY,
-                rightStickX,
-                rightStickY,
+                fused.inputMap,
+                fused.leftTrigger,
+                fused.rightTrigger,
+                fused.leftStickX,
+                fused.leftStickY,
+                fused.rightStickX,
+                fused.rightStickY,
             )
+        }
+    }
+
+    // In order to properly handle controllers that are split into multiple devices,
+    // we must aggregate all controllers with the same controller number into a single
+    // device before we send it. The buttons are ORed; each trigger and each stick axis takes
+    // the value of larger magnitude, the later device's on a tie.
+    private fun fuseControllerInputs(
+        originalContext: GenericControllerContext,
+        controllerNumber: Short,
+    ): FusedPacket {
+        val fused = fusedPacket
+        fused.clear()
+
+        inputDeviceContexts.forEachValue { fuseIfOnNumber(it, controllerNumber, originalContext) }
+        usbDeviceContexts.forEachValue { fuseIfOnNumber(it, controllerNumber, originalContext) }
+
+        // The on-screen controller is held to the number alone: it has its number from the start,
+        // and its buttons join the packet of a pad in mouse mode as well
+        if (defaultContext.controllerNumber == controllerNumber) {
+            fuse(defaultContext)
+        }
+        return fused
+    }
+
+    // A pad joins the packet when it has a number, the number of the context that sends and its
+    // mouse mode: a pad in mouse mode and one that is not make packets of their own
+    private fun fuseIfOnNumber(
+        context: GenericControllerContext,
+        controllerNumber: Short,
+        originalContext: GenericControllerContext,
+    ) {
+        if (
+            context.assignedControllerNumber &&
+                context.controllerNumber == controllerNumber &&
+                context.mouseEmulationActive == originalContext.mouseEmulationActive
+        ) {
+            fuse(context)
+        }
+    }
+
+    private fun fuse(context: GenericControllerContext) {
+        val fused = fusedPacket
+        fused.inputMap = fused.inputMap or context.sentInputMap()
+        fused.leftTrigger = maxByMagnitude(fused.leftTrigger, context.leftTrigger)
+        fused.rightTrigger = maxByMagnitude(fused.rightTrigger, context.rightTrigger)
+        fused.leftStickX = maxByMagnitude(fused.leftStickX, context.leftStickX)
+        fused.leftStickY = maxByMagnitude(fused.leftStickY, context.leftStickY)
+        fused.rightStickX = maxByMagnitude(fused.rightStickX, context.rightStickX)
+        fused.rightStickY = maxByMagnitude(fused.rightStickY, context.rightStickY)
+    }
+
+    // A pad in mouse mode does not send its buttons as a gamepad: A and B are the left and right
+    // mouse buttons and the D-pad scrolls. [inputMap] is what the pads on its number hold.
+    private fun sendMouseEmulation(originalContext: GenericControllerContext, inputMap: Int) {
+        val changedMask = inputMap xor originalContext.mouseEmulationLastInputMap
+
+        originalContext.mouseEmulationLastInputMap = inputMap
+
+        sendMouseButtons(changedMask, inputMap)
+        sendDpadScroll(changedMask, inputMap)
+    }
+
+    private fun sendMouseButtons(changedMask: Int, inputMap: Int) {
+        if ((changedMask and ControllerPacket.A_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.A_FLAG) != 0) {
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
+            } else {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
+            }
+        }
+        if ((changedMask and ControllerPacket.B_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.B_FLAG) != 0) {
+                conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
+            } else {
+                conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
+            }
+        }
+    }
+
+    // A direction scrolls one click when it goes down, and nothing when it goes up
+    private fun sendDpadScroll(changedMask: Int, inputMap: Int) {
+        if ((changedMask and ControllerPacket.UP_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.UP_FLAG) != 0) {
+                conn.sendMouseScroll(1)
+            }
+        }
+        if ((changedMask and ControllerPacket.DOWN_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.DOWN_FLAG) != 0) {
+                conn.sendMouseScroll(-1)
+            }
+        }
+        if ((changedMask and ControllerPacket.RIGHT_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.RIGHT_FLAG) != 0) {
+                conn.sendMouseHScroll(1)
+            }
+        }
+        if ((changedMask and ControllerPacket.LEFT_FLAG) != 0) {
+            if ((inputMap and ControllerPacket.LEFT_FLAG) != 0) {
+                conn.sendMouseHScroll(-1)
+            }
         }
     }
 
     // Return a valid keycode, -2 to consume, or -1 to not consume the event
     // Device MAY BE NULL
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "ReturnCount",
-    )
     private fun handleRemapping(context: InputDeviceContext, event: KeyEvent): Int {
-        // Don't capture the back button if configured
-        if (context.ignoreBack) {
-            if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-                return REMAP_IGNORE
-            }
+        // The first step that has an answer ends the remapping: the steps after it never see the
+        // key, which keeps the flags of the pad that they would change as they are
+        var keyCode = remapSpecialKey(context, event)
+        if (keyCode == REMAP_NONE) {
+            keyCode = remapByScanCode(context, event)
+        }
+        if (keyCode == REMAP_NONE) {
+            keyCode = fixUpKeyCode(context, event)
+        }
+        return keyCode
+    }
+
+    // The keys that no scan code table decides: Back on a pad that ignores it, the Share button,
+    // the clickpad of a Sony pad and the Mode button of an 8BitDo pad. REMAP_NONE for the others
+    private fun remapSpecialKey(context: InputDeviceContext, event: KeyEvent): Int =
+        when {
+            // Don't capture the back button if configured
+            context.ignoreBack && event.keyCode == KeyEvent.KEYCODE_BACK -> REMAP_IGNORE
+
+            // If we know this gamepad has a share button and receive an unmapped
+            // KEY_RECORD event, report that as a share button press.
+            context.hasShare &&
+                event.keyCode == KeyEvent.KEYCODE_UNKNOWN &&
+                event.scanCode == KEY_RECORD -> KeyEvent.KEYCODE_MEDIA_RECORD
+
+            isSonyClickpadSelect(context, event) -> KeyEvent.KEYCODE_BUTTON_1
+
+            // Override mode button for 8BitDo controllers
+            context.vendorId == VENDOR_8BITDO && event.scanCode == BTN_C ->
+                KeyEvent.KEYCODE_BUTTON_MODE
+            else -> REMAP_NONE
         }
 
-        // If we know this gamepad has a share button and receive an unmapped
-        // KEY_RECORD event, report that as a share button press.
-        if (context.hasShare) {
-            if (event.keyCode == KeyEvent.KEYCODE_UNKNOWN && event.scanCode == KEY_RECORD) {
-                return KeyEvent.KEYCODE_MEDIA_RECORD
-            }
+    // The Shield's key layout files map the DualShock 4 clickpad button to
+    // BUTTON_SELECT instead of something sane like BUTTON_1 as the standard AOSP
+    // mapping does. If we get a button from a Sony device reported as BUTTON_SELECT
+    // that matches the keycode used by hid-sony for the clickpad or it's from the
+    // separate touchpad input device, remap it to BUTTON_1 to match the current AOSP
+    // layout and trigger our touchpad button logic.
+    private fun isSonyClickpadSelect(context: InputDeviceContext, event: KeyEvent): Boolean {
+        if (context.vendorId != VENDOR_SONY || event.keyCode != KeyEvent.KEYCODE_BUTTON_SELECT) {
+            return false
         }
+        return event.scanCode == BTN_THUMBL || context.isDualShockStandaloneTouchpad
+    }
 
-        // The Shield's key layout files map the DualShock 4 clickpad button to
-        // BUTTON_SELECT instead of something sane like BUTTON_1 as the standard AOSP
-        // mapping does. If we get a button from a Sony device reported as BUTTON_SELECT
-        // that matches the keycode used by hid-sony for the clickpad or it's from the
-        // separate touchpad input device, remap it to BUTTON_1 to match the current AOSP
-        // layout and trigger our touchpad button logic.
-        if (
-            context.vendorId == VENDOR_SONY &&
-                event.keyCode == KeyEvent.KEYCODE_BUTTON_SELECT &&
-                (event.scanCode == BTN_THUMBL || context.isDualShockStandaloneTouchpad)
-        ) {
-            return KeyEvent.KEYCODE_BUTTON_1
+    // The scan code tables of the pads whose key layout is wrong or missing, in the order they
+    // apply: the first table that has an answer ends the search. REMAP_NONE when none has
+    private fun remapByScanCode(context: InputDeviceContext, event: KeyEvent): Int {
+        var keyCode = if (hasSwitchLayout(context)) switchButton(event.scanCode) else REMAP_NONE
+        if (keyCode == REMAP_NONE && context.usesLinuxGamepadStandardFaceButtons) {
+            keyCode = linuxFaceButton(event.scanCode)
         }
-
-        // Override mode button for 8BitDo controllers
-        if (context.vendorId == VENDOR_8BITDO && event.scanCode == BTN_C) {
-            return KeyEvent.KEYCODE_BUTTON_MODE
+        if (keyCode == REMAP_NONE) {
+            keyCode = remapQuirkyPad(context, event)
         }
+        if (keyCode == REMAP_NONE) {
+            keyCode = rawDpadButton(context, event)
+        }
+        return keyCode
+    }
 
-        // This mapping was adding in Android 10, then changed based on
-        // kernel changes (adding hid-nintendo) in Android 11. If we're
-        // on anything newer than Pie, just use the built-in mapping.
-        if (
-            (context.vendorId == VENDOR_NINTENDO &&
+    // This mapping was adding in Android 10, then changed based on
+    // kernel changes (adding hid-nintendo) in Android 11. If we're
+    // on anything newer than Pie, just use the built-in mapping.
+    private fun hasSwitchLayout(context: InputDeviceContext): Boolean {
+        // The Switch Pro controller
+        val switchPro =
+            context.vendorId == VENDOR_NINTENDO &&
                 context.productId == PRODUCT_SWITCH_PRO &&
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) || // Switch Pro controller
-                (context.vendorId == VENDOR_HORI && context.productId == PRODUCT_HORIPAD_SWITCH)
-        ) { // HORIPAD for Switch
-            when (event.scanCode) {
-                BTN_SOUTH -> return KeyEvent.KEYCODE_BUTTON_A
-                BTN_EAST -> return KeyEvent.KEYCODE_BUTTON_B
-                BTN_C -> return KeyEvent.KEYCODE_BUTTON_X
-                BTN_NORTH -> return KeyEvent.KEYCODE_BUTTON_Y
-                BTN_WEST -> return KeyEvent.KEYCODE_BUTTON_L1
-                BTN_Z -> return KeyEvent.KEYCODE_BUTTON_R1
-                BTN_TL -> return KeyEvent.KEYCODE_BUTTON_L2
-                BTN_TR -> return KeyEvent.KEYCODE_BUTTON_R2
-                BTN_TL2 -> return KeyEvent.KEYCODE_BUTTON_SELECT
-                BTN_TR2 -> return KeyEvent.KEYCODE_BUTTON_START
-                BTN_SELECT -> return KeyEvent.KEYCODE_BUTTON_THUMBL
-                BTN_START -> return KeyEvent.KEYCODE_BUTTON_THUMBR
-                BTN_THUMBL -> return KeyEvent.KEYCODE_BUTTON_MODE
-            }
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+
+        // The HORIPAD for Switch
+        val horipad = context.vendorId == VENDOR_HORI && context.productId == PRODUCT_HORIPAD_SWITCH
+        return switchPro || horipad
+    }
+
+    // The face buttons, the bumpers and the triggers, then the buttons in the middle
+    private fun switchButton(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_SOUTH -> KeyEvent.KEYCODE_BUTTON_A
+            BTN_EAST -> KeyEvent.KEYCODE_BUTTON_B
+            BTN_C -> KeyEvent.KEYCODE_BUTTON_X
+            BTN_NORTH -> KeyEvent.KEYCODE_BUTTON_Y
+            BTN_WEST -> KeyEvent.KEYCODE_BUTTON_L1
+            BTN_Z -> KeyEvent.KEYCODE_BUTTON_R1
+            BTN_TL -> KeyEvent.KEYCODE_BUTTON_L2
+            BTN_TR -> KeyEvent.KEYCODE_BUTTON_R2
+            else -> switchCenterButton(scanCode)
         }
 
-        if (context.usesLinuxGamepadStandardFaceButtons) {
-            // Android's Generic.kl swaps BTN_NORTH and BTN_WEST
-            when (event.scanCode) {
-                BTN_SOUTH -> return KeyEvent.KEYCODE_BUTTON_A
-                BTN_EAST -> return KeyEvent.KEYCODE_BUTTON_B
-                BTN_NORTH -> return KeyEvent.KEYCODE_BUTTON_Y
-                BTN_WEST -> return KeyEvent.KEYCODE_BUTTON_X
-            }
+    private fun switchCenterButton(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_TL2 -> KeyEvent.KEYCODE_BUTTON_SELECT
+            BTN_TR2 -> KeyEvent.KEYCODE_BUTTON_START
+            BTN_SELECT -> KeyEvent.KEYCODE_BUTTON_THUMBL
+            BTN_START -> KeyEvent.KEYCODE_BUTTON_THUMBR
+            BTN_THUMBL -> KeyEvent.KEYCODE_BUTTON_MODE
+            else -> REMAP_NONE
         }
 
-        if (context.isNonStandardDualShock4) {
-            when (event.scanCode) {
-                BTN_SOUTH -> return KeyEvent.KEYCODE_BUTTON_X
-                BTN_EAST -> return KeyEvent.KEYCODE_BUTTON_A
-                BTN_C -> return KeyEvent.KEYCODE_BUTTON_B
-                BTN_NORTH -> return KeyEvent.KEYCODE_BUTTON_Y
-                BTN_WEST -> return KeyEvent.KEYCODE_BUTTON_L1
-                BTN_Z -> return KeyEvent.KEYCODE_BUTTON_R1
-                /*
-                **** Using analog triggers instead ****
-                case 310:
-                    return KeyEvent.KEYCODE_BUTTON_L2;
-                case 311:
-                    return KeyEvent.KEYCODE_BUTTON_R2;
-                */
-                BTN_TL2 -> return KeyEvent.KEYCODE_BUTTON_SELECT
-                BTN_TR2 -> return KeyEvent.KEYCODE_BUTTON_START
-                BTN_SELECT -> return KeyEvent.KEYCODE_BUTTON_THUMBL
-                BTN_START -> return KeyEvent.KEYCODE_BUTTON_THUMBR
-                BTN_MODE -> return KeyEvent.KEYCODE_BUTTON_MODE
-                else -> return REMAP_CONSUME
-            }
-        } else if (context.isServal && event.keyCode == KeyEvent.KEYCODE_UNKNOWN) {
+    // Android's Generic.kl swaps BTN_NORTH and BTN_WEST
+    private fun linuxFaceButton(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_SOUTH -> KeyEvent.KEYCODE_BUTTON_A
+            BTN_EAST -> KeyEvent.KEYCODE_BUTTON_B
+            BTN_NORTH -> KeyEvent.KEYCODE_BUTTON_Y
+            BTN_WEST -> KeyEvent.KEYCODE_BUTTON_X
+            else -> REMAP_NONE
+        }
+
+    // At most one quirk applies to a pad, the first that fits, and a quirk whose table has no
+    // answer ends the chain: the quirks after it are not tried
+    private fun remapQuirkyPad(context: InputDeviceContext, event: KeyEvent): Int =
+        when {
+            context.isNonStandardDualShock4 -> dualShock4Button(event.scanCode)
+
             // If this is a Serval controller sending an unknown key code, it's probably
             // the start and select buttons
-            when (event.scanCode) {
-                BTN_SELECT -> return KeyEvent.KEYCODE_BUTTON_SELECT
-                BTN_START -> return KeyEvent.KEYCODE_BUTTON_START
-            }
-        } else if (context.isNonStandardXboxBtController) {
-            when (event.scanCode) {
-                BTN_C -> return KeyEvent.KEYCODE_BUTTON_X
-                BTN_NORTH -> return KeyEvent.KEYCODE_BUTTON_Y
-                BTN_WEST -> return KeyEvent.KEYCODE_BUTTON_L1
-                BTN_Z -> return KeyEvent.KEYCODE_BUTTON_R1
-                BTN_TL -> return KeyEvent.KEYCODE_BUTTON_SELECT
-                BTN_TR -> return KeyEvent.KEYCODE_BUTTON_START
-                BTN_TL2 -> return KeyEvent.KEYCODE_BUTTON_THUMBL
-                BTN_TR2 -> return KeyEvent.KEYCODE_BUTTON_THUMBR
-                KEY_MENU -> return KeyEvent.KEYCODE_BUTTON_MODE
-                else -> {
-                    // Other buttons are mapped correctly
-                }
-            }
-
-            // The Xbox button is sent as MENU
-            if (event.keyCode == KeyEvent.KEYCODE_MENU) {
-                return KeyEvent.KEYCODE_BUTTON_MODE
-            }
-        } else if (
-            context.vendorId == VENDOR_ASUS && // ASUS
-                (context.productId == PRODUCT_KUNAI_USB || // Kunai - USB
-                    context.productId == PRODUCT_KUNAI_BLUETOOTH) // Kunai - Bluetooth
-        ) {
-            // ROG Kunai has special M1-M4 buttons that are accessible via the
-            // joycon-style detachable controllers that we should map to Start
-            // and Select.
-            when (event.scanCode) {
-                KUNAI_START_1,
-                KUNAI_START_2 -> return KeyEvent.KEYCODE_BUTTON_START
-                KUNAI_SELECT_1,
-                KUNAI_SELECT_2 -> return KeyEvent.KEYCODE_BUTTON_SELECT
-            }
+            context.isServal && event.keyCode == KeyEvent.KEYCODE_UNKNOWN ->
+                servalButton(event.scanCode)
+            context.isNonStandardXboxBtController -> xboxBluetoothButton(event)
+            isAsusKunai(context) -> kunaiButton(event.scanCode)
+            else -> REMAP_NONE
         }
 
+    private fun dualShock4Button(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_SOUTH -> KeyEvent.KEYCODE_BUTTON_X
+            BTN_EAST -> KeyEvent.KEYCODE_BUTTON_A
+            BTN_C -> KeyEvent.KEYCODE_BUTTON_B
+            BTN_NORTH -> KeyEvent.KEYCODE_BUTTON_Y
+            BTN_WEST -> KeyEvent.KEYCODE_BUTTON_L1
+            BTN_Z -> KeyEvent.KEYCODE_BUTTON_R1
+            /*
+            **** Using analog triggers instead ****
+            case 310:
+                return KeyEvent.KEYCODE_BUTTON_L2;
+            case 311:
+                return KeyEvent.KEYCODE_BUTTON_R2;
+            */
+            BTN_TL2 -> KeyEvent.KEYCODE_BUTTON_SELECT
+            BTN_TR2 -> KeyEvent.KEYCODE_BUTTON_START
+            BTN_SELECT -> KeyEvent.KEYCODE_BUTTON_THUMBL
+            BTN_START -> KeyEvent.KEYCODE_BUTTON_THUMBR
+            BTN_MODE -> KeyEvent.KEYCODE_BUTTON_MODE
+            else -> REMAP_CONSUME
+        }
+
+    private fun servalButton(scanCode: Int): Int =
+        when (scanCode) {
+            BTN_SELECT -> KeyEvent.KEYCODE_BUTTON_SELECT
+            BTN_START -> KeyEvent.KEYCODE_BUTTON_START
+            else -> REMAP_NONE
+        }
+
+    private fun xboxBluetoothButton(event: KeyEvent): Int {
+        // The buttons that are not here are mapped correctly
+        val keyCode =
+            when (event.scanCode) {
+                BTN_C -> KeyEvent.KEYCODE_BUTTON_X
+                BTN_NORTH -> KeyEvent.KEYCODE_BUTTON_Y
+                BTN_WEST -> KeyEvent.KEYCODE_BUTTON_L1
+                BTN_Z -> KeyEvent.KEYCODE_BUTTON_R1
+                BTN_TL -> KeyEvent.KEYCODE_BUTTON_SELECT
+                BTN_TR -> KeyEvent.KEYCODE_BUTTON_START
+                BTN_TL2 -> KeyEvent.KEYCODE_BUTTON_THUMBL
+                BTN_TR2 -> KeyEvent.KEYCODE_BUTTON_THUMBR
+                KEY_MENU -> KeyEvent.KEYCODE_BUTTON_MODE
+                else -> REMAP_NONE
+            }
+
+        // The Xbox button is sent as MENU
+        if (keyCode == REMAP_NONE && event.keyCode == KeyEvent.KEYCODE_MENU) {
+            return KeyEvent.KEYCODE_BUTTON_MODE
+        }
+        return keyCode
+    }
+
+    private fun isAsusKunai(context: InputDeviceContext) =
+        context.vendorId == VENDOR_ASUS && // ASUS
+            (context.productId == PRODUCT_KUNAI_USB || // Kunai - USB
+                context.productId == PRODUCT_KUNAI_BLUETOOTH) // Kunai - Bluetooth
+
+    // ROG Kunai has special M1-M4 buttons that are accessible via the
+    // joycon-style detachable controllers that we should map to Start
+    // and Select.
+    private fun kunaiButton(scanCode: Int): Int =
+        when (scanCode) {
+            KUNAI_START_1,
+            KUNAI_START_2 -> KeyEvent.KEYCODE_BUTTON_START
+            KUNAI_SELECT_1,
+            KUNAI_SELECT_2 -> KeyEvent.KEYCODE_BUTTON_SELECT
+            else -> REMAP_NONE
+        }
+
+    /* FIXME There's no good way to know for sure if xpad is bound
+    to this device, so we won't use the name to validate if these
+    scancodes should be mapped to DPAD
+
+    context.isXboxController &&
+    */
+    private fun rawDpadButton(context: InputDeviceContext, event: KeyEvent): Int {
         if (
             context.hatXAxis == -1 &&
                 context.hatYAxis == -1 &&
-                /* FIXME There's no good way to know for sure if xpad is bound
-                to this device, so we won't use the name to validate if these
-                scancodes should be mapped to DPAD
-
-                context.isXboxController &&
-                */
                 event.keyCode == KeyEvent.KEYCODE_UNKNOWN
         ) {
             // If there's not a proper Xbox controller mapping, we'll translate the raw d-pad
             // scan codes into proper key codes
-            when (event.scanCode) {
-                BTN_TRIGGER_HAPPY1 -> return KeyEvent.KEYCODE_DPAD_LEFT
-                BTN_TRIGGER_HAPPY2 -> return KeyEvent.KEYCODE_DPAD_RIGHT
-                BTN_TRIGGER_HAPPY3 -> return KeyEvent.KEYCODE_DPAD_UP
-                BTN_TRIGGER_HAPPY4 -> return KeyEvent.KEYCODE_DPAD_DOWN
+            return when (event.scanCode) {
+                BTN_TRIGGER_HAPPY1 -> KeyEvent.KEYCODE_DPAD_LEFT
+                BTN_TRIGGER_HAPPY2 -> KeyEvent.KEYCODE_DPAD_RIGHT
+                BTN_TRIGGER_HAPPY3 -> KeyEvent.KEYCODE_DPAD_UP
+                BTN_TRIGGER_HAPPY4 -> KeyEvent.KEYCODE_DPAD_DOWN
+                else -> REMAP_NONE
             }
         }
+        return REMAP_NONE
+    }
 
-        // Past here we can fixup the keycode and potentially trigger
-        // another special case so we need to remember what keycode we're using
-        var keyCode = event.keyCode
-
+    // Past here we can fixup the keycode and potentially trigger another special case so we need
+    // to remember what keycode we're using
+    private fun fixUpKeyCode(context: InputDeviceContext, event: KeyEvent): Int {
         // This is a hack for (at least) the "Tablet Remote" app
         // which sends BACK with META_ALT_ON instead of KEYCODE_BUTTON_B
-        if (
-            keyCode == KeyEvent.KEYCODE_BACK &&
-                !event.hasNoModifiers() &&
-                (event.flags and KeyEvent.FLAG_SOFT_KEYBOARD) != 0
-        ) {
-            keyCode = KeyEvent.KEYCODE_BUTTON_B
-        }
+        val keyCode = if (isSoftKeyboardBack(event)) KeyEvent.KEYCODE_BUTTON_B else event.keyCode
 
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU) {
-            // Ensure that we never use back as start if we have a real start
-            context.backIsStart = false
-        } else if (keyCode == KeyEvent.KEYCODE_BUTTON_SELECT) {
-            // Don't use mode as select if we have a select
-            context.modeIsSelect = false
-        } else if (context.backIsStart && keyCode == KeyEvent.KEYCODE_BACK) {
+        return when {
+            keyCode == KeyEvent.KEYCODE_BUTTON_START || keyCode == KeyEvent.KEYCODE_MENU -> {
+                // Ensure that we never use back as start if we have a real start
+                context.backIsStart = false
+                keyCode
+            }
+            keyCode == KeyEvent.KEYCODE_BUTTON_SELECT -> {
+                // Don't use mode as select if we have a select
+                context.modeIsSelect = false
+                keyCode
+            }
             // Emulate the start button with back
-            return KeyEvent.KEYCODE_BUTTON_START
-        } else if (context.modeIsSelect && keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            context.backIsStart && keyCode == KeyEvent.KEYCODE_BACK -> KeyEvent.KEYCODE_BUTTON_START
             // Emulate the select button with mode
-            return KeyEvent.KEYCODE_BUTTON_SELECT
-        } else if (context.searchIsMode && keyCode == KeyEvent.KEYCODE_SEARCH) {
+            context.modeIsSelect && keyCode == KeyEvent.KEYCODE_BUTTON_MODE ->
+                KeyEvent.KEYCODE_BUTTON_SELECT
             // Emulate the mode button with search
-            return KeyEvent.KEYCODE_BUTTON_MODE
+            context.searchIsMode && keyCode == KeyEvent.KEYCODE_SEARCH ->
+                KeyEvent.KEYCODE_BUTTON_MODE
+            else -> keyCode
         }
-
-        return keyCode
     }
+
+    private fun isSoftKeyboardBack(event: KeyEvent) =
+        event.keyCode == KeyEvent.KEYCODE_BACK &&
+            !event.hasNoModifiers() &&
+            (event.flags and KeyEvent.FLAG_SOFT_KEYBOARD) != 0
 
     private fun handleFlipFaceButtons(keyCode: Int): Int {
         return when (keyCode) {
@@ -1871,12 +1990,9 @@ class ControllerHandler(
         // evaluates the deadzone.
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress(
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "LongParameterList",
-    )
+    // Converted as is from the inherited Java; LongParameterList stays because the only caller,
+    // handleMotionEvent, passes the eight axis values as separate floats (Sprint 18c backlog).
+    @Suppress("LongParameterList")
     private fun handleAxisSet(
         context: InputDeviceContext,
         lsX: Float,
@@ -1888,9 +2004,6 @@ class ControllerHandler(
         hatX: Float,
         hatY: Float,
     ) {
-        var leftTriggerValue = lt
-        var rightTriggerValue = rt
-
         if (context.leftStickXAxis != -1 && context.leftStickYAxis != -1) {
             val leftStickVector = populateCachedVector(lsX, lsY)
 
@@ -1910,60 +2023,70 @@ class ControllerHandler(
         }
 
         if (context.leftTriggerAxis != -1 && context.rightTriggerAxis != -1) {
-            // Android sends an initial 0 value for trigger axes even if the trigger
-            // should be negative when idle. After the first touch, the axes will go back
-            // to normal behavior, so ignore triggersIdleNegative for each trigger until
-            // first touch.
-            if (leftTriggerValue != 0f) {
-                context.leftTriggerAxisUsed = true
-            }
-            if (rightTriggerValue != 0f) {
-                context.rightTriggerAxisUsed = true
-            }
-            if (context.triggersIdleNegative) {
-                if (context.leftTriggerAxisUsed) {
-                    leftTriggerValue = (leftTriggerValue + 1) / 2
-                }
-                if (context.rightTriggerAxisUsed) {
-                    rightTriggerValue = (rightTriggerValue + 1) / 2
-                }
-            }
-
-            if (leftTriggerValue <= context.triggerDeadzone) {
-                leftTriggerValue = 0f
-            }
-            if (rightTriggerValue <= context.triggerDeadzone) {
-                rightTriggerValue = 0f
-            }
-
-            context.leftTrigger = triggerByte(leftTriggerValue)
-            context.rightTrigger = triggerByte(rightTriggerValue)
+            setTriggerValues(context, lt, rt)
         }
 
         if (context.hatXAxis != -1 && context.hatYAxis != -1) {
-            context.inputMap =
-                context.inputMap and
-                    (ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG).inv()
-            if (hatX < -HAT_THRESHOLD) {
-                context.inputMap = context.inputMap or ControllerPacket.LEFT_FLAG
-                context.hatXAxisUsed = true
-            } else if (hatX > HAT_THRESHOLD) {
-                context.inputMap = context.inputMap or ControllerPacket.RIGHT_FLAG
-                context.hatXAxisUsed = true
-            }
-
-            context.inputMap =
-                context.inputMap and (ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG).inv()
-            if (hatY < -HAT_THRESHOLD) {
-                context.inputMap = context.inputMap or ControllerPacket.UP_FLAG
-                context.hatYAxisUsed = true
-            } else if (hatY > HAT_THRESHOLD) {
-                context.inputMap = context.inputMap or ControllerPacket.DOWN_FLAG
-                context.hatYAxisUsed = true
-            }
+            setHatButtons(context, hatX, hatY)
         }
 
         sendControllerInputPacket(context)
+    }
+
+    private fun setTriggerValues(context: InputDeviceContext, lt: Float, rt: Float) {
+        var leftTriggerValue = lt
+        var rightTriggerValue = rt
+
+        // Android sends an initial 0 value for trigger axes even if the trigger
+        // should be negative when idle. After the first touch, the axes will go back
+        // to normal behavior, so ignore triggersIdleNegative for each trigger until
+        // first touch.
+        if (leftTriggerValue != 0f) {
+            context.leftTriggerAxisUsed = true
+        }
+        if (rightTriggerValue != 0f) {
+            context.rightTriggerAxisUsed = true
+        }
+        if (context.triggersIdleNegative) {
+            if (context.leftTriggerAxisUsed) {
+                leftTriggerValue = (leftTriggerValue + 1) / 2
+            }
+            if (context.rightTriggerAxisUsed) {
+                rightTriggerValue = (rightTriggerValue + 1) / 2
+            }
+        }
+
+        if (leftTriggerValue <= context.triggerDeadzone) {
+            leftTriggerValue = 0f
+        }
+        if (rightTriggerValue <= context.triggerDeadzone) {
+            rightTriggerValue = 0f
+        }
+
+        context.leftTrigger = triggerByte(leftTriggerValue)
+        context.rightTrigger = triggerByte(rightTriggerValue)
+    }
+
+    private fun setHatButtons(context: InputDeviceContext, hatX: Float, hatY: Float) {
+        context.inputMap =
+            context.inputMap and (ControllerPacket.LEFT_FLAG or ControllerPacket.RIGHT_FLAG).inv()
+        if (hatX < -HAT_THRESHOLD) {
+            context.inputMap = context.inputMap or ControllerPacket.LEFT_FLAG
+            context.hatXAxisUsed = true
+        } else if (hatX > HAT_THRESHOLD) {
+            context.inputMap = context.inputMap or ControllerPacket.RIGHT_FLAG
+            context.hatXAxisUsed = true
+        }
+
+        context.inputMap =
+            context.inputMap and (ControllerPacket.UP_FLAG or ControllerPacket.DOWN_FLAG).inv()
+        if (hatY < -HAT_THRESHOLD) {
+            context.inputMap = context.inputMap or ControllerPacket.UP_FLAG
+            context.hatYAxisUsed = true
+        } else if (hatY > HAT_THRESHOLD) {
+            context.inputMap = context.inputMap or ControllerPacket.DOWN_FLAG
+            context.hatYAxisUsed = true
+        }
     }
 
     // Normalize the given raw float value into a 0.0-1.0f range; a range with no width puts every
@@ -4185,6 +4308,9 @@ class ControllerHandler(
 
         private const val REMAP_IGNORE = -1
         private const val REMAP_CONSUME = -2
+
+        // Not a key code: a step of handleRemapping that has no answer for the key
+        private const val REMAP_NONE = -3
 
         private const val SENSOR_ENABLE_DELAY_MS = 1000L
         private const val MAX_SENSOR_RATE_HZ = 200

@@ -300,38 +300,19 @@ open class AnalogStick(controller: VirtualController, context: Context, elementI
         private fun getMovementRadius(x: Float, y: Float): Double =
             Math.sqrt((x * x + y * y).toDouble())
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ReturnCount")
-        private fun getAngle(wayX: Float, wayY: Float): Double {
-            // prevent divisions by zero for corner cases
-            if (wayX == 0f) {
-                // straight above the centre (and on it) is 0, straight below is half a turn
-                return if (wayY > 0) Math.PI else 0.0
-            } else if (wayY == 0f) {
-                if (wayX > 0) {
-                    return Math.PI * QUARTER_TURNS_RIGHT / 2
-                } else if (wayX < 0) {
-                    return Math.PI * 1 / 2
-                }
-            }
-            // return correct calculated angle for each quadrant
-            return if (wayX > 0) {
-                if (wayY < 0) {
-                    // first quadrant
+        private fun getAngle(wayX: Float, wayY: Float): Double =
+            when {
+                // prevent divisions by zero for corner cases: straight above the centre (and on it)
+                // is 0, straight below is half a turn
+                wayX == 0f -> if (wayY > 0) Math.PI else 0.0
+                wayY == 0f && wayX > 0 -> Math.PI * QUARTER_TURNS_RIGHT / 2
+                wayY == 0f && wayX < 0 -> Math.PI * 1 / 2
+                // return correct calculated angle for each quadrant, the first to the fourth
+                wayX > 0 && wayY < 0 ->
                     QUARTER_TURNS_RIGHT * Math.PI / 2 + atan((-wayY / wayX).toDouble())
-                } else {
-                    // second quadrant
-                    Math.PI + atan((wayX / wayY).toDouble())
-                }
-            } else {
-                if (wayY > 0) {
-                    // third quadrant
-                    Math.PI / 2 + atan((wayY / -wayX).toDouble())
-                } else {
-                    // fourth quadrant
-                    0 + atan((-wayX / -wayY).toDouble())
-                }
+                wayX > 0 -> Math.PI + atan((wayX / wayY).toDouble())
+                wayY > 0 -> Math.PI / 2 + atan((wayY / -wayX).toDouble())
+                else -> 0 + atan((-wayX / -wayY).toDouble())
             }
-        }
     }
 }

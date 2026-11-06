@@ -439,103 +439,19 @@ class ControllerHandler(
 
     // Called before sending input but after we've determined that this
     // is definitely a controller (not a keyboard, mouse, or something else)
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun assignControllerNumberIfNeeded(context: GenericControllerContext) {
         if (context.assignedControllerNumber) {
             return
         }
 
-        // Set when all MAX_GAMEPADS numbers are taken: the pad gets none, and the host hears
+        // Refused when all MAX_GAMEPADS numbers are taken: the pad gets none, and the host hears
         // nothing of it, until one frees up
-        var refused = false
-
-        if (context is InputDeviceContext) {
-            val devContext: InputDeviceContext = context
-
-            if (!context.refusedControllerNumber) {
-                LimeLog.info(
-                    "${devContext.name} (${context.id}) needs a controller number assigned"
-                )
-            }
-            if (!devContext.external) {
-                LimeLog.info("Built-in buttons hardcoded as controller 0")
-                context.controllerNumber = 0
-            } else if (prefConfig.multiController && devContext.hasJoystickAxes) {
-                context.controllerNumber = 0
-
-                refused = !reserveControllerNumber(context)
-            } else if (!devContext.hasJoystickAxes) {
-                // If this device doesn't have joystick axes, it may be an input device associated
-                // with another joystick (like a PS4 touchpad). We'll propagate that joystick's
-                // controller number to this associated device.
-
-                context.controllerNumber = 0
-
-                // For the DS4 case, the associated joystick is the next device after the touchpad.
-                // We'll try the opposite case too, just to be a little future-proof.
-                var associatedDevice = InputDevice.getDevice(devContext.id + 1)
-                if (!isAssociatedJoystick(devContext.inputDevice, associatedDevice)) {
-                    associatedDevice = InputDevice.getDevice(devContext.id - 1)
-                    if (!isAssociatedJoystick(devContext.inputDevice, associatedDevice)) {
-                        LimeLog.info("No associated joystick device found")
-                        associatedDevice = null
-                    }
-                }
-
-                if (associatedDevice != null) {
-                    var associatedDeviceContext = inputDeviceContexts.get(associatedDevice.id)
-
-                    // Create a new context for the associated device if one doesn't exist
-                    if (associatedDeviceContext == null) {
-                        associatedDeviceContext =
-                            createInputDeviceContextForDevice(associatedDevice)
-                        inputDeviceContexts.put(associatedDevice.id, associatedDeviceContext)
-                    }
-
-                    // Assign a controller number for the associated device if one isn't assigned
-                    if (!associatedDeviceContext.assignedControllerNumber) {
-                        assignControllerNumberIfNeeded(associatedDeviceContext)
-                    }
-
-                    if (associatedDeviceContext.assignedControllerNumber) {
-                        // Propagate the associated controller number
-                        context.controllerNumber = associatedDeviceContext.controllerNumber
-
-                        LimeLog.info(
-                            "Propagated controller number from ${associatedDeviceContext.name}"
-                        )
-                    } else {
-                        // The joystick has none, so the touchpad waits for one as well
-                        refused = true
-                    }
-                }
+        val refused =
+            if (context is InputDeviceContext) {
+                takeInputDeviceNumber(context)
             } else {
-                LimeLog.info("Not reserving a controller number")
-                context.controllerNumber = 0
+                takeOtherContextNumber(context)
             }
-
-            // If the gamepad doesn't have motion sensors, use the on-device sensors as a fallback
-            // for player 1. A pad that waits for a number is not player 1
-            if (!refused) {
-                if (
-                    prefConfig.gamepadMotionSensorsFallbackToDevice &&
-                        context.controllerNumber.toInt() == 0 &&
-                        devContext.sensorManager == null
-                ) {
-                    devContext.sensorManager = deviceSensorManager
-                }
-            }
-        } else {
-            if (prefConfig.multiController) {
-                context.controllerNumber = 0
-
-                refused = !reserveControllerNumber(context)
-            } else {
-                LimeLog.info("Not reserving a controller number")
-                context.controllerNumber = 0
-            }
-        }
 
         if (refused) {
             if (!context.refusedControllerNumber) {
@@ -553,6 +469,117 @@ class ControllerHandler(
 
         // Report attributes of this new controller to the host
         context.sendControllerArrival()
+    }
+
+    // Gives the context of an Android input device its controller number. True when it has to
+    // wait for one.
+    private fun takeInputDeviceNumber(context: InputDeviceContext): Boolean {
+        if (!context.refusedControllerNumber) {
+            LimeLog.info("${context.name} (${context.id}) needs a controller number assigned")
+        }
+
+        val refused =
+            when {
+                !context.external -> {
+                    LimeLog.info("Built-in buttons hardcoded as controller 0")
+                    context.controllerNumber = 0
+                    false
+                }
+                prefConfig.multiController && context.hasJoystickAxes -> {
+                    context.controllerNumber = 0
+                    !reserveControllerNumber(context)
+                }
+                !context.hasJoystickAxes -> takeAssociatedNumber(context)
+                else -> {
+                    LimeLog.info("Not reserving a controller number")
+                    context.controllerNumber = 0
+                    false
+                }
+            }
+
+        // A pad that waits for a number is not player 1
+        if (!refused) {
+            borrowPhoneSensors(context)
+        }
+        return refused
+    }
+
+    // If the gamepad doesn't have motion sensors, use the on-device sensors as a fallback
+    // for player 1
+    private fun borrowPhoneSensors(context: InputDeviceContext) {
+        if (
+            prefConfig.gamepadMotionSensorsFallbackToDevice &&
+                context.controllerNumber.toInt() == 0 &&
+                context.sensorManager == null
+        ) {
+            context.sensorManager = deviceSensorManager
+        }
+    }
+
+    // If this device doesn't have joystick axes, it may be an input device associated
+    // with another joystick (like a PS4 touchpad). We'll propagate that joystick's
+    // controller number to this associated device. True when the joystick has none yet.
+    private fun takeAssociatedNumber(context: InputDeviceContext): Boolean {
+        context.controllerNumber = 0
+
+        val associatedDevice = findAssociatedJoystick(context) ?: return false
+        val associatedDeviceContext = associatedJoystickContext(associatedDevice)
+        if (!associatedDeviceContext.assignedControllerNumber) {
+            // The joystick has none, so the touchpad waits for one as well
+            return true
+        }
+
+        // Propagate the associated controller number
+        context.controllerNumber = associatedDeviceContext.controllerNumber
+
+        LimeLog.info("Propagated controller number from ${associatedDeviceContext.name}")
+        return false
+    }
+
+    // For the DS4 case, the associated joystick is the next device after the touchpad.
+    // We'll try the opposite case too, just to be a little future-proof.
+    private fun findAssociatedJoystick(context: InputDeviceContext): InputDevice? {
+        val next = InputDevice.getDevice(context.id + 1)
+        if (isAssociatedJoystick(context.inputDevice, next)) {
+            return next
+        }
+
+        val previous = InputDevice.getDevice(context.id - 1)
+        if (isAssociatedJoystick(context.inputDevice, previous)) {
+            return previous
+        }
+
+        LimeLog.info("No associated joystick device found")
+        return null
+    }
+
+    // The context of the associated joystick, with a controller number if one is free. It is made
+    // here when the joystick has none yet.
+    private fun associatedJoystickContext(device: InputDevice): InputDeviceContext {
+        var associatedDeviceContext = inputDeviceContexts.get(device.id)
+
+        // Create a new context for the associated device if one doesn't exist
+        if (associatedDeviceContext == null) {
+            associatedDeviceContext = createInputDeviceContextForDevice(device)
+            inputDeviceContexts.put(device.id, associatedDeviceContext)
+        }
+
+        // Assign a controller number for the associated device if one isn't assigned
+        assignControllerNumberIfNeeded(associatedDeviceContext)
+        return associatedDeviceContext
+    }
+
+    // Gives a USB pad, or any context that is not an Android input device, its controller number.
+    // True when it has to wait for one.
+    private fun takeOtherContextNumber(context: GenericControllerContext): Boolean {
+        if (!prefConfig.multiController) {
+            LimeLog.info("Not reserving a controller number")
+            context.controllerNumber = 0
+            return false
+        }
+
+        context.controllerNumber = 0
+        return !reserveControllerNumber(context)
     }
 
     private fun createUsbDeviceContextForDevice(device: AbstractController): UsbDeviceContext {

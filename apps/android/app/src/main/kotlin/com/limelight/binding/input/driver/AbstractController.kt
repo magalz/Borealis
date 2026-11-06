@@ -70,4 +70,9 @@ abstract class AbstractController(
     protected fun notifyDeviceAdded() {
         listener.deviceAdded(this)
     }
+
+    companion object {
+        // The bulk write of a rumble gives up after this long (milliseconds)
+        const val USB_WRITE_TIMEOUT_MS = 100
+    }
 }

@@ -166,7 +166,7 @@ class XboxOneController(
                 RUMBLE_FULL,
             )
         val res =
-            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, RUMBLE_TIMEOUT_MS)
+            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
         val sent = res == data.size
         if (!sent) {
             LimeLog.warning("Rumble transfer failed: $res")
@@ -330,7 +330,6 @@ class XboxOneController(
         private const val MOTOR_SHIFT = 9
         private const val INIT_TIMEOUT_MS = 3000
         private const val ACK_TIMEOUT_MS = 3000
-        private const val RUMBLE_TIMEOUT_MS = 100
 
         // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
         @Suppress("ComplexCondition")

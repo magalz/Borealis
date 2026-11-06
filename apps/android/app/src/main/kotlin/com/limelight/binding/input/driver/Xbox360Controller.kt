@@ -114,7 +114,7 @@ class Xbox360Controller(
                 0x00,
             )
         val res =
-            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, RUMBLE_TIMEOUT_MS)
+            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
         val sent = res == data.size
         if (!sent) {
             LimeLog.warning("Rumble transfer failed: $res")
@@ -194,7 +194,6 @@ class Xbox360Controller(
         private const val LED_TIMEOUT_MS = 3000
         private const val RUMBLE_REPORT_SIZE: Byte = 0x08
         private const val MOTOR_BYTE_SHIFT = 8
-        private const val RUMBLE_TIMEOUT_MS = 100
 
         // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
         @Suppress("ComplexCondition")

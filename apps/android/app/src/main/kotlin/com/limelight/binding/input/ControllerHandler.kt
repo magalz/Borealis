@@ -3569,9 +3569,6 @@ class ControllerHandler(
         @JvmField
         val mouseEmulationRunnable: Runnable =
             object : Runnable {
-                // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13
-                // backlog).
-                @Suppress("LongMethod")
                 override fun run() {
                     if (!mouseEmulationActive) {
                         return
@@ -3585,64 +3582,56 @@ class ControllerHandler(
                     // the PC
                     val precision = (mouseEmulationLastInputMap and ControllerPacket.RB_FLAG) != 0
 
-                    // Send mouse events from analog sticks
-                    if (
-                        prefConfig.analogStickForScrolling ==
-                            PreferenceConfiguration.AnalogStickForScrolling.RIGHT
-                    ) {
-                        sendEmulatedMouseMove(
-                            leftStickMotion,
-                            leftStickX,
-                            leftStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                        sendEmulatedMouseScroll(
-                            rightStickMotion,
-                            rightStickX,
-                            rightStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                    } else if (
-                        prefConfig.analogStickForScrolling ==
-                            PreferenceConfiguration.AnalogStickForScrolling.LEFT
-                    ) {
-                        sendEmulatedMouseMove(
-                            rightStickMotion,
-                            rightStickX,
-                            rightStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                        sendEmulatedMouseScroll(
-                            leftStickMotion,
-                            leftStickX,
-                            leftStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                    } else {
-                        sendEmulatedMouseMove(
-                            leftStickMotion,
-                            leftStickX,
-                            leftStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                        sendEmulatedMouseMove(
-                            rightStickMotion,
-                            rightStickX,
-                            rightStickY,
-                            elapsedMs,
-                            precision,
-                        )
-                    }
+                    sendEmulatedMouseFromSticks(elapsedMs, precision)
 
                     // Requeue the callback
                     mainThreadHandler.postDelayed(this, mouseEmulationReportPeriod.toLong())
                 }
             }
+
+        // Send mouse events from analog sticks
+        private fun sendEmulatedMouseFromSticks(elapsedMs: Long, precision: Boolean) {
+            if (
+                prefConfig.analogStickForScrolling ==
+                    PreferenceConfiguration.AnalogStickForScrolling.RIGHT
+            ) {
+                sendEmulatedMouseMove(leftStickMotion, leftStickX, leftStickY, elapsedMs, precision)
+                sendEmulatedMouseScroll(
+                    rightStickMotion,
+                    rightStickX,
+                    rightStickY,
+                    elapsedMs,
+                    precision,
+                )
+            } else if (
+                prefConfig.analogStickForScrolling ==
+                    PreferenceConfiguration.AnalogStickForScrolling.LEFT
+            ) {
+                sendEmulatedMouseMove(
+                    rightStickMotion,
+                    rightStickX,
+                    rightStickY,
+                    elapsedMs,
+                    precision,
+                )
+                sendEmulatedMouseScroll(
+                    leftStickMotion,
+                    leftStickX,
+                    leftStickY,
+                    elapsedMs,
+                    precision,
+                )
+            } else {
+                sendEmulatedMouseMove(leftStickMotion, leftStickX, leftStickY, elapsedMs, precision)
+                sendEmulatedMouseMove(
+                    rightStickMotion,
+                    rightStickX,
+                    rightStickY,
+                    elapsedMs,
+                    precision,
+                )
+            }
+        }
 
         fun toggleMouseEmulation() {
             setMouseEmulation(!mouseEmulationActive, true)

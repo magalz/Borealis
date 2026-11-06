@@ -115,10 +115,11 @@ class Xbox360Controller(
             )
         val res =
             connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, RUMBLE_TIMEOUT_MS)
-        if (res != data.size) {
+        val sent = res == data.size
+        if (!sent) {
             LimeLog.warning("Rumble transfer failed: $res")
         }
-        return true
+        return sent
     }
 
     override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {

@@ -148,7 +148,7 @@ class XboxOneController(
         return true
     }
 
-    private fun sendRumblePacket() {
+    private fun sendRumblePacket(): Boolean {
         val data =
             byteArrayOf(
                 RUMBLE_REPORT_ID,
@@ -167,23 +167,23 @@ class XboxOneController(
             )
         val res =
             connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, RUMBLE_TIMEOUT_MS)
-        if (res != data.size) {
+        val sent = res == data.size
+        if (!sent) {
             LimeLog.warning("Rumble transfer failed: $res")
         }
+        return sent
     }
 
     override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         this.lowFreqMotor = lowFreqMotor
         this.highFreqMotor = highFreqMotor
-        sendRumblePacket()
-        return true
+        return sendRumblePacket()
     }
 
     override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         this.leftTriggerMotor = leftTrigger
         this.rightTriggerMotor = rightTrigger
-        sendRumblePacket()
-        return true
+        return sendRumblePacket()
     }
 
     override fun stop() {

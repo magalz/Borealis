@@ -53,8 +53,14 @@ abstract class AbstractController(
 
     abstract fun stop()
 
+    /**
+     * Sets the two main motors. Returns true when the write went through, and false when the
+     * transfer ended with anything but the whole packet (a timeout, a failure or a short write). A
+     * pad with nothing to write returns true: nothing failed.
+     */
     abstract fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean
 
+    /** Sets the trigger motors. The result means what the result of [rumble] means. */
     abstract fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean
 
     protected fun notifyDeviceRemoved() {

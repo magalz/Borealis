@@ -5,6 +5,7 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import com.google.common.truth.Truth.assertThat
 import com.limelight.R
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.capture.InputCaptureProvider
@@ -26,6 +27,12 @@ internal const val STREAM_HEIGHT = 180
 /** Where the stream view sits in the background touch view: its top, under the free space. */
 internal const val STREAM_TOP = 145
 
+/** The time of the events that the tests build, unless a test gives another one. */
+internal const val TIME = MotionSpec.EVENT_TIME
+
+/** A press this long is not a pulse of a side button. */
+internal const val SETTLE_MS = 25L
+
 /**
  * One call that reached the native library, as the tests compare it: the name of the call and its
  * arguments with their types (`Short` for the coordinates, `Byte` for a button).
@@ -37,6 +44,12 @@ internal fun sent(): List<Sent> = ShadowRecordingBridge.calls.map { Sent(it.name
 
 /** Forgets the calls so far. */
 internal fun forgetSent() = ShadowRecordingBridge.calls.clear()
+
+/** The native library got exactly [calls], in order; the calls are forgotten after the check. */
+internal fun assertSent(vararg calls: Sent) {
+    assertThat(sent()).containsExactlyElementsIn(calls).inOrder()
+    forgetSent()
+}
 
 /** `sendMousePosition`: the pointer is at ([x], [y]) on a stream view of [width] by [height]. */
 internal fun position(
@@ -164,6 +177,19 @@ internal abstract class MotionTestBase : GameTestBase() {
         ShadowLooper.idleMainLooper(millis, TimeUnit.MILLISECONDS)
     }
 
+    /** The touch screen event [event] reaches [view], as the window hands it to the activity. */
+    protected fun touch(view: View, event: MotionEvent) = rig.game.onTouch(view, event)
+
+    /** The mouse reports [buttons] as down, at (10, 20) of the stream view, now. */
+    protected fun mouse(action: Int, buttons: Int): Boolean =
+        rig.game.onGenericMotion(
+            streamView,
+            mouseEvent(action, 10f, 20f, buttons, SystemClock.uptimeMillis()),
+        )
+
+    /** What the host gets for the place where [mouse] puts the pointer. */
+    protected fun thePointer() = position(10, 20)
+
     /** Gives the controller handler a pad that the system knows by [deviceId]. */
     protected fun addGamepadContext(deviceId: Int, controllerNumber: Short) {
         rig.addGamepadContext(deviceId, controllerNumber)
@@ -227,5 +253,18 @@ internal fun fingerEvent(
     motionEventOf(InputDevice.SOURCE_TOUCHSCREEN, action) {
         points.forEach { (x, y) -> pointer(x, y, MotionEvent.TOOL_TYPE_FINGER) }
         actionIndex = index
+        build()
+    }
+
+/** A touch screen event of one finger at ([x], [y]) at the time [at]; [build] changes the rest. */
+internal fun finger(
+    action: Int,
+    x: Float,
+    y: Float,
+    at: Long = TIME,
+    build: MotionSpec.() -> Unit = {},
+): MotionEvent =
+    fingerEvent(action, listOf(x to y)) {
+        eventTime = at
         build()
     }

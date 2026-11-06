@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.stream.game.motion
 
 import android.view.MotionEvent
-import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import com.google.common.truth.Truth.assertThat
@@ -21,20 +20,6 @@ internal class FingerTouchTest : MotionTestBase() {
     private val left = MouseButtonPacket.BUTTON_LEFT
 
     private fun direct() = rig.session.setTouchMode(TouchMode.DIRECT)
-
-    private fun touch(view: View, event: MotionEvent) = rig.game.onTouch(view, event)
-
-    private fun finger(
-        action: Int,
-        x: Float,
-        y: Float,
-        at: Long = TIME,
-        build: MotionSpec.() -> Unit = {},
-    ) =
-        fingerEvent(action, listOf(x to y)) {
-            eventTime = at
-            build()
-        }
 
     private fun down(x: Float, y: Float, at: Long = TIME) =
         finger(MotionEvent.ACTION_DOWN, x, y, at)
@@ -553,9 +538,5 @@ internal class FingerTouchTest : MotionTestBase() {
         assertThat(touch(streamView, thirdUp)).isFalse()
         assertThat(touch(streamView, thirdOfFour)).isFalse()
         assertThat(sent()).isEmpty()
-    }
-
-    private companion object {
-        const val TIME = 10_000L
     }
 }

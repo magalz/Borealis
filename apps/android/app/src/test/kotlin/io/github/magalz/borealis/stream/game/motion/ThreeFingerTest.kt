@@ -166,8 +166,4 @@ internal class ThreeFingerTest : MotionTestBase() {
         assertThat(handled).isFalse()
         assertThat(panel()).isEqualTo(Panel.NONE)
     }
-
-    private companion object {
-        const val TIME = 10_000L
-    }
 }

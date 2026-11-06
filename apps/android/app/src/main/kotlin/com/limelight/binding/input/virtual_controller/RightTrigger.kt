@@ -4,8 +4,8 @@ package com.limelight.binding.input.virtual_controller
 import android.annotation.SuppressLint
 import android.content.Context
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-// The elements have no (Context) constructor on purpose: they need their controller and their id.
+// ViewConstructor lint: the elements have no (Context) constructor on purpose, they need their
+// controller and their id (Sprint 18c backlog).
 @SuppressLint("ViewConstructor")
 class RightTrigger(controller: VirtualController, layer: Int, context: Context) :
     DigitalButton(controller, EID_RT, layer, context) {

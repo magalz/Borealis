@@ -49,7 +49,8 @@ class TwoFingerTap {
     }
 }
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// Converted as is from the inherited Java; TooManyFunctions and LongParameterList stay: the class
+// waits for its split, and the constructor is frozen until then (Sprint 18d backlog).
 // The parameters are the connection, the pointer, the reference screen, the view, the settings and
 // the two-finger tap that the contexts of a stream share.
 @Suppress("TooManyFunctions", "LongParameterList")

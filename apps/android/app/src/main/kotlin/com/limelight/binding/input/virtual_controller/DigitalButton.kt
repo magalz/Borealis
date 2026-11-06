@@ -12,8 +12,8 @@ import android.view.MotionEvent
 /**
  * This is a digital button on screen element. It is used to get click and double click user input.
  */
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-// The elements have no (Context) constructor on purpose: they need their controller and their id.
+// ViewConstructor lint: the elements have no (Context) constructor on purpose, they need their
+// controller and their id (Sprint 18c backlog).
 @SuppressLint("ViewConstructor")
 open class DigitalButton(
     controller: VirtualController,

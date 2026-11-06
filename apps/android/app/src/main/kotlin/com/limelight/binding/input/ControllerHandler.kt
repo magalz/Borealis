@@ -134,8 +134,8 @@ class ControllerHandler(
             deviceVibrator = vibratorManager.defaultVibrator
         } else {
             deviceVibratorManager = null
-            // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13
-            // backlog).
+            // Converted as is from the inherited Java; VIBRATOR_SERVICE stays for the API levels
+            // before VibratorManager (Sprint 18c backlog).
             @Suppress("DEPRECATION")
             deviceVibrator = activityContext.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
@@ -2080,8 +2080,8 @@ class ControllerHandler(
         // evaluates the deadzone.
     }
 
-    // Converted as is from the inherited Java; LongParameterList stays because the only caller,
-    // handleMotionEvent, passes the eight axis values as separate floats (Sprint 18c backlog).
+    // LongParameterList stays because the only caller, handleMotionEvent, passes the eight axis
+    // values as separate floats, and the class split reshapes the axis path (Sprint 18d backlog).
     @Suppress("LongParameterList")
     private fun handleAxisSet(
         context: InputDeviceContext,

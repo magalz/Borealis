@@ -78,44 +78,43 @@ class XboxOneController(
         connection.bulkTransfer(checkNotNull(outEndpt), payload, payload.size, ACK_TIMEOUT_MS)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount")
-    override fun handleRead(buffer: ByteBuffer): Boolean {
-        when (buffer.get().toInt()) {
-            BUTTONS_REPORT -> {
-                if (buffer.remaining() < BUTTONS_REPORT_MIN_SIZE) {
-                    LimeLog.severe("XBone button/axis read too small: " + buffer.remaining())
-                    return false
-                }
-
-                buffer.position(buffer.position() + BUTTONS_REPORT_SKIP)
-                processButtons(buffer)
-                return true
-            }
-            MODE_REPORT -> {
-                if (buffer.remaining() < MODE_REPORT_MIN_SIZE) {
-                    LimeLog.severe("XBone mode read too small: " + buffer.remaining())
-                    return false
-                }
-
-                // The Xbox One S controller needs acks for mode reports otherwise
-                // it retransmits them forever.
-                if (buffer.get().toInt() == MODE_REPORT_ACK_FLAGS) {
-                    ackModeReport(buffer.get())
-                    buffer.position(buffer.position() + 1)
-                } else {
-                    buffer.position(buffer.position() + 2)
-                }
-                setButtonFlag(
-                    ControllerPacket.SPECIAL_BUTTON_FLAG,
-                    buffer.get().toInt() and GUIDE_BIT,
-                )
-                return true
-            }
+    // Reads a buttons report after its type byte. Returns false when the report is too short.
+    private fun readButtonsReport(buffer: ByteBuffer): Boolean {
+        if (buffer.remaining() < BUTTONS_REPORT_MIN_SIZE) {
+            LimeLog.severe("XBone button/axis read too small: " + buffer.remaining())
+            return false
         }
 
-        return false
+        buffer.position(buffer.position() + BUTTONS_REPORT_SKIP)
+        processButtons(buffer)
+        return true
     }
+
+    // Reads a mode report after its type byte. Returns false when the report is too short.
+    private fun readModeReport(buffer: ByteBuffer): Boolean {
+        if (buffer.remaining() < MODE_REPORT_MIN_SIZE) {
+            LimeLog.severe("XBone mode read too small: " + buffer.remaining())
+            return false
+        }
+
+        // The Xbox One S controller needs acks for mode reports otherwise
+        // it retransmits them forever.
+        if (buffer.get().toInt() == MODE_REPORT_ACK_FLAGS) {
+            ackModeReport(buffer.get())
+            buffer.position(buffer.position() + 1)
+        } else {
+            buffer.position(buffer.position() + 2)
+        }
+        setButtonFlag(ControllerPacket.SPECIAL_BUTTON_FLAG, buffer.get().toInt() and GUIDE_BIT)
+        return true
+    }
+
+    override fun handleRead(buffer: ByteBuffer): Boolean =
+        when (buffer.get().toInt()) {
+            BUTTONS_REPORT -> readButtonsReport(buffer)
+            MODE_REPORT -> readModeReport(buffer)
+            else -> false
+        }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
     @Suppress("ReturnCount", "LoopWithTooManyJumpStatements")

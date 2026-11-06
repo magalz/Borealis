@@ -138,3 +138,74 @@ From Sprint 17b the work of Borealis is tracked in the itsaplan project `ignis-d
 - **Bisect hazards stay in history.** With `--no-ff` merges, a few commits fail a check that the next commit fixes
   (a line-length and a class-size rule of detekt, and a spotless failure on comment lines). Each one is named in the
   review notes, so a bisect can skip it.
+
+## Lessons from Sprint 18a
+
+- **A failed history replay leaves the store "indexing" for good.** On 2026-11-05 a daemon started with a plain
+  `memtrace start` replayed 200 commits, the replay failed ("owned source retains extra source rows"), and every
+  query answered `indexing_in_progress`, through two more plain restarts. A restart through the launcher with
+  `MEMTRACE_NO_REPLAY` made the graph current, but its publication stayed "partial", and a full index then
+  failed on a stale edge row. What worked was the full wipe of the [task lifecycle](#task-lifecycle) (stop,
+  reset, history purge), then the daemon started again through the launcher with `MEMTRACE_NO_REPLAY`,
+  `MEMTRACE_NO_STARTUP_WATCH` and `MEMTRACE_NO_WATCH_RESTORE`: the graph was rebuilt from source, and the
+  embeddings finished after it. A plain restart does not clear that state.
+- **A session's `memtrace mcp` keeps state of its own.** It can hold a job that does not clear (an incremental
+  job of the main session and an overlay job of lane B got stuck in "scan": the first was killed, and the second
+  never cleared), though an overlay job from a session's MCP can also just be slow: one finished after about 6.5
+  minutes. It can hold an old quota too (below). The daemon serves MCP over HTTP at `http://127.0.0.1:3030/mcp`, and a small shell
+  helper in the session scratch area (`mt.sh <tool> '<json arguments>'`, forward-slash paths; it is not in the
+  repository) calls it. Every call of a task goes through the helper when the session's MCP is stuck or stale.
+- **Index overlays through the daemon.** The overlay of a worktree is indexed with `index_directory` and
+  `check_job_status` through the helper, never through a session's MCP: through the daemon an overlay took
+  seconds, and a task may dispatch on the `main` label with no overlay when its code is the same. One overlay
+  waited on `repository_busy` and succeeded on a retry.
+- **The monthly quota ran out in the middle of the sprint.** On 2026-11-06 the community plan's query quota
+  (13,122 queries used of 1,000 a month, resetting on 2026-12-06) was spent, and every call answered
+  `quota_exceeded`, through the MCP and the daemon. The rule while it lasted: one test call and no retry loop;
+  callers and impact from the LSP and Grep; a mutation check on every refactored method; the report names the gap
+  ("Memtrace blocked (quota)"). When the owner added credits, the daemon kept the old quota in memory until it
+  was restarted through the launcher (with `MEMTRACE_NO_REPLAY`, and no rebuild), and the session's MCP kept
+  answering `quota_exceeded`, so from then on every call went through the helper.
+- **Wrapped markers.** Four markers were wrapped over two comment lines (`...(Sprint 13` and, on the next line,
+  `// backlog).`), so the one-line search that counted 158 markers missed four of the 162. Search with
+  `rg -n -U "Sprint 1[234][ \t]*(\n[ \t]*//[ \t]*)?backlog" apps/android`, and write a relabeled marker on one
+  line. A marker sweep also finds only the places that carry a marker: six structural suppressions in the network
+  code had none, and went to a card of their own (BORE-92).
+- **Lint was not in the task checks.** One `UseKtx` error (`SparseArray.size()` in the `ContextList.publish()` of
+  BORE-90) failed the Android job on every push from `395178097` to `b98a57f49`, 9 runs, because the pushes went
+  out without a look at the results. Check the CI result of each wave before the next push. `lintDebug` of every
+  module a task touches is now one of the task checks, and a reviewer runs it too.
+- **Hooks read the command line.** A commit message goes in `-m` arguments, with `Refs: BORE-N` and
+  `Co-Authored-By` as the two lines of one last `-m`. Two `-m` flags make two paragraphs, and
+  `git interpret-trailers` then reads only the last one, so the hook does not see `Refs`. Check each commit with
+  `git log -1 --format=%B | git interpret-trailers --parse`. The eight commits and the merge of BORE-75 failed that
+  check and were rewritten before they were published (`git filter-branch --msg-filter` over the lane, with the
+  trees compared before and after), and a few other messages had `Refs` outside the trailer block and were
+  reworded. The itsaplan hook reads the trailers and the closing words from the command line too: use `-m` and an
+  inline `--body`, not files, and give a draft pull request its closing words as well.
+- **Fixes before the refactor found more bugs than the plan listed.** Wave 0 was five cards (BORE-39, 42, 43, 54
+  and 51), and BORE-89, BORE-90 and BORE-95 came out of it: the implementer of BORE-54 found BORE-89, BORE-95
+  turned up while BORE-89 was fixed, and the flaky `ControllerNumberLimitTest` (BORE-62) turned out to be
+  a production race on the lists of pads (BORE-90), which a load run with burner threads reproduced about once in
+  1500 runs. A gate in the test rig would have turned the crash green. Reproduce a flaky test under load before
+  anything is changed in it, and fix before the refactor, so that the refactor keeps no known defect: a later fix
+  also reuses an earlier one (BORE-89 reuses the helpers of BORE-54).
+- **Mutation checks were the strongest evidence that a refactor kept behaviour.** A characterization test is
+  proven by a mutant of the old code that it kills, and the new code is proven by one-line mutants (a swapped
+  order, a dropped condition, a flipped branch) that a named test catches. CH-3 ran a 54-mutant audit of the
+  Sprint 13 tests and 39 mutants of the new helpers, CH-4 29 and CH-5 22, and all were caught; the reviews of the
+  lane merges ran their own mutants. They also stood in for Memtrace while its quota was out.
+- **A usage limit stopped the sessions in the middle of tasks.** It hit on 2026-11-06 (resetting at 04:10 local
+  time). The implementer of BORE-90 died after its failing test with the fix uncommitted, one run of
+  BORE-80 died with no commit, and the lane sessions stopped. They resumed from their progress files: the one of
+  BORE-90 held its design, so the resumed task went on from it, and the run of BORE-80 started again from its
+  brief. A progress file that holds the decisions, and not only the commits, is what makes a resume cheap.
+- **Three lanes, one phase.** The main session ran lane A (`ControllerHandler`, and the library and stream UI)
+  through `/phase-loop`, and two fresh sessions ran lane B (network and host) and lane C (pads and input) on
+  disjoint files, each with its own integration branch, implementers and reviewers. Every lane merge into the
+  phase got an independent merge review in the main session, on a merged tree in a detached worktree. Those
+  reviews found what a task review cannot: a test fake of lane A that stopped compiling when BORE-42 changed the
+  return type of `rumble` (fixed on the phase with its own commit), commits whose trailers did not parse, and a
+  fix commit that failed detekt alone, which the notes name for a bisect. When a task needed five one-line edits
+  in the test fakes of another lane, the main session allowed the return type and `return true` only, and merged
+  the lane before the task that needed them.

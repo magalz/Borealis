@@ -1406,7 +1406,7 @@ the TV: the same audio runs, not a Sprint 16 regression
   with that method. `continuousAudio=1` made the runs worse (TV Balanced 406 drops and fps limit 222,
   against 263 and 154 without it), so the drop limit was the cause. Owner decision (2026-11-02):
   `PENDING_AUDIO_LIMIT_MS` at 100 ms, and continuous audio off (the `StreamConfiguration.continuousAudio`
-  field stays, off by default, with no caller). Result: TV 146 and 64 drops become 4 and 1; S22 140
+  field stayed, off by default, with no caller, until Sprint 18a deleted it with its query). Result: TV 146 and 64 drops become 4 and 1; S22 140
   and 33 become 15 and 29, and on the S22 most drops come at the start of the stream (11 of 15 and 17
   of 29). See [device-validation, Audio measurement, Sprint 17a](development/device-validation.md#audio-measurement-sprint-17a-2026-11-02).
 - **Audio behind the picture on the TV: the Bluetooth notice.** The entry "Audio behind the picture
@@ -1944,7 +1944,11 @@ that name a sprint are scheduled in that sprint; the others are not scheduled.
   review found it: `RestoreOpenerFocus` twice, test helpers copied across the fit, focus and motion tests, the
   traversal-order pattern written twice, `motorByte` in both Xbox drivers, and the pad fusing block of
   `ControllerHandler` still in three copies. None is a defect, and the card's title marks it
-  for the refactor. Taken by [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input).
+  for the refactor. Taken by [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input),
+  where it is done in the phase: one `RestoreOpenerFocus` (in `library/focus/OpenerFocus.kt`) and one
+  `resetWindowFocus()` (in `testing/WindowFocus.kt`), the `readingOrderGroup` and `readingOrderIndex`
+  modifiers (BORE-69), one `motorByte(motor, shift)`, `fuse` and `fuseIfOnNumber`, and the shared test
+  helpers of BORE-72 and BORE-73.
 - **BORE-50, found in the round: "already paired" cannot be reached with LuminalShine.** A forgotten host that is added
   again comes back "Not paired", because LuminalShine 26.11.0 reports its pairing state only over HTTPS. The owner
   decides between a reworded message and a pairing over HTTPS on re-add (section 23, finding 1).
@@ -1963,7 +1967,16 @@ that name a sprint are scheduled in that sprint; the others are not scheduled.
 
 ### Sprint 18a: refactor of the converted code (network, host and input)
 
-Planned 2026-11-05, started. Phase card BORE-60. The scope was first set on 2026-10-28. On
+**Status: Done in the phase, pending the device round and the merge.** Planned and started on
+2026-11-05, and run to 2026-11-06. Phase card BORE-60, draft pull request
+[#129](https://github.com/magalz/Borealis/pull/129) from `phase/s18a-refactor-network-input`. Every
+task card listed under "Cards delivered" is merged into the phase at its head `66f61bde8`, except
+BORE-84 (the relabel sweep) and BORE-85 (these docs), which join when their tasks merge; BORE-62 only ran a
+proof and has no commit. The figures below are at `66f61bde8`. The device round has not run: its checklist is
+[section 24 of the device validation](development/device-validation.md#24-results-sprint-18a), with
+every row pending.
+
+The scope was first set on 2026-10-28. On
 2026-11-05 the owner split the sprint in two, run one after the other, each with its own phase
 pull request and device round, and added Sprints 18c and 18d before SecOps (see the
 [order of the coming sprints](#order-of-the-coming-sprints-owner-decisions-of-2026-10-21-and-2026-10-28)).
@@ -1975,21 +1988,43 @@ The numbers of the later sprints do not change.
 - **Sprint 18b** takes the video, audio and stream-activity code of the Sprint 14 block, and the
   test and tooling items. It ends with a device round on the picture and the sound.
 
-- **Recount** at `3e55b12a1`: 158 markers on 157 places in 43 files (48 `(Sprint 12 backlog)`,
-  59 `(Sprint 13 backlog)`, 51 `(Sprint 14 backlog)`; `WakeOnLanSender` has two markers on one
-  place). The 166 of the 2026-10-28 decision and the 162 of the earlier text (the Sprint 16 count)
-  are superseded: the difference is the places that Sprints 16 and 17 removed. By kind: 97 sit on
-  structural suppressions that a refactor can clear (complexity, `ReturnCount` and `ThrowsCount`,
-  `ComplexCondition`, `NestedBlockDepth`), 44 are bound to behaviour or to the ABI
-  (`PrintStackTrace` and generic catches, deprecated APIs kept on purpose, `@SuppressLint`, JNI and
-  fixed listener signatures, `PLATFORM_CLASS_MAPPED_TO_KOTLIN`), and 16 are whole-class
-  `LargeClass` and `TooManyFunctions`.
+- **Recount** at `3e55b12a1` (the code of the phase base `0929a8bdd`): 162 markers on 161 places in
+  44 files (49 `(Sprint 12 backlog)`, 62 `(Sprint 13 backlog)`, 51 `(Sprint 14 backlog)`;
+  `WakeOnLanSender` has two markers on one place). The first count of this sprint, 158 markers on
+  157 places in 43 files (48, 59 and 51), was wrong: it used a one-line search, and four markers
+  are wrapped over two comment lines (`...(Sprint 13` and, on the next line, `// backlog).`). They
+  are three in `ControllerHandler` (the `init` block with `DEPRECATION`, `onSensorChanged` and
+  `mouseEmulationRunnable.run`, both `LongMethod`) and one in `JmDNSDiscoveryAgent.discover`
+  (`NestedBlockDepth`). The 162 of the earlier text (the Sprint 16 count: 49, 62 and 51 after
+  wave 2) agrees with it. The 166 of the 2026-10-28 decision is superseded: the difference is the
+  places that Sprints 16 and 17 removed. By kind: 100 sit on structural suppressions that a
+  refactor can clear (complexity, `ReturnCount` and `ThrowsCount`, `ComplexCondition`,
+  `NestedBlockDepth`), 45 are bound to behaviour or to the ABI (`PrintStackTrace` and generic
+  catches, deprecated APIs kept on purpose, `@SuppressLint`, JNI and fixed listener signatures,
+  `PLATFORM_CLASS_MAPPED_TO_KOTLIN`), and 16 are whole-class `LargeClass` and `TooManyFunctions`.
+  The exit check is now a multi-line search:
+  `rg -n -U "Sprint 1[234][ \t]*(\n[ \t]*//[ \t]*)?backlog" apps/android`.
+- **Markers left at the phase head `66f61bde8`**, by the same multi-line search for each label:
+  - 14 `(Sprint 12 backlog)` and `(Sprint 13 backlog)` markers are still open. BORE-84, the relabel
+    sweep, takes exactly these 14: it moves 10 to 18c (the three `ComputerDatabaseManager`
+    places, the `ControllerHandler` `init` block, `VideoDecoderRenderer` and the five
+    `@SuppressLint("ViewConstructor")` virtual-controller elements) and 4 to 18d (`ShortcutHelper`,
+    `NvConnectionListener`, `RelativeTouchContext` and `AbsoluteTouchContext`), and it moves
+    `ControllerHandler.handleAxisSet` from 18c to 18d (decision D13). Count again after BORE-84
+    merges: the exit check is zero `(Sprint 12 backlog)` and `(Sprint 13 backlog)` markers.
+  - 51 `(Sprint 14 backlog)` markers, none touched by 18a: they are the work of
+    [Sprint 18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling).
+  - 43 `(Sprint 18c backlog)` and 8 `(Sprint 18d backlog)` labels, placed by the 18a tasks and
+    counted as label occurrences (a comment that names both labels counts in both). They wait for
+    [Sprint 18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code) and
+    [Sprint 18d](#sprint-18d-splitting-the-large-converted-classes).
 - **Marker rule** (applies to 18a and 18b): each place a task touches ends done (its structural
   suppression entries deleted, detekt green, marker removed), or it is relabeled
   `(Sprint 18c backlog)` (behaviour or ABI) or `(Sprint 18d backlog)` (class split), with a
   one-line reason. A mixed place loses its structural entries and is relabeled 18c for the rest.
   18a ends with no `(Sprint 12 backlog)` or `(Sprint 13 backlog)` marker.
-- **Wave 0, fixes first** (owner: the refactor keeps no known defect). Each one is test-first:
+- **Wave 0, fixes first** (owner: the refactor keeps no known defect). Each one is test-first, and
+  all are done in the phase:
   - BORE-54: a pad that leaves while a button is held in mouse emulation leaves the PC's mouse
     button down.
   - BORE-43: a battery poll after destroy can mark a freed controller number.
@@ -1998,36 +2033,141 @@ The numbers of the later sprints do not change.
   - BORE-39: the Xbox One rumble shift, checked against the GIP range first.
   - BORE-51: the TV focus after Hide or Forget goes to the neighbour card, not to the rail item
     "Hosts".
-- **Scope:**
+  - Three found-by-agent bugs joined wave 0 under the same rule (decisions D1, D2 and D9 below):
+    BORE-89 (turning the gamepad mouse off while A or B is held leaves the PC's click down),
+    BORE-90 (a race on the lists of pads, behind the flaky test) and BORE-95 (the on-screen
+    controller's click stays down when a pad's mouse mode ends).
+- **Scope** (the cards are listed under "Cards delivered" below):
   - the structural places of the Sprint 12 and Sprint 13 code: `ControllerHandler` (in five
     tasks), `NvConnection`, `NvHTTP` and `PairingManager`, `ComputerManagerService`, the identity,
     Wake-on-LAN and crypto places, `TvChannelHelper` and `PosterContentProvider`,
     `PreferenceConfiguration` and mDNS, the USB drivers, the on-screen controller, the capture
     providers and `KeyboardTranslator.translate`;
-  - BORE-49, the duplication that Sprint 17b left: `RestoreOpenerFocus`, the pad fusing block,
-    the traversal-order modifier, `motorByte` and the test helpers;
+  - BORE-49, the duplication that Sprint 17b left: `RestoreOpenerFocus` (now one function, in
+    `library/focus/OpenerFocus.kt`), the pad fusing block, the traversal-order modifier,
+    `motorByte` and the test helpers;
   - K6, the Windows `VK_*` codes declared three times in `:borealis:stream` (moved here by
-    Sprint 16);
+    Sprint 16). Done (BORE-70): one set of 23 codes in `keys/VirtualKeys.kt`;
   - C4, the controller-input fusing block of `ControllerHandler`, written out three times (moved
-    here by Sprint 16; it is the fusing block of BORE-49);
+    here by Sprint 16; it is the fusing block of BORE-49). Done (BORE-65): `fuse` and
+    `fuseIfOnNumber`;
   - the deletion of `StreamConfiguration.continuousAudio` and its query in `NvHTTP` (owner,
-    2026-11-05: delete it; it has no caller since Sprint 17a turned continuous audio off);
-  - a relabel sweep for the Sprint 12 and Sprint 13 markers that no task removed.
+    2026-11-05: delete it; it has no caller since Sprint 17a turned continuous audio off). Done
+    (BORE-75): the field, the Builder setter, the query and its constant are gone, and
+    `LaunchRequestTest` pins that a launch carries no `continuousAudio`;
+  - a relabel sweep for the Sprint 12 and Sprint 13 markers that no task removed (BORE-84).
 - **Two deviations from the split, stated.** The flaky `ControllerNumberLimitTest` and the
   `MenuChordDetector.update` complexity refactor are in 18a, not 18b, because both are input code.
   - **A flaky controller test**, from Sprint 17a (seen once each in three task gates of the phase).
     `ControllerNumberLimitTest`, "a number that frees up goes to the pad that was left out", fails
     with an NPE at `ControllerHandler.kt:244` and depends on the order of the tests. Make it
-    deterministic.
+    deterministic. Result: the flake was a production race, not a test defect: the lists of pads
+    were read off the main thread while the main thread changed them. BORE-90 fixed it, and
+    BORE-62 then ran the proof (20 of 20 runs alone, 5 of 5 in order, and 0 of 1500 under load).
   - **`MenuChordDetector.update`** (`borealis/stream/.../input/MenuChordDetector.kt`), from the
     Sprint 9 quality review: a complexity refactor. Cyclomatic complexity 13 and cognitive
     complexity 18, seven mutable fields, a repeated expression, and an order dependency with no
-    comment.
+    comment. Done (BORE-71): a table of about 60 cases pins it, and the chord state moved into a
+    private nested `Chord`.
 - **Method:** behaviour does not change outside wave 0. Characterization tests come first where a
   refactored method has none. A refactored place loses its suppression and its marker.
+- **Cards delivered** (subtasks of BORE-60; all but BORE-84 and BORE-85 are merged into the phase at
+  `66f61bde8`, and those two join when their tasks merge):
+  - The roadmap split of Sprint 18: BORE-61.
+  - Wave 0 fixes: BORE-54, BORE-51, BORE-39, BORE-43, BORE-42 (the driver side, in two parts) and
+    BORE-63 (the handler side of BORE-42), and, found on the way, BORE-90, BORE-62 (the proof of
+    the fix, no commit of its own), BORE-95 and BORE-89.
+  - `ControllerHandler`, in five tasks: BORE-64 to BORE-68 (CH-1 early returns and complex
+    conditions, with the relabels; CH-2 controller numbers, the fusing block, remapping and the
+    axes; CH-3 button down and up, the touchpad event and the mouse-emulation tick; CH-4 the
+    device context factory and the controller arrival; CH-5 the battery, the rumble, the motion
+    request and the sensor listener).
+  - The duplication of BORE-49 and the input and UI helpers: BORE-49 itself (one `RestoreOpenerFocus`
+    and one `resetWindowFocus()`), BORE-69 (the traversal-order modifier pair), BORE-70 (K6),
+    BORE-71 (`MenuChordDetector.update`), BORE-72 (the Settings fit test helpers and
+    `assumeNormalSpacing`) and BORE-73 (the shared motion test helpers and the `AppsViewModel`
+    snapshot builder).
+  - Network and host: BORE-74 (the `NvConnection` start), BORE-75 (`NvHTTP`, `PairingManager` and
+    the deletion of `continuousAudio`), BORE-76 (`ComputerManagerService`), BORE-77 (identity,
+    Wake-on-LAN and crypto), BORE-78 (`TvChannelHelper` and `PosterContentProvider`), BORE-79
+    (preferences and mDNS) and BORE-96 (the jmDNS discovery loop, added for a wrapped marker).
+  - Pads and input: BORE-80 (`UsbDriverService` and `AbstractXboxController`, in two parts),
+    BORE-81 (the Xbox drivers: the shared claim rule, `handleRead`, `doInit` and the 360 dongle
+    start, in two parts), BORE-82 (the on-screen controller) and BORE-83 (the capture providers
+    and `KeyboardTranslator`).
+  - The close: BORE-84 (the relabel sweep) and BORE-85 (these docs).
+- **Owner decisions of 2026-11-05** for this sprint:
+  - Known bugs first: "Wave 0 fixes first (Recommended)". Wave 0 is BORE-39, BORE-42, BORE-43 and
+    BORE-54, and BORE-51 ("18a wave 0, then merge").
+  - Size and execution: split 18a and 18b, and run it with `/phase-loop` and fresh lane sessions.
+  - The places that cannot change without changing behaviour: "create another sprint before s19
+    just to do those and any behavior changing leftover" (18c). The large classes: another sprint
+    before SecOps, after 18c (18d).
+  - `continuousAudio`: delete the field and the query. BORE-50: defer to Sprint 19, SecOps.
+- **Decisions under the owner's night delegation (2026-11-06).** Before going to sleep the owner
+  wrote that, if the main session had to ask something, it should "investigue 4 possibilidades e
+  escolha a recomendada" (investigate four options and choose the recommended one), that the owner
+  authorized it, and that the owner wanted a summary of these decisions at the end. For each
+  question the main session listed four options, took the recommended one, and recorded it in the
+  sprint ledger. Merges to `main`, the device round on the TV, messages to other people and
+  deleting folders outside the sprint's own worktrees stayed outside the delegation. The owner
+  reviews these decisions with the phase pull request:
+  - **D1, BORE-89:** turning the gamepad mouse off while A or B is held leaves the click down. It
+    goes into wave 0, after BORE-63 and before CH-1, like the other known bugs.
+  - **D2, BORE-62, BORE-90:** the flaky `ControllerNumberLimitTest` is a production race, so the
+    fix goes to a new wave-0 bug card (BORE-90) and BORE-62 only runs the proof. A test gate that
+    would hide the race was rejected.
+  - **D3, BORE-90:** a copy-on-write `@Volatile` snapshot of each list of pads, with no new lock and
+    no thread change. A list with more than one writing thread (the USB input thread) is written
+    under the existing `inputLock`, and reads stay lock-free (D3a, from the advisor's review). One
+    lock, confining the work to the main thread and a concurrent collection were rejected.
+  - **D4, BORE-81:** split in two. The shared claim rule goes into a new file,
+    `driver/UsbInterfaceMatch.kt`, and not into `AbstractController`.
+  - **D5, BORE-91:** the "Server version malformed" check of `NvConnection` can never run. It waits
+    for 18c, because removing it is a refactor and returning null is a behaviour change.
+  - **D6, BORE-91:** two more unreachable checks (`tryPollIp`, "Polling returned no UUID!", and
+    `ApplistPoller`, "Null app list received") join the same 18c card.
+  - **D7, BORE-92:** unmarked structural suppressions in `NvConnection`, `NvHTTP` and
+    `ComputerManagerService` escape the marker sweeps. They get an 18b sweep card, and 18a stays at
+    its marker scope.
+  - **D8, BORE-93, BORE-94:** the identity-loss bugs and the crypto load oddities that BORE-77
+    found go to 18c, where changing behaviour is the point, and not into 18a.
+  - **D9, BORE-95:** an on-screen-controller click that stays down when a pad's mouse mode ends is
+    fixed in wave 0, as in D1.
+  - **D10, BORE-95:** the click comes up when the pad's mouse mode ends, unless another context
+    still in mouse mode on that number holds it. The on-screen controller never counts as a holder,
+    so after the end its A is a gamepad A.
+  - **D11, BORE-95:** two pads in mouse mode on one number can send one extra button up after the
+    other's release. It is balanced and a no-op on the PC, so it is accepted and recorded.
+  - **D12, BORE-96, BORE-84:** four markers are wrapped over two lines, and each goes to the task
+    that covers its area (BORE-96 is new, for the jmDNS one). The exit check is multi-line.
+  - **D13, BORE-84:** `handleAxisSet` (`LongParameterList`) is relabeled 18d, not 18c: its only
+    caller passes the axis values as separate floats, and the class split reshapes the axis path.
+  - **D14, BORE-73:** it also removed the `TIME` copies of `PenFallbackTest` and `ThreeFingerTest`
+    (same folder, same duplication). Accepted.
+  - **D15, BORE-60:** the Memtrace quota ran out (13,122 queries used of a monthly 1,000, resetting
+    on 2026-12-06). The remaining tasks ran on the LSP, Grep and mutation checks of the
+    characterization tests. At 14:34 on 2026-11-06 the owner added credits and the daemon was
+    restarted, and Memtrace was required again; CH-4 had started before that and kept the fallback.
+- **Cross-lane decisions** (main session, 2026-11-06):
+  - BORE-42 owns five one-line edits of test fakes outside its lane (the `Boolean` return of
+    `rumble` and `rumbleTriggers` in `UsbDriverServiceTest`, `ControllerHandlerRig`,
+    `HandlerStopTest`, `FeedbackSupport` and `SessionSupport`), and lane C is merged into the phase
+    before BORE-63.
+  - BORE-42 is split under one card: 42a is the shared `USB_WRITE_TIMEOUT_MS`, the `Boolean` rumble
+    writes and the five fakes, and 42b is `AbstractXboxController.stop()` skipping `rumble(0, 0)`
+    after a failed write.
+- **Where the leftovers went.** Each one is in the section of its sprint:
+  [18b](#sprint-18b-refactor-of-the-converted-code-video-audio-and-the-stream-activity-and-test-tooling)
+  (BORE-92 and the test notes on BORE-86),
+  [18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code) (BORE-91, BORE-93 and
+  BORE-94), [18d](#sprint-18d-splitting-the-large-converted-classes) (the notes on BORE-88) and
+  [Sprint 19](#sprint-19-secops) (BORE-50 and the CodeQL alerts of `PosterContentProvider`).
 - **Ends with a device round** on the controls and the host flows: pads on USB and Bluetooth,
   rumble, mouse emulation, touch, the on-screen controller, the keyboard, the menu chord, the TV
-  focus after Hide and Forget, Add host, pairing, wake and shortcuts.
+  focus after Hide and Forget, Add host, pairing, wake and shortcuts. The round has not run. Its
+  checklist, from the notes of every task, is
+  [section 24 of the device validation](development/device-validation.md#24-results-sprint-18a).
 
 ### Sprint 18b: refactor of the converted code (video, audio and the stream activity) and test tooling
 
@@ -2042,12 +2182,30 @@ Planned, not started. Phase card BORE-86. Split from Sprint 18 by the owner on 2
 - **MoonBridge and VideoDecoderRenderer** (`nvstream/jni/MoonBridge.kt`, 8 places, and
   `nvstream/av/video/VideoDecoderRenderer.kt`, 1 place) are bound to the JNI, so they are relabeled
   `(Sprint 18c backlog)` and not refactored. See [Sprint 18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code).
+  The `VideoDecoderRenderer` marker is a `(Sprint 12 backlog)` one, so the relabel sweep of
+  [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input) (BORE-84) takes it.
+- **The count.** 51 `(Sprint 14 backlog)` markers are left at the end of 18a, none touched by it (the
+  multi-line search of the [recount](#sprint-18a-refactor-of-the-converted-code-network-host-and-input)).
+- **BORE-92: the structural suppressions that carry no marker.** Sprint 18a found them in the network
+  code (decision D7): `NvConnection.quitAndLaunch` (`ReturnCount`), two more places in `NvConnection`,
+  two in `NvHTTP` and one in `ComputerManagerService`, at lines 777, 371 and 1342 of
+  `NvConnection.kt`, 69 and 895 of `NvHTTP.kt` and 528 of `ComputerManagerService.kt` when lane B found
+  them (read them again: 18a moved lines). No marker sweep finds them, so sweep every unmarked
+  structural suppression in `:app`, under the marker rule.
 - **A8**, moved here by Sprint 16: a comment on the 7.1 mask `0x18FC` of `AndroidAudioRenderer`
   still says that the constant is hardcoded for Lollipop. Only the value is pinned, by
   `AudioRendererSetupCharacterizationTest`, "8 channels ask for the 7 point 1 surround mask".
 - **Test and tooling items.** Moved here from the [backlog](#backlog-not-scheduled) (owner,
   2026-10-28), except the two items that 18a takes: `ControllerNumberLimitTest` and
   `MenuChordDetector.update`.
+  - **Notes from Sprint 18a**, recorded on BORE-86:
+    - the Wake-on-LAN test sends to the streaming ports, and no test runs the rethrow branch of the
+      sender: the test that reaches it skips on a machine with a network;
+    - `LaunchRequestTest` keeps a test that is now redundant ("continuous audio is off by default, so a
+      LuminalShine launch and resume send none", which the test that pins no `continuousAudio` in the
+      query repeats), and the name of its GFE test still mentions continuous audio;
+    - `AppsRouteTest` has its own private `snapshot(...)` builder, beside the shared one of
+      `AppsViewModelTestBase` that BORE-73 made (decision D14).
   - item (c) of the block "From the Sprint 14 conversion": `GameWiringTest` keeps 6 tests that read
     text (3 read `NvConnection.kt`, 3 read `src/main/res`); test code repeats across modules
     (`MainDispatcherRule`, `WorkerDispatcherRule` and the device qualifiers); the smaller leftovers
@@ -2102,6 +2260,21 @@ before the class splits of 18d.
   swapped behind API checks. The `@SuppressLint` places are reviewed.
 - The JNI and the fixed signatures cannot change. Each one gets a final "kept" comment with the
   reason.
+- **From Sprint 18a**, the behaviour leftovers (decisions D5, D6 and D8):
+  - **BORE-91, unreachable checks in the network code.** The "Server version malformed" check of
+    `NvConnection.acceptServer` can never run, because `NvHTTP.getServerVersion` throws and never
+    returns null. `tryPollIp` ("Polling returned no UUID!") and `ApplistPoller` ("Null app list
+    received") have the same kind of check. Remove them, or make the callee return null: the choice
+    is the sprint's.
+  - **BORE-93, bug: the identity can be lost.** A `close()` failure after a full read drops the
+    unique id, and `saveCertKeyPair` truncates `client.crt` before it writes the key, so a failed key
+    write leaves an empty certificate. A host would then pair again.
+  - **BORE-94, the crypto load oddities.** `generateCertKeyPair` never answers false, so its null
+    branch cannot run, and `loadCertKeyPair` keeps a valid certificate beside a corrupt key.
+  - The tests that pin the behaviour of BORE-93 and BORE-94 flip in this sprint.
+  - Notes from the lane reviews: a USB pad whose start fails still takes a controller id (a test pins
+    it), and `VIRTUAL_KEYS` in `KeyboardTranslator` is sized for key codes up to F24, so a code above
+    it would throw when the class initializes.
 - **Ends with a device round.**
 
 ### Sprint 18d: splitting the large converted classes
@@ -2113,6 +2286,23 @@ Planned, not started. Phase card BORE-88. Owner decision of 2026-11-05.
   `MediaCodecDecoderRenderer`, `MediaCodecHelper`, `ComputerManagerService`, `NvConnection`,
   `NvHTTP` and `PreferenceConfiguration`.
 - Characterization tests carry each split. The `com.limelight` names, the JNI and the manifest stay.
+- **Notes from Sprint 18a**, recorded on BORE-88:
+  - `ControllerHandler`: the rule that decides whether two pads are fused is written twice
+    (`fuseIfOnNumber` and `isFusedWith`), and the invariant of `FusedPacket`, the one packet that
+    `inputLock` guards, goes with the split; `keyState` builds a `Triple` twice per key event (it
+    boxes above 127), an old allocation on the hot path; `ContextList` publishes its snapshot only
+    on `put` and `delete`, so any other `SparseArray` mutator that someone starts to use must
+    publish too.
+  - `UsbDriverService` and `AndroidNativePointerCaptureProvider` sit at the `TooManyFunctions` limit
+    of 11, so a new helper goes to a companion or to a new type. `StreamConfiguration.Builder` (20
+    functions against that limit) is relabeled for this sprint.
+  - Tests that reach into internals: `ConnectionTypeBranchesTest` calls the private
+    `detectServerConnectionType` by reflection, a test of the Xbox driver reads the private
+    `inputThread` by reflection, and `NativePointerCaptureCharacterizationTest` reaches Robolectric's
+    `InputManagerGlobal.mInputDevices` (maintain it on a Robolectric upgrade). A split moves what
+    these reach.
+  - `handleAxisSet` (`LongParameterList`) is relabeled 18d by BORE-84 (decision D13): its caller
+    passes the axis values as eight separate floats.
 - **Ends with a device round.**
 
 ### Sprint 19: SecOps
@@ -2222,7 +2412,10 @@ release. Sprint 19 is hardening and security testing.
   which CodeQL does not see as a sanitizer. Owner decision of 2026-10-24: the alerts stay
   open until this sprint, which makes the check visible to CodeQL or dismisses them with
   the reason. Sprint 16 moved here, to be looked at with the alerts, the Sprint 12 entry P9:
-  `PosterContentProvider.openFile` serves any three-segment path as box art.
+  `PosterContentProvider.openFile` serves any three-segment path as box art. On the draft pull
+  request of Sprint 18a CodeQL reports two high alerts as new, at `PosterContentProvider.kt:33` and
+  `:46`: they are these alerts, moved by BORE-78 (CodeQL is not a required check), and are looked
+  at here.
 - **From Sprint 16.** Moved here, or found by the reviews of the fixes of the converted code
   (2026-10-31):
   - **The video and audio start cannot report a failure.** B4 made the JNI bridges check, log and
@@ -2557,7 +2750,7 @@ From the Sprint 12 conversion (2026-10-23). Item (a) is scheduled for
   - Optional feature: send `continuousAudio=1` in `/launch`. Merged into the "Audio runs" entry
     of item (d) of the Sprint 14 block, which moved to [Sprint 17](#sprint-17-general-fixes) (owner, 2026-10-28).
     Sprint 17a measured it on 2026-11-02 and turned it off: it made the audio runs worse, so Borealis
-    does not send it.
+    does not send it. Sprint 18a deleted the unused field and its query.
 
 From the Sprint 13 conversion (2026-10-25). Item (a) is scheduled for
 [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input), item (b) for
@@ -2633,6 +2826,8 @@ took item (b), and each of its entries now ends with its triage id and what Spri
       **K5, Sprint 16:** fixed (#109). The line reads "Using the native pointer capture".
     - The Windows `VK_*` codes are duplicated in `borealis/stream/.../KeyboardLayout.kt`. **K6,
       Sprint 16:** moved to [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input).
+      **Sprint 18a:** done (BORE-70). One set of 23 codes lives in `keys/VirtualKeys.kt`, and the
+      keyboard and the shortcuts read them from there.
   - **Touch** (`touch/`):
     - `RelativeTouchContext`: the release runnables of the middle, X1 and X2 buttons are
       unreachable, because `getMouseButtonIndex` gives only left or right. **T1, Sprint 16:**
@@ -2729,6 +2924,9 @@ took item (b), and each of its entries now ends with its triage id and what Spri
       quad only with a manager.
     - The controller-input fusing block is written out three times (about lines 1479 to 1514 of
       the Java). **C4, Sprint 16:** moved to [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input).
+      **Sprint 18a:** done (BORE-65). The block is `fuse` and `fuseIfOnNumber`; the rule that decides
+      whether two pads are fused is still written twice, a note for
+      [Sprint 18d](#sprint-18d-splitting-the-large-converted-classes).
     - The `gestures` constructor property is stored and never read. **C5, Sprint 16:** deleted in
       wave 2 (#108), with its argument at the `Game` call site and in the test rigs.
     - `(byte)(lt * 0xFF)` turns negative above 0.5; `(short)(x * 0x7FFE)` wraps past plus or

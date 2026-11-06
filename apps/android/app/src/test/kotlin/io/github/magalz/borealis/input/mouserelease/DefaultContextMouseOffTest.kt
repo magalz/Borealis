@@ -33,7 +33,7 @@ class DefaultContextMouseOffTest {
     }
 
     @Test
-    fun `a pad on the default context that ends its mouse with the Start hold while it holds A lets the left button go once`() {
+    fun `a default-context pad that ends its mouse with Start while it holds A lets the left button go once`() {
         holdStartAndLetGo()
         rig.press(KEYCODE_BUTTON_A)
         assertThat(rig.connection.buttonEvents()).containsExactly("down 1")
@@ -49,7 +49,7 @@ class DefaultContextMouseOffTest {
     }
 
     @Test
-    fun `a pad on the default context that ends its mouse while a pad in mouse mode on its number holds A sends no up`() {
+    fun `a default-context pad that ends its mouse while a mouse-mode pad on its number holds A sends no up`() {
         holdStartAndLetGo()
         val other = FakeUsbController(1, rig.handler).also { rig.handler.deviceAdded(it) }
         rig.handler.setMouseEmulation(true)

@@ -684,14 +684,13 @@ class ComputerManagerService : Service() {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
     // The stack trace goes to the standard error stream, as in the inherited Java. Logging it
-    // instead is a behaviour change.
-    @Suppress("PrintStackTrace", "ReturnCount")
+    // instead is a behaviour change (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
     private fun tryPollIp(
         details: ComputerDetails,
         address: ComputerDetails.AddressTuple,
-    ): ComputerDetails? {
+    ): ComputerDetails? =
         try {
             // If the current address's port number matches the active address's port number, we
             // can also assume the HTTPS port will also match. This assumption is currently safe
@@ -720,24 +719,25 @@ class ComputerManagerService : Service() {
             val newDetails = http.getComputerDetails(isLikelyOnline)
 
             // Check if this is the PC we expected
-            if (newDetails.uuid == null) {
-                LimeLog.severe("Polling returned no UUID!")
-                return null
-            } else if (details.uuid != null && details.uuid != newDetails.uuid) {
-                // details.uuid can be null on initial PC add
-                // We got the wrong PC!
-                LimeLog.info("Polling returned the wrong PC!")
-                return null
+            when {
+                newDetails.uuid == null -> {
+                    LimeLog.severe("Polling returned no UUID!")
+                    null
+                }
+                details.uuid != null && details.uuid != newDetails.uuid -> {
+                    // details.uuid can be null on initial PC add
+                    // We got the wrong PC!
+                    LimeLog.info("Polling returned the wrong PC!")
+                    null
+                }
+                else -> newDetails
             }
-
-            return newDetails
         } catch (e: XmlPullParserException) {
             e.printStackTrace()
-            return null
+            null
         } catch (ignored: IOException) {
-            return null
+            null
         }
-    }
 
     private class ParallelPollTuple(
         val address: ComputerDetails.AddressTuple?,

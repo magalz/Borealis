@@ -161,6 +161,40 @@ class XboxOneControllerTest {
     }
 
     @Test
+    fun `an init packet needs both its vendor and its product, a zero matching any`() {
+        // The product of another vendor's packet does not count, nor the vendor of another product.
+        assertThat(initPackets(0x0738, 0x02EA)).containsExactly(fw2015(0))
+        assertThat(initPackets(0x24C6, 0x02EA)).containsExactly(fw2015(0))
+        assertThat(initPackets(0x045E, 0x541A)).containsExactly(fw2015(0))
+        assertThat(initPackets(0x0F0D, 0x0165)).containsExactly(fw2015(0))
+        // The Hori packet of the product 0x0067 is the Hori vendor's, not the PDP vendor's.
+        assertThat(initPackets(0x0E6F, 0x0067))
+            .containsExactly(fw2015(0), pdp1(1), pdp2(2))
+            .inOrder()
+    }
+
+    @Test
+    fun `an init packet that fails ends the init at that packet, whichever it is`() {
+        // The packets of this pad: Hori, 2015, PDP 1 and PDP 2, of 13, 5, 7 and 6 bytes.
+        val first = pad(vendorId = 0x0E6F, productId = 0x0165)
+        first.usb.writeResults.add(-1)
+        assertThat(first.start()).isFalse()
+        assertThat(first.writtenBytes()).containsExactly(hori(0))
+        assertThat(log.warnings()).containsExactly("Initialization transfer failed: -1")
+
+        val third = pad(vendorId = 0x0E6F, productId = 0x0165)
+        third.usb.writeResults.addAll(listOf(13, 5, 0))
+        assertThat(third.start()).isFalse()
+        assertThat(third.writtenBytes()).containsExactly(hori(0), fw2015(1), pdp1(2)).inOrder()
+        assertThat(log.warnings())
+            .containsExactly(
+                "Initialization transfer failed: -1",
+                "Initialization transfer failed: 0",
+            )
+            .inOrder()
+    }
+
+    @Test
     fun `start fails when an interface cannot be claimed or an endpoint is missing`() {
         val claimFails = pad()
         claimFails.usb.claimResults.add(false)
@@ -545,6 +579,51 @@ class XboxOneControllerTest {
         pad.listener.states(1)
 
         assertThat(pad.writtenBytes()).containsExactly(fw2015(0))
+    }
+
+    @Test
+    fun `only the flags 0x30 ask for an acknowledgement, and the Guide byte is read all the same`() {
+        val pad = pad()
+        pad.play(
+            modeReport(flags = 0x00, guide = 0x01),
+            modeReport(flags = 0x10, guide = 0x01),
+            modeReport(flags = 0x31, guide = 0x01),
+            modeReport(flags = 0xB0, guide = 0x01),
+        )
+
+        pad.start()
+
+        assertThat(pad.listener.states(4).map { it.buttonFlags and GUIDE })
+            .containsExactly(
+                GUIDE,
+                GUIDE,
+                GUIDE,
+                GUIDE,
+            )
+        assertThat(pad.writtenBytes()).containsExactly(fw2015(0))
+    }
+
+    @Test
+    fun `the bytes after the end of a report are not read`() {
+        val pad = pad()
+        pad.play(
+            buttonsReport(first = 0x10) + intArrayOf(0xFF, 0xFF, 0xFF),
+            modeReport(guide = 0x01) + intArrayOf(0xFF, 0xFF),
+            modeReport(flags = 0x30, seq = 0x09, guide = 0x01) + intArrayOf(0xFF, 0xFF),
+        )
+
+        pad.start()
+
+        val flags = pad.listener.states(3).map { it.buttonFlags }
+        assertThat(flags)
+            .containsExactly(
+                ControllerPacket.A_FLAG,
+                GUIDE or ControllerPacket.A_FLAG,
+                GUIDE or ControllerPacket.A_FLAG,
+            )
+            .inOrder()
+        assertThat(pad.writtenBytes().drop(1).map { it[2] }).containsExactly(0x09)
+        assertThat(log.severes()).isEmpty()
     }
 
     @Test

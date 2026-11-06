@@ -176,6 +176,41 @@ class Xbox360WirelessDongleTest {
     }
 
     @Test
+    fun `a pad of the product 0x02a1 of another vendor is not the slot`() {
+        PadInputDevices.add(0x046D, 0x02A1, controllerNumber = 4)
+        val pad = dongle(wireless(0))
+
+        pad.start()
+
+        assertThat(pad.writtenBytes().single()[3]).isEqualTo(0x42)
+    }
+
+    @Test
+    fun `an input device with no number is passed over for the next one that matches`() {
+        PadInputDevices.add(0x045E, 0x0291, controllerNumber = 0)
+        PadInputDevices.add(0x046D, 0x0291, controllerNumber = 1)
+        PadInputDevices.add(0x045E, 0x02A1, controllerNumber = 3)
+        val pad = dongle(wireless(0))
+
+        pad.start()
+
+        assertThat(pad.writtenBytes().single()[3]).isEqualTo(0x44)
+    }
+
+    @Test
+    fun `a dongle with no wireless interface lights nothing and still fails`() {
+        val noInterface = dongle()
+        assertThat(noInterface.start()).isFalse()
+        assertThat(noInterface.usb.claims).isEmpty()
+
+        val other =
+            dongle(UsbPads.usbInterface(0, UsbPads.VENDOR_SPECIFIC, UsbPads.XB360_SUBCLASS, 1))
+        assertThat(other.start()).isFalse()
+        assertThat(other.usb.claims).isEmpty()
+        assertThat(other.usb.writes).isEmpty()
+    }
+
+    @Test
     fun `the first matching input device sets the slot`() {
         PadInputDevices.add(0x045E, 0x0291, controllerNumber = 2)
         PadInputDevices.add(0x045E, 0x0291, controllerNumber = 4)

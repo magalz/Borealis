@@ -1,10 +1,14 @@
 package io.github.magalz.borealis.input
 
+import android.annotation.SuppressLint
+import android.util.SparseArray
+import android.view.InputDevice
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * The native pointer capture of `Game`: capture is the pointer capture of Android, asked for on the
@@ -179,6 +183,19 @@ class NativePointerCaptureCharacterizationTest {
     }
 
     @Test
+    fun `an id that has no device behind it is skipped, and the search goes on`() {
+        // A device can go between the list of ids and the lookup of its device.
+        rig.connect(MOUSE, Sources.MOUSE)
+        listIdWithoutDevice(GONE)
+
+        rig.provider.hideCursor()
+
+        assertThat(InputDevice.getDeviceIds().toList()).containsAtLeast(GONE, MOUSE).inOrder()
+        assertThat(InputDevice.getDevice(GONE)).isNull()
+        assertThat(rig.view.requests).isEqualTo(1)
+    }
+
+    @Test
     fun `regaining focus while capturing asks for capture again after 500 ms`() {
         rig.connect(MOUSE, Sources.MOUSE)
         rig.provider.enableCapture()
@@ -311,7 +328,24 @@ class NativePointerCaptureCharacterizationTest {
         assertThat(rig.view.requests).isEqualTo(3)
     }
 
+    /**
+     * Makes [id] one of the ids that Android lists while it has no device for it. The framework
+     * keeps its devices in this array, which Robolectric fills when the first device is connected,
+     * and a missing one is what a device that has just gone looks like.
+     */
+    // Robolectric only, never a device.
+    @SuppressLint("PrivateApi")
+    private fun listIdWithoutDevice(id: Int) {
+        val global =
+            ReflectionHelpers.callStaticMethod<Any>(
+                Class.forName("android.hardware.input.InputManagerGlobal"),
+                "getInstance",
+            )
+        ReflectionHelpers.getField<SparseArray<InputDevice?>>(global, "mInputDevices").put(id, null)
+    }
+
     private companion object {
+        const val GONE = 1
         const val MOUSE = 3
         const val KEYBOARD = 4
         const val TOUCHSCREEN = 2

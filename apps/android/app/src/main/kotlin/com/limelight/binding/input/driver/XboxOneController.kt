@@ -1,6 +1,5 @@
 package com.limelight.binding.input.driver
 
-import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import com.limelight.LimeLog
@@ -325,24 +324,8 @@ class XboxOneController(
         private const val INIT_TIMEOUT_MS = 3000
         private const val ACK_TIMEOUT_MS = 3000
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition")
         @JvmStatic
-        fun canClaimDevice(device: UsbDevice): Boolean {
-            for (supportedVid in SUPPORTED_VENDORS) {
-                if (
-                    device.vendorId == supportedVid &&
-                        device.interfaceCount >= 1 &&
-                        device.getInterface(0).interfaceClass ==
-                            UsbConstants.USB_CLASS_VENDOR_SPEC &&
-                        device.getInterface(0).interfaceSubclass == XB1_IFACE_SUBCLASS &&
-                        device.getInterface(0).interfaceProtocol == XB1_IFACE_PROTOCOL
-                ) {
-                    return true
-                }
-            }
-
-            return false
-        }
+        fun canClaimDevice(device: UsbDevice): Boolean =
+            matchesFirstInterface(device, SUPPORTED_VENDORS, XB1_IFACE_SUBCLASS, XB1_IFACE_PROTOCOL)
     }
 }

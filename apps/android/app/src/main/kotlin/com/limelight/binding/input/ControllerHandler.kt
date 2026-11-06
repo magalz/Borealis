@@ -197,7 +197,7 @@ class ControllerHandler(
 
             // destroy() takes the listeners away
             val reportedMotion = context.gyroListener != null || context.accelListener != null
-            releaseMouseButtons(context)
+            endMouse(context)
             releaseControllerNumber(context)
             context.destroy()
             inputDeviceContexts.remove(deviceId)
@@ -247,11 +247,11 @@ class ControllerHandler(
         // Unregister our input device callbacks
         inputManager.unregisterInputDeviceListener(this)
 
-        // The buttons a pad in mouse mode holds go up before anything that waits on a pad, and
-        // before the contexts end it
-        inputDeviceContexts.forEachValue { releaseMouseButtons(it) }
-        usbDeviceContexts.forEachValue { releaseMouseButtons(it) }
-        releaseMouseButtons(defaultContext)
+        // The buttons a pad in mouse mode holds go up before anything that waits on a pad, and the
+        // pad's reports that follow send no click
+        inputDeviceContexts.forEachValue { endMouse(it) }
+        usbDeviceContexts.forEachValue { endMouse(it) }
+        endMouse(defaultContext)
 
         inputDeviceContexts.forEachValue { deviceContext -> deviceContext.destroy() }
 
@@ -1320,11 +1320,8 @@ class ControllerHandler(
         }
     }
 
-    // Mouse buttons held by a pad in mouse mode would stay down on the PC. A pad that leaves and
-    // the stop of the handler release them here too, but a context's destroy() does not: a changed
-    // device destroys its old context and the new one carries the click over. The lock is the
-    // packet send's, so no packet follows the release, and a second release finds the buttons let
-    // go.
+    // Mouse buttons held by a pad in mouse mode would stay down on the PC. The lock is the packet
+    // send's, so no packet follows the release, and a second release finds the buttons let go.
     private fun releaseMouseButtons(context: GenericControllerContext) {
         synchronized(inputLock) {
             if (context.mouseEmulationActive) {
@@ -1336,6 +1333,17 @@ class ControllerHandler(
                 }
             }
             context.mouseEmulationLastInputMap = 0
+        }
+    }
+
+    // A pad that leaves and the stop of the handler release the buttons and end the mouse mode in
+    // the same lock section: a report still on its way from the USB driver's thread finds no mouse,
+    // so no click goes down after the up. destroy() does not do it, because a changed device
+    // destroys its old context and the new one carries the click and the mode over.
+    private fun endMouse(context: GenericControllerContext) {
+        synchronized(inputLock) {
+            releaseMouseButtons(context)
+            context.mouseEmulationActive = false
         }
     }
 
@@ -3343,7 +3351,7 @@ class ControllerHandler(
         val context = usbDeviceContexts.get(controller.controllerId)
         if (context != null) {
             LimeLog.info("Removed controller: ${controller.controllerId}")
-            releaseMouseButtons(context)
+            endMouse(context)
             releaseControllerNumber(context)
             context.destroy()
             usbDeviceContexts.remove(controller.controllerId)

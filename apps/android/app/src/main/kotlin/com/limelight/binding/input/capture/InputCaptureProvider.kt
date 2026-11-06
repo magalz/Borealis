@@ -2,7 +2,9 @@ package com.limelight.binding.input.capture
 
 import android.view.MotionEvent
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// Converted as is from the inherited Java; AbstractClassCanBeConcreteClass stays because the
+// abstract base and its protected fields are part of the Java-visible API that
+// InputJavaVisibleApiTest pins (Sprint 18c backlog).
 @Suppress("AbstractClassCanBeConcreteClass")
 abstract class InputCaptureProvider {
     @JvmField protected var isCapturing = false

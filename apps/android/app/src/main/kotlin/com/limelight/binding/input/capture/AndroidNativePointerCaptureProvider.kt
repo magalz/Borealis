@@ -92,7 +92,8 @@ class AndroidNativePointerCaptureProvider(activity: Activity, private val target
         // we have to delay a bit before requesting capture because otherwise
         // we'll hit the "requestPointerCapture called for a window that has no focus"
         // error and it will not actually capture the cursor.
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+        // Converted as is from the inherited Java; DEPRECATION stays because the Handler() without
+        // a looper is kept on purpose (Sprint 18c backlog).
         @Suppress("DEPRECATION") val h = Handler()
         h.postDelayed(
             {

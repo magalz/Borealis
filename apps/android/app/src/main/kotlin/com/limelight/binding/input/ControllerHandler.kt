@@ -659,13 +659,9 @@ class ControllerHandler(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "DEPRECATION",
-        "LongMethod",
-    )
+    // The steps read the device in this order: the ones that ask for hardware are guarded by the
+    // Android version, and the quirks come last because they override what the axes and the key
+    // layout found.
     private fun createInputDeviceContextForDevice(dev: InputDevice): InputDeviceContext {
         val context = InputDeviceContext()
         val devName = dev.name
@@ -675,8 +671,57 @@ class ControllerHandler(
         LimeLog.info("Product ID: ${dev.productId}")
         LimeLog.info(dev.toString())
 
+        identifyDevice(context, dev)
+        chooseVibrator(context, dev)
+        chooseSensorManager(context, dev)
+        findRgbLed(context, dev)
+        readKeyLayout(context, dev)
+        readTouchpadRanges(context, dev)
+        chooseLeftStick(context, dev)
+
+        // This is hack to deal with the Nvidia Shield's modifications that causes the DS4 clickpad
+        // to work as a duplicate Select button instead of a unique button we can handle separately.
+        context.isDualShockStandaloneTouchpad =
+            context.vendorId == VENDOR_SONY && // Sony
+                devName.endsWith(" Touchpad") &&
+                dev.sources == (InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_MOUSE)
+
+        chooseTriggerAxes(context, dev)
+        chooseRightStick(context, dev)
+        chooseHat(context, dev)
+        chooseStickDeadzones(context)
+        chooseTriggerDeadzone(context, dev)
+
+        // The ADT-1 controller needs a similar fixup to the ASUS Gamepad
+        if (dev.vendorId == VENDOR_GOOGLE && dev.productId == PRODUCT_ADT1) {
+            context.backIsStart = true
+            context.modeIsSelect = true
+            context.triggerDeadzone = MAX_TRIGGER_DEADZONE
+            context.hasSelect = true
+            context.hasMode = false
+        }
+
+        context.ignoreBack = shouldIgnoreBack(dev)
+
+        applyNameQuirks(context, dev)
+
+        // Thrustmaster Score A gamepad home button reports directly to android as
+        // KEY_HOMEPAGE event on another event channel
+        if (dev.vendorId == VENDOR_THRUSTMASTER && dev.productId == PRODUCT_SCORE_A) {
+            context.hasMode = false
+        }
+
+        LimeLog.info(
+            "Analog stick deadzone: ${context.leftStickDeadzoneRadius} ${context.rightStickDeadzoneRadius}"
+        )
+        LimeLog.info("Trigger deadzone: ${context.triggerDeadzone}")
+
+        return context
+    }
+
+    private fun identifyDevice(context: InputDeviceContext, dev: InputDevice) {
         context.inputDevice = dev
-        context.name = devName
+        context.name = dev.name
         context.id = dev.id
         context.external = isExternal(dev)
 
@@ -689,7 +734,13 @@ class ControllerHandler(
             MoonBridge.guessControllerHasPaddles(context.vendorId, context.productId)
         context.hasShare =
             MoonBridge.guessControllerHasShareButton(context.vendorId, context.productId)
+    }
 
+    // Converted as is from the inherited Java; DEPRECATION stays because InputDevice.getVibrator is
+    // the way to the vibrator of a pad before Android 12 and the fallback after it (Sprint 18c
+    // backlog).
+    @Suppress("DEPRECATION")
+    private fun chooseVibrator(context: InputDeviceContext, dev: InputDevice) {
         // Try to use the InputDevice's associated vibrators first
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
@@ -707,39 +758,40 @@ class ControllerHandler(
             context.vibrator = dev.vibrator
         } else if (!context.external) {
             // If this is an internal controller, try to use the device's vibrator
-            if (
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    hasQuadAmplitudeControlledRumbleVibrators(checkNotNull(deviceVibratorManager))
-            ) {
-                context.vibratorManager = deviceVibratorManager
-                context.quadVibrators = true
-            } else if (
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    hasDualAmplitudeControlledRumbleVibrators(checkNotNull(deviceVibratorManager))
-            ) {
-                context.vibratorManager = deviceVibratorManager
-                context.quadVibrators = false
-            } else if (deviceVibrator.hasVibrator()) {
-                context.vibrator = deviceVibrator
-            }
+            chooseDeviceVibrator(context)
         }
+    }
 
-        // On Android 12, we can try to use the InputDevice's sensors. This may not work if the
-        // Linux kernel version doesn't have motion sensor support, which is common for third-party
-        // gamepads.
-        //
-        // Android 12 has a bug that causes InputDeviceSensorManager to cause a NPE on a background
-        // thread due to bad error checking in InputListener callbacks. InputDeviceSensorManager is
-        // created upon the first call to InputDevice.getSensorManager(), so we avoid calling this
-        // on Android 12 unless we have a gamepad that could plausibly have motion sensors.
-        // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
+    private fun chooseDeviceVibrator(context: InputDeviceContext) {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                hasQuadAmplitudeControlledRumbleVibrators(checkNotNull(deviceVibratorManager))
+        ) {
+            context.vibratorManager = deviceVibratorManager
+            context.quadVibrators = true
+        } else if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                hasDualAmplitudeControlledRumbleVibrators(checkNotNull(deviceVibratorManager))
+        ) {
+            context.vibratorManager = deviceVibratorManager
+            context.quadVibrators = false
+        } else if (deviceVibrator.hasVibrator()) {
+            context.vibrator = deviceVibrator
+        }
+    }
+
+    // On Android 12, we can try to use the InputDevice's sensors. This may not work if the
+    // Linux kernel version doesn't have motion sensor support, which is common for third-party
+    // gamepads.
+    //
+    // Android 12 has a bug that causes InputDeviceSensorManager to cause a NPE on a background
+    // thread due to bad error checking in InputListener callbacks. InputDeviceSensorManager is
+    // created upon the first call to InputDevice.getSensorManager(), so we avoid calling this
+    // on Android 12 unless we have a gamepad that could plausibly have motion sensors.
+    // https://cs.android.com/android/_/android/platform/frameworks/base/+/8970010a5e9f3dc5c069f56b4147552accfcbbeb
+    private fun chooseSensorManager(context: InputDeviceContext, dev: InputDevice) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ||
-                    context.vendorId == VENDOR_SONY ||
-                    context.vendorId == VENDOR_NINTENDO) && // Sony or Nintendo
-                    prefConfig.gamepadMotionSensors
-            ) {
+            if (mayHaveMotionSensors(context.vendorId) && prefConfig.gamepadMotionSensors) {
                 if (
                     dev.sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null ||
                         dev.sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
@@ -748,8 +800,16 @@ class ControllerHandler(
                 }
             }
         }
+    }
 
-        // Check if this device has a usable RGB LED and cache that result
+    // Sony or Nintendo; on Android 13 and later, any pad
+    private fun mayHaveMotionSensors(vendorId: Int): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ||
+            vendorId == VENDOR_SONY ||
+            vendorId == VENDOR_NINTENDO
+
+    // Check if this device has a usable RGB LED and cache that result
+    private fun findRgbLed(context: InputDeviceContext, dev: InputDevice) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             for (light in dev.lightsManager.lights) {
                 if (light.hasRgbControl()) {
@@ -768,9 +828,11 @@ class ControllerHandler(
                 context.hasRgbLed = false
             }
         }
+    }
 
-        // Detect if the gamepad has Mode and Select buttons according to the Android key layouts.
-        // We do this first because other codepaths below may override these defaults.
+    // Detect if the gamepad has Mode and Select buttons according to the Android key layouts.
+    // We do this first because other codepaths below may override these defaults.
+    private fun readKeyLayout(context: InputDeviceContext, dev: InputDevice) {
         val buttons =
             dev.hasKeys(
                 KeyEvent.KEYCODE_BUTTON_MODE,
@@ -780,12 +842,16 @@ class ControllerHandler(
             )
         context.hasMode = buttons[0]
         context.hasSelect = buttons[1] || buttons[2]
+    }
 
+    private fun readTouchpadRanges(context: InputDeviceContext, dev: InputDevice) {
         context.touchpadXRange = dev.getMotionRange(MotionEvent.AXIS_X, InputDevice.SOURCE_TOUCHPAD)
         context.touchpadYRange = dev.getMotionRange(MotionEvent.AXIS_Y, InputDevice.SOURCE_TOUCHPAD)
         context.touchpadPressureRange =
             dev.getMotionRange(MotionEvent.AXIS_PRESSURE, InputDevice.SOURCE_TOUCHPAD)
+    }
 
+    private fun chooseLeftStick(context: InputDeviceContext, dev: InputDevice) {
         context.leftStickXAxis = MotionEvent.AXIS_X
         context.leftStickYAxis = MotionEvent.AXIS_Y
         if (
@@ -795,14 +861,9 @@ class ControllerHandler(
             // This is a gamepad
             context.hasJoystickAxes = true
         }
+    }
 
-        // This is hack to deal with the Nvidia Shield's modifications that causes the DS4 clickpad
-        // to work as a duplicate Select button instead of a unique button we can handle separately.
-        context.isDualShockStandaloneTouchpad =
-            context.vendorId == VENDOR_SONY && // Sony
-                devName.endsWith(" Touchpad") &&
-                dev.sources == (InputDevice.SOURCE_KEYBOARD or InputDevice.SOURCE_MOUSE)
-
+    private fun chooseTriggerAxes(context: InputDeviceContext, dev: InputDevice) {
         val leftTriggerRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_LTRIGGER)
         val rightTriggerRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_RTRIGGER)
         val brakeRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_BRAKE)
@@ -821,51 +882,61 @@ class ControllerHandler(
             context.leftTriggerAxis = MotionEvent.AXIS_BRAKE
             context.rightTriggerAxis = MotionEvent.AXIS_THROTTLE
         } else {
-            val rxRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_RX)
-            val ryRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_RY)
-            if (rxRange != null && ryRange != null && devName != null) {
-                if (dev.vendorId == VENDOR_SONY) { // Sony
-                    if (dev.hasKeys(KeyEvent.KEYCODE_BUTTON_C)[0]) {
-                        LimeLog.info("Detected non-standard DualShock 4 mapping")
-                        context.isNonStandardDualShock4 = true
-                    } else {
-                        LimeLog.info("Detected DualShock 4 (Linux standard mapping)")
-                        context.usesLinuxGamepadStandardFaceButtons = true
-                    }
-                }
-
-                if (context.isNonStandardDualShock4) {
-                    // The old DS4 driver uses RX and RY for triggers
-                    context.leftTriggerAxis = MotionEvent.AXIS_RX
-                    context.rightTriggerAxis = MotionEvent.AXIS_RY
-
-                    // DS4 has Select and Mode buttons (possibly mapped non-standard)
-                    context.hasSelect = true
-                    context.hasMode = true
-                } else {
-                    // If it's not a non-standard DS4 controller, it's probably an Xbox controller
-                    // or other sane controller that uses RX and RY for right stick and Z and RZ for
-                    // triggers.
-                    context.rightStickXAxis = MotionEvent.AXIS_RX
-                    context.rightStickYAxis = MotionEvent.AXIS_RY
-
-                    // While it's likely that Z and RZ are triggers, we may have digital trigger
-                    // buttons instead. We must check that we actually have Z and RZ axes before
-                    // assigning them.
-                    if (
-                        getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_Z) != null &&
-                            getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_RZ) != null
-                    ) {
-                        context.leftTriggerAxis = MotionEvent.AXIS_Z
-                        context.rightTriggerAxis = MotionEvent.AXIS_RZ
-                    }
-                }
-
-                // Triggers always idle negative on axes that are centered at zero
-                context.triggersIdleNegative = true
-            }
+            chooseTriggersOnRxRy(context, dev)
         }
+    }
 
+    private fun chooseTriggersOnRxRy(context: InputDeviceContext, dev: InputDevice) {
+        val rxRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_RX)
+        val ryRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_RY)
+        if (rxRange != null && ryRange != null && dev.name != null) {
+            if (dev.vendorId == VENDOR_SONY) { // Sony
+                detectDualShock4Mapping(context, dev)
+            }
+
+            if (context.isNonStandardDualShock4) {
+                // The old DS4 driver uses RX and RY for triggers
+                context.leftTriggerAxis = MotionEvent.AXIS_RX
+                context.rightTriggerAxis = MotionEvent.AXIS_RY
+
+                // DS4 has Select and Mode buttons (possibly mapped non-standard)
+                context.hasSelect = true
+                context.hasMode = true
+            } else {
+                // If it's not a non-standard DS4 controller, it's probably an Xbox controller
+                // or other sane controller that uses RX and RY for right stick and Z and RZ for
+                // triggers.
+                context.rightStickXAxis = MotionEvent.AXIS_RX
+                context.rightStickYAxis = MotionEvent.AXIS_RY
+
+                // While it's likely that Z and RZ are triggers, we may have digital trigger
+                // buttons instead. We must check that we actually have Z and RZ axes before
+                // assigning them.
+                if (
+                    getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_Z) != null &&
+                        getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_RZ) != null
+                ) {
+                    context.leftTriggerAxis = MotionEvent.AXIS_Z
+                    context.rightTriggerAxis = MotionEvent.AXIS_RZ
+                }
+            }
+
+            // Triggers always idle negative on axes that are centered at zero
+            context.triggersIdleNegative = true
+        }
+    }
+
+    private fun detectDualShock4Mapping(context: InputDeviceContext, dev: InputDevice) {
+        if (dev.hasKeys(KeyEvent.KEYCODE_BUTTON_C)[0]) {
+            LimeLog.info("Detected non-standard DualShock 4 mapping")
+            context.isNonStandardDualShock4 = true
+        } else {
+            LimeLog.info("Detected DualShock 4 (Linux standard mapping)")
+            context.usesLinuxGamepadStandardFaceButtons = true
+        }
+    }
+
+    private fun chooseRightStick(context: InputDeviceContext, dev: InputDevice) {
         if (context.rightStickXAxis == -1 && context.rightStickYAxis == -1) {
             val zRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_Z)
             val rzRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_RZ)
@@ -885,15 +956,19 @@ class ControllerHandler(
                 }
             }
         }
+    }
 
-        // Some devices have "hats" for d-pads
+    // Some devices have "hats" for d-pads
+    private fun chooseHat(context: InputDeviceContext, dev: InputDevice) {
         val hatXRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_HAT_X)
         val hatYRange = getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_HAT_Y)
         if (hatXRange != null && hatYRange != null) {
             context.hatXAxis = MotionEvent.AXIS_HAT_X
             context.hatYAxis = MotionEvent.AXIS_HAT_Y
         }
+    }
 
+    private fun chooseStickDeadzones(context: InputDeviceContext) {
         if (context.leftStickXAxis != -1 && context.leftStickYAxis != -1) {
             context.leftStickDeadzoneRadius = stickDeadzone.toFloat()
         }
@@ -901,7 +976,9 @@ class ControllerHandler(
         if (context.rightStickXAxis != -1 && context.rightStickYAxis != -1) {
             context.rightStickDeadzoneRadius = stickDeadzone.toFloat()
         }
+    }
 
+    private fun chooseTriggerDeadzone(context: InputDeviceContext, dev: InputDevice) {
         if (context.leftTriggerAxis != -1 && context.rightTriggerAxis != -1) {
             val ltRange = getMotionRangeForJoystickAxis(dev, context.leftTriggerAxis)
             val rtRange = getMotionRangeForJoystickAxis(dev, context.rightTriggerAxis)
@@ -918,85 +995,75 @@ class ControllerHandler(
                 context.triggerDeadzone = DEFAULT_TRIGGER_DEADZONE
             }
         }
+    }
 
-        // The ADT-1 controller needs a similar fixup to the ASUS Gamepad
-        if (dev.vendorId == VENDOR_GOOGLE && dev.productId == PRODUCT_ADT1) {
+    // The first name that matches decides
+    private fun applyNameQuirks(context: InputDeviceContext, dev: InputDevice) {
+        val devName = dev.name ?: return
+        when {
+            devName.contains("ASUS Gamepad") -> applyAsusGamepadQuirks(context, dev)
+            devName.contains("SHIELD") || devName.contains("NVIDIA Controller") ->
+                applyShieldQuirks(context, devName)
+            devName.contains("Razer Serval") -> applyServalQuirks(context)
+            devName == "Xbox Wireless Controller" -> applyXboxBluetoothQuirks(context, dev)
+        }
+    }
+
+    // For the Nexus Player (and probably other ATV devices), we should
+    // use the back button as start since it doesn't have a start/menu button
+    // on the controller
+    private fun applyAsusGamepadQuirks(context: InputDeviceContext, dev: InputDevice) {
+        val hasStartKey = dev.hasKeys(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_MENU, 0)
+        if (!hasStartKey[0] && !hasStartKey[1]) {
             context.backIsStart = true
             context.modeIsSelect = true
-            context.triggerDeadzone = MAX_TRIGGER_DEADZONE
             context.hasSelect = true
             context.hasMode = false
         }
 
-        context.ignoreBack = shouldIgnoreBack(dev)
+        // The ASUS Gamepad has triggers that sit far forward and are prone to false presses
+        // so we increase the deadzone on them to minimize this
+        context.triggerDeadzone = MAX_TRIGGER_DEADZONE
+    }
 
-        if (devName != null) {
-            // For the Nexus Player (and probably other ATV devices), we should
-            // use the back button as start since it doesn't have a start/menu button
-            // on the controller
-            if (devName.contains("ASUS Gamepad")) {
-                val hasStartKey =
-                    dev.hasKeys(KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_MENU, 0)
-                if (!hasStartKey[0] && !hasStartKey[1]) {
-                    context.backIsStart = true
-                    context.modeIsSelect = true
-                    context.hasSelect = true
-                    context.hasMode = false
-                }
-
-                // The ASUS Gamepad has triggers that sit far forward and are prone to false presses
-                // so we increase the deadzone on them to minimize this
-                context.triggerDeadzone = MAX_TRIGGER_DEADZONE
-            } else if (devName.contains("SHIELD") || devName.contains("NVIDIA Controller")) {
-                // SHIELD controllers: only the Search button needs a fix-up
-
-                // The big Nvidia button on the Shield controllers acts like a Search button. It
-                // summons the Google Assistant on the Shield TV. On my Pixel 4, it seems to do
-                // nothing, so we can hijack it to act like a mode button.
-                if (
-                    devName.contains("NVIDIA Controller v01.03") ||
-                        devName.contains("NVIDIA Controller v01.04")
-                ) {
-                    context.searchIsMode = true
-                    context.hasMode = true
-                }
-            } else if (devName.contains("Razer Serval")) {
-                // The Serval has a couple of unknown buttons that are start and select. It also has
-                // a back button which we want to ignore since there's already a select button.
-                context.isServal = true
-
-                // Serval has Select and Mode buttons (possibly mapped non-standard)
-                context.hasMode = true
-                context.hasSelect = true
-            } else if (devName == "Xbox Wireless Controller") {
-                // The Xbox One S Bluetooth controller has some mappings that need fixing up.
-                // However, Microsoft released a firmware update with no change to VID/PID
-                // or device name that fixed the mappings for Android. Since there's
-                // no good way to detect this, we'll use the presence of GAS/BRAKE axes
-                // that were added in the latest firmware. If those are present, the only
-                // required fixup is ignoring the select button.
-                if (gasRange == null) {
-                    context.isNonStandardXboxBtController = true
-
-                    // Xbox One S has Select and Mode buttons (possibly mapped non-standard)
-                    context.hasMode = true
-                    context.hasSelect = true
-                }
-            }
+    // SHIELD controllers: only the Search button needs a fix-up
+    private fun applyShieldQuirks(context: InputDeviceContext, devName: String) {
+        // The big Nvidia button on the Shield controllers acts like a Search button. It
+        // summons the Google Assistant on the Shield TV. On my Pixel 4, it seems to do
+        // nothing, so we can hijack it to act like a mode button.
+        if (
+            devName.contains("NVIDIA Controller v01.03") ||
+                devName.contains("NVIDIA Controller v01.04")
+        ) {
+            context.searchIsMode = true
+            context.hasMode = true
         }
+    }
 
-        // Thrustmaster Score A gamepad home button reports directly to android as
-        // KEY_HOMEPAGE event on another event channel
-        if (dev.vendorId == VENDOR_THRUSTMASTER && dev.productId == PRODUCT_SCORE_A) {
-            context.hasMode = false
+    private fun applyServalQuirks(context: InputDeviceContext) {
+        // The Serval has a couple of unknown buttons that are start and select. It also has
+        // a back button which we want to ignore since there's already a select button.
+        context.isServal = true
+
+        // Serval has Select and Mode buttons (possibly mapped non-standard)
+        context.hasMode = true
+        context.hasSelect = true
+    }
+
+    // The Xbox One S Bluetooth controller has some mappings that need fixing up.
+    // However, Microsoft released a firmware update with no change to VID/PID
+    // or device name that fixed the mappings for Android. Since there's
+    // no good way to detect this, we'll use the presence of GAS/BRAKE axes
+    // that were added in the latest firmware. If those are present, the only
+    // required fixup is ignoring the select button.
+    private fun applyXboxBluetoothQuirks(context: InputDeviceContext, dev: InputDevice) {
+        if (getMotionRangeForJoystickAxis(dev, MotionEvent.AXIS_GAS) == null) {
+            context.isNonStandardXboxBtController = true
+
+            // Xbox One S has Select and Mode buttons (possibly mapped non-standard)
+            context.hasMode = true
+            context.hasSelect = true
         }
-
-        LimeLog.info(
-            "Analog stick deadzone: ${context.leftStickDeadzoneRadius} ${context.rightStickDeadzoneRadius}"
-        )
-        LimeLog.info("Trigger deadzone: ${context.triggerDeadzone}")
-
-        return context
     }
 
     // The rules apply in this order: when two fit, the first one decides.

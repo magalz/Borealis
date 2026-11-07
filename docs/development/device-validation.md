@@ -6627,8 +6627,8 @@ cleared only the `menu_hint_shown` key on both, so the hint shows again):
 
 Sprint 18a refactored the network, host and input code without changing behaviour, after it fixed the known
 bugs of its wave 0 ([roadmap](../roadmap.md#sprint-18a-refactor-of-the-converted-code-network-host-and-input)).
-This section is the checklist of its device round. **The round has not run: every row is `pending`.** The
-Notes column holds what the task reports asked the round to check, with the card that asked. A row stays on the
+This section is the checklist of its device round and its results; the round ran on 2026-11-06. The
+Notes column holds what the task reports asked the round to check, with the card that asked, then the result. A row stays on the
 list although a unit test covers the same code, because only a device shows a USB write, a focus change or a
 real network.
 
@@ -6639,9 +6639,9 @@ sections 22 and 23 do.
 
 ### Setup
 
-- **Build:** the debug build of the head of `phase/s18a-refactor-network-input`. Name the commit here when
-  the round runs.
-- **Host:** LuminalShine. Name the release here when the round runs. The GFE row of F3 needs a GFE host.
+- **Build:** the debug build of `22b585b1b`, the head of `phase/s18a-refactor-network-input` after the two
+  waves of the whole-phase review, installed over the build of 2026-11-04.
+- **Host:** LuminalShine (it reports `7.1.431.-1`). No GFE host, so the GFE row of F3 was not run.
 - **Devices:** the Samsung Galaxy S22 on USB (free to use) and the Google TV Streamer (ask first). Name the pads that the round uses: an Xbox One pad, an Xbox One S pad, a wired Xbox 360 pad, the
   Xbox 360 wireless dongle, a pad with a touchpad (DualShock 4), a pad with a hat, and a pad over Bluetooth.
 - **Data hygiene:** [section 5](#5-data-hygiene) applies. Use `<host>` for the host address and `<applicationId>` for the
@@ -6657,70 +6657,103 @@ sections 22 and 23 do.
 
 | Step | Device | Result | Notes |
 | --- | --- | --- | --- |
-| A1 Strong rumble | S22 (USB) | pending | An Xbox One pad on the USB driver: a strong rumble of 0x8000 or more is felt as strong (the driver sends 0x40 to 0x7F for it), never weak and never wrapped to a low value. BORE-39. |
-| A2 Rumble stops when the stream ends | S22 (USB) | pending | A wired Xbox One pad: end a stream while the main and the trigger motors rumble. Both stop. BORE-63. |
-| A3 Unbind with a stuck pad | S22 (USB) | pending | The unbind adds no second 100 ms wait for each pad on the main thread, and the pads that are fine stop rumbling at the unbind. BORE-42, BORE-63. |
-| A4 A pad leaves while A is held in the gamepad mouse | S22 (USB, Bluetooth) | pending | Hold A in the gamepad mouse, then unplug a USB pad, drop a Bluetooth pad, or put the app in the background: the PC's button comes up. A device change while A is held keeps the click. BORE-54. |
-| A5 The gamepad mouse turned off with A or B held | S22 (USB, system pad) | pending | Turn the gamepad mouse off with a Start hold while A or B is held, on a pad of the system and on a USB pad: the PC's button comes up once. BORE-89. |
-| A6 A pad in mouse mode and the on-screen controller | S22 | pending | A pad in mouse mode while the on-screen controller holds A. End the mouse mode with the menu row, with the Start hold and by the pad leaving: the PC gets one button up each time. BORE-95. |
-| A7 A pad that reports as device 0, in the gamepad mouse | S22 | pending | A pad that Android reports as device 0, or with no device: a Start hold turns the gamepad mouse on, A is held, and a Start hold turns the mouse off. The PC's left button comes up once. BORE-95, the fix that came out of the whole-phase review: the default context's own held click was counted as held by others, so the click stayed down. |
-| A8 Start hold, shoulder buttons and the quit combo | S22 | pending | A Start hold of more than 750 ms toggles the gamepad mouse, and a shorter one does not. Start with LB acts as Select. Select with LB acts as the clickpad on a PS4 pad. The gamepad mouse with RB held, under each scroll setting. The quit combo. BORE-66. |
-| A9 Touchpad of a DualShock | S22 | pending | The touchpad touches and the clickpad, with the touchpad as a mouse on and off. BORE-66. |
-| A10 Keys held through the capture, and a hat | S22 | pending | A key held through the capture, and the D-pad keys of a pad with a hat, behave as before the sprint. BORE-66. |
-| A11 Battery | S22 (USB, Bluetooth) | pending | A pad that reports a battery still sends it to the host while it is connected, and a pad that has left sends nothing more. No task report holds a device note for this: the row comes from the plan of the round (battery) and from BORE-43 and BORE-68. |
-| A12 Xbox One S init | S22 (USB) | pending | The init of the Xbox One S pad and the acknowledgement of the Guide mode report. BORE-81. |
-| A13 Xbox 360 wireless dongle | S22 (USB) | pending | The LED shows the slot of each pad. BORE-81. |
-| A14 Attach and unplug of wired pads | S22 (USB) | pending | A wired Xbox 360 and a wired Xbox One pad are announced about 1 s after they are attached, input flows, and the unplug gives one removal. BORE-80. |
+| A1 Strong rumble | S22 (USB) | not run | An Xbox One pad on the USB driver: a strong rumble of 0x8000 or more is felt as strong (the driver sends 0x40 to 0x7F for it), never weak and never wrapped to a low value. BORE-39. Result: No Xbox One pad in the round. |
+| A2 Rumble stops when the stream ends | S22 (USB) | pass | A wired Xbox One pad: end a stream while the main and the trigger motors rumble. Both stop. BORE-63. Result: On the TV, an 8BitDo Ultimate 2 in XInput mode (`2dc8:310b`) held by the USB driver: the host's rumble reached the pad, and a Disconnect during a rumble stopped the motors. |
+| A3 Unbind with a stuck pad | S22 (USB) | partly | The unbind adds no second 100 ms wait for each pad on the main thread, and the pads that are fine stop rumbling at the unbind. BORE-42, BORE-63. Result: No stuck pad to test. A healthy pad: one of two Disconnects logged that the pad did not take the zero of its motors, after a 1.2 to 1.4 s app stall; the host had zeroed the motors 0.4 s before, so nothing kept rumbling. The write, its timeout and the stop zero are the same at `0929a8bdd`: [BORE-103](#findings-steps-not-run-and-what-was-left-on-the-devices). |
+| A4 A pad leaves while A is held in the gamepad mouse | S22 (USB, Bluetooth) | pass | Hold A in the gamepad mouse, then unplug a USB pad, drop a Bluetooth pad, or put the app in the background: the PC's button comes up. A device change while A is held keeps the click. BORE-54. Result: The owner, on the TV with the 8BitDo on the USB driver: the receiver unplugged with A held in the gamepad mouse, and the PC's button came up. Bluetooth and the background were not run. |
+| A5 The gamepad mouse turned off with A or B held | S22 (USB, system pad) | pass | Turn the gamepad mouse off with a Start hold while A or B is held, on a pad of the system and on a USB pad: the PC's button comes up once. BORE-89. Result: The owner, on the TV with the USB pad. The system pad part was not run. |
+| A6 A pad in mouse mode and the on-screen controller | S22 | not run | A pad in mouse mode while the on-screen controller holds A. End the mouse mode with the menu row, with the Start hold and by the pad leaving: the PC gets one button up each time. BORE-95. Result: The S22 had no pad to share a number with the on-screen controller. |
+| A7 A pad that reports as device 0, in the gamepad mouse | S22 | not run | A pad that Android reports as device 0, or with no device: a Start hold turns the gamepad mouse on, A is held, and a Start hold turns the mouse off. The PC's left button comes up once. BORE-95, the fix that came out of the whole-phase review: the default context's own held click was counted as held by others, so the click stayed down. Result: No pad that reports as device 0. Unit tests cover the fix (`DefaultContextMouseOffTest`). |
+| A8 Start hold, shoulder buttons and the quit combo | S22 | pass | A Start hold of more than 750 ms toggles the gamepad mouse, and a shorter one does not. Start with LB acts as Select. Select with LB acts as the clickpad on a PS4 pad. The gamepad mouse with RB held, under each scroll setting. The quit combo. BORE-66. Result: The owner, on the TV with the USB pad: the Start hold, Start with LB, and the quit combo. The PS4 clickpad was not run (no PS4 pad). |
+| A9 Touchpad of a DualShock | S22 | not run | The touchpad touches and the clickpad, with the touchpad as a mouse on and off. BORE-66. Result: No DualShock. |
+| A10 Keys held through the capture, and a hat | S22 | not run | A key held through the capture, and the D-pad keys of a pad with a hat, behave as before the sprint. BORE-66. Result: Not in the owner's steps, and no pad with a hat. |
+| A11 Battery | S22 (USB, Bluetooth) | not run | A pad that reports a battery still sends it to the host while it is connected, and a pad that has left sends nothing more. No task report holds a device note for this: the row comes from the plan of the round (battery) and from BORE-43 and BORE-68. Result: No pad of the round reports a battery: the wired Xbox 360 protocol has none, and Android gave none to the system pads seen. |
+| A12 Xbox One S init | S22 (USB) | not run | The init of the Xbox One S pad and the acknowledgement of the Guide mode report. BORE-81. Result: No Xbox One S pad. |
+| A13 Xbox 360 wireless dongle | S22 (USB) | not run | The LED shows the slot of each pad. BORE-81. Result: No Xbox 360 wireless dongle. |
+| A14 Attach and unplug of wired pads | S22 (USB) | pass | A wired Xbox 360 and a wired Xbox One pad are announced about 1 s after they are attached, input flows, and the unplug gives one removal. BORE-80. Result: The owner, on the TV: the 8BitDo receiver in XInput mode attached and unplugged; the USB driver counted the pad and enumerated one gamepad. |
 
 ### B. The on-screen controller
 
 | Step | Device | Result | Notes |
 | --- | --- | --- | --- |
-| B1 Layout, D-pad and sticks | S22 | pending | The layout of the on-screen controller, the drawing and the press of the D-pad, and the direction of each stick in all four quarters. BORE-82. |
+| B1 Layout, D-pad and sticks | S22 | pass | The layout of the on-screen controller, the drawing and the press of the D-pad, and the direction of each stick in all four quarters. BORE-82. Result: The owner, on the S22. |
 
 ### C. Touch and keyboard
 
 | Step | Device | Result | Notes |
 | --- | --- | --- | --- |
-| C1 Keyboard keys | S22 | pending | Keys of a keyboard reach the PC as before. `KeyboardTranslator.translate` was refactored, and the merge review compared it with the old code over the key codes -1000 to 1999 with no mismatch, so a wrong key is not expected. BORE-83. |
-| C2 Pointer capture | S22 | pending | The capture works with a mouse and with a touchpad, and a touchscreen device does not capture. BORE-83. |
-| C3 Touch | S22 | pending | A pass over the touch modes (tap, double tap and hold, two-finger scroll). No task of 18a changed touch code (BORE-73 shared the test helpers), so this row comes from the plan of the round. |
+| C1 Keyboard keys | S22 | not run | Keys of a keyboard reach the PC as before. `KeyboardTranslator.translate` was refactored, and the merge review compared it with the old code over the key codes -1000 to 1999 with no mismatch, so a wrong key is not expected. BORE-83. Result: No physical keyboard. |
+| C2 Pointer capture | S22 | not run | The capture works with a mouse and with a touchpad, and a touchscreen device does not capture. BORE-83. Result: No mouse or touchpad. |
+| C3 Touch | S22 | pass | A pass over the touch modes (tap, double tap and hold, two-finger scroll). No task of 18a changed touch code (BORE-73 shared the test helpers), so this row comes from the plan of the round. Result: The owner, on the S22 in trackpad mode. |
 
 ### D. The menu chord
 
 | Step | Device | Result | Notes |
 | --- | --- | --- | --- |
-| D1 Select and Start held for one second | S22, TV | pending | The chord opens the menu. On a pad that reports Start and Select as separate events, Start or Select pressed alone is held back from the PC for 60 ms (`LONE_WAIT_MS`). Let go in that time, it reaches the PC as a short press. Still held when the 60 ms are over, or with a button other than its partner pressed in that time, it reaches the PC at that moment, while it is still held. The first button of a chord reaches the PC only if the other button comes later than the 60 ms, and the chord still starts then. A pad that reports them differently is not marked failed for the hold-back. No task report holds a device note for this: the row comes from the plan of the round and from the `MenuChordDetector` KDoc. BORE-71. |
+| D1 Select and Start held for one second | S22, TV | pass | The chord opens the menu. On a pad that reports Start and Select as separate events, Start or Select pressed alone is held back from the PC for 60 ms (`LONE_WAIT_MS`). Let go in that time, it reaches the PC as a short press. Still held when the 60 ms are over, or with a button other than its partner pressed in that time, it reaches the PC at that moment, while it is still held. The first button of a chord reaches the PC only if the other button comes later than the 60 ms, and the chord still starts then. A pad that reports them differently is not marked failed for the hold-back. No task report holds a device note for this: the row comes from the plan of the round and from the `MenuChordDetector` KDoc. BORE-71. Result: The owner, on the TV with the USB pad. The S22 part was not run. |
 
 ### E. TV focus (Hosts and Apps)
 
 | Step | Device | Result | Notes |
 | --- | --- | --- | --- |
-| E1 Back from a window | TV | pending | Back from the options, the details or the Forget confirmation of a host, and from the actions, the quit confirmation or the details of an app: the focus returns to the card or tile that opened it. BORE-49. |
-| E2 Forget a host | TV | pending | Forget a host in the middle and the last host: the focus goes to the neighbour card (the previous one when the last went). Forget the only host: no card is left, so the focus goes where Compose puts it, and the row records where it lands. BORE-51. |
-| E3 Hide an app | TV | pending | Hide a tile in the middle and the last tile, with the hidden apps not shown: the focus goes to the neighbour tile. BORE-51. |
-| E4 Hide with the hidden apps shown | TV | pending | The focus stays on the tile. BORE-51. |
+| E1 Back from a window | TV | pass | Back from the options, the details or the Forget confirmation of a host, and from the actions, the quit confirmation or the details of an app: the focus returns to the card or tile that opened it. BORE-49. Result: TV. Back from the host options, details and Forget confirmation, and from the app actions and details, returns the focus to the card or tile. The quit confirmation of the Apps screen was not run. |
+| E2 Forget a host | TV | partly | Forget a host in the middle and the last host: the focus goes to the neighbour card (the previous one when the last went). Forget the only host: no card is left, so the focus goes where Compose puts it, and the row records where it lands. BORE-51. Result: TV. Forgetting the first of two hosts (an unpaired host found on the network) moved the focus to the next card, and mDNS found the host again at once. The last card and the only host were not run: the only other host is the paired PC. |
+| E3 Hide an app | TV | pass | Hide a tile in the middle and the last tile, with the hidden apps not shown: the focus goes to the neighbour tile. BORE-51. Result: TV. Hiding the first tile moves the focus to the next tile, and hiding the last tile to the previous one. Both apps were shown again. |
+| E4 Hide with the hidden apps shown | TV | pass | The focus stays on the tile. BORE-51. Result: TV. The focus stays on the tile. |
 
 ### F. Host flows
 
 | Step | Device | Result | Notes |
 | --- | --- | --- | --- |
-| F1 Pairing | S22, TV | pending | A right PIN pairs, and a wrong PIN fails. BORE-75. |
-| F2 `serverinfo` | S22 | pending | The request goes over HTTPS with the pinned certificate, and falls back to HTTP after the certificate changed. BORE-75. |
-| F3 Launch and resume | S22, TV | pending | Launch and resume on LuminalShine. On a GFE host: a resolution that is not a standard one. BORE-75. |
-| F4 Start and resume | S22 | pending | A start; a resume (asked, and remembered); a resume that the host refuses with 470 or 525. BORE-74. |
-| F5 Another app is running, leaving, a failed start | S22 | pending | A different app is running: Join, Quit and relaunch, and Cancel. Leave at each stage of the start. A failed native start restarts once. BORE-74. |
-| F6 Connection types | S22 | pending | With `remote=auto`: on Wi-Fi, on a VPN (Tailscale), on cellular, and on NAT64. BORE-74. |
-| F7 Poll, discovery and wake | S22, TV | pending | A host goes offline and comes back. STUN for a host added by its LAN address. A host with several addresses. The app list refreshes. A host is woken and found again. BORE-76. |
-| F8 Wake-on-LAN | S22, TV | pending | A sleeping host wakes by its local address and by a manual address. BORE-77. |
-| F9 Identity after an update | S22, TV | pending | A host that was paired stays paired after the update (the same `client.crt`, `client.key` and unique id). A fresh install pairs. BORE-77. |
-| F10 TV channel: request and first launch | TV | pending | Pairing shows the request to add the channel. The first launch of a game adds its program with the poster (`content://poster.<applicationId>/boxart/...`). BORE-78. |
-| F11 TV channel: relaunch and removal | TV | pending | A relaunch updates the program and adds no copy. A program that was removed is added again on a relaunch. BORE-78. |
-| F12 TV channel: hide and delete | TV | pending | Hiding an app removes its program. Deleting the host removes its channel. BORE-78. |
-| F13 Settings | S22, TV | pending | A stream reads every setting as before. An upgrade with the old `list_resolution_fps` setting migrates it. BORE-79. |
-| F14 IPv6 discovery | S22, TV | pending | Discovery over IPv6 on Android 14 and later (NSD), and below it (JmDNS); NSD started and stopped again. No device of earlier rounds runs below Android 14, so the JmDNS part may stay `not run`. BORE-79, BORE-96. |
-| F15 Add host and shortcuts | S22, TV | pending | Add a host, pin a shortcut and start from it. This row comes from the plan of the round: 18a changed the code behind them, with no behaviour change. |
+| F1 Pairing | S22, TV | not run | A right PIN pairs, and a wrong PIN fails. BORE-75. Result: No host to pair in the round. |
+| F2 `serverinfo` | S22 | partly | The request goes over HTTPS with the pinned certificate, and falls back to HTTP after the certificate changed. BORE-75. Result: Every request went over HTTPS to the pinned host. The fallback to HTTP after a certificate change was not run. |
+| F3 Launch and resume | S22, TV | pass | Launch and resume on LuminalShine. On a GFE host: a resolution that is not a standard one. BORE-75. Result: LuminalShine: a launch on the TV and on the S22, a resume on the S22, and quits from the menu. The GFE row was not run (no GFE host). |
+| F4 Start and resume | S22 | partly | A start; a resume (asked, and remembered); a resume that the host refuses with 470 or 525. BORE-74. Result: S22: a start, a Disconnect, and a resume with no prompt (remembered). The query carries no `continuousAudio`. A resume refused with 470 or 525 was not run. |
+| F5 Another app is running, leaving, a failed start | S22 | partly | A different app is running: Join, Quit and relaunch, and Cancel. Leave at each stage of the start. A failed native start restarts once. BORE-74. Result: S22: with Desktop running, the Steam sheet offers to quit Desktop and start Steam Big Picture; Back cancels, and the option asks to confirm, sends `/cancel`, then launches. TV: Cancel pressed while `/launch` waited on the host finished the activity at once, no RTSP started, and the client sent `/cancel` when the launch answered. The Game-side Join dialog is not reachable from the Library flow. One quit from the menu ended on the error screen although the PC had quit the app: [BORE-102](#findings-steps-not-run-and-what-was-left-on-the-devices). |
+| F6 Connection types | S22 | partly | With `remote=auto`: on Wi-Fi, on a VPN (Tailscale), on cellular, and on NAT64. BORE-74. Result: The owner, on the S22: Wi-Fi, Tailscale (the host Imanix, paired by its Tailscale address) and cellular. NAT64 was not run. |
+| F7 Poll, discovery and wake | S22, TV | partly | A host goes offline and comes back. STUN for a host added by its LAN address. A host with several addresses. The app list refreshes. A host is woken and found again. BORE-76. Result: The poll returns the LAN address, the app list refreshes every 30 s, and a forgotten host was found again. Offline and back, STUN and the wake were not run: the PC does not stay asleep (the B5 note of section 19). |
+| F8 Wake-on-LAN | S22, TV | not run | A sleeping host wakes by its local address and by a manual address. BORE-77. Result: The PC does not stay asleep (the B5 note of section 19). |
+| F9 Identity after an update | S22, TV | pass | A host that was paired stays paired after the update (the same `client.crt`, `client.key` and unique id). A fresh install pairs. BORE-77. Result: An update over the build of 2026-11-04 on the TV and the S22: `client.crt`, `client.key` and the unique id stay byte for byte the same, and the PC stays paired. |
+| F10 TV channel: request and first launch | TV | partly | Pairing shows the request to add the channel. The first launch of a game adds its program with the poster (`content://poster.<applicationId>/boxart/...`). BORE-78. Result: TV. `content read` of both posters equals the cache files; `abc`, `-1` and `..%2F..%2Fshared_prefs` give `FileNotFoundException: not an app id`. The program rows are not observable: the shell cannot read another app's rows, and the Streamer shows no third-party channel rows (section 11). |
+| F11 TV channel: relaunch and removal | TV | not run | A relaunch updates the program and adds no copy. A program that was removed is added again on a relaunch. BORE-78. Result: Not observable on the Streamer (see F10). |
+| F12 TV channel: hide and delete | TV | not run | Hiding an app removes its program. Deleting the host removes its channel. BORE-78. Result: Not observable on the Streamer (see F10). |
+| F13 Settings | S22, TV | pass | A stream reads every setting as before. An upgrade with the old `list_resolution_fps` setting migrates it. BORE-79. Result: TV and S22: settings of 1280x720 and 60 fps; the launch asked `1280x720x59` on both. The migration of the old `list_resolution_fps` was not run (no such setting left to migrate). |
+| F14 IPv6 discovery | S22, TV | partly | Discovery over IPv6 on Android 14 and later (NSD), and below it (JmDNS); NSD started and stopped again. No device of earlier rounds runs below Android 14, so the JmDNS part may stay `not run`. BORE-79, BORE-96. Result: S22 (Android 16) and TV (Android 14): NSD started, stopped and started again, and resolved the PC with one IPv4 and five IPv6 addresses. JmDNS was not run (no device below Android 14). |
+| F15 Add host and shortcuts | S22, TV | pass | Add a host, pin a shortcut and start from it. This row comes from the plan of the round: 18a changed the code behind them, with no behaviour change. Result: The owner, on the S22: Add to home screen, and the shortcut opened the stream. |
 
 ### Findings, steps not run, and what was left on the devices
 
-None yet: the round has not run.
+- **BORE-102, a quit that the host accepted can end on the error screen.** One quit from the stream
+  menu on the S22: `/cancel` answered `cancel=1` after 6.4 s, then the check that follows it
+  (`getServerInfo(true)`) timed out on connect after 5 s, so the quit was reported as failed and the
+  error screen offered "Try again". Nothing ran on the PC. The other quits did the check in 43 ms.
+  The path is the same at `0929a8bdd`, and a failed check leaves no log line. Planned for 18c.
+- **BORE-103, a USB pad's stop on the TV.** One of two Disconnects logged that the pad did not take
+  the zero of its motors, after an ART thread-flip stall of 1.2 to 1.4 s (72 frames skipped); the
+  same stall shows mid-stream (2.2 s and 0.6 s) while the USB pad is attached. Each stop also posts
+  to the input handler after its thread quit (`releaseControllerNumber`), and the message is
+  dropped. The 100 ms write, the stop zero and the post are the same at `0929a8bdd`; 18a only made
+  the failed zero visible. Planned for 18c.
+- **BORE-101, rumble for pads that Android handles natively without force feedback.** On the TV,
+  the kernel gives no vibrator to the 8BitDo Ultimate 2 in its Android mode (`2dc8:6012`) or to an
+  8BitDo Pro 3 receiver in Switch mode (`057e:2009`), and the Ultimate 2 in Switch mode gets no
+  input device at all. Only the XInput mode (`2dc8:310b`) rumbles, through Borealis's USB driver.
+  A new feature card.
+- **The modes of the 8BitDo Ultimate 2 receiver on the TV:**
+  - `2dc8:310b`, XInput: Android sees only a HID mouse and keyboard, and the pad goes to the USB
+    driver;
+  - `2dc8:6012`: a system gamepad, with no vibrator and no battery;
+  - `057e:2009`, for the Switch mode and for the fourth mode: a USB HID device with no input device;
+  - `2dc8:6013`, for about 3 s while the mode changes.
+- **Logcat shows host addresses.** "Starting parallel poll" writes the host's IPv4 and IPv6
+  addresses unmasked. This is by design: logcat skips redaction until export
+  ([ADR 0050](../adr/0050-diagnostics-audit-and-interim-settings.md)). The line is the same at
+  `0929a8bdd`.
+- **Two slips of the round's driver, with no effect left.** A wrong key on the TV started Steam Big
+  Picture, which was quit from the menu. A tap on the S22 meant for the starting screen landed on
+  the stream as one click on the PC.
+- **Not run, for lack of hardware or host:** A1, A6, A7, A9 to A13, C1, C2, F1, F8, F11 and F12, and
+  the parts named in each row.
+- **Left on the devices:** the S22 keeps the home-screen shortcut of F15, which is the owner's to
+  keep. The apps hidden for E3 and E4 were shown again, and Show hidden apps is off. The TV was put
+  to sleep at the end.

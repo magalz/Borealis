@@ -32,13 +32,6 @@ internal class MouseBackHoldTest : MotionTestBase() {
     private val backState = MotionEvent.BUTTON_BACK
     private val forwardState = MotionEvent.BUTTON_FORWARD
 
-    /** The mouse reports [buttons] as down, at (10, 20) of the stream view, now. */
-    private fun mouse(action: Int, buttons: Int): Boolean =
-        rig.game.onGenericMotion(
-            streamView,
-            mouseEvent(action, 10f, 20f, buttons, SystemClock.uptimeMillis()),
-        )
-
     /** The buttons go down, stay down for [millis] and come up. */
     private fun tap(buttons: Int, millis: Long) {
         mouse(MotionEvent.ACTION_DOWN, buttons)
@@ -75,17 +68,10 @@ internal class MouseBackHoldTest : MotionTestBase() {
         streaming()
     }
 
-    private fun thePointer() = position(10, 20)
-
     private fun panel(): Panel = (rig.phase as StreamPhase.Streaming).panel
 
     /** The buttons that reached the host: the calls of the mouse buttons, nothing else. */
     private fun buttonsSent() = sent().filter { it.name == "sendMouseButton" }
-
-    private fun assertSent(vararg calls: Sent) {
-        assertThat(sent()).containsExactlyElementsIn(calls).inOrder()
-        forgetSent()
-    }
 
     // ----- A hold -----
 
@@ -727,9 +713,6 @@ internal class MouseBackHoldTest : MotionTestBase() {
     private companion object {
         /** How long a side button of the Logi M650 stays down. */
         const val PULSE_MS = 7L
-
-        /** A press this long is not a pulse. */
-        const val SETTLE_MS = 25L
 
         /** The time that Back and Forward have to come together. */
         const val WINDOW_MS = 250L

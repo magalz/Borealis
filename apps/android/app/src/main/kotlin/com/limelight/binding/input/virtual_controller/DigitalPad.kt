@@ -8,8 +8,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.view.MotionEvent
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-// The elements have no (Context) constructor on purpose: they need their controller and their id.
+// ViewConstructor lint: the elements have no (Context) constructor on purpose, they need their
+// controller and their id (Sprint 18c backlog).
 @SuppressLint("ViewConstructor")
 class DigitalPad(controller: VirtualController, context: Context) :
     VirtualControllerElement(controller, context, EID_DPAD) {
@@ -22,8 +22,6 @@ class DigitalPad(controller: VirtualController, context: Context) :
         listeners.add(listener)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("LongMethod")
     override fun onElementDraw(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
@@ -36,22 +34,29 @@ class DigitalPad(controller: VirtualController, context: Context) :
         paint.strokeWidth = defaultStrokeWidth.toFloat()
 
         if (direction == DIGITAL_PAD_DIRECTION_NO_DIRECTION) {
-            // draw no direction rect
-            paint.style = Paint.Style.STROKE
-            paint.color = defaultColor
-            canvas.drawRect(
-                getPercent(w, MIDDLE_NEAR_PERCENT),
-                getPercent(h, MIDDLE_NEAR_PERCENT),
-                getPercent(w, MIDDLE_FAR_PERCENT),
-                getPercent(h, MIDDLE_FAR_PERCENT),
-                paint,
-            )
+            drawMiddle(canvas, w, h)
         }
 
-        // draw left rect
-        paint.color =
-            if ((direction and DIGITAL_PAD_DIRECTION_LEFT) > 0) pressedColor else defaultColor
+        drawSides(canvas, w, h)
+        drawDiagonals(canvas, w, h)
+    }
+
+    private fun drawMiddle(canvas: Canvas, w: Float, h: Float) {
+        // draw no direction rect
         paint.style = Paint.Style.STROKE
+        paint.color = defaultColor
+        canvas.drawRect(
+            getPercent(w, MIDDLE_NEAR_PERCENT),
+            getPercent(h, MIDDLE_NEAR_PERCENT),
+            getPercent(w, MIDDLE_FAR_PERCENT),
+            getPercent(h, MIDDLE_FAR_PERCENT),
+            paint,
+        )
+    }
+
+    private fun drawSides(canvas: Canvas, w: Float, h: Float) {
+        // draw left rect
+        prepareShape(held(DIGITAL_PAD_DIRECTION_LEFT))
         canvas.drawRect(
             paint.strokeWidth + DPAD_MARGIN,
             getPercent(h, THIRD_PERCENT),
@@ -61,9 +66,7 @@ class DigitalPad(controller: VirtualController, context: Context) :
         )
 
         // draw up rect
-        paint.color =
-            if ((direction and DIGITAL_PAD_DIRECTION_UP) > 0) pressedColor else defaultColor
-        paint.style = Paint.Style.STROKE
+        prepareShape(held(DIGITAL_PAD_DIRECTION_UP))
         canvas.drawRect(
             getPercent(w, THIRD_PERCENT),
             paint.strokeWidth + DPAD_MARGIN,
@@ -73,9 +76,7 @@ class DigitalPad(controller: VirtualController, context: Context) :
         )
 
         // draw right rect
-        paint.color =
-            if ((direction and DIGITAL_PAD_DIRECTION_RIGHT) > 0) pressedColor else defaultColor
-        paint.style = Paint.Style.STROKE
+        prepareShape(held(DIGITAL_PAD_DIRECTION_RIGHT))
         canvas.drawRect(
             getPercent(w, TWO_THIRDS_PERCENT),
             getPercent(h, THIRD_PERCENT),
@@ -85,9 +86,7 @@ class DigitalPad(controller: VirtualController, context: Context) :
         )
 
         // draw down rect
-        paint.color =
-            if ((direction and DIGITAL_PAD_DIRECTION_DOWN) > 0) pressedColor else defaultColor
-        paint.style = Paint.Style.STROKE
+        prepareShape(held(DIGITAL_PAD_DIRECTION_DOWN))
         canvas.drawRect(
             getPercent(w, THIRD_PERCENT),
             getPercent(h, TWO_THIRDS_PERCENT),
@@ -95,18 +94,11 @@ class DigitalPad(controller: VirtualController, context: Context) :
             h - (paint.strokeWidth + DPAD_MARGIN),
             paint,
         )
+    }
 
+    private fun drawDiagonals(canvas: Canvas, w: Float, h: Float) {
         // draw left up line
-        paint.color =
-            if (
-                (direction and DIGITAL_PAD_DIRECTION_LEFT) > 0 &&
-                    (direction and DIGITAL_PAD_DIRECTION_UP) > 0
-            ) {
-                pressedColor
-            } else {
-                defaultColor
-            }
-        paint.style = Paint.Style.STROKE
+        prepareShape(held(DIGITAL_PAD_DIRECTION_LEFT) && held(DIGITAL_PAD_DIRECTION_UP))
         canvas.drawLine(
             paint.strokeWidth + DPAD_MARGIN,
             getPercent(h, THIRD_PERCENT),
@@ -116,16 +108,7 @@ class DigitalPad(controller: VirtualController, context: Context) :
         )
 
         // draw up right line
-        paint.color =
-            if (
-                (direction and DIGITAL_PAD_DIRECTION_UP) > 0 &&
-                    (direction and DIGITAL_PAD_DIRECTION_RIGHT) > 0
-            ) {
-                pressedColor
-            } else {
-                defaultColor
-            }
-        paint.style = Paint.Style.STROKE
+        prepareShape(held(DIGITAL_PAD_DIRECTION_UP) && held(DIGITAL_PAD_DIRECTION_RIGHT))
         canvas.drawLine(
             getPercent(w, TWO_THIRDS_PERCENT),
             paint.strokeWidth + DPAD_MARGIN,
@@ -135,16 +118,7 @@ class DigitalPad(controller: VirtualController, context: Context) :
         )
 
         // draw right down line
-        paint.color =
-            if (
-                (direction and DIGITAL_PAD_DIRECTION_RIGHT) > 0 &&
-                    (direction and DIGITAL_PAD_DIRECTION_DOWN) > 0
-            ) {
-                pressedColor
-            } else {
-                defaultColor
-            }
-        paint.style = Paint.Style.STROKE
+        prepareShape(held(DIGITAL_PAD_DIRECTION_RIGHT) && held(DIGITAL_PAD_DIRECTION_DOWN))
         canvas.drawLine(
             w - (paint.strokeWidth + DPAD_MARGIN),
             getPercent(h, TWO_THIRDS_PERCENT),
@@ -154,16 +128,7 @@ class DigitalPad(controller: VirtualController, context: Context) :
         )
 
         // draw down left line
-        paint.color =
-            if (
-                (direction and DIGITAL_PAD_DIRECTION_DOWN) > 0 &&
-                    (direction and DIGITAL_PAD_DIRECTION_LEFT) > 0
-            ) {
-                pressedColor
-            } else {
-                defaultColor
-            }
-        paint.style = Paint.Style.STROKE
+        prepareShape(held(DIGITAL_PAD_DIRECTION_DOWN) && held(DIGITAL_PAD_DIRECTION_LEFT))
         canvas.drawLine(
             getPercent(w, THIRD_PERCENT),
             h - (paint.strokeWidth + DPAD_MARGIN),
@@ -172,6 +137,15 @@ class DigitalPad(controller: VirtualController, context: Context) :
             paint,
         )
     }
+
+    // A shape is stroked in the pressed colour while the pad holds its direction, in the default
+    // one otherwise.
+    private fun prepareShape(pressed: Boolean) {
+        paint.color = if (pressed) pressedColor else defaultColor
+        paint.style = Paint.Style.STROKE
+    }
+
+    private fun held(flag: Int): Boolean = (direction and flag) > 0
 
     private fun newDirectionCallback(direction: Int) {
         // notify listeners

@@ -1,6 +1,5 @@
 package com.limelight.binding.input.driver
 
-import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import com.limelight.LimeLog
@@ -101,34 +100,24 @@ class Xbox360Controller(
         return true
     }
 
-    // The high byte of a motor, but never 0 for a motor that is not zero, so a weak rumble is not
-    // lost and only a real zero stops the motor.
-    private fun motorByte(motor: Short): Byte {
-        val byte = (motor.toInt() shr MOTOR_BYTE_SHIFT).toByte()
-        return if (byte.toInt() == 0 && motor.toInt() != 0) 1 else byte
-    }
-
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         val data =
             byteArrayOf(
                 0x00,
                 RUMBLE_REPORT_SIZE,
                 0x00,
-                motorByte(lowFreqMotor),
-                motorByte(highFreqMotor),
+                motorByte(lowFreqMotor, MOTOR_BYTE_SHIFT),
+                motorByte(highFreqMotor, MOTOR_BYTE_SHIFT),
                 0x00,
                 0x00,
                 0x00,
             )
-        val res =
-            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, RUMBLE_TIMEOUT_MS)
-        if (res != data.size) {
-            LimeLog.warning("Rumble transfer failed: $res")
-        }
+        return writeRumble(data)
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         // Trigger motors not present on Xbox 360 controllers
+        return true
     }
 
     companion object {
@@ -198,26 +187,14 @@ class Xbox360Controller(
         private const val LED_TIMEOUT_MS = 3000
         private const val RUMBLE_REPORT_SIZE: Byte = 0x08
         private const val MOTOR_BYTE_SHIFT = 8
-        private const val RUMBLE_TIMEOUT_MS = 100
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition")
         @JvmStatic
-        fun canClaimDevice(device: UsbDevice): Boolean {
-            for (supportedVid in SUPPORTED_VENDORS) {
-                if (
-                    device.vendorId == supportedVid &&
-                        device.interfaceCount >= 1 &&
-                        device.getInterface(0).interfaceClass ==
-                            UsbConstants.USB_CLASS_VENDOR_SPEC &&
-                        device.getInterface(0).interfaceSubclass == XB360_IFACE_SUBCLASS &&
-                        device.getInterface(0).interfaceProtocol == XB360_IFACE_PROTOCOL
-                ) {
-                    return true
-                }
-            }
-
-            return false
-        }
+        fun canClaimDevice(device: UsbDevice): Boolean =
+            matchesFirstInterface(
+                device,
+                SUPPORTED_VENDORS,
+                XB360_IFACE_SUBCLASS,
+                XB360_IFACE_PROTOCOL,
+            )
     }
 }

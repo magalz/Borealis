@@ -22,6 +22,10 @@ abstract class AbstractXboxController(
     // Set once by stop(), which the main thread and the reader thread can both call.
     private val stopped = AtomicBoolean(false)
 
+    // Whether the last rumble write failed. The rumble runs on the handler's thread and stop() on
+    // the main thread or the reader thread.
+    @Volatile private var lastRumbleFailed = false
+
     @JvmField protected var inEndpt: UsbEndpoint? = null
     @JvmField protected var outEndpt: UsbEndpoint? = null
 
@@ -50,19 +54,10 @@ abstract class AbstractXboxController(
                 ControllerPacket.SPECIAL_BUTTON_FLAG
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("LongMethod", "NestedBlockDepth", "LoopWithTooManyJumpStatements")
     private fun createInputThread(): Thread =
         object : Thread() {
             override fun run() {
-                try {
-                    // Delay for a moment before reporting the new gamepad and
-                    // accepting new input. This allows time for the old InputDevice
-                    // to go away before we reclaim its spot. If the old device is still
-                    // around when we call notifyDeviceAdded(), we won't be able to claim
-                    // the controller number used by the original InputDevice.
-                    Thread.sleep(STARTUP_DELAY_MS)
-                } catch (_: InterruptedException) {
+                if (!waitForStartup()) {
                     return
                 }
 
@@ -72,36 +67,8 @@ abstract class AbstractXboxController(
                 while (!isInterrupted && !stopped.get()) {
                     val buffer = ByteArray(READ_BUFFER_SIZE)
 
-                    var res: Int
-
-                    //
-                    // There's no way that I can tell to determine if a device has failed
-                    // or if the timeout has simply expired. We'll check how long the transfer
-                    // took to fail and assume the device failed if it happened before the timeout
-                    // expired.
-                    //
-
-                    do {
-                        // Read the next input state packet
-                        val lastMillis = SystemClock.uptimeMillis()
-                        res = connection.bulkTransfer(inEndpt, buffer, buffer.size, READ_TIMEOUT_MS)
-
-                        // If we get a zero length response, treat it as an error
-                        if (res == 0) {
-                            res = -1
-                        }
-
-                        if (
-                            res == -1 &&
-                                SystemClock.uptimeMillis() - lastMillis < IO_ERROR_WINDOW_MS
-                        ) {
-                            LimeLog.warning("Detected device I/O error")
-                            this@AbstractXboxController.stop()
-                            break
-                        }
-                    } while (res == -1 && !isInterrupted && !stopped.get())
-
-                    if (res == -1 || stopped.get()) {
+                    val res = readReport(buffer)
+                    if (res == READ_FAILED || stopped.get()) {
                         break
                     }
 
@@ -113,12 +80,70 @@ abstract class AbstractXboxController(
                     }
                 }
             }
+
+            // Returns false when the thread is interrupted before the delay is over.
+            private fun waitForStartup(): Boolean =
+                try {
+                    // Delay for a moment before reporting the new gamepad and
+                    // accepting new input. This allows time for the old InputDevice
+                    // to go away before we reclaim its spot. If the old device is still
+                    // around when we call notifyDeviceAdded(), we won't be able to claim
+                    // the controller number used by the original InputDevice.
+                    Thread.sleep(STARTUP_DELAY_MS)
+                    true
+                } catch (_: InterruptedException) {
+                    false
+                }
+
+            // Reads the next input state packet into buffer and returns its length, or READ_FAILED
+            // when the device failed or the thread was told to end.
+            private fun readReport(buffer: ByteArray): Int {
+                //
+                // There's no way that I can tell to determine if a device has failed
+                // or if the timeout has simply expired. We'll check how long the transfer
+                // took to fail and assume the device failed if it happened before the timeout
+                // expired.
+                //
+                var res: Int
+                do {
+                    val lastMillis = SystemClock.uptimeMillis()
+                    res = connection.bulkTransfer(inEndpt, buffer, buffer.size, READ_TIMEOUT_MS)
+
+                    // If we get a zero length response, treat it as an error
+                    if (res == 0) {
+                        res = READ_FAILED
+                    }
+
+                    if (
+                        res == READ_FAILED &&
+                            SystemClock.uptimeMillis() - lastMillis < IO_ERROR_WINDOW_MS
+                    ) {
+                        LimeLog.warning("Detected device I/O error")
+                        this@AbstractXboxController.stop()
+                        return READ_FAILED
+                    }
+                } while (res == READ_FAILED && !isInterrupted && !stopped.get())
+
+                return res
+            }
         }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ReturnCount")
     override fun start(): Boolean {
-        // Force claim all interfaces
+        // Claim the interfaces, find the endpoints and run the init function, in this order
+        if (!claimInterfaces() || !findEndpoints() || !doInit()) {
+            return false
+        }
+
+        // Start listening for controller input
+        val thread = createInputThread()
+        inputThread = thread
+        thread.start()
+
+        return true
+    }
+
+    // Force claim all interfaces
+    private fun claimInterfaces(): Boolean {
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
 
@@ -127,8 +152,11 @@ abstract class AbstractXboxController(
                 return false
             }
         }
+        return true
+    }
 
-        // Find the endpoints
+    // Find the endpoints, one IN and one OUT, of the first interface
+    private fun findEndpoints(): Boolean {
         val iface = device.getInterface(0)
         for (i in 0 until iface.endpointCount) {
             val endpt = iface.getEndpoint(i)
@@ -148,22 +176,11 @@ abstract class AbstractXboxController(
         }
 
         // Make sure the required endpoints were present
-        if (inEndpt == null || outEndpt == null) {
+        val found = inEndpt != null && outEndpt != null
+        if (!found) {
             LimeLog.warning("Missing required endpoint")
-            return false
         }
-
-        // Run the init function
-        if (!doInit()) {
-            return false
-        }
-
-        // Start listening for controller input
-        val thread = createInputThread()
-        inputThread = thread
-        thread.start()
-
-        return true
+        return found
     }
 
     override fun stop() {
@@ -173,8 +190,11 @@ abstract class AbstractXboxController(
             return
         }
 
-        // Cancel any rumble effects
-        rumble(0, 0)
+        // Cancel any rumble effects. A pad whose last rumble write failed is stuck: its write would
+        // block this thread, the main thread on an unbind, for the whole timeout again.
+        if (!lastRumbleFailed) {
+            rumble(0, 0)
+        }
 
         // Stop the input thread
         inputThread?.let {
@@ -189,6 +209,26 @@ abstract class AbstractXboxController(
         notifyDeviceRemoved()
     }
 
+    // Writes a rumble packet and remembers whether it went through. Returns true when the whole
+    // packet was sent.
+    protected fun writeRumble(data: ByteArray): Boolean {
+        val res =
+            connection.bulkTransfer(checkNotNull(outEndpt), data, data.size, USB_WRITE_TIMEOUT_MS)
+        val sent = res == data.size
+        if (!sent) {
+            LimeLog.warning("Rumble transfer failed: $res")
+        }
+        lastRumbleFailed = !sent
+        return sent
+    }
+
+    // A motor shifted down as an unsigned number, but never to 0 for a motor that is not zero, so
+    // a weak rumble is not lost and only a real zero stops the motor.
+    protected fun motorByte(motor: Short, shift: Int): Byte {
+        val byte = ((motor.toInt() and UNSIGNED_SHORT_MASK) shr shift).toByte()
+        return if (byte.toInt() == 0 && motor.toInt() != 0) 1 else byte
+    }
+
     protected abstract fun handleRead(buffer: ByteBuffer): Boolean
 
     protected abstract fun doInit(): Boolean
@@ -197,6 +237,8 @@ abstract class AbstractXboxController(
         private const val STARTUP_DELAY_MS = 1000L
         private const val READ_BUFFER_SIZE = 64
         private const val READ_TIMEOUT_MS = 3000
+        private const val READ_FAILED = -1
         private const val IO_ERROR_WINDOW_MS = 1000L
+        private const val UNSIGNED_SHORT_MASK = 0xFFFF
     }
 }

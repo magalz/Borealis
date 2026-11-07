@@ -12,7 +12,8 @@ abstract class VideoDecoderRenderer {
 
     // This is called once for each frame-start NALU. This means it will be called several times
     // for an IDR frame which contains several parameter sets and the I-frame data.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+    // Converted as is from the inherited Java; LongParameterList stays: the parameters mirror the
+    // decode-unit callback of the JNI bridge, which is frozen (Sprint 18c backlog).
     @Suppress("LongParameterList")
     abstract fun submitDecodeUnit(
         decodeUnitData: ByteArray?,

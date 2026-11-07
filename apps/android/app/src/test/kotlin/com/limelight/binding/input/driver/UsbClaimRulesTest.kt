@@ -2,6 +2,7 @@ package com.limelight.binding.input.driver
 
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbInterface
 import android.view.InputDevice
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.connection.ShadowRecordingBridge
@@ -163,6 +164,52 @@ class UsbClaimRulesTest {
     }
 
     @Test
+    fun `each driver is decided by its first interface whatever follows it`() {
+        // 360: 93/1, One: 71/208, dongle: 93/129.
+        val drivers =
+            mapOf<String, Triple<(UsbDevice) -> Boolean, Int, Int>>(
+                "Xbox 360" to
+                    Triple(
+                        { Xbox360Controller.canClaimDevice(it) },
+                        UsbPads.XB360_SUBCLASS,
+                        UsbPads.XB360_PROTOCOL,
+                    ),
+                "Xbox One" to
+                    Triple(
+                        { XboxOneController.canClaimDevice(it) },
+                        UsbPads.XB1_SUBCLASS,
+                        UsbPads.XB1_PROTOCOL,
+                    ),
+                "dongle" to
+                    Triple(
+                        { Xbox360WirelessDongle.canClaimDevice(it) },
+                        UsbPads.XB360_SUBCLASS,
+                        UsbPads.XB360W_PROTOCOL,
+                    ),
+            )
+        val wrong = mutableListOf<String>()
+        for ((name, rule) in drivers) {
+            val (claims, subclass, protocol) = rule
+            fun matching(id: Int) =
+                UsbPads.usbInterface(id, subclass = subclass, protocol = protocol)
+
+            fun other(id: Int) =
+                UsbPads.usbInterface(id, UsbConstants.USB_CLASS_HID, subclass = 0, protocol = 0)
+
+            fun claimed(vararg interfaces: UsbInterface) =
+                claims(UsbPads.device("/dev/x", 0x045E, 0x0001, interfaces.toList()))
+
+            if (!claimed(matching(0))) wrong += "$name: a matching interface alone"
+            if (!claimed(matching(0), other(1))) wrong += "$name: a matching one, then another"
+            if (!claimed(matching(0), matching(1))) wrong += "$name: two matching ones"
+            if (claimed(other(0), matching(1))) wrong += "$name: another one, then a matching one"
+            if (claimed(other(0))) wrong += "$name: another interface alone"
+        }
+
+        assertThat(wrong).isEmpty()
+    }
+
+    @Test
     fun `a device with no interface is claimed by no driver`() {
         val device = UsbPads.device("/dev/x", 0x045E, 0x028E, emptyList())
 
@@ -299,6 +346,88 @@ class UsbClaimRulesTest {
 
         assertThat(UsbDriverService.shouldClaimDevice(unknown, true)).isFalse()
         assertThat(UsbDriverService.shouldClaimDevice(unknownVendor, true)).isFalse()
+    }
+
+    // What the claim decision is by the rules of the three drivers. Of the kernels the tests use,
+    // only 5.10 is fine for the Xbox One driver, and the dongle's LED is lit from 4.2 on.
+    private fun expectedClaim(
+        kind: String,
+        version: String,
+        androidHandles: Boolean,
+        claimAll: Boolean,
+    ): Boolean {
+        val oneIsFine = version == "5.10.0"
+        val wirelessLedIsLit = version != "3.10.0"
+        return when (kind) {
+            "Xbox One" -> !oneIsFine || !androidHandles || claimAll
+            "Xbox 360" -> !androidHandles || claimAll
+            "dongle" -> !wirelessLedIsLit || claimAll
+            else -> false
+        }
+    }
+
+    private fun wrongClaims(
+        devices: Map<String, UsbDevice>,
+        version: String,
+        androidHandles: Boolean,
+    ) =
+        listOf(false, true).flatMap { claimAll ->
+            devices
+                .filter { (kind, device) ->
+                    UsbDriverService.shouldClaimDevice(device, claimAll) !=
+                        expectedClaim(kind, version, androidHandles, claimAll)
+                }
+                .map { (kind, _) ->
+                    "$kind, kernel $version, handled $androidHandles, all $claimAll"
+                }
+        }
+
+    @Test
+    fun `the claim decision for each kind of device, kernel, view of Android and setting`() {
+        val devices =
+            mapOf(
+                "Xbox One" to xboxOne(),
+                "Xbox 360" to xbox360(),
+                "dongle" to dongle(),
+                "unknown" to UsbPads.device("/dev/x", 0x1234, 0x0001, emptyList()),
+            )
+        val wrong = mutableListOf<String>()
+        for (androidHandles in listOf(false, true)) {
+            if (androidHandles) {
+                PadInputDevices.add(0x045E, 0x02EA, PadInputDevices.GAMEPAD)
+                PadInputDevices.add(0x045E, 0x028E, PadInputDevices.GAMEPAD)
+                // The dongle shows the same: wireless pads have other product IDs.
+                PadInputDevices.add(0x045E, 0x0291, PadInputDevices.GAMEPAD)
+            }
+            for (version in listOf("3.10.0", "4.9.186", "5.10.0")) {
+                kernel(version)
+                wrong += wrongClaims(devices, version, androidHandles)
+            }
+        }
+
+        assertThat(wrong).isEmpty()
+    }
+
+    @Test
+    fun `a claim decision reads the kernel version once, whatever the device and the setting`() {
+        kernel("5.10.0")
+        val devices =
+            listOf(
+                xboxOne(),
+                xbox360(),
+                dongle(),
+                UsbPads.device("/dev/x", 0x1234, 0x0001, emptyList()),
+            )
+
+        for (device in devices) {
+            for (claimAll in listOf(false, true)) {
+                val before = log.messages.size
+
+                UsbDriverService.shouldClaimDevice(device, claimAll)
+
+                assertThat(log.messages.drop(before)).containsExactly("Kernel Version: 5.10.0")
+            }
+        }
     }
 
     @Test

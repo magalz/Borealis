@@ -3,6 +3,7 @@ package com.limelight.nvstream
 import android.app.ActivityManager
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.NetworkCapabilities
 import android.net.RouteInfo
 import android.os.Build
@@ -65,10 +66,12 @@ import org.xmlpull.v1.XmlPullParserException
 // BOREALIS: typed failure causes (host.failure)
 // BOREALIS: LuminalShine launch retries (host.launch)
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-// The stack traces that the Java prints to stderr and the RuntimeException that wraps the cause of
-// a missing AES provider stay as they were: PrintStackTrace and TooGenericExceptionThrown are
-// suppressed for that. The constructor has the seven parameters of the Java.
+// Converted as is from the inherited Java; the rest is for later sprints:
+// - TooManyFunctions, LargeClass and LongParameterList: the class waits for its split, and until
+//   then the constructor has the seven parameters of the Java (Sprint 18d backlog).
+// - PrintStackTrace and TooGenericExceptionThrown: the stack traces that the Java prints to stderr
+//   and the RuntimeException that wraps the cause of a missing AES provider stay as they were
+//   (Sprint 18c backlog).
 @Suppress("TooManyFunctions", "LargeClass", "LongParameterList")
 open class NvConnection(
     // Context parameters
@@ -392,97 +395,92 @@ open class NvConnection(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ReturnCount", "PrintStackTrace")
     private fun detectServerConnectionType(): Int {
         val connMgr =
             appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork = connMgr.activeNetwork
-        if (activeNetwork != null) {
-            val netCaps = connMgr.getNetworkCapabilities(activeNetwork)
-            if (netCaps != null) {
-                if (
-                    netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                        !netCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                ) {
-                    // VPNs are treated as remote connections
-                    return StreamConfiguration.STREAM_CFG_REMOTE
-                } else if (netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                    // Cellular is always treated as remote to avoid any possible
-                    // issues with 464XLAT or similar technologies.
-                    return StreamConfiguration.STREAM_CFG_REMOTE
-                }
-            }
-
-            // Check if the server address is on-link
-            val linkProperties = connMgr.getLinkProperties(activeNetwork)
-            if (linkProperties != null) {
-                val serverAddress: InetAddress
-                try {
-                    serverAddress = resolveServerAddress()
-                } catch (e: IOException) {
-                    e.printStackTrace()
-
-                    // We can't decide without being able to resolve the server address
-                    return StreamConfiguration.STREAM_CFG_AUTO
-                }
-
-                // If the address is in the NAT64 prefix, always treat it as remote
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    val nat64Prefix = linkProperties.nat64Prefix
-                    if (nat64Prefix != null && nat64Prefix.contains(serverAddress)) {
-                        return StreamConfiguration.STREAM_CFG_REMOTE
-                    }
-                }
-
-                for (route in linkProperties.routes) {
-                    // Skip non-unicast routes (which are all we get prior to Android 13)
-                    if (
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            route.type != RouteInfo.RTN_UNICAST
-                    ) {
-                        continue
-                    }
-
-                    // Find the first route that matches this address
-                    if (route.matches(serverAddress)) {
-                        // If there's no gateway, this is an on-link destination
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            // We want to use hasGateway() because getGateway() doesn't adhere
-                            // to documented behavior of returning null for on-link addresses.
-                            if (!route.hasGateway()) {
-                                return StreamConfiguration.STREAM_CFG_LOCAL
-                            }
-                        } else {
-                            // getGateway() is documented to return null for on-link destinations,
-                            // but it actually returns the unspecified address (0.0.0.0 or ::).
-                            val gateway = route.gateway
-                            if (gateway == null || gateway.isAnyLocalAddress) {
-                                return StreamConfiguration.STREAM_CFG_LOCAL
-                            }
-                        }
-
-                        // We _should_ stop after the first matching route, but for some reason
-                        // Android doesn't always report IPv6 routes in descending order of
-                        // specificity and metric. To handle that case, we enumerate all matching
-                        // routes, assuming that an on-link route will always be preferred.
-                    }
-                }
-            }
-        }
-
+        val activeNetwork = connMgr.activeNetwork ?: return StreamConfiguration.STREAM_CFG_AUTO
         // If we can't determine the connection type, let moonlight-common-c decide.
-        return StreamConfiguration.STREAM_CFG_AUTO
+        return remoteByTransport(connMgr.getNetworkCapabilities(activeNetwork))
+            ?: typeByLink(connMgr.getLinkProperties(activeNetwork))
+            ?: StreamConfiguration.STREAM_CFG_AUTO
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "ReturnCount",
-        "ThrowsCount",
-    )
+    /** The remote type for a VPN or a cellular network; null when [netCaps] do not say. */
+    private fun remoteByTransport(netCaps: NetworkCapabilities?): Int? {
+        if (netCaps == null) {
+            return null
+        }
+        // VPNs are treated as remote connections. Cellular is always treated as remote to avoid any
+        // possible issues with 464XLAT or similar technologies.
+        val remote =
+            netCaps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
+                !netCaps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) ||
+                netCaps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        return if (remote) StreamConfiguration.STREAM_CFG_REMOTE else null
+    }
+
+    /**
+     * Whether the server address is on-link, from the link properties of the network; null when
+     * they do not say.
+     */
+    private fun typeByLink(linkProperties: LinkProperties?): Int? {
+        if (linkProperties == null) {
+            return null
+        }
+        val serverAddress = resolveServerAddressOrNull()
+        return when {
+            // We can't decide without being able to resolve the server address
+            serverAddress == null -> StreamConfiguration.STREAM_CFG_AUTO
+            // If the address is in the NAT64 prefix, always treat it as remote
+            inNat64Prefix(linkProperties, serverAddress) -> StreamConfiguration.STREAM_CFG_REMOTE
+            hasOnLinkRoute(linkProperties, serverAddress) -> StreamConfiguration.STREAM_CFG_LOCAL
+            else -> null
+        }
+    }
+
+    // Converted as is from the inherited Java; the stack trace that it prints to stderr stays as it
+    // was (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun resolveServerAddressOrNull(): InetAddress? =
+        try {
+            resolveServerAddress()
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
+        }
+
+    private fun inNat64Prefix(linkProperties: LinkProperties, serverAddress: InetAddress): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            linkProperties.nat64Prefix?.contains(serverAddress) == true
+
+    // We _should_ stop after the first matching route, but for some reason Android doesn't always
+    // report IPv6 routes in descending order of specificity and metric. To handle that case, we
+    // enumerate all matching routes, assuming that an on-link route will always be preferred.
+    private fun hasOnLinkRoute(
+        linkProperties: LinkProperties,
+        serverAddress: InetAddress,
+    ): Boolean =
+        linkProperties.routes.any { route ->
+            !isSkipped(route) && route.matches(serverAddress) && isOnLink(route)
+        }
+
+    // Skip non-unicast routes (which are all we get prior to Android 13)
+    private fun isSkipped(route: RouteInfo): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && route.type != RouteInfo.RTN_UNICAST
+
+    // If there's no gateway, this is an on-link destination
+    private fun isOnLink(route: RouteInfo): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // We want to use hasGateway() because getGateway() doesn't adhere to documented
+            // behavior of returning null for on-link addresses.
+            !route.hasGateway()
+        } else {
+            // getGateway() is documented to return null for on-link destinations, but it actually
+            // returns the unspecified address (0.0.0.0 or ::).
+            val gateway = route.gateway
+            gateway == null || gateway.isAnyLocalAddress
+        }
+
     @Throws(XmlPullParserException::class, IOException::class)
     private fun startApp(): Boolean {
         val h =
@@ -494,28 +492,53 @@ open class NvConnection(
                 checkNotNull(cryptoProvider),
             )
 
+        val serverInfo = readServerInfo(h)
+        if (!acceptServer(h, serverInfo)) {
+            return false
+        }
+
+        val streamConfig = checkNotNull(context.streamConfig)
+        if (!negotiateStream(h, serverInfo, streamConfig)) {
+            return false
+        }
+
+        //
+        // Video stream format will be decided during the RTSP handshake
+        //
+
+        return launchOrResume(h, serverInfo, streamConfig)
+    }
+
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun readServerInfo(h: NvHTTP): String {
         val serverInfo: String =
             try {
                 // BOREALIS: retry a timed-out /serverinfo (host.launch)
                 collisions.readServerInfo(ServerInfoReader { h.getServerInfo(true) })
             } catch (e: IOException) {
-                // BOREALIS: the HTTP fallback after a mismatch can fail too; the mismatch is the
-                // cause (host.failure)
-                if (h.sawCertificateMismatch()) {
-                    throw CertificateMismatchException(e)
-                }
-                throw e
+                serverInfoFailed(h, e)
             } catch (e: XmlPullParserException) {
-                if (h.sawCertificateMismatch()) {
-                    throw CertificateMismatchException(e)
-                }
-                throw e
+                serverInfoFailed(h, e)
             }
         // BOREALIS: the fallback to HTTP would only say "not paired" (host.failure)
         if (h.sawCertificateMismatch()) {
             throw CertificateMismatchException(null)
         }
+        return serverInfo
+    }
 
+    // BOREALIS: the HTTP fallback after a mismatch can fail too; the mismatch is the cause
+    // (host.failure)
+    private fun serverInfoFailed(h: NvHTTP, e: Exception): Nothing {
+        if (h.sawCertificateMismatch()) {
+            throw CertificateMismatchException(e)
+        }
+        throw e
+    }
+
+    /** Takes in what /serverinfo says of the host; false when the host cannot be streamed from. */
+    @Throws(XmlPullParserException::class, IOException::class)
+    private fun acceptServer(h: NvHTTP, serverInfo: String): Boolean {
         context.serverAppVersion = h.getServerVersion(serverInfo)
         if (context.serverAppVersion == null) {
             context.listener.displayMessage("Server version malformed")
@@ -534,8 +557,19 @@ open class NvConnection(
         }
 
         context.serverCodecModeSupport = h.getServerCodecModeSupport(serverInfo).toInt()
+        return true
+    }
 
-        val streamConfig = checkNotNull(context.streamConfig)
+    /**
+     * Decides on the negotiated stream parameters now: HDR, the resolution, the connection type and
+     * the packet size. False when the resolution cannot be streamed.
+     */
+    @Throws(XmlPullParserException::class, IOException::class)
+    private fun negotiateStream(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
         context.negotiatedHdr =
             (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0
         if ((context.serverCodecModeSupport and HDR_CODEC_MODES) == 0 && context.negotiatedHdr) {
@@ -545,42 +579,8 @@ open class NvConnection(
             context.negotiatedHdr = false
         }
 
-        //
-        // Decide on negotiated stream parameters now
-        //
-
-        // Check for a supported stream resolution
-        if (
-            (streamConfig.width > MAX_H264_SIDE || streamConfig.height > MAX_H264_SIDE) &&
-                (h.getServerCodecModeSupport(serverInfo) and CODEC_MODE_ABOVE_4K) == 0L &&
-                context.isNvidiaServerSoftware
-        ) {
-            context.listener.displayMessage(
-                "Your host PC does not support streaming at resolutions above 4K."
-            )
+        if (!negotiateResolution(h, serverInfo, streamConfig)) {
             return false
-        } else if (
-            (streamConfig.width > MAX_H264_SIDE || streamConfig.height > MAX_H264_SIDE) &&
-                (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_H264.inv()) ==
-                    0
-        ) {
-            context.listener.displayMessage(
-                "Your streaming device must support HEVC or AV1 to stream at resolutions above 4K."
-            )
-            return false
-        } else if (streamConfig.height >= HEIGHT_4K && !h.supports4K(serverInfo)) {
-            // Client wants 4K but the server can't do it
-            context.listener.displayTransientMessage(
-                "You must update GeForce Experience to stream in 4K. The stream will be 1080p."
-            )
-
-            // Lower resolution to 1080p
-            context.negotiatedWidth = WIDTH_1080P
-            context.negotiatedHeight = HEIGHT_1080P
-        } else {
-            // Take what the client wanted
-            context.negotiatedWidth = streamConfig.width
-            context.negotiatedHeight = streamConfig.height
         }
 
         // We will perform some connection type detection if the caller asked for it
@@ -596,106 +596,182 @@ open class NvConnection(
             context.negotiatedRemoteStreaming = streamConfig.remote
             context.negotiatedPacketSize = streamConfig.maxPacketSize
         }
+        return true
+    }
 
-        //
-        // Video stream format will be decided during the RTSP handshake
-        //
-
-        val configuredApp = checkNotNull(streamConfig.app)
-        var app: NvApp = configuredApp
-
-        // If the client did not provide an exact app ID, do a lookup with the applist
-        if (!configuredApp.isInitialized) {
-            LimeLog.info(
-                "Using deprecated app lookup method - " +
-                    "Please specify an app ID in your StreamConfiguration instead"
-            )
-            val found = h.getAppByName(configuredApp.appName)
-            if (found == null) {
+    // Check for a supported stream resolution
+    @Throws(XmlPullParserException::class, IOException::class)
+    private fun negotiateResolution(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
+        val above4k = streamConfig.width > MAX_H264_SIDE || streamConfig.height > MAX_H264_SIDE
+        return when {
+            above4k &&
+                (h.getServerCodecModeSupport(serverInfo) and CODEC_MODE_ABOVE_4K) == 0L &&
+                context.isNvidiaServerSoftware -> {
                 context.listener.displayMessage(
-                    "The app " + configuredApp.appName + " is not in GFE app list"
+                    "Your host PC does not support streaming at resolutions above 4K."
                 )
-                return false
+                false
             }
-            app = found
+            above4k &&
+                (streamConfig.supportedVideoFormats and MoonBridge.VIDEO_FORMAT_MASK_H264.inv()) ==
+                    0 -> {
+                context.listener.displayMessage(
+                    "Your streaming device must support HEVC or AV1 to stream at resolutions above 4K."
+                )
+                false
+            }
+            streamConfig.height >= HEIGHT_4K && !h.supports4K(serverInfo) -> {
+                // Client wants 4K but the server can't do it
+                context.listener.displayTransientMessage(
+                    "You must update GeForce Experience to stream in 4K. The stream will be 1080p."
+                )
+
+                // Lower resolution to 1080p
+                context.negotiatedWidth = WIDTH_1080P
+                context.negotiatedHeight = HEIGHT_1080P
+                true
+            }
+            else -> {
+                // Take what the client wanted
+                context.negotiatedWidth = streamConfig.width
+                context.negotiatedHeight = streamConfig.height
+                true
+            }
         }
+    }
+
+    /** Finds the app to start, then resumes it when it runs and launches it when it does not. */
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun launchOrResume(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
+        val app = lookUpApp(h, checkNotNull(streamConfig.app)) ?: return false
         appToStart = app // BOREALIS: launch and ask with the id that was found
 
         // If there's a game running, resume it
-        if (h.getCurrentGame(serverInfo) != 0) {
-            // BOREALIS: kept outside the try so the fallback launch is not handled as a resume
-            // error
-            var resumed = LaunchOutcome.SUCCEEDED
-            try {
-                if (h.getCurrentGame(serverInfo) == app.appId) {
-                    // BOREALIS: nothing tells this session from another device's: ask, unless the
-                    // user chose Resume or Continue for this app (host contract 7.6). A restart
-                    // went through that already
-                    val restart = collisions.isRestart()
-                    if (!restart && !streamConfig.resumeChosen) {
-                        return askAboutRunning(h, context, app.appId)
-                    }
-                    if (!restart) {
-                        conflicts.joinedByChoice(
-                            checkNotNull(context.serverAddress).address,
-                            app.appId,
-                        )
-                    }
-                    // BOREALIS: wait while the host is busy; retries, cancellation and the no-app
-                    // fallback
-                    resumed =
-                        if (collisions.settleBeforeResume()) {
-                            launchWithRetry(h, "resume", app.appId)
-                        } else {
-                            LaunchOutcome.CANCELLED
-                        }
-                    if (resumed == LaunchOutcome.CANCELLED) { // BOREALIS
-                        return false
-                    }
-                    // BOREALIS: was !h.launchApp(context, "resume", ...)
-                    if (resumed == LaunchOutcome.FAILED) {
-                        context.listener.displayMessage("Failed to resume existing session")
-                        return false
-                    }
-                } else {
-                    // BOREALIS: ask before quitting another device's app; a restart never quits it
-                    return collisions.differentAppRunning(
-                        LaunchAttempt { resolveConflict(h, context) }
-                    )
-                }
-            } catch (e: HostHttpResponseException) {
-                if (e.errorCode == STATUS_NOT_YOUR_SESSION) {
-                    // This is the error you get when you try to resume a session that's not yours.
-                    // Because this is fairly common, we'll display a more detailed message.
-                    context.listener.displayMessage(
-                        "This session wasn't started by this device," +
-                            " so it cannot be resumed. End streaming on the original " +
-                            "device or the PC itself and try again. (Error code: " +
-                            e.errorCode +
-                            ")"
-                    )
-                    return false
-                } else if (e.errorCode == STATUS_MINIMIZED) {
-                    context.listener.displayMessage(
-                        "The application is minimized. Resume it on the PC manually or " +
-                            "quit the session and start streaming again."
-                    )
-                    return false
-                } else {
-                    throw e
-                }
-            }
-            // BOREALIS: nothing to resume, launch instead
-            if (resumed == LaunchOutcome.FALLBACK_TO_LAUNCH) {
-                return launchNotRunningApp(h, context)
-            }
-
-            collisions.resumeAccepted(context.isNvidiaServerSoftware) // BOREALIS
-            LimeLog.info("Resumed existing game session")
-            return true
+        return if (h.getCurrentGame(serverInfo) != 0) {
+            resumeRunningApp(h, serverInfo, streamConfig)
         } else {
-            return launchNotRunningApp(h, context)
+            launchNotRunningApp(h, context)
         }
+    }
+
+    // If the client did not provide an exact app ID, do a lookup with the applist
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun lookUpApp(h: NvHTTP, configuredApp: NvApp): NvApp? {
+        if (configuredApp.isInitialized) {
+            return configuredApp
+        }
+        LimeLog.info(
+            "Using deprecated app lookup method - " +
+                "Please specify an app ID in your StreamConfiguration instead"
+        )
+        val found = h.getAppByName(configuredApp.appName)
+        if (found == null) {
+            context.listener.displayMessage(
+                "The app " + configuredApp.appName + " is not in GFE app list"
+            )
+        }
+        return found
+    }
+
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun resumeRunningApp(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean {
+        // BOREALIS: kept outside the try so the fallback launch is not handled as a resume error
+        val resumed: LaunchOutcome
+        try {
+            val answer = askBeforeResume(h, serverInfo, streamConfig)
+            if (answer != null) {
+                return answer
+            }
+            resumed = requestResume(h)
+        } catch (e: HostHttpResponseException) {
+            return refusedResume(e)
+        }
+        return when (resumed) {
+            // BOREALIS: the user left, or the host did not take the /resume
+            LaunchOutcome.CANCELLED,
+            LaunchOutcome.FAILED -> false
+            // BOREALIS: nothing to resume, launch instead
+            LaunchOutcome.FALLBACK_TO_LAUNCH -> launchNotRunningApp(h, context)
+            else -> {
+                collisions.resumeAccepted(context.isNvidiaServerSoftware) // BOREALIS
+                LimeLog.info("Resumed existing game session")
+                true
+            }
+        }
+    }
+
+    // BOREALIS: the answer of the question about the app that runs, which ends the start; null when
+    // the start goes on to the /resume (host.launch)
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun askBeforeResume(
+        h: NvHTTP,
+        serverInfo: String,
+        streamConfig: StreamConfiguration,
+    ): Boolean? {
+        if (h.getCurrentGame(serverInfo) != appToStart.appId) {
+            // BOREALIS: ask before quitting another device's app; a restart never quits it
+            return collisions.differentAppRunning(LaunchAttempt { resolveConflict(h, context) })
+        }
+        // BOREALIS: nothing tells this session from another device's: ask, unless the user chose
+        // Resume or Continue for this app (host contract 7.6). A restart went through that already
+        val restart = collisions.isRestart()
+        if (!restart && !streamConfig.resumeChosen) {
+            return askAboutRunning(h, context, appToStart.appId)
+        }
+        if (!restart) {
+            conflicts.joinedByChoice(checkNotNull(context.serverAddress).address, appToStart.appId)
+        }
+        return null
+    }
+
+    // BOREALIS: wait while the host is busy; retries, cancellation and the no-app fallback
+    @Throws(IOException::class, XmlPullParserException::class)
+    private fun requestResume(h: NvHTTP): LaunchOutcome {
+        val resumed =
+            if (collisions.settleBeforeResume()) {
+                launchWithRetry(h, "resume", appToStart.appId)
+            } else {
+                LaunchOutcome.CANCELLED
+            }
+        // BOREALIS: was !h.launchApp(context, "resume", ...)
+        if (resumed == LaunchOutcome.FAILED) {
+            context.listener.displayMessage("Failed to resume existing session")
+        }
+        return resumed
+    }
+
+    // The host refused the resume. Two of its statuses have a message of their own; any other one
+    // goes up to the start.
+    private fun refusedResume(e: HostHttpResponseException): Boolean {
+        val message =
+            when (e.errorCode) {
+                // This is the error you get when you try to resume a session that's not yours.
+                // Because this is fairly common, we'll display a more detailed message.
+                STATUS_NOT_YOUR_SESSION ->
+                    "This session wasn't started by this device," +
+                        " so it cannot be resumed. End streaming on the original " +
+                        "device or the PC itself and try again. (Error code: " +
+                        e.errorCode +
+                        ")"
+                STATUS_MINIMIZED ->
+                    "The application is minimized. Resume it on the PC manually or " +
+                        "quit the session and start streaming again."
+                else -> throw e
+            }
+        context.listener.displayMessage(message)
+        return false
     }
 
     @Suppress("ReturnCount")
@@ -737,29 +813,24 @@ open class NvConnection(
         return launchNotRunningApp(h, context)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("ReturnCount")
     @Throws(IOException::class, XmlPullParserException::class)
     private fun launchNotRunningApp(h: NvHTTP, context: ConnectionContext): Boolean {
         // Launch the app since it's not running
         // BOREALIS: retries and cancellation
-        val launched = launchWithRetry(h, "launch", appToStart.appId)
-        if (launched == LaunchOutcome.CANCELLED) { // BOREALIS
-            return false
+        return when (launchWithRetry(h, "launch", appToStart.appId)) {
+            LaunchOutcome.CANCELLED -> false
+            // BOREALIS: ask the user once
+            LaunchOutcome.CONFLICT -> resolveConflict(h, context)
+            // BOREALIS: was !h.launchApp(context, "launch", ...)
+            LaunchOutcome.SUCCEEDED -> {
+                LimeLog.info("Launched new game session")
+                true
+            }
+            else -> {
+                context.listener.displayMessage("Failed to launch application")
+                false
+            }
         }
-        // BOREALIS: ask the user once
-        if (launched == LaunchOutcome.CONFLICT) {
-            return resolveConflict(h, context)
-        }
-        // BOREALIS: was !h.launchApp(context, "launch", ...)
-        if (launched != LaunchOutcome.SUCCEEDED) {
-            context.listener.displayMessage("Failed to launch application")
-            return false
-        }
-
-        LimeLog.info("Launched new game session")
-
-        return true
     }
 
     fun start(
@@ -826,8 +897,6 @@ open class NvConnection(
     }
 
     /** What the thread of [start] does. */
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    @Suppress("LongMethod", "ReturnCount")
     private fun runStart(
         audioRenderer: AudioRenderer?,
         videoDecoderRenderer: VideoDecoderRenderer?,
@@ -847,33 +916,7 @@ open class NvConnection(
 
         context.listener.stageStarting(appName)
 
-        try {
-            if (!startApp()) {
-                // BOREALIS: the user left, nothing to report
-                if (launchCancelled) {
-                    return
-                }
-                // BOREALIS: the step, not the app name
-                context.listener.stageFailed(startStep, 0, 0)
-                return
-            }
-            context.listener.stageComplete(appName)
-        } catch (e: HostHttpResponseException) {
-            // BOREALIS: the user left during the request, nothing to report
-            if (launchCancelled) {
-                return
-            }
-            // BOREALIS: the log masks addresses; the screen never shows the exception text
-            StartFailureLog.failed(startStep, e)
-            recordStartFailure(e) // BOREALIS: host.failure
-            // BOREALIS: the step, not the app name
-            context.listener.stageFailed(startStep, 0, e.errorCode)
-            return
-        } catch (e: XmlPullParserException) {
-            failedOnTheNetwork(e)
-            return
-        } catch (e: IOException) {
-            failedOnTheNetwork(e)
+        if (!startOnHost(appName)) {
             return
         }
 
@@ -885,8 +928,51 @@ open class NvConnection(
         val ib = ByteBuffer.allocate(RI_IV_SIZE)
         ib.putInt(context.riKeyId)
 
-        // Acquire the connection semaphore to ensure we only have one
-        // connection going at once.
+        if (!takePlace()) {
+            return
+        }
+
+        // Moonlight-core is not thread-safe with respect to connection start and stop, so
+        // we must not invoke that functionality in parallel.
+        synchronized(MoonBridge::class.java) {
+            startNative(audioRenderer, videoDecoderRenderer, connectionListener, ib.array())
+        }
+    }
+
+    /**
+     * The part of the start that talks to the host, up to the stage that is complete. False when
+     * the start is over: the host or the user ended it, and the listener has been told, unless the
+     * user left.
+     */
+    private fun startOnHost(appName: String?): Boolean =
+        try {
+            if (startApp()) {
+                context.listener.stageComplete(appName)
+                true
+            } else {
+                // BOREALIS: the user left, nothing to report
+                if (!launchCancelled) {
+                    // BOREALIS: the step, not the app name
+                    context.listener.stageFailed(startStep, 0, 0)
+                }
+                false
+            }
+        } catch (e: HostHttpResponseException) {
+            failedOnTheHost(e)
+            false
+        } catch (e: XmlPullParserException) {
+            failedOnTheNetwork(e)
+            false
+        } catch (e: IOException) {
+            failedOnTheNetwork(e)
+            false
+        }
+
+    /**
+     * Takes the place of the connection semaphore, to have only one connection going at once. False
+     * when the start is over: it was interrupted while it waited, or the user left.
+     */
+    private fun takePlace(): Boolean {
         try {
             connectionAllowed.acquire()
         } catch (e: InterruptedException) {
@@ -894,7 +980,7 @@ open class NvConnection(
             StartFailureLog.failed(startStep, e)
             // BOREALIS: the step, not the app name
             context.listener.stageFailed(startStep, 0, 0)
-            return
+            return false
         }
         // BOREALIS: before the cancel check, so that a stop() from here on gives the place back
         // too (host.launch)
@@ -902,75 +988,107 @@ open class NvConnection(
         // BOREALIS: left while waiting for the semaphore
         if (launchCancelled) {
             releasePlace()
+            return false
+        }
+        return true
+    }
+
+    /** The native start, which [runStart] calls with the monitor of the bridge held. */
+    private fun startNative(
+        audioRenderer: AudioRenderer?,
+        videoDecoderRenderer: VideoDecoderRenderer?,
+        connectionListener: NvConnectionListener?,
+        iv: ByteArray,
+    ) {
+        // BOREALIS: a whole stop() may have come since the check above, and the native start
+        // would reset its interrupt: the start is either complete before the stop takes the
+        // monitor, and the stop then stops it, or it never begins. The flag is written before
+        // the cancel is read: stop() writes the cancel and then reads the flag outside the
+        // monitor to decide on the interrupt, so either this sees the cancel and never begins,
+        // or the stop sees the flag and interrupts. The opposite order would let the start
+        // begin after a stop that skipped the interrupt (host.launch)
+        if (!setBridgeUpUnlessCancelled()) {
+            releasePlace()
             return
         }
-
-        // Moonlight-core is not thread-safe with respect to connection start and stop, so
-        // we must not invoke that functionality in parallel.
-        synchronized(MoonBridge::class.java) {
-            // BOREALIS: a whole stop() may have come since the check above, and the native start
-            // would reset its interrupt: the start is either complete before the stop takes the
-            // monitor, and the stop then stops it, or it never begins. The flag is written before
-            // the cancel is read: stop() writes the cancel and then reads the flag outside the
-            // monitor to decide on the interrupt, so either this sees the cancel and never begins,
-            // or the stop sees the flag and interrupts. The opposite order would let the start
-            // begin after a stop that skipped the interrupt (host.launch)
-            if (!setBridgeUpUnlessCancelled()) {
-                releasePlace()
-                return
-            }
-            // BOREALIS: hold an RTSP failure that collides with another device
-            MoonBridge.setupBridge(
-                videoDecoderRenderer,
-                audioRenderer,
-                HeldStageFailures(checkNotNull(connectionListener), collisions),
-            )
-            val streamConfig = checkNotNull(context.streamConfig)
-            val ret =
-                MoonBridge.startConnection(
-                    checkNotNull(context.serverAddress).address,
-                    context.serverAppVersion,
-                    context.serverGfeVersion,
-                    context.rtspSessionUrl,
-                    context.serverCodecModeSupport,
-                    context.negotiatedWidth,
-                    context.negotiatedHeight,
-                    streamConfig.refreshRate,
-                    streamConfig.bitrate,
-                    context.negotiatedPacketSize,
-                    context.negotiatedRemoteStreaming,
-                    checkNotNull(streamConfig.audioConfiguration).toInt(),
-                    streamConfig.supportedVideoFormats,
-                    streamConfig.clientRefreshRateX100,
-                    checkNotNull(context.riKey).encoded,
-                    ib.array(),
-                    context.videoCapabilities,
-                    streamConfig.colorSpace,
-                    streamConfig.colorRange,
-                )
-            connected = ret == 0 // BOREALIS: stream.keyframe
-            nativeStartEnded(ret) // BOREALIS: host.launch
-            if (ret != 0) {
-                // LiStartConnection() failed, so the caller is not expected
-                // to stop the connection themselves. We need to release their
-                // semaphore count for them.
-                // BOREALIS: and the bridge: LiStartConnection undid its own work, so what is left
-                // is the renderers and the listener of this start, which must not outlive it. The
-                // flag goes before the place, because another connection may start right after
-                // this one gave it back, and a late stop() of this one must then make no native
-                // call; a restart sets it again. A stop that read the flag has made its interrupt
-                // by the time the lock lets the clear through, so it cannot land on the start of
-                // the connection that takes the place next (host.launch)
-                MoonBridge.cleanupBridge()
-                synchronized(bridgeFlagLock) { bridgeSetUp = false }
-                releasePlace()
-                // BOREALIS: restart the whole start once
-                if (collisions.restartAfterFailure()) {
-                    start(audioRenderer, videoDecoderRenderer, connectionListener)
-                }
-                return
-            }
+        // BOREALIS: hold an RTSP failure that collides with another device
+        MoonBridge.setupBridge(
+            videoDecoderRenderer,
+            audioRenderer,
+            HeldStageFailures(checkNotNull(connectionListener), collisions),
+        )
+        val ret = startNativeConnection(iv)
+        connected = ret == 0 // BOREALIS: stream.keyframe
+        nativeStartEnded(ret) // BOREALIS: host.launch
+        if (ret != 0) {
+            failedNativeStart(audioRenderer, videoDecoderRenderer, connectionListener)
         }
+    }
+
+    private fun startNativeConnection(iv: ByteArray): Int {
+        val streamConfig = checkNotNull(context.streamConfig)
+        return MoonBridge.startConnection(
+            checkNotNull(context.serverAddress).address,
+            context.serverAppVersion,
+            context.serverGfeVersion,
+            context.rtspSessionUrl,
+            context.serverCodecModeSupport,
+            context.negotiatedWidth,
+            context.negotiatedHeight,
+            streamConfig.refreshRate,
+            streamConfig.bitrate,
+            context.negotiatedPacketSize,
+            context.negotiatedRemoteStreaming,
+            checkNotNull(streamConfig.audioConfiguration).toInt(),
+            streamConfig.supportedVideoFormats,
+            streamConfig.clientRefreshRateX100,
+            checkNotNull(context.riKey).encoded,
+            iv,
+            context.videoCapabilities,
+            streamConfig.colorSpace,
+            streamConfig.colorRange,
+        )
+    }
+
+    /**
+     * The native start answered with an error: cleans the bridge up, gives the place back and
+     * restarts the start at most once.
+     */
+    private fun failedNativeStart(
+        audioRenderer: AudioRenderer?,
+        videoDecoderRenderer: VideoDecoderRenderer?,
+        connectionListener: NvConnectionListener?,
+    ) {
+        // LiStartConnection() failed, so the caller is not expected
+        // to stop the connection themselves. We need to release their
+        // semaphore count for them.
+        // BOREALIS: and the bridge: LiStartConnection undid its own work, so what is left
+        // is the renderers and the listener of this start, which must not outlive it. The
+        // flag goes before the place, because another connection may start right after
+        // this one gave it back, and a late stop() of this one must then make no native
+        // call; a restart sets it again. A stop that read the flag has made its interrupt
+        // by the time the lock lets the clear through, so it cannot land on the start of
+        // the connection that takes the place next (host.launch)
+        MoonBridge.cleanupBridge()
+        synchronized(bridgeFlagLock) { bridgeSetUp = false }
+        releasePlace()
+        // BOREALIS: restart the whole start once
+        if (collisions.restartAfterFailure()) {
+            start(audioRenderer, videoDecoderRenderer, connectionListener)
+        }
+    }
+
+    /** The host answered a request of the start with a status that is not 200. */
+    private fun failedOnTheHost(e: HostHttpResponseException) {
+        // BOREALIS: the user left during the request, nothing to report
+        if (launchCancelled) {
+            return
+        }
+        // BOREALIS: the log masks addresses; the screen never shows the exception text
+        StartFailureLog.failed(startStep, e)
+        recordStartFailure(e) // BOREALIS: host.failure
+        // BOREALIS: the step, not the app name
+        context.listener.stageFailed(startStep, 0, e.errorCode)
     }
 
     /** The XML of the host, or the connection to it, failed during the start. */

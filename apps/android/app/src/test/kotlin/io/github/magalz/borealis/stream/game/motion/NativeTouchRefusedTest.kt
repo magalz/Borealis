@@ -1,7 +1,6 @@
 package io.github.magalz.borealis.stream.game.motion
 
 import android.view.MotionEvent
-import android.view.View
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
@@ -36,11 +35,6 @@ internal class NativeTouchRefusedTest : MotionTestBase() {
     private fun hostWithoutTouch() {
         ShadowRecordingBridge.intResult = MoonBridge.LI_ERR_UNSUPPORTED
     }
-
-    private fun touch(view: View, event: MotionEvent) = rig.game.onTouch(view, event)
-
-    private fun finger(action: Int, x: Float, y: Float, at: Long = TIME) =
-        fingerEvent(action, listOf(x to y)) { eventTime = at }
 
     private fun down(x: Float = 100.9f, y: Float = 50.7f, at: Long = TIME) =
         finger(MotionEvent.ACTION_DOWN, x, y, at)
@@ -322,9 +316,5 @@ internal class NativeTouchRefusedTest : MotionTestBase() {
         assertThat(notices()).containsExactly(StreamNotice.NativeTouchRefused)
         assertThat(asked()).isEqualTo(1)
         assertThat(refusalLines()).hasSize(1)
-    }
-
-    private companion object {
-        const val TIME = 10_000L
     }
 }

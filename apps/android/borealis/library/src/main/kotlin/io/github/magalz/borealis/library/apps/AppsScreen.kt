@@ -55,6 +55,8 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
+import io.github.magalz.borealis.library.focus.RestoreOpenerFocus
+import io.github.magalz.borealis.library.focus.openerAfterRemoval
 
 /**
  * An outline reaches BorealisDimens.outlineReach outside a tile, thickOutlineReach when it is the
@@ -84,8 +86,9 @@ private const val STACKED_HEADER_FONT_SCALE = 2f
  * the system Back there is handled by the navigation of the shell. Above a font scale of 2.0 the
  * title takes the whole width: under the bar of a phone, above the toggle of a TV or handheld
  * ([STACKED_HEADER_FONT_SCALE]). When the last of these windows closes, the tile of the app they
- * were for has the focus again ([RestoreOpenerFocus]). Messages go through [snackbarHostState].
- * Provides its own theme for [formFactor].
+ * were for has the focus again ([RestoreOpenerFocus]); after Hide, which takes the app off the
+ * grid, it is the tile that takes its place ([openerAfterRemoval]). Messages go through
+ * [snackbarHostState]. Provides its own theme for [formFactor].
  */
 @Composable
 fun AppsScreen(
@@ -103,8 +106,8 @@ fun AppsScreen(
 ) {
     BorealisTheme(formFactor) {
         // The app that the last window over the grid was for, whichever way it opened: a tap or OK
-        // on an app that asks, X or a long press, or a launch request. A phone starts with no
-        // focus, so there is nothing to give back.
+        // on an app that asks, X or a long press, or a launch request; after Hide, the tile that
+        // takes its place. A phone starts with no focus, so there is nothing to give back.
         var openerId by remember { mutableStateOf<Int?>(null) }
         val windowAppId = state.actions?.app?.id ?: state.details?.id
         LaunchedEffect(windowAppId) { if (windowAppId != null) openerId = windowAppId }
@@ -143,35 +146,26 @@ fun AppsScreen(
                 Modifier.align(Alignment.BottomCenter).padding(SNACKBAR_PADDING),
             )
         }
-        state.actions?.let { AppActionsSheet(it, onActionChosen, onActionsDismissed) }
+        state.actions?.let { sheet ->
+            AppActionsSheet(
+                sheet,
+                onChosen = { action ->
+                    // Hide takes the app off the grid only while the hidden apps are not shown (the
+                    // filter of the ViewModel keeps `showHidden || !hidden`); else its tile stays.
+                    if (action == AppAction.HIDE && !state.showHidden) {
+                        openerId = state.items.openerAfterRemoval(sheet.app.id, openerId) { it.id }
+                    }
+                    onActionChosen(action)
+                },
+                onDismiss = onActionsDismissed,
+            )
+        }
         state.details?.let { AppDetailsDialog(it, onDetailsDismissed) }
         RestoreOpenerFocus(
             open = state.actions != null || state.details != null,
             openerListed = state.items.any { it.id == opener },
             focus = openerFocus,
         )
-    }
-}
-
-/**
- * Asks for [focus], the requester of the tile of the app that opened the windows, once the last
- * window over the grid has closed: the actions, the quit confirmation inside them or the details.
- * On the TV the focus was lost after Back (Sprint 14 UAT, U11); the tests assume that the window
- * took it from the screen and that Compose gave it back to the first tile, not to the one that had
- * it. Nothing happens when the app is already gone from the grid ([openerListed] is false), and
- * nothing when the screen starts with a window already open: that is not a close. After Hide the
- * removal is asynchronous (the ViewModel launches it), so the app may still be in the grid when the
- * sheet closes, and its tile, about to go, asks for the focus. A tile that the grid does not
- * compose (many apps, scrolled away while a window was open) has no node for [focus]: Compose logs
- * it and answers false, so nothing fails. This is the effect of `RestoreOpenerFocus` of the hosts
- * screen, written for apps because that one takes the host list and ids.
- */
-@Composable
-private fun RestoreOpenerFocus(open: Boolean, openerListed: Boolean, focus: FocusRequester) {
-    var wasOpen by remember { mutableStateOf(open) }
-    LaunchedEffect(open) {
-        if (wasOpen && !open && openerListed) focus.requestFocus()
-        wasOpen = open
     }
 }
 

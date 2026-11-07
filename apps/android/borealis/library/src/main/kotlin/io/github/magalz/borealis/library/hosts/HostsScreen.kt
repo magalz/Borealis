@@ -53,6 +53,8 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisSpacing
 import io.github.magalz.borealis.library.R
+import io.github.magalz.borealis.library.focus.RestoreOpenerFocus
+import io.github.magalz.borealis.library.focus.openerAfterRemoval
 
 /**
  * An outline reaches BorealisDimens.outlineReach outside its card, thickOutlineReach when it is the
@@ -82,7 +84,8 @@ private val LOADING_SIZE = 64.dp
  * The options (Details, Wake, Forget) and the Forget confirmation belong to the screen: it keeps
  * which host they are open for and calls [onDetails], [onWake] or [onForget] when the user chooses.
  * The details are shown while [HostsUiState.details] is set. When the last of these windows closes,
- * the card that opened the options has the focus again ([RestoreOpenerFocus]). [snackbarHostState]
+ * the card that opened the options has the focus again ([RestoreOpenerFocus]); after Forget it is
+ * the card that takes the place of the forgotten one ([openerAfterRemoval]). [snackbarHostState]
  * shows the messages the route turns the ViewModel's effects into.
  *
  * **Back.** The screen intercepts no Back, so Back still leaves the activity from the home screen:
@@ -148,13 +151,15 @@ fun HostsScreen(
             onForgetHostChange = { forgetHostId = it },
             onDetails = onDetails,
             onWake = onWake,
-            onForget = onForget,
+            onForget = { id ->
+                openerId = state.items.openerAfterRemoval(id, openerId) { it.id }
+                onForget(id)
+            },
             onDetailsDismissed = onDetailsDismissed,
         )
         RestoreOpenerFocus(
             open = optionsHostId != null || forgetHostId != null || state.details != null,
-            openerId = options.hostId,
-            hosts = state.items,
+            openerListed = state.items.any { it.id == options.hostId },
             focus = openerFocus,
         )
     }
@@ -192,9 +197,9 @@ private fun HostsLayout(
 }
 
 /**
- * What a card does to open the options of its host ([open]), and what gives the focus back to it
- * when they are gone: [hostId] is the host whose card opened them last (null on a phone), and
- * [focus] the requester of that card.
+ * What a card does to open the options of its host ([open]), and what gives the focus back when
+ * they are gone: [hostId] is the host whose card opened them last, or whose card takes the place of
+ * the host that Forget removes (null on a phone), and [focus] the requester of that card.
  */
 private class OptionsOpener(
     val hostId: String?,

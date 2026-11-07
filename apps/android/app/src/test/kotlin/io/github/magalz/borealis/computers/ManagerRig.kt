@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
+import android.net.Network
+import android.net.NetworkInfo
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.IBinder
@@ -16,9 +18,12 @@ import com.limelight.computers.ComputerManagerService.ComputerManagerBinder
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.ComputerDetails.AddressTuple
+import com.limelight.nvstream.http.PairingManager
 import io.github.magalz.borealis.computerstore.computerDatabase
+import io.github.magalz.borealis.crypto.TestIdentities
 import io.github.magalz.borealis.nvhttp.HostReply
 import io.github.magalz.borealis.nvhttp.NvFakeHost
+import java.io.File
 import java.net.InetAddress
 import java.security.cert.X509Certificate
 import java.util.concurrent.CopyOnWriteArrayList
@@ -29,6 +34,10 @@ import org.junit.rules.ExternalResource
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ServiceController
+import org.robolectric.shadows.ShadowConnectivityManager
+import org.robolectric.shadows.ShadowNetwork
+import org.robolectric.shadows.ShadowNetworkCapabilities
+import org.robolectric.shadows.ShadowNetworkInfo
 
 /** How long a test waits for something that another thread does before it fails. */
 internal const val WAIT_MS = 30_000L
@@ -96,6 +105,60 @@ internal fun saved(
         it.manualAddress = manual
         it.serverCert = cert
     }
+
+/** How many `/applist` requests the host has read. */
+internal fun NvFakeHost.appListRequests(): Int = requests.count { it.path == "/applist" }
+
+/** A host as the library has it once it is paired: online, with its certificate. */
+internal fun paired(host: NvFakeHost, uuid: String): ComputerDetails =
+    ComputerDetails().also {
+        it.uuid = uuid
+        it.name = "DEN-PC"
+        it.state = ComputerDetails.State.ONLINE
+        it.pairState = PairingManager.PairState.PAIRED
+        it.activeAddress = host.address
+        it.httpsPort = host.httpsPort
+        it.serverCert = TestIdentities.hostRsa.certificate
+    }
+
+/** Where the app list poller caches the app list of the host [uuid]. */
+internal fun ManagerRule.appListCache(uuid: String) = File(app.cacheDir, "applist/$uuid")
+
+/** Waits until the app list poller is idle, waiting for its period or for a wake-up. */
+internal fun awaitIdle() =
+    awaitUntil("the app list thread to wait") {
+        liveThreads(APP_LIST_THREAD).singleOrNull()?.state == Thread.State.TIMED_WAITING
+    }
+
+/** Wakes the poller once it is idle. */
+internal fun ComputerManagerService.ApplistPoller.nudge() {
+    awaitIdle()
+    pollNow()
+}
+
+/** Adds a network to the platform. */
+internal fun ShadowConnectivityManager.connectNetwork(
+    netId: Int,
+    type: Int,
+    transports: List<Int>,
+    capabilities: List<Int>,
+    active: Boolean = false,
+): Network {
+    val info =
+        ShadowNetworkInfo.newInstance(NetworkInfo.DetailedState.CONNECTED, type, 0, true, true)
+    val network = ShadowNetwork.newInstance(netId)
+    addNetwork(network, info)
+    if (active) {
+        setActiveNetworkInfo(info)
+        setDefaultNetworkActive(true)
+    }
+    val netCaps = ShadowNetworkCapabilities.newInstance()
+    shadowOf(netCaps).clearCapabilities()
+    for (transport in transports) shadowOf(netCaps).addTransportType(transport)
+    for (capability in capabilities) shadowOf(netCaps).addCapability(capability)
+    setNetworkCapabilities(network, netCaps)
+    return network
+}
 
 /** One call of the listener, as it was when it arrived: the details are the live object. */
 internal class Update(val details: ComputerDetails) {

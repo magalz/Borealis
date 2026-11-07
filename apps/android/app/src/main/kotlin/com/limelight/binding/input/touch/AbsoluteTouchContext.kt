@@ -22,7 +22,8 @@ private const val TOUCH_DOWN_DEAD_ZONE_DISTANCE_THRESHOLD = 20
 // The mouse button of a tap goes up this long after it went down.
 private const val BUTTON_RELEASE_DELAY = 100L
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
+// Converted as is from the inherited Java; TooManyFunctions stays: the class waits for its split
+// (Sprint 18d backlog).
 @Suppress("TooManyFunctions")
 class AbsoluteTouchContext(
     private val conn: NvConnection,

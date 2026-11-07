@@ -123,6 +123,8 @@ class Xbox360ControllerTest {
         assertThat(log.warnings()).containsExactly("LED set transfer failed: -1")
     }
 
+    // The claim and the search for the endpoints are AbstractXboxController's: the Xbox One pad
+    // shares them, so the tests of their failures below pin both pads.
     @Test
     fun `start fails when an interface cannot be claimed, and goes no further`() {
         val pad = pad()
@@ -135,56 +137,53 @@ class Xbox360ControllerTest {
         assertThat(log.warnings()).containsExactly("Failed to claim interfaces")
     }
 
-    private fun startFailsWith(
-        warning: String,
-        vararg endpoints: android.hardware.usb.UsbEndpoint,
-    ) {
-        val device =
-            UsbPads.device(
-                "/dev/odd",
-                0x045E,
-                0x028E,
-                listOf(
-                    UsbPads.usbInterface(
-                        0,
-                        subclass = UsbPads.XB360_SUBCLASS,
-                        protocol = UsbPads.XB360_PROTOCOL,
-                        endpoints = endpoints.toList(),
-                    )
-                ),
-            )
-        val pad = pad(device = device)
+    private fun padWithEndpoints(
+        vararg endpoints: android.hardware.usb.UsbEndpoint
+    ): Pad<Xbox360Controller> =
+        pad(
+            device =
+                UsbPads.device(
+                    "/dev/odd",
+                    0x045E,
+                    0x028E,
+                    listOf(
+                        UsbPads.usbInterface(
+                            0,
+                            subclass = UsbPads.XB360_SUBCLASS,
+                            protocol = UsbPads.XB360_PROTOCOL,
+                            endpoints = endpoints.toList(),
+                        )
+                    ),
+                )
+        )
+
+    @Test
+    fun `a pad that cannot be claimed is not looked at for its endpoints`() {
+        val pad = padWithEndpoints(UsbPads.outEndpoint(1))
+        pad.usb.claimResults.add(false)
 
         assertThat(pad.start()).isFalse()
-        assertThat(pad.usb.writes).isEmpty()
-        assertThat(log.warnings()).containsExactly(warning)
+
+        assertThat(log.warnings()).containsExactly("Failed to claim interfaces")
     }
 
     @Test
     fun `start fails on a second IN endpoint`() =
-        startFailsWith(
-            "Found duplicate IN endpoint",
-            UsbPads.inEndpoint(1),
-            UsbPads.outEndpoint(1),
-            UsbPads.inEndpoint(2),
-        )
+        padWithEndpoints(UsbPads.inEndpoint(1), UsbPads.outEndpoint(1), UsbPads.inEndpoint(2))
+            .assertStartFails(log, "Found duplicate IN endpoint")
 
     @Test
     fun `start fails on a second OUT endpoint`() =
-        startFailsWith(
-            "Found duplicate OUT endpoint",
-            UsbPads.inEndpoint(1),
-            UsbPads.outEndpoint(1),
-            UsbPads.outEndpoint(2),
-        )
+        padWithEndpoints(UsbPads.inEndpoint(1), UsbPads.outEndpoint(1), UsbPads.outEndpoint(2))
+            .assertStartFails(log, "Found duplicate OUT endpoint")
 
     @Test
     fun `start fails without an IN endpoint`() =
-        startFailsWith("Missing required endpoint", UsbPads.outEndpoint(1))
+        padWithEndpoints(UsbPads.outEndpoint(1)).assertStartFails(log, "Missing required endpoint")
 
     @Test
     fun `start fails without an OUT endpoint`() =
-        startFailsWith("Missing required endpoint", UsbPads.inEndpoint(1))
+        padWithEndpoints(UsbPads.inEndpoint(1)).assertStartFails(log, "Missing required endpoint")
 
     @Test
     fun `the pad is announced after the first second and before any report`() {
@@ -425,6 +424,29 @@ class Xbox360ControllerTest {
         assertThat(thread).isNotSameInstanceAs(Thread.currentThread())
     }
 
+    // The thread start() made to read the pad: the controller keeps it for its stop.
+    private fun Xbox360Controller.readerThread(): Thread {
+        val field = AbstractXboxController::class.java.getDeclaredField("inputThread")
+        field.isAccessible = true
+        return field.get(this) as Thread
+    }
+
+    @Test
+    fun `an interrupt in the first second ends the reading thread before it announces the pad`() {
+        val pad = pad()
+        pad.start()
+
+        // The thread sleeps through its first second before it announces the pad: an interrupt
+        // there is a thread that is told to end, and nothing more.
+        val reader = pad.controller.readerThread()
+        reader.interrupt()
+        reader.join(5_000)
+
+        assertThat(reader.isAlive).isFalse()
+        assertThat(pad.listener.quietFor(300)).isTrue()
+        assertThat(pad.usb.closes).isEqualTo(0)
+    }
+
     @Test
     fun `an interrupt of the reading thread ends it and does not stop the pad`() {
         val pad = pad()
@@ -519,6 +541,54 @@ class Xbox360ControllerTest {
     }
 
     @Test
+    fun `a pad whose last rumble failed is stopped without another write`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumble(1, 2)
+
+        pad.controller.stop()
+        pad.controller.stop()
+
+        // The LED command and the rumble that failed: a stuck pad would block the stop's write for
+        // the whole timeout, so it gets none. The pad is still closed and reported removed once.
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.usb.closes).isEqualTo(1)
+        val removed = pad.listener.next()
+        assertThat((removed as PadEvent.Removed).controller).isSameInstanceAs(pad.controller)
+        assertThat(pad.listener.quietFor(300)).isTrue()
+    }
+
+    @Test
+    fun `a pad whose last rumble went through gets its zero write at the stop`() {
+        val pad = pad()
+        pad.start()
+        pad.controller.rumble(0x7FFF, 0x7FFF)
+
+        pad.controller.stop()
+
+        // The LED command, the rumble, then the rumble that stops the motors.
+        assertThat(pad.usb.writes).hasSize(3)
+        assertThat(pad.writtenBytes().last()).isEqualTo(listOf(0x00, 0x08, 0x00, 0, 0, 0, 0, 0))
+        assertThat(pad.usb.closes).isEqualTo(1)
+    }
+
+    @Test
+    fun `a rumble that went through after one that failed keeps the zero write at the stop`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumble(1, 2)
+        pad.controller.rumble(3, 4)
+
+        pad.controller.stop()
+
+        assertThat(pad.usb.writes).hasSize(4)
+        assertThat(pad.writtenBytes().last()).isEqualTo(listOf(0x00, 0x08, 0x00, 0, 0, 0, 0, 0))
+        assertThat(pad.usb.closes).isEqualTo(1)
+    }
+
+    @Test
     fun `stopping a pad that waits for a report ends the reading`() {
         val pad = pad()
         pad.start()
@@ -597,6 +667,28 @@ class Xbox360ControllerTest {
     }
 
     @Test
+    fun `a rumble that went through reports success`() {
+        val pad = pad()
+        pad.start()
+
+        assertThat(pad.controller.rumble(1, 2)).isTrue()
+    }
+
+    @Test
+    fun `a rumble reports a write that fails, times out or falls short`() {
+        // The rumble packet is eight bytes.
+        val results =
+            listOf(-1, 0, 7).associateWith { written ->
+                val pad = pad()
+                pad.start()
+                pad.usb.writeResults.add(written)
+                pad.controller.rumble(1, 2)
+            }
+
+        assertThat(results).containsExactly(-1, false, 0, false, 7, false)
+    }
+
+    @Test
     fun `the Xbox 360 pad has no trigger motors`() {
         val pad = pad()
         pad.start()
@@ -605,6 +697,14 @@ class Xbox360ControllerTest {
 
         // Only the LED command was written.
         assertThat(pad.usb.writes).hasSize(1)
+    }
+
+    @Test
+    fun `the missing trigger motors are not a failed rumble`() {
+        val pad = pad()
+        pad.start()
+
+        assertThat(pad.controller.rumbleTriggers(0x7FFF, 0x7FFF)).isTrue()
     }
 
     private companion object {

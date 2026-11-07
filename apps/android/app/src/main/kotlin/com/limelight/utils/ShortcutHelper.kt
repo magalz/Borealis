@@ -9,7 +9,8 @@ import com.limelight.R
 import com.limelight.nvstream.http.ComputerDetails
 import com.limelight.nvstream.http.NvApp
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
+// Converted as is from the inherited Java; TooManyFunctions stays: the class waits for its split
+// (Sprint 18d backlog).
 @Suppress("TooManyFunctions")
 class ShortcutHelper(private val context: Context) {
     private val sm: ShortcutManager = context.getSystemService(ShortcutManager::class.java)

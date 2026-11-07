@@ -39,15 +39,15 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.components.Chip
 import io.github.magalz.borealis.designsystem.components.KeyboardKey
+import io.github.magalz.borealis.designsystem.components.readingOrderGroup
+import io.github.magalz.borealis.designsystem.components.readingOrderIndex
 import io.github.magalz.borealis.designsystem.focus.InitialFocusState
 import io.github.magalz.borealis.designsystem.focus.initialFocus
 import io.github.magalz.borealis.designsystem.focus.rememberInitialFocusState
@@ -62,6 +62,7 @@ import io.github.magalz.borealis.stream.keys.KeyModifier
 import io.github.magalz.borealis.stream.keys.KeyModifier.SHIFT
 import io.github.magalz.borealis.stream.keys.NamedChord
 import io.github.magalz.borealis.stream.keys.Shortcuts
+import io.github.magalz.borealis.stream.keys.VK_BACKSPACE
 import io.github.magalz.borealis.stream.ui.common.onBackKey
 import io.github.magalz.borealis.stream.ui.common.onGamepadB
 import io.github.magalz.borealis.stream.ui.keyboard.CharKey
@@ -81,8 +82,6 @@ private val CHIP_GAP = 6.dp
 // padding of a list holds BorealisDimens.outlineReach, and thickOutlineReach when it is the
 // thicker one.
 private val CHIP_ROW_PADDING = BorealisDimens.listPadding
-
-private const val VK_BACKSPACE = 0x08
 
 /**
  * The Borealis keyboard: a shortcut row, three letter rows and a bottom row, with Ctrl, Alt, Win
@@ -302,10 +301,7 @@ private fun KeyRow(keys: List<KeySpec>, actions: KeyActions, firstKeyFocus: Firs
     val rowEnd = remember { FocusRequester() }
     // The keys of a row are as high as the highest: a caption that wraps makes its key grow.
     Row(
-        Modifier.fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            // The keys are read in this group, in the order of their traversalIndex.
-            .semantics { isTraversalGroup = true },
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).readingOrderGroup(),
         horizontalArrangement = Arrangement.spacedBy(KEY_GAP, Alignment.CenterHorizontally),
     ) {
         for ((index, key) in keys.withIndex()) {
@@ -315,9 +311,7 @@ private fun KeyRow(keys: List<KeySpec>, actions: KeyActions, firstKeyFocus: Firs
                 Modifier.weight(key.style.weight, fill = false)
                     .fillMaxHeight()
                     .testTag("key:$name")
-                    // The focused key is lifted over its neighbours, which moves it to the end of
-                    // the semantics children of the row; its place is the one it has on the screen.
-                    .semantics { traversalIndex = index.toFloat() }
+                    .readingOrderIndex(index)
             // A symbol on the cap is read out as the name of the key.
             if (!name.equals(caption, ignoreCase = true))
                 modifier = modifier.semantics { contentDescription = name }

@@ -1390,10 +1390,11 @@ host raises these messages:
   request: a `Host` containing `0.0.0.0` means normal quality
   (`src/rtsp.cpp:1597-1607`).
 - `continuousAudio=1` makes the host send audio without silence gaps
-  (`src/nvhttp.cpp:1617`, `src/rtsp.cpp:1631-1634`). Borealis does not send it: the client field
-  `StreamConfiguration.continuousAudio` is off by default and has no caller. It was measured worse
-  on 2026-11-02 (more dropped audio packets at the same client limit, in Sprint 17a's test
-  streams).
+  (`src/nvhttp.cpp:1617`, `src/rtsp.cpp:1631-1634`). Borealis does not send it: the `/launch` request
+  has no `continuousAudio` argument, and the client no longer has a field or a query for it (Sprint
+  18a deleted `StreamConfiguration.continuousAudio`, which had no caller since Sprint 17a). It was
+  measured worse on 2026-11-02 (more dropped audio packets at the same client limit, in Sprint
+  17a's test streams).
 - `localAudioPlayMode` selects whether the host also plays audio locally
   (`src/nvhttp.cpp:2822`).
 - There is no client-to-host microphone stream: the host has no microphone

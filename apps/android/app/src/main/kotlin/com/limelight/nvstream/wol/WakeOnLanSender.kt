@@ -2,6 +2,7 @@ package com.limelight.nvstream.wol
 
 import com.limelight.LimeLog
 import com.limelight.nvstream.http.ComputerDetails
+import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -40,7 +41,7 @@ object WakeOnLanSender {
     private const val HEX_RADIX = 16
 
     // The stack traces go to the standard error stream, as in the inherited Java. Logging them
-    // instead is a behaviour change (Sprint 12 backlog).
+    // instead is a behaviour change (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     private fun sendPacketsForAddress(
         address: InetAddress,
@@ -93,12 +94,11 @@ object WakeOnLanSender {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 12 backlog).
-    // The stack traces go to the standard error stream, as in the inherited Java. Logging them
-    // instead is a behaviour change (Sprint 12 backlog).
+    // Converted as is from the inherited Java; the stack traces go to the standard error stream
+    // as they did, and logging them instead is a behaviour change (Sprint 18c backlog).
     @JvmStatic
     @Throws(IOException::class)
-    @Suppress("NestedBlockDepth", "PrintStackTrace")
+    @Suppress("PrintStackTrace")
     fun sendWolPacket(computer: ComputerDetails) {
         val payload = createWolPayload(computer)
         var lastException: IOException? = null
@@ -120,35 +120,13 @@ object WakeOnLanSender {
                     continue
                 }
 
-                try {
-                    sendPacketsForAddress(
-                        InetAddress.getByName("255.255.255.255"),
-                        address.port,
-                        sock,
-                        payload,
-                    )
-                    sentWolPacket = true
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                    lastException = e
-                }
-
-                try {
-                    for (resolvedAddress in InetAddress.getAllByName(address.address)) {
-                        try {
-                            sendPacketsForAddress(resolvedAddress, address.port, sock, payload)
-                            sentWolPacket = true
-                        } catch (e: IOException) {
-                            e.printStackTrace()
-                            lastException = e
-                        }
+                val sent =
+                    sendToAddressTuple(address, sock, payload) { e ->
+                        e.printStackTrace()
+                        lastException = e
                     }
-                } catch (e: IOException) {
-                    // We may have addresses that don't resolve on this subnet,
-                    // but don't throw and exit the whole function if that happens.
-                    // We'll throw it at the end if we didn't send a single packet.
-                    e.printStackTrace()
-                    lastException = e
+                if (sent) {
+                    sentWolPacket = true
                 }
             }
         }
@@ -159,6 +137,50 @@ object WakeOnLanSender {
         if (!sentWolPacket && failure != null) {
             throw failure
         }
+    }
+
+    /**
+     * Sends the packets to the broadcast address and then to every address that [address] resolves
+     * to, all with its port, and says whether at least one went out. Each failure goes to
+     * [onFailure], and none stops the sends that follow.
+     */
+    private fun sendToAddressTuple(
+        address: AddressTuple,
+        sock: DatagramSocket,
+        payload: ByteArray,
+        onFailure: (IOException) -> Unit,
+    ): Boolean {
+        var sent = false
+
+        try {
+            sendPacketsForAddress(
+                InetAddress.getByName("255.255.255.255"),
+                address.port,
+                sock,
+                payload,
+            )
+            sent = true
+        } catch (e: IOException) {
+            onFailure(e)
+        }
+
+        try {
+            for (resolvedAddress in InetAddress.getAllByName(address.address)) {
+                try {
+                    sendPacketsForAddress(resolvedAddress, address.port, sock, payload)
+                    sent = true
+                } catch (e: IOException) {
+                    onFailure(e)
+                }
+            }
+        } catch (e: IOException) {
+            // We may have addresses that don't resolve on this subnet,
+            // but don't throw and exit the whole function if that happens.
+            // We'll throw it at the end if we didn't send a single packet.
+            onFailure(e)
+        }
+
+        return sent
     }
 
     private fun macStringToBytes(macAddress: String?): ByteArray {

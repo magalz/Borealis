@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.stream.game.motion
 
-import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
 import com.google.common.truth.Truth.assertThat
@@ -21,20 +20,6 @@ internal class MouseButtonsTest : MotionTestBase() {
     private val right = MouseButtonPacket.BUTTON_RIGHT
     private val back = MouseButtonPacket.BUTTON_X1
     private val forward = MouseButtonPacket.BUTTON_X2
-
-    /** The mouse reports [buttons] as down, at (10, 20) of the stream view, now. */
-    private fun mouse(action: Int, buttons: Int): Boolean =
-        rig.game.onGenericMotion(
-            streamView,
-            mouseEvent(action, 10f, 20f, buttons, SystemClock.uptimeMillis()),
-        )
-
-    private fun thePointer() = position(10, 20)
-
-    private fun assertSent(vararg calls: Sent) {
-        assertThat(sent()).containsExactlyElementsIn(calls).inOrder()
-        forgetSent()
-    }
 
     // ----- One button at a time -----
 
@@ -288,8 +273,5 @@ internal class MouseButtonsTest : MotionTestBase() {
     private companion object {
         /** A touchpad of Samsung DeX: the sources of a touch screen and a mouse, together. */
         const val SAMSUNG_DEX_SOURCE = 12290
-
-        /** A press this long is not a pulse of a side button. */
-        const val SETTLE_MS = 25L
     }
 }

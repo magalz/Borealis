@@ -44,18 +44,8 @@ class MenuChordDetector {
         val loneTap: Int = 0,
     )
 
+    private val chord = Chord()
     private var held = 0
-    private var armedAt = NOT_ARMED
-
-    /** The chord buttons that belong to a pending chord or to one that fired and is still held. */
-    private var consumed = 0
-    private var masking = false
-
-    /**
-     * A button other than Start and Select has been held since every button was last up, so the
-     * chord cannot arm: what is left of a quit combo or of any other press is not a chord.
-     */
-    private var foreign = false
 
     /** Start or Select pressed alone and held back while its partner may still arrive. */
     private var lone = 0
@@ -84,54 +74,28 @@ class MenuChordDetector {
         maskWhilePending: Boolean,
         holdLone: Boolean = false,
     ): Update {
+        // Two things keep their place. What is hidden is read first, before any step changes it:
+        // an event is silent when it only lets go of buttons that were hidden before it. And the
+        // armed chord is settled before keepHeld narrows what it claims: firing claims both
+        // buttons, so one that is let go in the event that fires is dropped by keepHeld.
         val previousHeld = held
         val previousHidden = hidden()
         held = buttons
 
         val loneTap = endLoneWait(buttons)
-
-        var fired = false
-        var earlyRelease = false
-        if (armedAt != NOT_ARMED) {
-            if (time - armedAt >= HOLD_MS) {
-                fire()
-                fired = true
-            } else if (buttons != CHORD) {
-                armedAt = NOT_ARMED
-                if (buttons and CHORD.inv() != 0) {
-                    consumed = 0
-                    masking = false
-                } else {
-                    earlyRelease = true
-                }
-            }
-        }
-
-        consumed = consumed and buttons
-        if (consumed == 0) masking = false
-
-        foreign = buttons != 0 && (foreign || buttons and CHORD.inv() != 0)
-        if (canArm(buttons)) {
-            armedAt = time
-            consumed = CHORD
-            masking = maskWhilePending
-        }
-
+        val settled = chord.settle(buttons, time)
+        chord.keepHeld(buttons)
+        chord.armFromCleanStart(buttons, time, maskWhilePending)
         if (holdLone && startsAlone(previousHeld, buttons)) {
             lone = buttons
             loneAt = time
         }
 
+        val fired = settled == Settled.FIRED
         val changed = previousHeld xor buttons
         val silent = !fired && changed != 0 && changed and previousHidden == changed
-        return Update(fired, earlyRelease, silent, loneTap)
+        return Update(fired, settled == Settled.EARLY_RELEASE, silent, loneTap)
     }
-
-    /**
-     * Whether [buttons] start a chord: Start and Select alone, and nothing left over from before.
-     */
-    private fun canArm(buttons: Int): Boolean =
-        buttons == CHORD && !foreign && armedAt == NOT_ARMED && consumed == 0
 
     /** The wait of a lone button ends when the buttons change; returns the button let go in it. */
     private fun endLoneWait(buttons: Int): Int {
@@ -160,44 +124,123 @@ class MenuChordDetector {
             loneAt = NOT_ARMED
             return Update(fired = false, earlyRelease = false, silent = false)
         }
-        if (armedAt == NOT_ARMED || time - armedAt < HOLD_MS) {
+        if (!chord.fireIfDue(time)) {
             return Update(fired = false, earlyRelease = false, silent = true)
         }
-        fire()
         return Update(fired = true, earlyRelease = false, silent = false)
     }
 
     /** The time the next check is due, or [NO_DEADLINE] when none is pending. */
-    @Synchronized
-    fun deadline(): Long =
-        when {
-            lone != 0 -> loneAt + LONE_WAIT_MS
-            armedAt != NOT_ARMED -> armedAt + HOLD_MS
-            else -> NO_DEADLINE
-        }
+    @Synchronized fun deadline(): Long = if (lone != 0) loneAt + LONE_WAIT_MS else chord.deadline()
 
     /** The buttons that must not be sent to the PC. */
-    @Synchronized fun hidden(): Int = (if (masking) consumed else 0) or lone
+    @Synchronized fun hidden(): Int = chord.hidden() or lone
 
     /** Whether [button] belongs to a chord that is pending or still held after it fired. */
-    @Synchronized fun claims(button: Int): Boolean = consumed and button != 0
+    @Synchronized fun claims(button: Int): Boolean = chord.claims(button)
 
     /** Forgets the chord, as when the pad is captured. */
     @Synchronized
     fun reset() {
         held = 0
-        armedAt = NOT_ARMED
-        consumed = 0
-        masking = false
-        foreign = false
+        chord.reset()
         lone = 0
         loneAt = NOT_ARMED
     }
 
-    private fun fire() {
-        armedAt = NOT_ARMED
-        consumed = CHORD
-        masking = true
+    /** What an armed chord did with one event. */
+    private enum class Settled {
+        NOTHING,
+        FIRED,
+        EARLY_RELEASE,
+    }
+
+    /**
+     * The chord itself, from Start and Select going down together until both are up. It is read and
+     * changed only under the lock of the detector that owns it.
+     */
+    private class Chord {
+        private var armedAt = NOT_ARMED
+
+        /**
+         * The chord buttons that belong to a pending chord or to one that fired and is still held.
+         */
+        private var consumed = 0
+        private var masking = false
+
+        /**
+         * A button other than Start and Select has been held since every button was last up, so the
+         * chord cannot arm: what is left of a quit combo or of any other press is not a chord.
+         */
+        private var foreign = false
+
+        /** Completes the chord when its deadline has come at [time]; true when it did. */
+        fun fireIfDue(time: Long): Boolean {
+            if (armedAt == NOT_ARMED || time - armedAt < HOLD_MS) return false
+            armedAt = NOT_ARMED
+            consumed = CHORD
+            masking = true
+            return true
+        }
+
+        /**
+         * What an armed chord does with an event: an event at or after the deadline completes it,
+         * whatever buttons it holds, and before then any buttons but Start and Select alone end it.
+         */
+        fun settle(buttons: Int, time: Long): Settled =
+            when {
+                fireIfDue(time) -> Settled.FIRED
+                armedAt == NOT_ARMED || buttons == CHORD -> Settled.NOTHING
+                else -> cancel(buttons)
+            }
+
+        /**
+         * Another button ends the chord for good and releases its hold on the PC's buttons. Letting
+         * one of Start and Select go ends it as an early release, and what is still held stays
+         * claimed.
+         */
+        private fun cancel(buttons: Int): Settled {
+            armedAt = NOT_ARMED
+            if (!holdsOther(buttons)) return Settled.EARLY_RELEASE
+            consumed = 0
+            masking = false
+            return Settled.NOTHING
+        }
+
+        /** Only the chord buttons that are still held stay claimed. */
+        fun keepHeld(buttons: Int) {
+            consumed = consumed and buttons
+            if (consumed == 0) masking = false
+        }
+
+        /**
+         * Starts the chord when [buttons] are Start and Select alone, with nothing left over from
+         * before. Every event is counted in [foreign] first, whether or not a chord can start.
+         */
+        fun armFromCleanStart(buttons: Int, time: Long, mask: Boolean) {
+            foreign = buttons != 0 && (foreign || holdsOther(buttons))
+            if (canArm(buttons)) {
+                armedAt = time
+                consumed = CHORD
+                masking = mask
+            }
+        }
+
+        private fun canArm(buttons: Int): Boolean =
+            buttons == CHORD && !foreign && armedAt == NOT_ARMED && consumed == 0
+
+        fun deadline(): Long = if (armedAt == NOT_ARMED) NO_DEADLINE else armedAt + HOLD_MS
+
+        fun hidden(): Int = if (masking) consumed else 0
+
+        fun claims(button: Int): Boolean = consumed and button != 0
+
+        fun reset() {
+            armedAt = NOT_ARMED
+            consumed = 0
+            masking = false
+            foreign = false
+        }
     }
 
     companion object {
@@ -211,5 +254,8 @@ class MenuChordDetector {
         private const val START = GamepadButtons.START
         private const val SELECT = GamepadButtons.SELECT
         private const val CHORD = START or SELECT
+
+        /** Whether a button other than Start and Select is among [buttons]. */
+        private fun holdsOther(buttons: Int): Boolean = buttons and CHORD.inv() != 0
     }
 }

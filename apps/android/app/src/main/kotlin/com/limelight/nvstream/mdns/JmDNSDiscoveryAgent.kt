@@ -124,9 +124,7 @@ class JmDNSDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener) :
     }
 
     // The loop of the discovery thread, which holds a reference to the resolver for as long as it
-    // runs. Converted as is from the inherited Java; refactor in a later sprint (Sprint 12
-    // backlog).
-    @Suppress("NestedBlockDepth")
+    // runs.
     private fun discover(discoveryIntervalMs: Int) {
         // This may result in listener callbacks so we must register
         // our listener first.
@@ -137,32 +135,42 @@ class JmDNSDiscoveryAgent(context: Context, listener: MdnsDiscoveryListener) :
                 // Start an mDNS request
                 resolver.requestServiceInfo(SERVICE_TYPE, null, discoveryIntervalMs.toLong())
 
-                // Run service resolution again for pending machines
-                val pendingNames = synchronized(pendingResolution) { ArrayList(pendingResolution) }
-                for (name in pendingNames) {
-                    LimeLog.info("mDNS: Retrying service resolution for machine: $name")
-                    val infos =
-                        resolver.getServiceInfos(SERVICE_TYPE, name, SERVICE_INFO_TIMEOUT_MS)
-                    if (infos != null && infos.isNotEmpty()) {
-                        LimeLog.info("mDNS: Resolved (retry) with ${infos.size} service entries")
-                        for (svcinfo in infos) {
-                            handleResolvedServiceInfo(svcinfo)
-                        }
-                    }
-                }
+                retryPendingResolutions(resolver)
 
                 // Wait for the next polling interval
-                try {
-                    Thread.sleep(discoveryIntervalMs.toLong())
-                } catch (e: InterruptedException) {
-                    break
-                }
+                if (!waitForNextPoll(discoveryIntervalMs)) break
             }
         } finally {
             // Dereference the resolver
             dereferenceResolver()
         }
     }
+
+    // Run service resolution again for pending machines. The names are copied first, as each
+    // machine that resolves leaves the set.
+    private fun retryPendingResolutions(resolver: JmmDNS) {
+        val pendingNames = synchronized(pendingResolution) { ArrayList(pendingResolution) }
+        for (name in pendingNames) {
+            LimeLog.info("mDNS: Retrying service resolution for machine: $name")
+            val infos = resolver.getServiceInfos(SERVICE_TYPE, name, SERVICE_INFO_TIMEOUT_MS)
+            if (infos != null && infos.isNotEmpty()) {
+                LimeLog.info("mDNS: Resolved (retry) with ${infos.size} service entries")
+                for (svcinfo in infos) {
+                    handleResolvedServiceInfo(svcinfo)
+                }
+            }
+        }
+    }
+
+    // Whether the wait ran its whole interval. An interrupt ends it at once: it is the stop that
+    // ends the loop, and the exception clears the flag of the thread.
+    private fun waitForNextPoll(discoveryIntervalMs: Int): Boolean =
+        try {
+            Thread.sleep(discoveryIntervalMs.toLong())
+            true
+        } catch (e: InterruptedException) {
+            false
+        }
 
     @Synchronized
     override fun stopDiscovery() {

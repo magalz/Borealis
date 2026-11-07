@@ -52,12 +52,14 @@ class RecordingUsbController(id: Int, listener: UsbDriverListener) :
         // Nothing is held open.
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         rumbles += lowFreqMotor.toInt() to highFreqMotor.toInt()
+        return true
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         triggerRumbles += leftTrigger.toInt() to rightTrigger.toInt()
+        return true
     }
 
     /** Reports a state with [buttons] held, which gives the pad its controller number. */

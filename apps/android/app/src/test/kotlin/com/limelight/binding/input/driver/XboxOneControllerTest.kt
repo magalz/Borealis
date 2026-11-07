@@ -15,6 +15,9 @@ import org.robolectric.annotation.Config
  * Characterizes the Xbox One driver through its public side: the packets it sends to the OUT
  * endpoint, and what reaches the listener from the reports a pad plays on the IN endpoint.
  */
+// One suite for one driver: detekt's size limit is passed, and the helpers are shared by every
+// test.
+@Suppress("LargeClass")
 @RunWith(RobolectricTestRunner::class)
 @Config(
     shadows =
@@ -158,6 +161,40 @@ class XboxOneControllerTest {
     }
 
     @Test
+    fun `an init packet needs both its vendor and its product, a zero matching any`() {
+        // The product of another vendor's packet does not count, nor the vendor of another product.
+        assertThat(initPackets(0x0738, 0x02EA)).containsExactly(fw2015(0))
+        assertThat(initPackets(0x24C6, 0x02EA)).containsExactly(fw2015(0))
+        assertThat(initPackets(0x045E, 0x541A)).containsExactly(fw2015(0))
+        assertThat(initPackets(0x0F0D, 0x0165)).containsExactly(fw2015(0))
+        // The Hori packet of the product 0x0067 is the Hori vendor's, not the PDP vendor's.
+        assertThat(initPackets(0x0E6F, 0x0067))
+            .containsExactly(fw2015(0), pdp1(1), pdp2(2))
+            .inOrder()
+    }
+
+    @Test
+    fun `an init packet that fails ends the init at that packet, whichever it is`() {
+        // The packets of this pad: Hori, 2015, PDP 1 and PDP 2, of 13, 5, 7 and 6 bytes.
+        val first = pad(vendorId = 0x0E6F, productId = 0x0165)
+        first.usb.writeResults.add(-1)
+        assertThat(first.start()).isFalse()
+        assertThat(first.writtenBytes()).containsExactly(hori(0))
+        assertThat(log.warnings()).containsExactly("Initialization transfer failed: -1")
+
+        val third = pad(vendorId = 0x0E6F, productId = 0x0165)
+        third.usb.writeResults.addAll(listOf(13, 5, 0))
+        assertThat(third.start()).isFalse()
+        assertThat(third.writtenBytes()).containsExactly(hori(0), fw2015(1), pdp1(2)).inOrder()
+        assertThat(log.warnings())
+            .containsExactly(
+                "Initialization transfer failed: -1",
+                "Initialization transfer failed: 0",
+            )
+            .inOrder()
+    }
+
+    @Test
     fun `start fails when an interface cannot be claimed or an endpoint is missing`() {
         val claimFails = pad()
         claimFails.usb.claimResults.add(false)
@@ -189,6 +226,55 @@ class XboxOneControllerTest {
         assertThat(log.warnings())
             .containsExactly("Failed to claim interfaces", "Missing required endpoint")
             .inOrder()
+    }
+
+    private fun padWithEndpoints(
+        vararg endpoints: android.hardware.usb.UsbEndpoint
+    ): Pad<XboxOneController> =
+        Pad(
+                UsbPads.device(
+                    "/dev/odd",
+                    0x045E,
+                    0x02EA,
+                    listOf(
+                        UsbPads.usbInterface(
+                            0,
+                            subclass = UsbPads.XB1_SUBCLASS,
+                            protocol = UsbPads.XB1_PROTOCOL,
+                            endpoints = endpoints.toList(),
+                        )
+                    ),
+                )
+            ) { device, connection, listener ->
+                XboxOneController(device, connection, 0, listener)
+            }
+            .also(pads::add)
+
+    // The claim and the search for the endpoints are AbstractXboxController's, and
+    // Xbox360ControllerTest pins what this class would pin again: a missing IN endpoint, and a pad
+    // that cannot be claimed. The second endpoint of a direction ends the search: the pad is not
+    // then reported as one that misses an endpoint.
+    @Test
+    fun `start fails on a second IN endpoint`() =
+        padWithEndpoints(UsbPads.inEndpoint(1), UsbPads.inEndpoint(2))
+            .assertStartFails(log, "Found duplicate IN endpoint")
+
+    @Test
+    fun `start fails on a second OUT endpoint`() =
+        padWithEndpoints(UsbPads.outEndpoint(1), UsbPads.outEndpoint(2))
+            .assertStartFails(log, "Found duplicate OUT endpoint")
+
+    @Test
+    fun `an init that fails starts no input thread`() {
+        val pad = pad(vendorId = 0x045E, productId = 0x02EA)
+        pad.usb.writeResults.add(-1)
+
+        assertThat(pad.start()).isFalse()
+
+        // The input thread would announce the pad after its first second, and then read.
+        assertThat(pad.listener.quietFor(1_300)).isTrue()
+        assertThat(pad.usb.readTimeouts).isEmpty()
+        assertThat(log.warnings()).containsExactly("Initialization transfer failed: -1")
     }
 
     // A 0x20 report: the type, three bytes the driver skips, the two button bytes, the two
@@ -471,6 +557,51 @@ class XboxOneControllerTest {
     }
 
     @Test
+    fun `only the flags 0x30 ask for an acknowledgement, and the Guide byte is read all the same`() {
+        val pad = pad()
+        pad.play(
+            modeReport(flags = 0x00, guide = 0x01),
+            modeReport(flags = 0x10, guide = 0x01),
+            modeReport(flags = 0x31, guide = 0x01),
+            modeReport(flags = 0xB0, guide = 0x01),
+        )
+
+        pad.start()
+
+        assertThat(pad.listener.states(4).map { it.buttonFlags and GUIDE })
+            .containsExactly(
+                GUIDE,
+                GUIDE,
+                GUIDE,
+                GUIDE,
+            )
+        assertThat(pad.writtenBytes()).containsExactly(fw2015(0))
+    }
+
+    @Test
+    fun `the bytes after the end of a report are not read`() {
+        val pad = pad()
+        pad.play(
+            buttonsReport(first = 0x10) + intArrayOf(0xFF, 0xFF, 0xFF),
+            modeReport(guide = 0x01) + intArrayOf(0xFF, 0xFF),
+            modeReport(flags = 0x30, seq = 0x09, guide = 0x01) + intArrayOf(0xFF, 0xFF),
+        )
+
+        pad.start()
+
+        val flags = pad.listener.states(3).map { it.buttonFlags }
+        assertThat(flags)
+            .containsExactly(
+                ControllerPacket.A_FLAG,
+                GUIDE or ControllerPacket.A_FLAG,
+                GUIDE or ControllerPacket.A_FLAG,
+            )
+            .inOrder()
+        assertThat(pad.writtenBytes().drop(1).map { it[2] }).containsExactly(0x09)
+        assertThat(log.severes()).isEmpty()
+    }
+
+    @Test
     fun `a mode report of type 0x30 is acknowledged with its own sequence number`() {
         val pad = pad()
         pad.play(modeReport(flags = 0x30, seq = 0xA0, guide = 0x01))
@@ -573,11 +704,29 @@ class XboxOneControllerTest {
             .containsExactly(
                 rumblePacket(1, 0x00, 0x00, 0x3F, 0x20),
                 rumblePacket(2, 0x3F, 0x01, 0x3F, 0x20),
-                rumblePacket(3, 0x3F, 0x01, 0xC0, 0xFF),
+                rumblePacket(3, 0x3F, 0x01, 0x40, 0x7F),
                 rumblePacket(4, 0x3F, 0x01, 0x02, 0x01),
             )
             .inOrder()
         assertThat(pad.usb.writes.drop(1).map { it.timeoutMs }.toSet()).containsExactly(100)
+    }
+
+    @Test
+    fun `a motor of 0x8000 or more goes out as 0x40 to 0x7F, the trigger motors too`() {
+        val pad = pad()
+        pad.start()
+
+        // The motor bytes take 0 to 0x7F: the shift is unsigned, so a motor with its top bit set
+        // does not sign-extend into 0xC0 or 0xFF.
+        pad.controller.rumbleTriggers(0x8000.toShort(), 0xFFFF.toShort())
+        pad.controller.rumble(0xFFFF.toShort(), 0x8000.toShort())
+
+        assertThat(pad.writtenBytes().drop(1))
+            .containsExactly(
+                rumblePacket(1, 0x40, 0x7F, 0x00, 0x00),
+                rumblePacket(2, 0x40, 0x7F, 0x7F, 0x40),
+            )
+            .inOrder()
     }
 
     @Test
@@ -624,6 +773,18 @@ class XboxOneControllerTest {
     }
 
     @Test
+    fun `a rumble write waits 100 ms at most`() {
+        val pad = pad()
+        pad.start()
+        val initWrites = pad.usb.writes.size
+
+        pad.controller.rumble(1, 2)
+        pad.controller.rumbleTriggers(3, 4)
+
+        assertThat(pad.usb.writes.drop(initWrites).map { it.timeoutMs }).containsExactly(100, 100)
+    }
+
+    @Test
     fun `a rumble that does not go through is not an error`() {
         val pad = pad()
         pad.start()
@@ -633,6 +794,42 @@ class XboxOneControllerTest {
 
         assertThat(pad.usb.writes).hasSize(2)
         assertThat(log.warnings()).containsExactly("Rumble transfer failed: -1")
+    }
+
+    @Test
+    fun `a rumble that went through reports success, the trigger motors too`() {
+        val pad = pad()
+        pad.start()
+
+        assertThat(pad.controller.rumble(1, 2)).isTrue()
+        assertThat(pad.controller.rumbleTriggers(3, 4)).isTrue()
+    }
+
+    @Test
+    fun `a rumble reports a write that fails, times out or falls short`() {
+        // The rumble packet is 13 bytes.
+        val results =
+            listOf(-1, 0, 12).associateWith { written ->
+                val pad = pad()
+                pad.start()
+                pad.usb.writeResults.add(written)
+                pad.controller.rumble(1, 2)
+            }
+
+        assertThat(results).containsExactly(-1, false, 0, false, 12, false)
+    }
+
+    @Test
+    fun `a trigger rumble reports a write that fails, times out or falls short`() {
+        val results =
+            listOf(-1, 0, 12).associateWith { written ->
+                val pad = pad()
+                pad.start()
+                pad.usb.writeResults.add(written)
+                pad.controller.rumbleTriggers(3, 4)
+            }
+
+        assertThat(results).containsExactly(-1, false, 0, false, 12, false)
     }
 
     @Test
@@ -655,6 +852,67 @@ class XboxOneControllerTest {
         assertThat(pad.usb.closes).isEqualTo(1)
         val removed = pad.listener.next()
         assertThat((removed as PadEvent.Removed).controller).isSameInstanceAs(pad.controller)
+    }
+
+    @Test
+    fun `a pad whose last rumble failed is stopped without another write`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumble(1, 2)
+
+        pad.controller.stop()
+        pad.controller.stop()
+
+        // The 2015 init and the rumble that failed: a stuck pad would block the stop's write for
+        // the whole timeout, so it gets none. The pad is still closed and reported removed once.
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.usb.closes).isEqualTo(1)
+        val removed = pad.listener.next()
+        assertThat((removed as PadEvent.Removed).controller).isSameInstanceAs(pad.controller)
+        assertThat(pad.listener.quietFor(300)).isTrue()
+    }
+
+    @Test
+    fun `a pad whose last trigger rumble failed is stopped without another write`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumbleTriggers(3, 4)
+
+        pad.controller.stop()
+
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.usb.closes).isEqualTo(1)
+        assertThat(pad.listener.next()).isInstanceOf(PadEvent.Removed::class.java)
+    }
+
+    @Test
+    fun `a pad that got no rumble write gets its zero write at the stop`() {
+        val pad = pad()
+        pad.start()
+
+        pad.controller.stop()
+
+        // The 2015 init, then the stop's rumble.
+        assertThat(pad.usb.writes).hasSize(2)
+        assertThat(pad.writtenBytes().last()).isEqualTo(rumblePacket(1, 0x00, 0x00, 0x00, 0x00))
+        assertThat(pad.usb.closes).isEqualTo(1)
+    }
+
+    @Test
+    fun `a rumble that went through after one that failed keeps the zero write at the stop`() {
+        val pad = pad()
+        pad.start()
+        pad.usb.writeResults.add(-1)
+        pad.controller.rumble(1, 2)
+        pad.controller.rumble(3, 4)
+
+        pad.controller.stop()
+
+        assertThat(pad.usb.writes).hasSize(4)
+        assertThat(pad.writtenBytes().last()).isEqualTo(rumblePacket(3, 0x00, 0x00, 0x00, 0x00))
+        assertThat(pad.usb.closes).isEqualTo(1)
     }
 
     private companion object {

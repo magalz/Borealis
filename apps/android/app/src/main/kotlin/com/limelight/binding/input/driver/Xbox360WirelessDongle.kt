@@ -61,48 +61,48 @@ class Xbox360WirelessDongle(
         connection.releaseInterface(iface)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-    @Suppress("ComplexCondition", "LoopWithTooManyJumpStatements")
-    override fun start(): Boolean {
-        var controllerIndex = 0
+    // Newer xpad versions use a special product ID (0x02a1) for controllers
+    // rather than copying the product ID of the dongle itself.
+    private fun isPadOfDongle(inputDev: InputDevice): Boolean =
+        inputDev.vendorId == device.vendorId &&
+            (inputDev.productId == device.productId ||
+                inputDev.productId == NEWER_XPAD_PRODUCT_ID) &&
+            inputDev.controllerNumber > 0
 
-        // On Android, there is a controller number associated with input devices.
-        // We can use this to approximate the likely controller number. This won't
-        // be completely accurate because there's no guarantee the order of interfaces
-        // matches the order that devices were enumerated by xpad, but it's probably
-        // better than nothing.
+    // On Android, there is a controller number associated with input devices.
+    // We can use this to approximate the likely controller number. This won't
+    // be completely accurate because there's no guarantee the order of interfaces
+    // matches the order that devices were enumerated by xpad, but it's probably
+    // better than nothing.
+    private fun firstControllerIndex(): Int {
         for (id in InputDevice.getDeviceIds()) {
             // Device was removed while looping
-            val inputDev = InputDevice.getDevice(id) ?: continue
-
-            // Newer xpad versions use a special product ID (0x02a1) for controllers
-            // rather than copying the product ID of the dongle itself.
-            if (
-                inputDev.vendorId == device.vendorId &&
-                    (inputDev.productId == device.productId ||
-                        inputDev.productId == NEWER_XPAD_PRODUCT_ID) &&
-                    inputDev.controllerNumber > 0
-            ) {
-                controllerIndex = inputDev.controllerNumber - 1
-                break
+            val inputDev = InputDevice.getDevice(id)
+            if (inputDev != null && isPadOfDongle(inputDev)) {
+                return inputDev.controllerNumber - 1
             }
         }
+
+        return 0
+    }
+
+    private fun isWirelessInputInterface(iface: UsbInterface): Boolean =
+        iface.interfaceClass == UsbConstants.USB_CLASS_VENDOR_SPEC &&
+            iface.interfaceSubclass == XB360W_IFACE_SUBCLASS &&
+            iface.interfaceProtocol == XB360W_IFACE_PROTOCOL
+
+    override fun start(): Boolean {
+        var controllerIndex = firstControllerIndex()
 
         // Send LED commands on the out endpoint of each interface. There is one interface
         // corresponding to each possible attached controller.
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
 
-            // Skip the non-input interfaces
-            if (
-                iface.interfaceClass != UsbConstants.USB_CLASS_VENDOR_SPEC ||
-                    iface.interfaceSubclass != XB360W_IFACE_SUBCLASS ||
-                    iface.interfaceProtocol != XB360W_IFACE_PROTOCOL
-            ) {
-                continue
+            // The non-input interfaces are skipped
+            if (isWirelessInputInterface(iface)) {
+                sendLedCommandToInterface(iface, controllerIndex++)
             }
-
-            sendLedCommandToInterface(iface, controllerIndex++)
         }
 
         // "Fail" to give control back to the kernel driver
@@ -113,12 +113,14 @@ class Xbox360WirelessDongle(
         // Nothing to do
     }
 
-    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short) {
+    override fun rumble(lowFreqMotor: Short, highFreqMotor: Short): Boolean {
         // Unreachable.
+        return true
     }
 
-    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short) {
+    override fun rumbleTriggers(leftTrigger: Short, rightTrigger: Short): Boolean {
         // Unreachable.
+        return true
     }
 
     companion object {
@@ -137,24 +139,13 @@ class Xbox360WirelessDongle(
         private const val LED_SLOT_COUNT = 4
         private const val LED_TIMEOUT_MS = 3000
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 13 backlog).
-        @Suppress("ComplexCondition")
         @JvmStatic
-        fun canClaimDevice(device: UsbDevice): Boolean {
-            for (supportedVid in SUPPORTED_VENDORS) {
-                if (
-                    device.vendorId == supportedVid &&
-                        device.interfaceCount >= 1 &&
-                        device.getInterface(0).interfaceClass ==
-                            UsbConstants.USB_CLASS_VENDOR_SPEC &&
-                        device.getInterface(0).interfaceSubclass == XB360W_IFACE_SUBCLASS &&
-                        device.getInterface(0).interfaceProtocol == XB360W_IFACE_PROTOCOL
-                ) {
-                    return true
-                }
-            }
-
-            return false
-        }
+        fun canClaimDevice(device: UsbDevice): Boolean =
+            matchesFirstInterface(
+                device,
+                SUPPORTED_VENDORS,
+                XB360W_IFACE_SUBCLASS,
+                XB360W_IFACE_PROTOCOL,
+            )
     }
 }

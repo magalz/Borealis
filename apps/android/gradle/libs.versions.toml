@@ -29,7 +29,7 @@ kotlinx-serialization = "1.12.0"
 # AGP when CI passes (ADR 0047); Dependabot groups it with KSP.
 kotlin = "2.4.21"
 kover = "0.9.11"
-ksp = "2.3.12"
+ksp = "2.3.13"
 ktfmt = "0.64"
 licensee = "1.14.1"
 okhttp = "5.5.1"

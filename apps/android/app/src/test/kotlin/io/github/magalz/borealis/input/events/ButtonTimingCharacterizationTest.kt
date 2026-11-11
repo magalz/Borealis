@@ -76,7 +76,7 @@ class ButtonTimingCharacterizationTest {
     }
 
     @Test
-    fun `a key let go at once asks for the whole 25 ms, one held for 24 ms for the last one, and a long hold for none`() {
+    fun `the handler asks to wait 25 ms for an instant release, 1 ms for 24 ms held, and none for a long hold`() {
         assertThat(waitsAsked(0)).containsExactly(25L)
         assertThat(waitsAsked(24)).containsExactly(1L)
         assertThat(waitsAsked(100)).isEmpty()

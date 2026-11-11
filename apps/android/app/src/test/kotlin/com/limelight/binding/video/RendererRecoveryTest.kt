@@ -1,10 +1,15 @@
 package com.limelight.binding.video
 
 import com.google.common.truth.Truth.assertThat
+import com.limelight.LimeLog
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import java.io.OutputStream
+import java.io.PrintStream
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 import org.junit.Assert.assertThrows
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.robolectric.util.ReflectionHelpers
 
@@ -21,14 +26,37 @@ import org.robolectric.util.ReflectionHelpers
  */
 @Suppress("LargeClass")
 class RendererRecoveryTest : RendererTestBase() {
+    /**
+     * A renderer that runs. With [stepped] its renderer thread makes a pass only when
+     * [recoveredByRendererThread] says so, instead of every 50 ms: a test that makes the codec fail
+     * several times uses it, so that no thread can ask for a recovery before the others have left
+     * the last one.
+     */
     private fun running(
-        pacing: Int = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY
+        pacing: Int = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY,
+        stepped: Boolean = false,
     ): MediaCodecDecoderRenderer {
         install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
         val renderer = renderer(prefs { framePacing = pacing })
         assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
-        renderer.begin()
+        if (stepped) renderer.beginStepped() else renderer.begin()
         return renderer
+    }
+
+    /**
+     * Lets the stepped renderer thread make passes until it has shown the first frame. Its first
+     * pass finds only the change of the output format, so more than one is needed; none waits for
+     * the clock, and the count only bounds a renderer that never shows the frame.
+     */
+    private fun stepUntilFrameShown() {
+        repeat(MAX_PASSES_FOR_A_FRAME) {
+            if (events<CodecEvent.Output>().isNotEmpty()) return
+            ShadowRecordingVideoCodec.stepOutput()
+            ShadowRecordingVideoCodec.awaitParked()
+        }
+        check(events<CodecEvent.Output>().isNotEmpty()) {
+            "The renderer thread did not show the first frame; journal: $journal"
+        }
     }
 
     /** What the renderer thread meets first: the failure [failure], and then it waits. */
@@ -195,15 +223,41 @@ class RendererRecoveryTest : RendererTestBase() {
 
     @Test
     fun `the stream goes on after a recovery, with buffers of the restarted codec`() {
-        val renderer = running()
+        val renderer = running(stepped = true)
         renderer.submit(pFrame(1))
+        stepUntilFrameShown()
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, recoverable)
-        renderer.submit(pFrame(2))
+        assertThat(recoveredByRendererThread { renderer.submit(pFrame(2)) })
+            .isEqualTo(MoonBridge.DR_NEED_IDR)
 
         val result = renderer.submit(pFrame(3))
 
         assertThat(result).isEqualTo(MoonBridge.DR_OK)
-        // The failed frame was never queued. The buffers of the restarted codec begin again at 0.
+        // The first frame was shown before the restart, and the failed one was never queued. The
+        // buffers of the restarted codec begin again at 0.
+        val shown = journal.indexOfFirst { it is CodecEvent.Output }
+        assertThat(shown).isAtLeast(0)
+        assertThat(shown).isLessThan(journal.indexOfFirst { it is CodecEvent.Stopped })
+        assertThat(events<CodecEvent.Queued>().map { it.index }).containsExactly(0, 0).inOrder()
+    }
+
+    @Test
+    fun `a restart with the first frame still in the codec`() {
+        install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        renderer.submit(pFrame(1))
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, recoverable)
+        val failing = InputCall { renderer.submit(pFrame(2)) }
+        // The renderer thread starts only now, so its first pass finds the recovery waiting for it
+        // and restarts the codec before it has shown the first frame.
+        awaitQuiesced(INPUT_THREAD)
+        renderer.begin()
+        assertThat(failing.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        val result = renderer.submit(pFrame(3))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
         assertThat(events<CodecEvent.Queued>().map { it.index }).containsExactly(0, 0).inOrder()
     }
 
@@ -804,10 +858,11 @@ class RendererRecoveryTest : RendererTestBase() {
 
     @Test
     fun `three seconds after the first failure that is not recovered the renderer crashes with it`() {
-        val renderer = running()
+        val renderer = running(stepped = true)
         for (number in 1..10) {
             ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
-            renderer.submit(pFrame(number))
+            assertThat(recoveredByRendererThread { renderer.submit(pFrame(number)) })
+                .isEqualTo(MoonBridge.DR_NEED_IDR)
         }
         val failure = codecException(errorCode = -38, actionCode = ACTION_NONE, message = "dead")
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT) { failure }
@@ -864,5 +919,128 @@ class RendererRecoveryTest : RendererTestBase() {
 
         assertThat(events<CodecEvent.Reset>()).hasSize(1)
         assertThat(log.lines()).contains("INFO: Codec recovery attempt: 1")
+    }
+
+    // The rig of the stepped renderer thread
+
+    @Test
+    fun `a failure of the call that a recovery waits for comes out with its own message`() {
+        running(stepped = true)
+
+        val thrown =
+            assertThrows(IllegalStateException::class.java) {
+                recoveredByRendererThread<Unit> {
+                    // A wait without the bit of this thread, which the rig reads as the race of
+                    // BORE-121, and then the wait that it expects of the input thread.
+                    LimeLog.info("Waiting to quiesce decoder threads: $CHOREOGRAPHER")
+                    LimeLog.info(
+                        "Waiting to quiesce decoder threads: ${INPUT_THREAD or CHOREOGRAPHER}"
+                    )
+                    throw stateFailure()
+                }
+            }
+
+        assertThat(thrown).hasMessageThat().isEqualTo("codec state")
+    }
+
+    // The load entry
+
+    /**
+     * A manual entry, not a test of the suite: it does nothing unless the variable
+     * `BOREALIS_RENDERER_LOAD` holds a number of passes. A pass runs the two cases that used to
+     * fail under load, each on a fresh renderer, in one JVM, while twice as many threads as the
+     * machine has processors spin and one more allocates. On a failure it prints the exception, the
+     * journal, the last 30 lines of the log with the thread that wrote each, and the stacks of all
+     * threads. From `apps/android`, in a shell where the variable is set:
+     * `BOREALIS_RENDERER_LOAD=2000 ./gradlew :app:testDebugUnitTest --tests
+     * '*RendererRecoveryTest*the flaky cases*' --rerun`.
+     */
+    @Test
+    fun `the flaky cases pass under load`() {
+        val passes = System.getenv(LOAD_VARIABLE)?.toIntOrNull() ?: 0
+        assumeTrue("Set $LOAD_VARIABLE to the number of passes to run this", passes > 0)
+        // The cases read the log of the thread only: the capture of the rule would grow for ever.
+        log.close()
+        val cases =
+            listOf(
+                "goes on after a recovery" to
+                    {
+                        `the stream goes on after a recovery, with buffers of the restarted codec`()
+                    },
+                "crashes after three seconds" to
+                    {
+                        `three seconds after the first failure that is not recovered the renderer crashes with it`()
+                    },
+            )
+        val burners = Burners()
+        val stderr = System.err
+        // The renderer prints the stack of every failure that it recovers.
+        System.setErr(PrintStream(OutputStream.nullOutputStream()))
+        try {
+            for (pass in 1..passes) {
+                // The watchdog bounds one pass, not the run.
+                lengthenWatchdog(PASS_WATCHDOG_SECONDS)
+                for ((name, case) in cases) {
+                    try {
+                        case()
+                    } catch (e: Throwable) {
+                        System.setErr(stderr)
+                        dumpFailure(pass, name, e)
+                        throw e
+                    } finally {
+                        endPass()
+                    }
+                }
+            }
+        } finally {
+            System.setErr(stderr)
+            burners.stop()
+        }
+    }
+
+    private fun dumpFailure(pass: Int, name: String, failure: Throwable) {
+        println("FAILED pass $pass of '$name': ${failure.stackTraceToString()}")
+        println("journal: $journal")
+        println("last log lines:")
+        threadLog.lines.takeLast(DUMPED_LINES).forEach { println("  $it") }
+        println(raceEvidence())
+        Thread.getAllStackTraces().forEach { (thread, stack) ->
+            println("thread ${thread.name} (${thread.state}):")
+            stack.forEach { println("    at $it") }
+        }
+    }
+
+    /** Daemon threads that take the processors away: two per processor spin, one allocates. */
+    private class Burners {
+        @Volatile private var running = true
+
+        init {
+            repeat(2 * Runtime.getRuntime().availableProcessors()) {
+                thread(name = "burner", isDaemon = true) {
+                    while (running) Thread.onSpinWait()
+                }
+            }
+            thread(name = "allocator", isDaemon = true) {
+                val live = arrayOfNulls<ByteArray>(LIVE_CHUNKS)
+                var next = 0
+                while (running) {
+                    live[next] = ByteArray(CHUNK_BYTES)
+                    next = (next + 1) % LIVE_CHUNKS
+                }
+            }
+        }
+
+        fun stop() {
+            running = false
+        }
+    }
+
+    private companion object {
+        const val LOAD_VARIABLE = "BOREALIS_RENDERER_LOAD"
+        const val MAX_PASSES_FOR_A_FRAME = 4
+        const val PASS_WATCHDOG_SECONDS = 60L
+        const val DUMPED_LINES = 30
+        const val LIVE_CHUNKS = 64
+        const val CHUNK_BYTES = 1 shl 20
     }
 }

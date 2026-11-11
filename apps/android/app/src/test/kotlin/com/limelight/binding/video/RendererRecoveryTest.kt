@@ -42,6 +42,22 @@ class RendererRecoveryTest : RendererTestBase() {
         return renderer
     }
 
+    /**
+     * Lets the stepped renderer thread make passes until it has shown the first frame. Its first
+     * pass finds only the change of the output format, so more than one is needed; none waits for
+     * the clock, and the count only bounds a renderer that never shows the frame.
+     */
+    private fun stepUntilFrameShown() {
+        repeat(MAX_PASSES_FOR_A_FRAME) {
+            if (events<CodecEvent.Output>().isNotEmpty()) return
+            ShadowRecordingVideoCodec.stepOutput()
+            ShadowRecordingVideoCodec.awaitParked()
+        }
+        check(events<CodecEvent.Output>().isNotEmpty()) {
+            "The renderer thread did not show the first frame; journal: $journal"
+        }
+    }
+
     /** What the renderer thread meets first: the failure [failure], and then it waits. */
     private fun MediaCodecDecoderRenderer.metByRendererThread(failure: () -> Throwable) {
         ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_OUTPUT, 1, failure)
@@ -208,6 +224,7 @@ class RendererRecoveryTest : RendererTestBase() {
     fun `the stream goes on after a recovery, with buffers of the restarted codec`() {
         val renderer = running(stepped = true)
         renderer.submit(pFrame(1))
+        stepUntilFrameShown()
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, recoverable)
         assertThat(recoveredByRendererThread { renderer.submit(pFrame(2)) })
             .isEqualTo(MoonBridge.DR_NEED_IDR)
@@ -215,7 +232,10 @@ class RendererRecoveryTest : RendererTestBase() {
         val result = renderer.submit(pFrame(3))
 
         assertThat(result).isEqualTo(MoonBridge.DR_OK)
-        // The failed frame was never queued. The buffers of the restarted codec begin again at 0.
+        // The first frame was shown before the restart, and the failed one was never queued. The
+        // buffers of the restarted codec begin again at 0.
+        assertThat(journal.indexOfFirst { it is CodecEvent.Output })
+            .isLessThan(journal.indexOfFirst { it is CodecEvent.Stopped })
         assertThat(events<CodecEvent.Queued>().map { it.index }).containsExactly(0, 0).inOrder()
     }
 
@@ -993,6 +1013,7 @@ class RendererRecoveryTest : RendererTestBase() {
 
     private companion object {
         const val LOAD_VARIABLE = "BOREALIS_RENDERER_LOAD"
+        const val MAX_PASSES_FOR_A_FRAME = 4
         const val PASS_WATCHDOG_SECONDS = 60L
         const val DUMPED_LINES = 30
         const val LIVE_CHUNKS = 64

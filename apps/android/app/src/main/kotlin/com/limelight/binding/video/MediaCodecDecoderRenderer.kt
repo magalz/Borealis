@@ -2029,28 +2029,11 @@ class MediaCodecDecoderRenderer(
             return text
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-        @Suppress("CyclomaticComplexMethod", "LongMethod")
         private fun generateText(
             renderer: MediaCodecDecoderRenderer,
             originalException: Exception,
         ): String {
-            var str =
-                if (renderer.numVpsIn == 0 && renderer.numSpsIn == 0 && renderer.numPpsIn == 0) {
-                    "PreSPSError"
-                } else if (renderer.numSpsIn > 0 && renderer.numPpsIn == 0) {
-                    "PrePPSError"
-                } else if (renderer.numPpsIn > 0 && renderer.numFramesIn == 0) {
-                    "PreIFrameError"
-                } else if (renderer.numFramesIn > 0 && renderer.outputFormat == null) {
-                    "PreOutputConfigError"
-                } else if (renderer.outputFormat != null && renderer.numFramesOut == 0) {
-                    "PreOutputError"
-                } else if (renderer.numFramesOut <= renderer.refreshRate * EARLY_OUTPUT_SECONDS) {
-                    "EarlyOutputError"
-                } else {
-                    "ErrorWhileStreaming"
-                }
+            var str = errorStage(renderer)
 
             val avcDecoder = renderer.avcDecoder
             val hevcDecoder = renderer.hevcDecoder
@@ -2066,60 +2049,77 @@ class MediaCodecDecoderRenderer(
                         .getCapabilitiesForType("video/avc")
                         .videoCapabilities
                         .orNpe("The AVC video capabilities")
-                val avcWidthRange: Range<Int> = avcCaps.supportedWidths
-                str += "AVC supported width range: $avcWidthRange$DELIMITER"
-                try {
-                    val avcFpsRange: Range<Double>? =
-                        avcCaps.getAchievableFrameRatesFor(
-                            renderer.initialWidth,
-                            renderer.initialHeight,
-                        )
-                    str += "AVC achievable FPS range: $avcFpsRange$DELIMITER"
-                } catch (ignored: IllegalArgumentException) {
-                    str += "AVC achievable FPS range: UNSUPPORTED!$DELIMITER"
-                }
+                str += rangeLines("AVC", avcCaps, renderer)
             }
-            // BOREALIS: an HEVC or AV1 decoder may be one that throws for its capabilities, which
-            // has none to report
-            val hevcCapabilities = hevcDecoder?.let {
-                renderer.capabilitiesOrNull(it, "video/hevc")
+            str += optionalDecoderLines("HEVC", hevcDecoder, "video/hevc", renderer)
+            str += optionalDecoderLines("AV1", av1Decoder, "video/av01", renderer)
+            str += settingsLines(renderer)
+
+            if (originalException is MediaCodec.CodecException) {
+                str += codecExceptionLines(originalException)
             }
-            if (hevcDecoder != null && hevcCapabilities == null) {
-                str += "HEVC capabilities: UNREADABLE!$DELIMITER"
-            } else if (hevcCapabilities != null) {
-                val hevcCaps =
-                    hevcCapabilities.videoCapabilities.orNpe("The HEVC video capabilities")
-                val hevcWidthRange: Range<Int> = hevcCaps.supportedWidths
-                str += "HEVC supported width range: $hevcWidthRange$DELIMITER"
-                try {
-                    val hevcFpsRange: Range<Double>? =
-                        hevcCaps.getAchievableFrameRatesFor(
-                            renderer.initialWidth,
-                            renderer.initialHeight,
-                        )
-                    str += "HEVC achievable FPS range: $hevcFpsRange$DELIMITER"
-                } catch (ignored: IllegalArgumentException) {
-                    str += "HEVC achievable FPS range: UNSUPPORTED!$DELIMITER"
-                }
+
+            str += originalException.toString()
+
+            return str
+        }
+
+        /** How far the stream had got, as the first word of the text. */
+        private fun errorStage(renderer: MediaCodecDecoderRenderer): String =
+            if (renderer.numVpsIn == 0 && renderer.numSpsIn == 0 && renderer.numPpsIn == 0) {
+                "PreSPSError"
+            } else if (renderer.numSpsIn > 0 && renderer.numPpsIn == 0) {
+                "PrePPSError"
+            } else if (renderer.numPpsIn > 0 && renderer.numFramesIn == 0) {
+                "PreIFrameError"
+            } else if (renderer.numFramesIn > 0 && renderer.outputFormat == null) {
+                "PreOutputConfigError"
+            } else if (renderer.outputFormat != null && renderer.numFramesOut == 0) {
+                "PreOutputError"
+            } else if (renderer.numFramesOut <= renderer.refreshRate * EARLY_OUTPUT_SECONDS) {
+                "EarlyOutputError"
+            } else {
+                "ErrorWhileStreaming"
             }
-            val av1Capabilities = av1Decoder?.let { renderer.capabilitiesOrNull(it, "video/av01") }
-            if (av1Decoder != null && av1Capabilities == null) {
-                str += "AV1 capabilities: UNREADABLE!$DELIMITER"
-            } else if (av1Capabilities != null) {
-                val av1Caps = av1Capabilities.videoCapabilities.orNpe("The AV1 video capabilities")
-                val av1WidthRange: Range<Int> = av1Caps.supportedWidths
-                str += "AV1 supported width range: $av1WidthRange$DELIMITER"
-                try {
-                    val av1FpsRange: Range<Double>? =
-                        av1Caps.getAchievableFrameRatesFor(
-                            renderer.initialWidth,
-                            renderer.initialHeight,
-                        )
-                    str += "AV1 achievable FPS range: $av1FpsRange$DELIMITER"
-                } catch (ignored: IllegalArgumentException) {
-                    str += "AV1 achievable FPS range: UNSUPPORTED!$DELIMITER"
-                }
+
+        /** The width range and the frame rate range of a decoder, for the size of the stream. */
+        private fun rangeLines(
+            label: String,
+            caps: MediaCodecInfo.VideoCapabilities,
+            renderer: MediaCodecDecoderRenderer,
+        ): String {
+            val widthRange: Range<Int> = caps.supportedWidths
+            var str = "$label supported width range: $widthRange$DELIMITER"
+            try {
+                val fpsRange: Range<Double>? =
+                    caps.getAchievableFrameRatesFor(renderer.initialWidth, renderer.initialHeight)
+                str += "$label achievable FPS range: $fpsRange$DELIMITER"
+            } catch (ignored: IllegalArgumentException) {
+                str += "$label achievable FPS range: UNSUPPORTED!$DELIMITER"
             }
+            return str
+        }
+
+        // BOREALIS: an HEVC or AV1 decoder may be one that throws for its capabilities, which has
+        // none to report
+        private fun optionalDecoderLines(
+            label: String,
+            decoder: MediaCodecInfo?,
+            mimeType: String,
+            renderer: MediaCodecDecoderRenderer,
+        ): String {
+            if (decoder == null) {
+                return ""
+            }
+            val capabilities =
+                renderer.capabilitiesOrNull(decoder, mimeType)
+                    ?: return "$label capabilities: UNREADABLE!$DELIMITER"
+            val caps = capabilities.videoCapabilities.orNpe("The $label video capabilities")
+            return rangeLines(label, caps, renderer)
+        }
+
+        private fun settingsLines(renderer: MediaCodecDecoderRenderer): String {
+            var str = ""
             str += "Configured format: ${renderer.configuredFormat}$DELIMITER"
             str += "Input format: ${renderer.inputFormat}$DELIMITER"
             str += "Output format: ${renderer.outputFormat}$DELIMITER"
@@ -2155,17 +2155,16 @@ class MediaCodecDecoderRenderer(
                 "Average hardware decoder latency: ${renderer.getAverageDecoderLatency()}ms" +
                     DELIMITER
             str += "Frame pacing mode: ${renderer.prefs.framePacing}$DELIMITER"
+            return str
+        }
 
-            if (originalException is MediaCodec.CodecException) {
-                str += "Diagnostic Info: ${originalException.diagnosticInfo}$DELIMITER"
-                str += "Recoverable: ${originalException.isRecoverable}$DELIMITER"
-                str += "Transient: ${originalException.isTransient}$DELIMITER"
+        private fun codecExceptionLines(originalException: MediaCodec.CodecException): String {
+            var str = ""
+            str += "Diagnostic Info: ${originalException.diagnosticInfo}$DELIMITER"
+            str += "Recoverable: ${originalException.isRecoverable}$DELIMITER"
+            str += "Transient: ${originalException.isTransient}$DELIMITER"
 
-                str += "Codec Error Code: ${originalException.errorCode}$DELIMITER"
-            }
-
-            str += originalException.toString()
-
+            str += "Codec Error Code: ${originalException.errorCode}$DELIMITER"
             return str
         }
 

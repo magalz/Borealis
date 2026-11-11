@@ -8,6 +8,8 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration.FormatOption
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /**
  * Characterizes the failure that a renderer cannot recover from and reports: when the crash
@@ -333,6 +335,140 @@ class RendererCrashTest : RendererTestBase() {
     }
 
     @Test
+    fun `the range lines come for AVC, then HEVC, then AV1`() {
+        device(DeviceBuild(sdk = Build.VERSION_CODES.R))
+        val renderer = small(MoonBridge.VIDEO_FORMAT_AV1_MAIN8, FormatOption.FORCE_AV1)
+
+        val lines = crash(renderer).lines()
+
+        assertThat(lines)
+            .containsAtLeast(
+                "AV1 Decoder: vendor.test.av1.decoder",
+                "AVC supported width range: [64, 4096]",
+                "AVC achievable FPS range: null",
+                "HEVC supported width range: [64, 4096]",
+                "HEVC achievable FPS range: null",
+                "AV1 supported width range: [64, 4096]",
+                "AV1 achievable FPS range: null",
+            )
+            .inOrder()
+    }
+
+    /** A renderer whose HEVC and AV1 decoders throw for their capabilities, as [broken] says. */
+    private fun withBroken(vararg broken: String): MediaCodecDecoderRenderer {
+        val decoders =
+            listOf(
+                codec("vendor.test.avc.decoder") { mime = "video/avc" },
+                codec("c2.test.hevc.decoder") {
+                    mime = "video/hevc"
+                    brokenCapabilities = "HEVC" in broken
+                },
+                codec("vendor.test.av1.decoder") {
+                    mime = "video/av01"
+                    brokenCapabilities = "AV1" in broken
+                },
+            )
+        install(*decoders.toTypedArray())
+        decoders.forEach { ShadowRecordingVideoCodec.register(it.name, inputBufferSize) }
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 })
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_AV1_MAIN8)).isEqualTo(0)
+        return renderer
+    }
+
+    @Test
+    fun `an HEVC and an AV1 decoder that throw for their capabilities are both unreadable`() {
+        val lines = crash(withBroken("HEVC", "AV1")).lines()
+
+        assertThat(lines)
+            .containsAtLeast(
+                "AVC supported width range: [64, 4096]",
+                "AVC achievable FPS range: null",
+                "HEVC capabilities: UNREADABLE!",
+                "AV1 capabilities: UNREADABLE!",
+            )
+            .inOrder()
+        assertThat(
+                lines.filter {
+                    it.contains("supported width range") || it.contains("achievable FPS range")
+                }
+            )
+            .hasSize(2)
+    }
+
+    @Test
+    fun `an HEVC decoder that throws is unreadable and the AV1 one is described`() {
+        val lines = crash(withBroken("HEVC")).lines()
+
+        assertThat(lines)
+            .containsAtLeast(
+                "HEVC capabilities: UNREADABLE!",
+                "AV1 supported width range: [64, 4096]",
+                "AV1 achievable FPS range: null",
+            )
+            .inOrder()
+        assertThat(lines.filter { it.startsWith("HEVC supported") }).isEmpty()
+        assertThat(lines.filter { it.startsWith("AV1 capabilities") }).isEmpty()
+    }
+
+    @Test
+    fun `an AV1 decoder that throws is unreadable and the HEVC one is described`() {
+        val lines = crash(withBroken("AV1")).lines()
+
+        assertThat(lines)
+            .containsAtLeast(
+                "HEVC supported width range: [64, 4096]",
+                "HEVC achievable FPS range: null",
+                "AV1 capabilities: UNREADABLE!",
+            )
+            .inOrder()
+        assertThat(lines.filter { it.startsWith("AV1 supported") }).isEmpty()
+        assertThat(lines.filter { it.startsWith("HEVC capabilities") }).isEmpty()
+    }
+
+    // The read of the AVC capabilities is not guarded, unlike the HEVC and AV1 ones: this records
+    // what happens today, and is not a design.
+    @Test
+    fun `an AVC decoder that throws for its capabilities keeps the text from being built`() {
+        install(
+            codec("vendor.test.avc.decoder") {
+                mime = "video/avc"
+                brokenCapabilities = true
+            }
+        )
+        ShadowRecordingVideoCodec.register("vendor.test.avc.decoder", inputBufferSize)
+        val renderer = renderer()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+
+        val thrown = crash(renderer)
+
+        // The error of the decoder is thrown in place of the crash, after the listener was told of
+        // the decode unit that did not fit.
+        assertThat(thrown).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(thrown).hasMessageThat().isEqualTo("buggy decoder")
+        assertThat(crashes.single())
+            .hasMessageThat()
+            .isEqualTo("Decode unit length 100 too large for input buffer 64")
+    }
+
+    @Test
+    fun `the formats of the codec come in the order configured, input, output, adaptive playback`() {
+        val renderer = small()
+
+        val lines = crash(renderer).lines()
+
+        val prefixes =
+            listOf(
+                "Configured format: ",
+                "Input format: ",
+                "Output format: ",
+                "Adaptive playback: ",
+            )
+        val positions = prefixes.map { prefix -> lines.indexOfFirst { it.startsWith(prefix) } }
+        assertThat(positions).doesNotContain(-1)
+        assertThat(positions).isInStrictOrder()
+    }
+
+    @Test
     fun `a size that a decoder does not support at any frame rate is reported as unsupported`() {
         device(DeviceBuild(sdk = Build.VERSION_CODES.R))
         val wide =
@@ -433,5 +569,57 @@ class RendererCrashTest : RendererTestBase() {
         renderer.prepare(MoonBridge.VIDEO_FORMAT_H265_MAIN10)
 
         assertThat(crash(renderer).lines().first()).isEqualTo("PreSPSErrorFormat: 200")
+    }
+
+    // What a codec exception adds to the text
+
+    /** The last five lines of the text of a crash caused by [failure], as the renderer makes it. */
+    private fun codecCrashLines(failure: MediaCodec.CodecException): List<String> {
+        val exception =
+            ReflectionHelpers.callConstructor(
+                Class.forName(
+                    "com.limelight.binding.video.MediaCodecDecoderRenderer\$RendererException"
+                ),
+                ClassParameter.from(MediaCodecDecoderRenderer::class.java, small()),
+                ClassParameter.from(Exception::class.java, failure),
+            ) as RuntimeException
+        return exception.lines().takeLast(5)
+    }
+
+    @Test
+    fun `a codec exception adds its diagnostic info, its flags and its error code before its own text`() {
+        assertThat(
+                codecCrashLines(
+                    codecException(errorCode = -38, actionCode = ACTION_NONE, message = "dead")
+                )
+            )
+            .containsExactly(
+                "Diagnostic Info: android.media.MediaCodec.error_neg_38",
+                "Recoverable: false",
+                "Transient: false",
+                "Codec Error Code: -38",
+                "android.media.MediaCodec\$CodecException: dead",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a recoverable codec exception says that it is recoverable and not transient`() {
+        assertThat(
+                codecCrashLines(codecException(errorCode = -1, actionCode = ACTION_RECOVERABLE))
+                    .subList(1, 3)
+            )
+            .containsExactly("Recoverable: true", "Transient: false")
+            .inOrder()
+    }
+
+    @Test
+    fun `a transient codec exception says that it is transient and not recoverable`() {
+        assertThat(
+                codecCrashLines(codecException(errorCode = -2, actionCode = ACTION_TRANSIENT))
+                    .subList(1, 3)
+            )
+            .containsExactly("Recoverable: false", "Transient: true")
+            .inOrder()
     }
 }

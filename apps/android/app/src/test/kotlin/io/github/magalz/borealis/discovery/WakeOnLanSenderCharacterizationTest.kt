@@ -11,25 +11,20 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketAddress
-import java.net.SocketException
-import java.net.SocketTimeoutException
 import java.util.logging.Level
 import kotlin.random.Random
-import org.junit.After
 import org.junit.Assert.assertThrows
-import org.junit.Assume.assumeNotNull
 import org.junit.Assume.assumeTrue
-import org.junit.AssumptionViolatedException
 import org.junit.Rule
 import org.junit.Test
 
 /**
  * The Wake-on-LAN packets of the inherited sender: the bytes of the magic packet for a MAC address
  * (a bad one included), the ports and the addresses that it goes to, and what a host that does not
- * resolve does to the others. Sockets that listen on `127.0.0.1` receive the packets.
- *
- * The sender also broadcasts to `255.255.255.255` for every address. That needs a network that
- * these tests cannot rely on, so what it does is not checked here.
+ * resolve does to the others. A [RecordingWolSocket] takes the packets, so nothing goes out to the
+ * network; the one test that sends through the real socket of the sender sends to `127.0.0.1` only.
+ * What the sender does with the broadcast address is checked in
+ * [WakeOnLanSenderBroadcastCharacterizationTest].
  *
  * Characterization: these tests pass on the Java class and on its Kotlin conversion, except the
  * ones about a port out of range (Sprint 16, S12-05): the Java class and the first conversion threw
@@ -39,85 +34,13 @@ class WakeOnLanSenderCharacterizationTest {
     @get:Rule val log = LimeLogCapture()
 
     private val loopback = InetAddress.getByName("127.0.0.1")
-    private val open = mutableListOf<DatagramSocket>()
 
     // A made-up MAC address of this test, locally administered (02:), and different for every test
-    // and every run. Ports 9 and 47009 are fixed, so another test run on the same machine may send
-    // to them while this one listens; the receiving loop skips whatever is not this packet.
+    // and every run.
     private val ownMac =
         intArrayOf(0x02) + IntArray(OWN_MAC_RANDOM_BYTES) { Random.nextInt(BYTE_VALUES) }
     private val ownMacText = ownMac.joinToString(":") { it.toString(HEX_RADIX).padStart(2, '0') }
     private val ownPacket = magicPacket(*ownMac)
-
-    @After
-    fun closeSockets() {
-        open.forEach { it.close() }
-    }
-
-    /** The five wake ports that follow the HTTP port of a host, with a socket on each. */
-    private class DynamicPorts(val httpPort: Int, val sockets: List<DatagramSocket>)
-
-    private fun bind(port: Int): DatagramSocket? =
-        try {
-            DatagramSocket(InetSocketAddress(loopback, port)).also { open += it }
-        } catch (ignored: SocketException) {
-            null
-        }
-
-    /** Ports 47998, 47999, 48000, 48002 and 48010 follow the HTTP port of the host. */
-    private fun bindDynamicPorts(): DynamicPorts {
-        repeat(BIND_TRIES) { _ ->
-            val first = Random.nextInt(FIRST_PORT_MIN, FIRST_PORT_MAX)
-            val sockets = DYNAMIC_OFFSETS.map { offset -> bind(first + offset) }
-            if (sockets.all { socket -> socket != null }) {
-                // The first dynamic port, 47998, is nine above the HTTP port.
-                return DynamicPorts(first - DYNAMIC_FIRST_OFFSET, sockets.filterNotNull())
-            }
-            sockets.filterNotNull().forEach { socket -> socket.close() }
-        }
-        error("no free ports to listen on")
-    }
-
-    /**
-     * An HTTP port whose first four dynamic ports (nine, ten, eleven and thirteen above it) are in
-     * range and whose fifth (twenty-one above it) is not, with a socket on each of the four. Null
-     * when none of the candidate ports is free to listen on.
-     */
-    private fun bindPartlyOutOfRangePorts(): DynamicPorts? {
-        for (httpPort in PARTLY_OUT_OF_RANGE_HTTP_PORTS) {
-            val sockets = IN_RANGE_DYNAMIC_OFFSETS.map { offset -> bind(httpPort + offset) }
-            if (sockets.all { socket -> socket != null }) {
-                return DynamicPorts(httpPort, sockets.filterNotNull())
-            }
-            sockets.filterNotNull().forEach { socket -> socket.close() }
-        }
-        return null
-    }
-
-    /**
-     * The next packet that holds [expected], or null when none comes within [timeoutMs]. A packet
-     * with another payload is not the one of this test and is skipped.
-     */
-    private fun DatagramSocket.take(expected: ByteArray, timeoutMs: Int = RECEIVE_MS): ByteArray? {
-        val deadline = System.nanoTime() + timeoutMs * NANOS_PER_MS
-        while (true) {
-            val leftMs = (deadline - System.nanoTime()) / NANOS_PER_MS
-            if (leftMs <= 0) {
-                return null
-            }
-            try {
-                soTimeout = leftMs.toInt()
-                val packet = DatagramPacket(ByteArray(BUFFER_BYTES), BUFFER_BYTES)
-                receive(packet)
-                val payload = packet.data.copyOf(packet.length)
-                if (payload.contentEquals(expected)) {
-                    return payload
-                }
-            } catch (ignored: SocketTimeoutException) {
-                return null
-            }
-        }
-    }
 
     private fun host(
         mac: String?,
@@ -133,269 +56,6 @@ class WakeOnLanSenderCharacterizationTest {
     private fun magicPacket(vararg mac: Int): ByteArray =
         ByteArray(6) { 0xFF.toByte() } +
             (1..16).flatMap { mac.map { byte -> byte.toByte() } }.toByteArray()
-
-    @Test
-    fun `the magic packet is six 0xFF bytes and sixteen copies of the MAC address`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
-
-        val received = ports.sockets.first().take(ownPacket)
-        assertThat(received).hasLength(102)
-        assertThat(received).isEqualTo(ownPacket)
-    }
-
-    @Test
-    fun `each of the five dynamic ports of the host gets the packet once`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
-
-        ports.sockets.forEach {
-            assertThat(it.take(ownPacket)).isEqualTo(ownPacket)
-            assertThat(it.take(ownPacket, NONE_MS)).isNull()
-        }
-    }
-
-    @Test
-    fun `the static port 47009 gets the packet whatever the HTTP port`() {
-        val port = bind(STATIC_TOOL_PORT)
-        assumeNotNull(port)
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
-
-        assertThat(port!!.take(ownPacket)).isEqualTo(ownPacket)
-    }
-
-    @Test
-    fun `the standard Wake-on-LAN port 9 gets the packet whatever the HTTP port`() {
-        // Port 9 is privileged on some systems; skip when it cannot be listened on.
-        val port = bind(STANDARD_WOL_PORT)
-        assumeNotNull(port)
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
-
-        assertThat(port!!.take(ownPacket)).isEqualTo(ownPacket)
-    }
-
-    @Test
-    fun `hex groups keep their low eight bits, in either case`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host("AA:bb:Cc:dD:EE:ff", ports.httpPort))
-
-        val expected = magicPacket(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF)
-        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
-    }
-
-    @Test
-    fun `a hex group above 255 wraps to a byte`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host("100:1ff:7f:80:0:1", ports.httpPort))
-
-        val expected = magicPacket(0x00, 0xFF, 0x7F, 0x80, 0x00, 0x01)
-        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
-        assertThat(log.messages(Level.WARNING)).isEmpty()
-    }
-
-    @Test
-    fun `a hex group with a sign is read as parseInt reads it`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host("-1:+f:02:03:04:05", ports.httpPort))
-
-        val expected = magicPacket(0xFF, 0x0F, 0x02, 0x03, 0x04, 0x05)
-        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
-    }
-
-    @Test
-    fun `a MAC address with a bad group keeps the groups before it, zeroes the rest and warns`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host("02:11:zz:33:44:55", ports.httpPort))
-
-        val expected = magicPacket(0x02, 0x11, 0, 0, 0, 0)
-        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
-        assertThat(log.messages(Level.WARNING))
-            .containsExactly("Malformed MAC address: 02:11:zz:33:44:55 (index: 2)")
-    }
-
-    @Test
-    fun `a group that holds a space is a bad group`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host("02: 11:22:33:44:55", ports.httpPort))
-
-        val expected = magicPacket(0x02, 0, 0, 0, 0, 0)
-        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
-        assertThat(log.messages(Level.WARNING))
-            .containsExactly("Malformed MAC address: 02: 11:22:33:44:55 (index: 1)")
-    }
-
-    @Test
-    fun `a MAC address with fewer than six groups is padded with zeros without a warning`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host("02:11", ports.httpPort))
-
-        val expected = magicPacket(0x02, 0x11, 0, 0, 0, 0)
-        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
-        assertThat(log.messages(Level.WARNING)).isEmpty()
-    }
-
-    @Test
-    fun `a MAC address with more than six groups uses the first six`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host("01:02:03:04:05:06:07:08", ports.httpPort))
-
-        val expected = magicPacket(1, 2, 3, 4, 5, 6)
-        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
-    }
-
-    @Test
-    fun `an empty MAC address is sent as six zero bytes without a warning`() {
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host("", ports.httpPort))
-
-        val expected = magicPacket(0, 0, 0, 0, 0, 0)
-        assertThat(ports.sockets.first().take(expected)).isEqualTo(expected)
-        assertThat(log.messages(Level.WARNING)).isEmpty()
-    }
-
-    @Test
-    fun `a host with no MAC address makes the sender throw before it sends anything`() {
-        val ports = bindDynamicPorts()
-
-        assertThrows(NullPointerException::class.java) {
-            WakeOnLanSender.sendWolPacket(host(null, ports.httpPort))
-        }
-
-        ports.sockets.forEach { assertThat(it.take(ownPacket, NONE_MS)).isNull() }
-    }
-
-    @Test
-    fun `a host with no address sends nothing and is not an error`() {
-        val ports = bindDynamicPorts()
-        val nowhere = ComputerDetails().apply { macAddress = ownMacText }
-
-        WakeOnLanSender.sendWolPacket(nowhere)
-
-        ports.sockets.forEach { assertThat(it.take(ownPacket, NONE_MS)).isNull() }
-    }
-
-    @Test
-    fun `the local, remote and manual addresses each get the packets, even when they are the same, in the packets`() {
-        val ports = bindDynamicPorts()
-        val details =
-            ComputerDetails().apply {
-                macAddress = ownMacText
-                localAddress = AddressTuple("127.0.0.1", ports.httpPort)
-                remoteAddress = AddressTuple("127.0.0.1", ports.httpPort)
-                manualAddress = AddressTuple("127.0.0.1", ports.httpPort)
-            }
-
-        WakeOnLanSender.sendWolPacket(details)
-
-        repeat(3) { assertThat(ports.sockets.first().take(ownPacket)).isEqualTo(ownPacket) }
-        assertThat(ports.sockets.first().take(ownPacket, NONE_MS)).isNull()
-    }
-
-    @Test
-    fun `the IPv6 address gets the packets too`() {
-        val ipv6Loopback = InetAddress.getByName("::1")
-        val first = Random.nextInt(FIRST_PORT_MIN, FIRST_PORT_MAX)
-        val socket =
-            try {
-                DatagramSocket(InetSocketAddress(ipv6Loopback, first)).also { open += it }
-            } catch (ignored: SocketException) {
-                null
-            }
-        assumeNotNull(socket)
-        val details =
-            ComputerDetails().apply {
-                macAddress = ownMacText
-                ipv6Address = AddressTuple("::1", first - DYNAMIC_FIRST_OFFSET)
-            }
-
-        WakeOnLanSender.sendWolPacket(details)
-
-        assertThat(socket!!.take(ownPacket)).isEqualTo(ownPacket)
-    }
-
-    @Test
-    fun `a host name is resolved and its addresses get the packets`() {
-        assumeTrue(InetAddress.getAllByName("localhost").contains(loopback))
-        val ports = bindDynamicPorts()
-
-        WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort, "localhost"))
-
-        assertThat(ports.sockets.first().take(ownPacket)).isEqualTo(ownPacket)
-    }
-
-    @Test
-    fun `an address that does not resolve does not stop the other addresses`() {
-        val ports = bindDynamicPorts()
-        val details =
-            ComputerDetails().apply {
-                macAddress = ownMacText
-                localAddress = AddressTuple(UNRESOLVABLE, ports.httpPort)
-                remoteAddress = AddressTuple("127.0.0.1", ports.httpPort)
-            }
-
-        WakeOnLanSender.sendWolPacket(details)
-
-        ports.sockets.forEach { assertThat(it.take(ownPacket)).isEqualTo(ownPacket) }
-    }
-
-    @Test
-    fun `an HTTP port too high for the dynamic ports sends the static ports and does not throw`() {
-        // The dynamic ports are the HTTP port plus 9 to 21, so all of them are above 65535 here.
-        val port = bind(STATIC_TOOL_PORT)
-        assumeNotNull(port)
-
-        val failure = runCatching { WakeOnLanSender.sendWolPacket(host(ownMacText, MAX_PORT)) }
-
-        assertThat(failure.exceptionOrNull()).isNull()
-        assertThat(port!!.take(ownPacket)).isEqualTo(ownPacket)
-    }
-
-    @Test
-    fun `a dynamic port above 65535 is skipped and the ones in range still get the packet`() {
-        val ports =
-            bindPartlyOutOfRangePorts()
-                ?: throw AssumptionViolatedException("no free ports near 65535 to listen on")
-        val skipped = ports.httpPort + LAST_DYNAMIC_OFFSET
-
-        val failure = runCatching {
-            WakeOnLanSender.sendWolPacket(host(ownMacText, ports.httpPort))
-        }
-
-        assertThat(failure.exceptionOrNull()).isNull()
-        ports.sockets.forEach { assertThat(it.take(ownPacket)).isEqualTo(ownPacket) }
-        assertThat(log.messages(Level.WARNING))
-            .contains("Wake-on-LAN: skipping port $skipped, it is outside 1..65535")
-    }
-
-    @Test
-    fun `an address with a port out of range does not stop the other addresses`() {
-        val ports = bindDynamicPorts()
-        val details =
-            ComputerDetails().apply {
-                macAddress = ownMacText
-                localAddress = AddressTuple("127.0.0.1", MAX_PORT)
-                remoteAddress = AddressTuple("127.0.0.1", ports.httpPort)
-            }
-
-        val failure = runCatching { WakeOnLanSender.sendWolPacket(details) }
-
-        assertThat(failure.exceptionOrNull()).isNull()
-        ports.sockets.forEach { assertThat(it.take(ownPacket)).isEqualTo(ownPacket) }
-    }
 
     private val broadcast = InetAddress.getByName("255.255.255.255")
 
@@ -529,14 +189,16 @@ class WakeOnLanSenderCharacterizationTest {
     fun `more than six groups use the first six, in every packet`() {
         val socket = wake(host("01:02:03:04:05:06:07:08", HTTP_PORT))
 
-        assertThat(socket.distinctPayloads()).containsExactly(magicPacket(1, 2, 3, 4, 5, 6).toList())
+        assertThat(socket.distinctPayloads())
+            .containsExactly(magicPacket(1, 2, 3, 4, 5, 6).toList())
     }
 
     @Test
     fun `an empty MAC address goes out as six zero bytes without a warning, in every packet`() {
         val socket = wake(host("", HTTP_PORT))
 
-        assertThat(socket.distinctPayloads()).containsExactly(magicPacket(0, 0, 0, 0, 0, 0).toList())
+        assertThat(socket.distinctPayloads())
+            .containsExactly(magicPacket(0, 0, 0, 0, 0, 0).toList())
         assertThat(log.messages(Level.WARNING)).isEmpty()
     }
 
@@ -573,7 +235,7 @@ class WakeOnLanSenderCharacterizationTest {
     }
 
     @Test
-    fun `the IPv6 address gets the packets too, in the packets`() {
+    fun `the IPv6 address gets the packets too`() {
         val details =
             ComputerDetails().apply {
                 macAddress = ownMacText
@@ -588,7 +250,7 @@ class WakeOnLanSenderCharacterizationTest {
     }
 
     @Test
-    fun `a host name is resolved and its addresses get the packets, in the packets`() {
+    fun `a host name is resolved and its addresses get the packets`() {
         assumeTrue(InetAddress.getAllByName("localhost").contains(loopback))
 
         val socket = wake(host(ownMacText, HTTP_PORT, "localhost"))
@@ -597,7 +259,7 @@ class WakeOnLanSenderCharacterizationTest {
     }
 
     @Test
-    fun `an address that does not resolve does not stop the other addresses, in the packets`() {
+    fun `an address that does not resolve does not stop the other addresses`() {
         val details =
             ComputerDetails().apply {
                 macAddress = ownMacText
@@ -620,8 +282,7 @@ class WakeOnLanSenderCharacterizationTest {
 
     @Test
     fun `a dynamic port above 65535 is skipped with a warning and the others still go out`() {
-        // With an HTTP port of 65515 the first four dynamic ports are in range and the fifth, 65536,
-        // is not.
+        // With an HTTP port of 65515 the first four dynamic ports are in range; the fifth is 65536.
         val socket = wake(host(ownMacText, PARTLY_OUT_OF_RANGE_HTTP_PORT))
 
         assertThat(socket.portsOf(loopback))
@@ -632,7 +293,7 @@ class WakeOnLanSenderCharacterizationTest {
     }
 
     @Test
-    fun `an address with a port out of range does not stop the other addresses, in the packets`() {
+    fun `an address with a port out of range does not stop the other addresses`() {
         val details =
             ComputerDetails().apply {
                 macAddress = ownMacText
@@ -660,46 +321,32 @@ class WakeOnLanSenderCharacterizationTest {
 
     @Test
     fun `the socket of a call sends a packet from its own port`() {
-        val receiver = bind(0)
-        assumeNotNull(receiver)
+        DatagramSocket(InetSocketAddress(loopback, 0)).use { receiver ->
+            WakeOnLanSender.openWolSocket().use { socket ->
+                val bytes = ownPacket
+                socket.send(DatagramPacket(bytes, bytes.size, loopback, receiver.localPort))
 
-        WakeOnLanSender.openWolSocket().use { socket ->
-            val bytes = ownPacket
-            socket.send(DatagramPacket(bytes, bytes.size, loopback, receiver!!.localPort))
-
-            val packet = DatagramPacket(ByteArray(BUFFER_BYTES), BUFFER_BYTES)
-            receiver.soTimeout = RECEIVE_MS
-            receiver.receive(packet)
-            assertThat(packet.data.copyOf(packet.length)).isEqualTo(bytes)
-            assertThat(packet.port).isEqualTo(socket.localPort)
+                val packet = DatagramPacket(ByteArray(BUFFER_BYTES), BUFFER_BYTES)
+                receiver.soTimeout = RECEIVE_MS
+                receiver.receive(packet)
+                assertThat(packet.data.copyOf(packet.length)).isEqualTo(bytes)
+                assertThat(packet.port).isEqualTo(socket.localPort)
+            }
         }
     }
 
     private companion object {
         const val HTTP_PORT = 47_989
         const val OTHER_HTTP_PORT = 50_000
+        // The dynamic ports are the HTTP port plus 9, 10, 11, 13 and 21: with this one the first
+        // four are in range and the last is not.
         const val PARTLY_OUT_OF_RANGE_HTTP_PORT = 65_515
-        const val BIND_TRIES = 50
-        const val FIRST_PORT_MIN = 20_000
-        const val FIRST_PORT_MAX = 60_000
-        const val DYNAMIC_FIRST_OFFSET = 9
-        val DYNAMIC_OFFSETS = listOf(0, 1, 2, 4, 12)
-
-        // The dynamic ports are the HTTP port plus 9, 10, 11, 13 and 21. With an HTTP port from
-        // 65515 to 65522 the first four are in range and the last is not.
-        val IN_RANGE_DYNAMIC_OFFSETS = listOf(9, 10, 11, 13)
-        const val LAST_DYNAMIC_OFFSET = 21
-        val PARTLY_OUT_OF_RANGE_HTTP_PORTS = 65_515..65_522
-        const val STATIC_TOOL_PORT = 47_009
-        const val STANDARD_WOL_PORT = 9
         const val MAX_PORT = 65_535
         const val BUFFER_BYTES = 1_024
         const val OWN_MAC_RANDOM_BYTES = 5
         const val BYTE_VALUES = 256
         const val HEX_RADIX = 16
-        const val NANOS_PER_MS = 1_000_000L
         const val RECEIVE_MS = 3_000
-        const val NONE_MS = 150
 
         // An IPv6 address with a scope that no interface has: the JDK refuses it at once, with no
         // lookup.

@@ -24,10 +24,15 @@ class GameWiringTest {
 
     // The names of the app's compiled resources of one type (`id`, `string`): a resource that comes
     // back in any layout or in the strings of any language is a field of its `R` class.
-    private fun resourceNames(type: String): List<String> =
-        Class.forName("com.limelight.R\$$type", false, javaClass.classLoader).declaredFields.map {
-            it.name
-        }
+    private fun resourceNames(type: String): List<String> {
+        val names =
+            Class.forName("com.limelight.R\$$type", false, javaClass.classLoader)
+                .declaredFields
+                .map { it.name }
+        // An empty class would let every check on these names pass without checking anything.
+        assertThat(names).isNotEmpty()
+        return names
+    }
 
     // The names of the activity's own fields, methods, nested classes and interfaces, read without
     // initializing the class.

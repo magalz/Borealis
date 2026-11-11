@@ -1111,124 +1111,143 @@ class Game :
             SurroundLayout.SURROUND_5_1
         }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress(
-        "CyclomaticComplexMethod",
-        "ForbiddenComment",
-        "LongMethod",
-        "LoopWithTooManyJumpStatements",
-    )
     private fun prepareDisplayForRendering(): Float {
         val display = windowManager.defaultDisplay
-        val windowLayoutParams = window.attributes
 
-        // Pick the optimal display mode explicitly
+        val bestMode = pickBestDisplayMode(display)
+
+        applyDisplayMode(display, bestMode)
+
+        val displayRefreshRate = bestMode.refreshRate
+
+        sizeStreamView()
+
+        // Set the desired refresh rate that will get passed into setFrameRate() later
+        desiredRefreshRate = displayRefreshRate
+
+        return reportedRefreshRate(displayRefreshRate)
+    }
+
+    // Pick the optimal display mode explicitly
+    private fun pickBestDisplayMode(display: Display): Display.Mode {
         var bestMode = display.mode
-        val isNativeResolutionStream =
-            PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)
-        var refreshRateIsGood = isRefreshRateGoodMatch(bestMode.refreshRate)
-        var refreshRateIsEqual = isRefreshRateEqualMatch(bestMode.refreshRate)
 
         LimeLog.info(
             "Current display mode: ${bestMode.physicalWidth}x${bestMode.physicalHeight}x${bestMode.refreshRate}"
         )
 
         for (candidate in display.supportedModes) {
-            val refreshRateReduced = candidate.refreshRate < bestMode.refreshRate
-            val resolutionReduced =
-                candidate.physicalWidth < bestMode.physicalWidth ||
-                    candidate.physicalHeight < bestMode.physicalHeight
-            val resolutionFitsStream =
-                candidate.physicalWidth >= prefConfig.width &&
-                    candidate.physicalHeight >= prefConfig.height
-
             LimeLog.info(
                 "Examining display mode: ${candidate.physicalWidth}x" +
                     "${candidate.physicalHeight}x${candidate.refreshRate}"
             )
 
             if (
-                candidate.physicalWidth > MAX_SAFE_DISPLAY_WIDTH &&
-                    prefConfig.width <= MAX_SAFE_DISPLAY_WIDTH
+                rejectsResolution(display, candidate, bestMode) ||
+                    rejectsRefreshRate(candidate, bestMode)
             ) {
-                // Avoid resolutions options above 4K to be safe
                 continue
-            }
-
-            // On non-4K streams, we force the resolution to never change unless it's above
-            // 60 FPS, which may require a resolution reduction due to HDMI bandwidth limitations,
-            // or it's a native resolution stream.
-            if (
-                prefConfig.width < UHD_WIDTH &&
-                    prefConfig.fps <= HIGH_FPS &&
-                    !isNativeResolutionStream
-            ) {
-                if (
-                    display.mode.physicalWidth != candidate.physicalWidth ||
-                        display.mode.physicalHeight != candidate.physicalHeight
-                ) {
-                    continue
-                }
-            }
-
-            // Make sure the resolution doesn't regress unless if it's over 60 FPS
-            // where we may need to reduce resolution to achieve the desired refresh rate.
-            if (resolutionReduced && !(prefConfig.fps > HIGH_FPS && resolutionFitsStream)) {
-                continue
-            }
-
-            if (
-                mayReduceRefreshRate() &&
-                    refreshRateIsEqual &&
-                    !isRefreshRateEqualMatch(candidate.refreshRate)
-            ) {
-                // If we had an equal refresh rate and this one is not, skip it. In min latency
-                // mode, we want to always prefer the highest frame rate even though it may cause
-                // microstuttering.
-                continue
-            } else if (refreshRateIsGood) {
-                // We've already got a good match, so if this one isn't also good, it's not
-                // worth considering at all.
-                if (!isRefreshRateGoodMatch(candidate.refreshRate)) {
-                    continue
-                }
-
-                if (mayReduceRefreshRate()) {
-                    // User asked for the lowest possible refresh rate, so don't raise it if we
-                    // have a good match already
-                    if (candidate.refreshRate > bestMode.refreshRate) {
-                        continue
-                    }
-                } else {
-                    // User asked for the highest possible refresh rate, so don't reduce it if we
-                    // have a good match already
-                    if (refreshRateReduced) {
-                        continue
-                    }
-                }
-            } else if (!isRefreshRateGoodMatch(candidate.refreshRate)) {
-                // We didn't have a good match and this match isn't good either, so just don't
-                // reduce the refresh rate.
-                if (refreshRateReduced) {
-                    continue
-                }
-            } else {
-                // We didn't have a good match and this match is good. Prefer this refresh rate
-                // even if it reduces the refresh rate. Lowering the refresh rate can be beneficial
-                // when streaming a 60 FPS stream on a 90 Hz device. We want to select 60 Hz to
-                // match the frame rate even if the active display mode is 90 Hz.
             }
 
             bestMode = candidate
-            refreshRateIsGood = isRefreshRateGoodMatch(candidate.refreshRate)
-            refreshRateIsEqual = isRefreshRateEqualMatch(candidate.refreshRate)
         }
 
         LimeLog.info(
             "Best display mode: ${bestMode.physicalWidth}x${bestMode.physicalHeight}x${bestMode.refreshRate}"
         )
 
-        // Only apply new window layout parameters if we've actually changed the display mode
+        return bestMode
+    }
+
+    // Whether the resolution of the candidate rules it out, whatever its refresh rate
+    private fun rejectsResolution(
+        display: Display,
+        candidate: Display.Mode,
+        bestMode: Display.Mode,
+    ): Boolean {
+        if (
+            candidate.physicalWidth > MAX_SAFE_DISPLAY_WIDTH &&
+                prefConfig.width <= MAX_SAFE_DISPLAY_WIDTH
+        ) {
+            // Avoid resolutions options above 4K to be safe
+            return true
+        }
+
+        // On non-4K streams, we force the resolution to never change unless it's above
+        // 60 FPS, which may require a resolution reduction due to HDMI bandwidth limitations,
+        // or it's a native resolution stream.
+        if (
+            prefConfig.width < UHD_WIDTH &&
+                prefConfig.fps <= HIGH_FPS &&
+                !PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)
+        ) {
+            if (
+                display.mode.physicalWidth != candidate.physicalWidth ||
+                    display.mode.physicalHeight != candidate.physicalHeight
+            ) {
+                return true
+            }
+        }
+
+        val resolutionReduced =
+            candidate.physicalWidth < bestMode.physicalWidth ||
+                candidate.physicalHeight < bestMode.physicalHeight
+        val resolutionFitsStream =
+            candidate.physicalWidth >= prefConfig.width &&
+                candidate.physicalHeight >= prefConfig.height
+
+        // Make sure the resolution doesn't regress unless if it's over 60 FPS
+        // where we may need to reduce resolution to achieve the desired refresh rate.
+        return resolutionReduced && !(prefConfig.fps > HIGH_FPS && resolutionFitsStream)
+    }
+
+    // Whether the refresh rate of the candidate rules it out, given the best mode so far
+    private fun rejectsRefreshRate(candidate: Display.Mode, bestMode: Display.Mode): Boolean {
+        if (
+            mayReduceRefreshRate() &&
+                isRefreshRateEqualMatch(bestMode.refreshRate) &&
+                !isRefreshRateEqualMatch(candidate.refreshRate)
+        ) {
+            // If we had an equal refresh rate and this one is not, skip it. In min latency
+            // mode, we want to always prefer the highest frame rate even though it may cause
+            // microstuttering.
+            return true
+        }
+
+        if (isRefreshRateGoodMatch(bestMode.refreshRate)) {
+            return rejectsAgainstGoodMatch(candidate, bestMode)
+        }
+
+        // We didn't have a good match. If this one isn't good either, just don't reduce the
+        // refresh rate. If it is good, prefer it even if it reduces the refresh rate: lowering
+        // the refresh rate can be beneficial when streaming a 60 FPS stream on a 90 Hz device.
+        // We want to select 60 Hz to match the frame rate even if the active display mode is
+        // 90 Hz.
+        return !isRefreshRateGoodMatch(candidate.refreshRate) &&
+            candidate.refreshRate < bestMode.refreshRate
+    }
+
+    // Whether the candidate is ruled out when the best mode so far is already a good match
+    private fun rejectsAgainstGoodMatch(candidate: Display.Mode, bestMode: Display.Mode): Boolean {
+        // We've already got a good match, so if this one isn't also good, it's not
+        // worth considering at all.
+        if (!isRefreshRateGoodMatch(candidate.refreshRate)) {
+            return true
+        }
+
+        return if (mayReduceRefreshRate()) {
+            // User asked for the lowest possible refresh rate, so don't raise it if we
+            // have a good match already
+            candidate.refreshRate > bestMode.refreshRate
+        } else {
+            // User asked for the highest possible refresh rate, so don't reduce it if we
+            // have a good match already
+            candidate.refreshRate < bestMode.refreshRate
+        }
+    }
+
+    // Only apply new window layout parameters if we've actually changed the display mode
+    private fun applyDisplayMode(display: Display, bestMode: Display.Mode) {
         if (display.mode.modeId != bestMode.modeId) {
             // If we only changed refresh rate and we're on an OS that supports
             // Surface.setFrameRate() use that instead of using preferredDisplayModeId to avoid the
@@ -1240,6 +1259,7 @@ class Game :
                     display.mode.physicalHeight != bestMode.physicalHeight
             ) {
                 // Apply the display mode change
+                val windowLayoutParams = window.attributes
                 windowLayoutParams.preferredDisplayModeId = bestMode.modeId
                 window.attributes = windowLayoutParams
             } else {
@@ -1250,9 +1270,9 @@ class Game :
         } else {
             LimeLog.info("Current display mode is already the best display mode")
         }
+    }
 
-        val displayRefreshRate = bestMode.refreshRate
-
+    private fun sizeStreamView() {
         if (prefConfig.stretchVideo) {
             // Set the surface to the size of the video
             streamView.holder.setFixedSize(prefConfig.width, prefConfig.height)
@@ -1262,22 +1282,23 @@ class Game :
                 prefConfig.width.toDouble() / prefConfig.height.toDouble()
             )
         }
+    }
 
-        // Set the desired refresh rate that will get passed into setFrameRate() later
-        desiredRefreshRate = displayRefreshRate
-
-        if (
+    // The inherited TODO below keeps ForbiddenComment (Sprint 18c backlog).
+    @Suppress("ForbiddenComment")
+    private fun reportedRefreshRate(displayRefreshRate: Float): Float {
+        return if (
             packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
                 packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
         ) {
             // TVs may take a few moments to switch refresh rates, and we can probably assume
             // it will be eventually activated.
             // TODO: Improve this
-            return displayRefreshRate
+            displayRefreshRate
         } else {
             // Use the lower of the current refresh rate and the selected refresh rate.
             // The preferred refresh rate may not actually be applied (ex: Battery Saver mode).
-            return min(windowManager.defaultDisplay.refreshRate, displayRefreshRate)
+            min(windowManager.defaultDisplay.refreshRate, displayRefreshRate)
         }
     }
 

@@ -418,12 +418,14 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
         // The input thread is the only one that has come; the renderer has no choreographer.
         threadLog.awaitWaiting(INPUT_THREAD or CHOREOGRAPHER)
         ShadowRecordingVideoCodec.stepOutput()
-        val result =
+        // Only a call that does not end is the race; what the call itself throws is its own.
+        val outcome =
             try {
-                input.result()
+                input.outcome()
             } catch (e: IllegalStateException) {
                 throw IllegalStateException(e.message + raceEvidence(), e)
             }
+        val result = outcome.result.getOrThrow()
         ShadowRecordingVideoCodec.awaitParked()
         return result
     }

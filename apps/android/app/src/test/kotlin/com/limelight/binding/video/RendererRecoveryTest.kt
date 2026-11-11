@@ -1,6 +1,7 @@
 package com.limelight.binding.video
 
 import com.google.common.truth.Truth.assertThat
+import com.limelight.LimeLog
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import java.io.OutputStream
@@ -917,6 +918,28 @@ class RendererRecoveryTest : RendererTestBase() {
 
         assertThat(events<CodecEvent.Reset>()).hasSize(1)
         assertThat(log.lines()).contains("INFO: Codec recovery attempt: 1")
+    }
+
+    // The rig of the stepped renderer thread
+
+    @Test
+    fun `a failure of the call that a recovery waits for comes out with its own message`() {
+        running(stepped = true)
+
+        val thrown =
+            assertThrows(IllegalStateException::class.java) {
+                recoveredByRendererThread<Unit> {
+                    // A wait without the bit of this thread, which the rig reads as the race of
+                    // BORE-121, and then the wait that it expects of the input thread.
+                    LimeLog.info("Waiting to quiesce decoder threads: $CHOREOGRAPHER")
+                    LimeLog.info(
+                        "Waiting to quiesce decoder threads: ${INPUT_THREAD or CHOREOGRAPHER}"
+                    )
+                    throw stateFailure()
+                }
+            }
+
+        assertThat(thrown).hasMessageThat().isEqualTo("codec state")
     }
 
     // The load entry

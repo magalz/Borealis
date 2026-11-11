@@ -33,6 +33,9 @@ import com.limelight.nvstream.input.ControllerPacket.TOUCHPAD_FLAG
 import com.limelight.nvstream.input.ControllerPacket.UP_FLAG
 import com.limelight.nvstream.input.ControllerPacket.X_FLAG
 import com.limelight.nvstream.input.ControllerPacket.Y_FLAG
+import io.github.magalz.borealis.testing.ANDROID_10
+import io.github.magalz.borealis.testing.ANDROID_15
+import io.github.magalz.borealis.testing.ANDROID_9
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -238,13 +241,13 @@ class RemappingCharacterizationTest {
     }
 
     @Test
-    @Config(sdk = [28])
+    @Config(sdk = [ANDROID_9])
     fun `a Switch Pro pad on Android 9 is mapped by scan code`() {
         assertSwitchLayout(pad(fields = mapOf("vendorId" to 0x057e, "productId" to 0x2009)))
     }
 
     @Test
-    @Config(sdk = [29])
+    @Config(sdk = [ANDROID_10])
     fun `a Switch Pro pad on Android 10 uses the built-in mapping`() {
         val pad = pad(fields = mapOf("vendorId" to 0x057e, "productId" to 0x2009))
 
@@ -255,7 +258,7 @@ class RemappingCharacterizationTest {
     }
 
     @Test
-    @Config(sdk = [35])
+    @Config(sdk = [ANDROID_15])
     fun `a Switch Pro pad on a newer Android uses the built-in mapping`() {
         val pad = pad(fields = mapOf("vendorId" to 0x057e, "productId" to 0x2009))
 
@@ -264,7 +267,7 @@ class RemappingCharacterizationTest {
     }
 
     @Test
-    @Config(sdk = [28])
+    @Config(sdk = [ANDROID_9])
     fun `another Nintendo product is not mapped by scan code`() {
         val pad = pad(fields = mapOf("vendorId" to 0x057e, "productId" to 0x2006))
 
@@ -273,7 +276,7 @@ class RemappingCharacterizationTest {
     }
 
     @Test
-    @Config(sdk = [28])
+    @Config(sdk = [ANDROID_9])
     fun `the Switch product of another vendor is not mapped by scan code`() {
         val pad = pad(fields = mapOf("vendorId" to 0x045e, "productId" to 0x2009))
 
@@ -282,19 +285,19 @@ class RemappingCharacterizationTest {
     }
 
     @Test
-    @Config(sdk = [28])
+    @Config(sdk = [ANDROID_9])
     fun `the HORIPAD for Switch is mapped by scan code on every Android`() {
         assertSwitchLayout(pad(fields = mapOf("vendorId" to 0x0f0d, "productId" to 0x00c1)))
     }
 
     @Test
-    @Config(sdk = [35])
+    @Config(sdk = [ANDROID_15])
     fun `the HORIPAD for Switch is mapped by scan code on a newer Android too`() {
         assertSwitchLayout(pad(fields = mapOf("vendorId" to 0x0f0d, "productId" to 0x00c1)))
     }
 
     @Test
-    @Config(sdk = [28])
+    @Config(sdk = [ANDROID_9])
     fun `another product of the HORI vendor, and the HORIPAD product of another vendor, are not mapped by scan code`() {
         val otherProduct =
             pad(deviceId = 7, fields = mapOf("vendorId" to 0x0f0d, "productId" to 0x00c0))

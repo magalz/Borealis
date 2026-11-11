@@ -2,6 +2,8 @@ package io.github.magalz.borealis.input.feedback
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.testing.ANDROID_11
+import io.github.magalz.borealis.testing.ANDROID_12
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -12,7 +14,7 @@ import org.robolectric.annotation.Config
  * for a PlayStation pad, whose vendor id it knows.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [ANDROID_12])
 class ControllerLedAndroid12Test : FeedbackTestBase() {
     private val lights = Hardware.lightsManager(listOf(Hardware.rgbLight(1)))
 
@@ -85,7 +87,7 @@ class ControllerLedAndroid12Test : FeedbackTestBase() {
 
 /** Android 11 has no lights API for input devices, so a colour goes nowhere and nothing breaks. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [30])
+@Config(sdk = [ANDROID_11])
 class ControllerLedAndroid11Test : FeedbackTestBase() {
     @Test
     fun `a colour is ignored and the pad reports no LED`() {

@@ -3060,8 +3060,9 @@ class Game :
         return handleMotionEvent(view, event)
     }
 
-    // Converted as is from the inherited Java; ClickableViewAccessibility stays because the stream
-    // view takes the touches itself and has no click action (Sprint 18c backlog).
+    // Converted as is from the inherited Java; ClickableViewAccessibility stays because the
+    // background touch view handles its touches itself and has no click action
+    // (Sprint 18c backlog).
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(view: View, event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) {

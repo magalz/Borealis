@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -21,13 +20,14 @@ import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.aFailure
+import io.github.magalz.borealis.stream.testing.distanceFrom
+import io.github.magalz.borealis.stream.testing.farthestFrom
 import io.github.magalz.borealis.stream.testing.setChrome
 import io.github.magalz.borealis.stream.ui.CONFLICT_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.ConflictDialog
 import io.github.magalz.borealis.stream.ui.ConnectionErrorScreen
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.glass.leftPixel
-import kotlin.math.abs
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,9 +70,6 @@ class DialogOverBackgroundApi30Test {
 
     private fun picture(): PixelMap = composeRule.frame(OUTSIDE_GAME_BACKGROUND_TAG)
 
-    private fun Color.distanceFrom(other: Color) =
-        abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue)
-
     private fun openDialog() {
         composeRule.runOnIdle { open = true }
         composeRule.waitForIdle()
@@ -81,10 +78,7 @@ class DialogOverBackgroundApi30Test {
     private fun assertScrim() {
         show()
         val before = picture()
-        val (x, y) =
-            (0 until before.width)
-                .flatMap { x -> (0 until before.height / BAND).map { y -> x to y } }
-                .maxBy { (x, y) -> before[x, y].distanceFrom(page) }
+        val (x, y) = before.farthestFrom(page)
 
         openDialog()
 
@@ -123,7 +117,6 @@ class DialogOverBackgroundApi30Test {
     }
 
     private companion object {
-        const val BAND = 10
         const val DIMMED = 0.45f
         const val SOLID = 0.005f
     }

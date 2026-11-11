@@ -3,6 +3,7 @@ package io.github.magalz.borealis.input.feedback
 import android.hardware.Sensor
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.testing.ANDROID_12
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -14,7 +15,7 @@ import org.robolectric.annotation.Config
  * every pad.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [ANDROID_12])
 class MotionSensorsAndroid12Test : FeedbackTestBase() {
     private val padSensors =
         Hardware.sensorManager(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE)

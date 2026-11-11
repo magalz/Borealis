@@ -13,6 +13,8 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.settings.device.DecoderLimits
 import io.github.magalz.borealis.settings.device.DisplayMode
 import io.github.magalz.borealis.settings.device.PixelSize
+import io.github.magalz.borealis.testing.ANDROID_10
+import io.github.magalz.borealis.testing.ANDROID_11
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -103,7 +105,7 @@ class AndroidDeviceFactsSourceTest {
     }
 
     @Test
-    @Config(sdk = [29])
+    @Config(sdk = [ANDROID_10])
     fun `a display with a cutout reports its cutout-safe size on Android 10`() {
         withTopCutout()
 
@@ -253,7 +255,7 @@ class AndroidDeviceFactsSourceTest {
     }
 
     @Test
-    @Config(sdk = [30])
+    @Config(sdk = [ANDROID_11])
     fun `the SDK level follows the device`() {
         assertThat(source.facts().sdkInt).isEqualTo(30)
     }

@@ -15,8 +15,8 @@ import io.github.magalz.borealis.designsystem.theme.borealisColors
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.TV
+import io.github.magalz.borealis.stream.testing.near
 import io.github.magalz.borealis.stream.ui.aStreaming
-import kotlin.math.abs
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,9 +65,6 @@ class MenuGlassFocusTest {
         }
     }
 
-    private fun Color.near(other: Color) =
-        abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue) < NEAR
-
     @Test
     @Config(qualifiers = TV)
     fun `on a TV the outline of the focused row keeps 3 to 1 over the lightest glass`() {
@@ -89,6 +86,5 @@ class MenuGlassFocusTest {
         const val HEIGHT_PX = 1080
         const val FOCUS_RATIO = 3.0
         const val OUTLINE_REACH_DP = 9
-        const val NEAR = 0.08f
     }
 }

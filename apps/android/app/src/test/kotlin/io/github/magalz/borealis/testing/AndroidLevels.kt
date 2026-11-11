@@ -19,3 +19,6 @@ const val ANDROID_13 = 33
 
 /** Android 14 (Upside Down Cake). */
 const val ANDROID_14 = 34
+
+/** Android 15 (Vanilla Ice Cream). */
+const val ANDROID_15 = 35

@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
+import io.github.magalz.borealis.library.testing.snapshot
 import io.github.magalz.borealis.library.testing.subscribe
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent

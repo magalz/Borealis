@@ -5,7 +5,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.library.domain.AddHostResult
 import io.github.magalz.borealis.library.domain.HostAddress
 import io.github.magalz.borealis.library.testing.FakeHostRepository
-import io.github.magalz.borealis.library.testing.MainDispatcherRule
+import io.github.magalz.borealis.logging.testing.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest

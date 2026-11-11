@@ -4,6 +4,7 @@ import android.hardware.BatteryState
 import android.view.KeyEvent
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.testing.ANDROID_11
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -506,7 +507,7 @@ class BatteryReportTest : FeedbackTestBase() {
  * not here), not even that no battery is present: the pad claims no battery either.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [30])
+@Config(sdk = [ANDROID_11])
 class BatteryReportAndroid11Test : FeedbackTestBase() {
     @Test
     fun `no battery is reported and the pad does not claim one`() {

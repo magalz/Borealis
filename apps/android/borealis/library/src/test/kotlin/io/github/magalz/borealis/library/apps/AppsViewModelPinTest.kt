@@ -3,6 +3,7 @@ package io.github.magalz.borealis.library.apps
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.library.testing.anApp
+import io.github.magalz.borealis.library.testing.snapshot
 import io.github.magalz.borealis.library.testing.subscribe
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runCurrent

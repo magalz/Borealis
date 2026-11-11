@@ -24,8 +24,8 @@ class BorealisCoverageTest {
     private fun isExcluded(className: String) = patterns.any { it.matcher(className).matches() }
 
     @Test
-    fun `the Java that sprint 14 converts is counted`() {
-        val remainingJava =
+    fun `the converted stream classes are counted`() {
+        val convertedStream =
             listOf(
                 "com.limelight.Game",
                 "com.limelight.Game\$1",
@@ -36,7 +36,7 @@ class BorealisCoverageTest {
                 "com.limelight.nvstream.jni.MoonBridge\$AudioConfiguration",
             )
 
-        assertThat(remainingJava.filter(::isExcluded)).isEmpty()
+        assertThat(convertedStream.filter(::isExcluded)).isEmpty()
     }
 
     @Test

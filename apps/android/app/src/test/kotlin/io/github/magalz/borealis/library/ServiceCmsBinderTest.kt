@@ -11,7 +11,7 @@ import com.limelight.Game
 import com.limelight.computers.ComputerManagerService
 import com.limelight.discovery.DiscoveryService
 import com.limelight.nvstream.http.NvApp
-import io.github.magalz.borealis.testing.WorkerDispatcherRule
+import io.github.magalz.borealis.logging.testing.WorkerDispatcherRule
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean

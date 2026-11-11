@@ -2,6 +2,8 @@ package io.github.magalz.borealis.input.feedback
 
 import android.os.Vibrator
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.testing.ANDROID_11
+import io.github.magalz.borealis.testing.ANDROID_12
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -416,7 +418,7 @@ class RumbleSingleVibratorTest : RumbleSingleVibratorContract() {
  * `AudioAttributes`.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [ANDROID_12])
 class RumbleSingleVibratorAndroid12Test : RumbleSingleVibratorContract() {
     override fun oneShot(amplitude: Int): VibratorCall =
         VibratorCall.Play(Effects.oneShot(amplitude), Effects.gameAudio())
@@ -427,7 +429,7 @@ class RumbleSingleVibratorAndroid12Test : RumbleSingleVibratorContract() {
 
 /** Android 11, which has no vibrator manager at all. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [30])
+@Config(sdk = [ANDROID_11])
 class RumbleSingleVibratorAndroid11Test : RumbleSingleVibratorContract() {
     override fun oneShot(amplitude: Int): VibratorCall =
         VibratorCall.Play(Effects.oneShot(amplitude), Effects.gameAudio())

@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.input.feedback
 
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.testing.ANDROID_12
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -11,7 +12,7 @@ import org.robolectric.annotation.Config
  * carry no usage, because `VibrationAttributes.setUsage` is only called from Android 13.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [31])
+@Config(sdk = [ANDROID_12])
 class RumbleManagerAndroid12Test : FeedbackTestBase() {
     @Test
     fun `two vibrators are driven with attributes that have no usage`() {

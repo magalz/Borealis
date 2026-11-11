@@ -1372,8 +1372,6 @@ class Game :
         super.onPause()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun onStop() {
         super.onStop()
         startupGuard.cancel() // BOREALIS: first-frame watchdog
@@ -1393,68 +1391,76 @@ class Game :
             stopConnection()
 
             if (prefConfig.enableLatencyToast) {
-                val averageEndToEndLat = decoderRenderer.getAverageEndToEndLatency()
-                val averageDecoderLat = decoderRenderer.getAverageDecoderLatency()
-                var message: String? = null
-                if (averageEndToEndLat > 0) {
-                    message =
-                        resources.getString(R.string.conn_client_latency) +
-                            " " +
-                            averageEndToEndLat +
-                            " ms"
-                    if (averageDecoderLat > 0) {
-                        message +=
-                            " (" +
-                                resources.getString(R.string.conn_client_latency_hw) +
-                                " " +
-                                averageDecoderLat +
-                                " ms)"
-                    }
-                } else if (averageDecoderLat > 0) {
-                    message =
-                        resources.getString(R.string.conn_hardware_latency) +
-                            " " +
-                            averageDecoderLat +
-                            " ms"
-                }
-
-                // Add the video codec to the post-stream toast
-                if (message != null) {
-                    message += " ["
-
-                    if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
-                        message += "H.264"
-                    } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
-                        message += "HEVC"
-                    } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
-                        message += "AV1"
-                    } else {
-                        message += "UNKNOWN"
-                    }
-
-                    if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
-                        message += " HDR"
-                    }
-
-                    message += "]"
-                }
-
-                if (message != null) {
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                }
+                showLatencyToast(videoFormat)
             }
 
-            // Clear the tombstone count if we terminated normally
-            if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
-                tombstonePrefs.edit {
-                    putInt("CrashCount", 0)
-                    putInt("LastNotifiedCrashCount", 0)
-                }
-            }
+            clearTombstoneAfterCleanStop()
         }
 
         // BOREALIS: every exit that finished the activity already asks once (leave)
         if (!isFinishing) finish()
+    }
+
+    // The post-stream toast: the latency of the stream and the video codec it used. A stream that
+    // decoded no frame has no latency, and shows nothing.
+    private fun showLatencyToast(videoFormat: Int) {
+        val latency = latencyText() ?: return
+        Toast.makeText(this, "$latency [${codecLabel(videoFormat)}]", Toast.LENGTH_LONG).show()
+    }
+
+    // The latency of the stream from the end-to-end and the decoder averages, or null when the
+    // stream has neither.
+    private fun latencyText(): String? {
+        val averageEndToEndLat = decoderRenderer.getAverageEndToEndLatency()
+        val averageDecoderLat = decoderRenderer.getAverageDecoderLatency()
+        var message: String? = null
+        if (averageEndToEndLat > 0) {
+            message =
+                resources.getString(R.string.conn_client_latency) + " " + averageEndToEndLat + " ms"
+            if (averageDecoderLat > 0) {
+                message +=
+                    " (" +
+                        resources.getString(R.string.conn_client_latency_hw) +
+                        " " +
+                        averageDecoderLat +
+                        " ms)"
+            }
+        } else if (averageDecoderLat > 0) {
+            message =
+                resources.getString(R.string.conn_hardware_latency) +
+                    " " +
+                    averageDecoderLat +
+                    " ms"
+        }
+        return message
+    }
+
+    // The video codec of the stream for the post-stream toast, with HDR for a 10-bit stream.
+    private fun codecLabel(videoFormat: Int): String {
+        val codec =
+            if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
+                "H.264"
+            } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
+                "HEVC"
+            } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
+                "AV1"
+            } else {
+                "UNKNOWN"
+            }
+        if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
+            return "$codec HDR"
+        }
+        return codec
+    }
+
+    // Clear the tombstone count if we terminated normally
+    private fun clearTombstoneAfterCleanStop() {
+        if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
+            tombstonePrefs.edit {
+                putInt("CrashCount", 0)
+                putInt("LastNotifiedCrashCount", 0)
+            }
+        }
     }
 
     // BOREALIS: who gets the input, from the stream session; the stream gets it until the session

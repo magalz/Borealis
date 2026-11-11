@@ -1021,8 +1021,6 @@ class Game :
             Math.round(refreshRate) % prefConfig.fps <= REFRESH_RATE_TOLERANCE
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ComplexCondition")
     private fun shouldIgnoreInsetsForResolution(width: Int, height: Int): Boolean {
         // Never ignore insets for non-native resolutions
         if (!PreferenceConfiguration.isNativeResolution(width, height)) {
@@ -1032,16 +1030,18 @@ class Game :
         val display = windowManager.defaultDisplay
         for (candidate in display.supportedModes) {
             // Ignore insets if this is an exact match for the display resolution
-            if (
-                (width == candidate.physicalWidth && height == candidate.physicalHeight) ||
-                    (height == candidate.physicalWidth && width == candidate.physicalHeight)
-            ) {
+            if (isModeSize(width, height, candidate)) {
                 return true
             }
         }
 
         return false
     }
+
+    /** Whether [width] x [height], or the same size turned the other way round, is [mode]'s. */
+    private fun isModeSize(width: Int, height: Int, mode: Display.Mode): Boolean =
+        (width == mode.physicalWidth && height == mode.physicalHeight) ||
+            (height == mode.physicalWidth && width == mode.physicalHeight)
 
     private fun mayReduceRefreshRate(): Boolean {
         return prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS ||

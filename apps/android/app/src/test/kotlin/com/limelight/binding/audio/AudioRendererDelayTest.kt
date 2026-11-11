@@ -57,19 +57,42 @@ class AudioRendererDelayTest : AudioRendererTestBase() {
     }
 
     @Test
-    fun `a track that played everything it was given has no delay`() {
+    fun `a track that played everything it was given has nothing to measure`() {
         val renderer = ready()
         repeat(4) { renderer.write(240) }
         played(960)
 
-        assertThat(renderer.audioDelayMs(NOW)).isEqualTo(0)
+        assertThat(renderer.audioDelayMs(NOW)).isNull()
     }
 
     @Test
-    fun `a timestamp that is older than the delay does not give a negative one`() {
+    fun `a timestamp that is older than the delay has nothing to measure`() {
         val renderer = ready()
         repeat(4) { renderer.write(240) }
         played(960, atNanos = NOW - 50 * NANOS_PER_MS)
+
+        assertThat(renderer.audioDelayMs(NOW)).isNull()
+    }
+
+    @Test
+    fun `the delay comes back when sound plays again`() {
+        val renderer = ready()
+        repeat(4) { renderer.write(240) }
+        played(960)
+        assertThat(renderer.audioDelayMs(NOW)).isNull()
+
+        // The same timestamp, 240 more frames written: they are 5 ms that wait.
+        renderer.write(240)
+
+        assertThat(renderer.audioDelayMs(NOW)).isEqualTo(5)
+    }
+
+    @Test
+    fun `a delay above zero and below a millisecond reads zero`() {
+        val renderer = ready()
+        // 24 frames are 0.5 ms at 48 kHz, and none of them is played.
+        renderer.write(24)
+        played(0)
 
         assertThat(renderer.audioDelayMs(NOW)).isEqualTo(0)
     }
@@ -91,7 +114,7 @@ class AudioRendererDelayTest : AudioRendererTestBase() {
         renderer.playDecodedAudio(ShortArray(480))
         played(0)
 
-        assertThat(renderer.audioDelayMs(NOW)).isEqualTo(0)
+        assertThat(renderer.audioDelayMs(NOW)).isNull()
     }
 
     @Test

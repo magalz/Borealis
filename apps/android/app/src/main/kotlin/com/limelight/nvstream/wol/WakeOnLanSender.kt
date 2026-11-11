@@ -7,7 +7,6 @@ import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.SocketAddress
 import java.util.Scanner
 
 object WakeOnLanSender {
@@ -41,7 +40,7 @@ object WakeOnLanSender {
     private const val PAYLOAD_BYTES = 102
     private const val HEX_RADIX = 16
 
-    internal fun openWolSocket(): DatagramSocket = DatagramSocket(null as SocketAddress?)
+    internal fun openWolSocket(): DatagramSocket = DatagramSocket(0)
 
     // The stack traces go to the standard error stream, as in the inherited Java. Logging them
     // instead is a behaviour change (Sprint 18c backlog).
@@ -107,7 +106,7 @@ object WakeOnLanSender {
         var lastException: IOException? = null
         var sentWolPacket = false
 
-        DatagramSocket(0).use { sock ->
+        openWolSocket().use { sock ->
             // Try all resolved remote and local addresses and broadcast addresses.
             // The broadcast address is required to avoid stale ARP cache entries
             // making the sleeping machine unreachable.

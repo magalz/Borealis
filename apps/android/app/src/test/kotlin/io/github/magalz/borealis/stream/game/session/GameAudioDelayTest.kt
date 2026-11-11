@@ -2,6 +2,7 @@ package io.github.magalz.borealis.stream.game.session
 
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.audio.AndroidAudioRenderer
 import com.limelight.binding.audio.AudioPlatform
@@ -45,23 +46,27 @@ internal class GameAudioDelayTest : GameTestBase() {
         ReflectionHelpers.callInstanceMethod<Any?>(rig.renderer, "pushPerfSnapshot")
     }
 
-    /** The audio renderer plays what the host sends: four packets, all of them presented. */
-    private fun playedEverything() {
+    /**
+     * The audio renderer gets what the host sends: 1.5 s of frames, none of them presented yet. The
+     * snapshot reads the real clock, so the wait is long enough not to depend on how fast the test
+     * runs.
+     */
+    private fun soundWaiting() {
         assertThat(audioRenderer.setup(MoonBridge.AUDIO_CONFIGURATION_STEREO, SAMPLE_RATE, FRAME))
             .isEqualTo(0)
         ShadowRecordingBridge.answers["getPendingAudioDuration"] = listOf(0)
-        repeat(4) { audioRenderer.playDecodedAudio(ShortArray(FRAME * 2)) }
-        AudioPlatform.timestamp = AudioPlatform.Timestamp(4L * FRAME, System.nanoTime())
+        repeat(300) { audioRenderer.playDecodedAudio(ShortArray(FRAME * 2)) }
+        AudioPlatform.timestamp = AudioPlatform.Timestamp(0, System.nanoTime())
     }
 
     @Test
     fun `a snapshot of a running stream carries the delay of the audio renderer of the stream`() {
         rig.streaming()
-        playedEverything()
+        soundWaiting()
 
         pushSnapshot()
 
-        assertThat(rig.session.perf.value?.audioDelayMs).isEqualTo(0)
+        assertThat(rig.session.perf.value?.audioDelayMs).isIn(Range.closed(1, 1_500))
     }
 
     @Test

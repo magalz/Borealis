@@ -244,9 +244,10 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
 
     /**
      * The audio delay in milliseconds, for the performance overlay: how long a frame handed to the
-     * track waits before the track presents it. Null until the track has a timestamp, and when
-     * there is no track. It asks the platform for the timestamp, so the overlay calls it once for
-     * each snapshot and not for each packet.
+     * track waits before the track presents it. Null until the track has a timestamp, when there is
+     * no track, and when no written frame still waits (an idle track has nothing to measure). A
+     * delay above zero and below a millisecond reads 0. It asks the platform for the timestamp, so
+     * the overlay calls it once for each snapshot and not for each packet.
      */
     fun audioDelayMs(): Int? = audioDelayMs(System.nanoTime())
 
@@ -259,11 +260,13 @@ class AndroidAudioRenderer(private val context: Context, private val enableAudio
 
         // The timestamp says that the track presented frame `framePosition` at `nanoTime`. The
         // frames written after it still wait, less the time since the timestamp was taken, which
-        // the track has played on. Never below zero.
+        // the track has played on. When that is not above zero, nothing waits and there is no delay
+        // to measure.
         val waitingFrames = framesWritten.get() - timestamp.framePosition
         val delayNanos =
             waitingFrames * NANOS_PER_SECOND / current.sampleRate - (nowNanos - timestamp.nanoTime)
-        return (delayNanos / NANOS_PER_MS).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
+        return if (delayNanos <= 0) null
+        else (delayNanos / NANOS_PER_MS).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
     override fun start() {

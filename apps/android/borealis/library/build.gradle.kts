@@ -29,6 +29,7 @@ dependencies {
     // types (the export sections), so those types must resolve on the test classpath.
     testImplementation(project(":borealis:diagnostics"))
     testImplementation(testFixtures(project(":borealis:designsystem")))
+    testImplementation(testFixtures(project(":borealis:logging")))
     testImplementation(libs.hilt.android.testing)
     add("kspTest", libs.hilt.compiler)
 }

@@ -7,8 +7,8 @@ import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostShortcuts
-import io.github.magalz.borealis.library.testing.MainDispatcherRule
 import io.github.magalz.borealis.library.testing.aHost
+import io.github.magalz.borealis.logging.testing.MainDispatcherRule
 import org.junit.Rule
 
 /**

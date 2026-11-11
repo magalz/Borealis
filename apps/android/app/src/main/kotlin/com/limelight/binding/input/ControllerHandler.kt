@@ -3217,7 +3217,7 @@ class ControllerHandler(
             // Since our sleep time is so short (<= 25 ms), it shouldn't cause a problem doing this
             // in the UI thread.
             try {
-                Thread.sleep(waitMs)
+                sleeper(waitMs)
             } catch (e: InterruptedException) {
                 e.printStackTrace()
 

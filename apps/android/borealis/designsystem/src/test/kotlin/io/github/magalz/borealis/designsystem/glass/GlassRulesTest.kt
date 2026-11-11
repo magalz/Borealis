@@ -71,6 +71,12 @@ class GlassRulesTest {
     }
 
     @Test
+    fun `the values of Reduced that the stream reads are 85 percent and 48 dp`() {
+        assertThat(REDUCED_GLASS_TINT_PERCENT).isEqualTo(85)
+        assertThat(REDUCED_GLASS_BLUR_DP).isEqualTo(48)
+    }
+
+    @Test
     fun `Off is solid`() {
         assertThat(spec(BorealisLook(transparency = Transparency.Off))).isEqualTo(GlassSpec.Solid)
     }

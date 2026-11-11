@@ -3,8 +3,12 @@ package com.limelight.binding.video
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import java.io.OutputStream
+import java.io.PrintStream
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 import org.junit.Assert.assertThrows
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.robolectric.util.ReflectionHelpers
 
@@ -21,13 +25,20 @@ import org.robolectric.util.ReflectionHelpers
  */
 @Suppress("LargeClass")
 class RendererRecoveryTest : RendererTestBase() {
+    /**
+     * A renderer that runs. With [stepped] its renderer thread makes a pass only when
+     * [recoveredByRendererThread] says so, instead of every 50 ms: a test that makes the codec fail
+     * several times uses it, so that no thread can ask for a recovery before the others have left
+     * the last one.
+     */
     private fun running(
-        pacing: Int = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY
+        pacing: Int = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY,
+        stepped: Boolean = false,
     ): MediaCodecDecoderRenderer {
         install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
         val renderer = renderer(prefs { framePacing = pacing })
         assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
-        renderer.begin()
+        if (stepped) renderer.beginStepped() else renderer.begin()
         return renderer
     }
 
@@ -195,10 +206,11 @@ class RendererRecoveryTest : RendererTestBase() {
 
     @Test
     fun `the stream goes on after a recovery, with buffers of the restarted codec`() {
-        val renderer = running()
+        val renderer = running(stepped = true)
         renderer.submit(pFrame(1))
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, recoverable)
-        renderer.submit(pFrame(2))
+        assertThat(recoveredByRendererThread { renderer.submit(pFrame(2)) })
+            .isEqualTo(MoonBridge.DR_NEED_IDR)
 
         val result = renderer.submit(pFrame(3))
 
@@ -824,10 +836,11 @@ class RendererRecoveryTest : RendererTestBase() {
 
     @Test
     fun `three seconds after the first failure that is not recovered the renderer crashes with it`() {
-        val renderer = running()
+        val renderer = running(stepped = true)
         for (number in 1..10) {
             ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
-            renderer.submit(pFrame(number))
+            assertThat(recoveredByRendererThread { renderer.submit(pFrame(number)) })
+                .isEqualTo(MoonBridge.DR_NEED_IDR)
         }
         val failure = codecException(errorCode = -38, actionCode = ACTION_NONE, message = "dead")
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT) { failure }
@@ -884,5 +897,102 @@ class RendererRecoveryTest : RendererTestBase() {
 
         assertThat(events<CodecEvent.Reset>()).hasSize(1)
         assertThat(log.lines()).contains("INFO: Codec recovery attempt: 1")
+    }
+
+    // The load entry
+
+    /**
+     * A manual entry, not a test of the suite: it does nothing unless the variable
+     * `BOREALIS_RENDERER_LOAD` holds a number of passes. A pass runs the two cases that used to
+     * fail under load, each on a fresh renderer, in one JVM, while twice as many threads as the
+     * machine has processors spin and one more allocates. On a failure it prints the exception, the
+     * journal, the last 30 lines of the log with the thread that wrote each, and the stacks of all
+     * threads. From `apps/android`, in a shell where the variable is set:
+     * `BOREALIS_RENDERER_LOAD=2000 ./gradlew :app:testDebugUnitTest --tests
+     * '*RendererRecoveryTest*the flaky cases*' --rerun`.
+     */
+    @Test
+    fun `the flaky cases pass under load`() {
+        val passes = System.getenv(LOAD_VARIABLE)?.toIntOrNull() ?: 0
+        assumeTrue("Set $LOAD_VARIABLE to the number of passes to run this", passes > 0)
+        lengthenWatchdog(LOAD_WATCHDOG_SECONDS)
+        val cases =
+            listOf(
+                "goes on after a recovery" to
+                    {
+                        `the stream goes on after a recovery, with buffers of the restarted codec`()
+                    },
+                "crashes after three seconds" to
+                    {
+                        `three seconds after the first failure that is not recovered the renderer crashes with it`()
+                    },
+            )
+        val burners = Burners()
+        val stderr = System.err
+        // The renderer prints the stack of every failure that it recovers.
+        System.setErr(PrintStream(OutputStream.nullOutputStream()))
+        try {
+            for (pass in 1..passes) {
+                for ((name, case) in cases) {
+                    try {
+                        case()
+                    } catch (e: Throwable) {
+                        System.setErr(stderr)
+                        dumpFailure(pass, name, e)
+                        throw e
+                    } finally {
+                        endPass()
+                    }
+                }
+            }
+        } finally {
+            System.setErr(stderr)
+            burners.stop()
+        }
+    }
+
+    private fun dumpFailure(pass: Int, name: String, failure: Throwable) {
+        println("FAILED pass $pass of '$name': ${failure.stackTraceToString()}")
+        println("journal: $journal")
+        println("last log lines:")
+        threadLog.lines.takeLast(DUMPED_LINES).forEach { println("  $it") }
+        println(raceEvidence())
+        Thread.getAllStackTraces().forEach { (thread, stack) ->
+            println("thread ${thread.name} (${thread.state}):")
+            stack.forEach { println("    at $it") }
+        }
+    }
+
+    /** Daemon threads that take the processors away: two per processor spin, one allocates. */
+    private class Burners {
+        @Volatile private var running = true
+
+        init {
+            repeat(2 * Runtime.getRuntime().availableProcessors()) {
+                thread(name = "burner", isDaemon = true) {
+                    while (running) Thread.onSpinWait()
+                }
+            }
+            thread(name = "allocator", isDaemon = true) {
+                val live = arrayOfNulls<ByteArray>(LIVE_CHUNKS)
+                var next = 0
+                while (running) {
+                    live[next] = ByteArray(CHUNK_BYTES)
+                    next = (next + 1) % LIVE_CHUNKS
+                }
+            }
+        }
+
+        fun stop() {
+            running = false
+        }
+    }
+
+    private companion object {
+        const val LOAD_VARIABLE = "BOREALIS_RENDERER_LOAD"
+        const val LOAD_WATCHDOG_SECONDS = 3_600L
+        const val DUMPED_LINES = 30
+        const val LIVE_CHUNKS = 64
+        const val CHUNK_BYTES = 1 shl 20
     }
 }

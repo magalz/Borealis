@@ -3,13 +3,12 @@ package io.github.magalz.borealis.stream.ui.glass
 import android.os.Build
 import androidx.compose.runtime.Immutable
 import io.github.magalz.borealis.designsystem.components.TextHaloStyle
+import io.github.magalz.borealis.designsystem.glass.REDUCED_GLASS_BLUR_DP
+import io.github.magalz.borealis.designsystem.glass.REDUCED_GLASS_TINT_PERCENT
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.Transparency
 
-/** The tint and the blur of [Transparency.Reduced] (ADR 0057), which are the same in the stream. */
-private const val REDUCED_TINT_PERCENT = 85
-private const val REDUCED_BLUR_DP = 48
 private const val PERCENT = 100
 
 /**
@@ -19,7 +18,7 @@ private const val PERCENT = 100
  * 85 percent of the surface leaves the text 4.5:1 over the lightest frame with or without its halo
  * (`PopupGlassContrastTest` in `design/accessibility`).
  */
-internal const val POPUP_TINT_PERCENT = REDUCED_TINT_PERCENT
+internal const val POPUP_TINT_PERCENT = REDUCED_GLASS_TINT_PERCENT
 
 /**
  * The halo of the text on the glass: 3 dp wide, blurred by 2 dp, 100 percent opaque and filled. The
@@ -51,8 +50,9 @@ internal class VideoGlassSpec(
  * with Reduce motion ([animationsRemoved], the setting of the app resolved with the system's) and
  * while the [batterySaver] is on.
  *
- * Standard takes the tint and the blur of the look, Reduced 85 percent at 48 dp, and the tint is
- * never raised for the contrast: a video is any frame, so the text on the glass stands on a halo
+ * Standard takes the tint and the blur of the look, Reduced the values that the design system
+ * declares for it ([REDUCED_GLASS_TINT_PERCENT], [REDUCED_GLASS_BLUR_DP], ADR 0057), and the tint
+ * is never raised for the contrast: a video is any frame, so the text on the glass stands on a halo
  * and not on what is behind it (decision 4, as the owner decided on 2026-10-29). As on a background
  * with a halo, ink-3 and ink-4 are ink-2, which the halo keeps at 4.5:1 and which they do not reach
  * on their own.
@@ -66,8 +66,9 @@ internal fun videoGlassSpec(
 ): VideoGlassSpec? {
     if (isSolid(look, sdk, batterySaver, animationsRemoved)) return null
     val reduced = look.transparency == Transparency.Reduced
-    val tint = if (reduced) REDUCED_TINT_PERCENT else look.glassTintPercent.coerceIn(0, PERCENT)
-    val blur = if (reduced) REDUCED_BLUR_DP else look.glassBlurDp
+    val tint =
+        if (reduced) REDUCED_GLASS_TINT_PERCENT else look.glassTintPercent.coerceIn(0, PERCENT)
+    val blur = if (reduced) REDUCED_GLASS_BLUR_DP else look.glassBlurDp
     return VideoGlassSpec(tint, blur, colors.copy(ink3 = colors.ink2, ink4 = colors.ink2), colors)
 }
 

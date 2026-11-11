@@ -91,6 +91,9 @@ class ControllerHandler(
     // to hold a reader there; it is null in the app
     @VisibleForTesting internal var deviceListStep: Runnable? = null
 
+    // How the wait before a short press goes up blocks; a test swaps it to see the wait asked for
+    @VisibleForTesting internal var sleeper: (Long) -> Unit = { ms -> Thread.sleep(ms) }
+
     private val stickDeadzone: Double
     private val defaultContext = InputDeviceContext()
     private val inputManager: InputManager
@@ -3214,7 +3217,7 @@ class ControllerHandler(
             // Since our sleep time is so short (<= 25 ms), it shouldn't cause a problem doing this
             // in the UI thread.
             try {
-                Thread.sleep(waitMs)
+                sleeper(waitMs)
             } catch (e: InterruptedException) {
                 e.printStackTrace()
 

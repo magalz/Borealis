@@ -333,6 +333,140 @@ class RendererCrashTest : RendererTestBase() {
     }
 
     @Test
+    fun `the range lines come for AVC, then HEVC, then AV1`() {
+        device(DeviceBuild(sdk = Build.VERSION_CODES.R))
+        val renderer = small(MoonBridge.VIDEO_FORMAT_AV1_MAIN8, FormatOption.FORCE_AV1)
+
+        val lines = crash(renderer).lines()
+
+        assertThat(lines)
+            .containsAtLeast(
+                "AV1 Decoder: vendor.test.av1.decoder",
+                "AVC supported width range: [64, 4096]",
+                "AVC achievable FPS range: null",
+                "HEVC supported width range: [64, 4096]",
+                "HEVC achievable FPS range: null",
+                "AV1 supported width range: [64, 4096]",
+                "AV1 achievable FPS range: null",
+            )
+            .inOrder()
+    }
+
+    /** A renderer whose HEVC and AV1 decoders throw for their capabilities, as [broken] says. */
+    private fun withBroken(vararg broken: String): MediaCodecDecoderRenderer {
+        val decoders =
+            listOf(
+                codec("vendor.test.avc.decoder") { mime = "video/avc" },
+                codec("c2.test.hevc.decoder") {
+                    mime = "video/hevc"
+                    brokenCapabilities = "HEVC" in broken
+                },
+                codec("vendor.test.av1.decoder") {
+                    mime = "video/av01"
+                    brokenCapabilities = "AV1" in broken
+                },
+            )
+        install(*decoders.toTypedArray())
+        decoders.forEach { ShadowRecordingVideoCodec.register(it.name, inputBufferSize) }
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 })
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_AV1_MAIN8)).isEqualTo(0)
+        return renderer
+    }
+
+    @Test
+    fun `an HEVC and an AV1 decoder that throw for their capabilities are both unreadable`() {
+        val lines = crash(withBroken("HEVC", "AV1")).lines()
+
+        assertThat(lines)
+            .containsAtLeast(
+                "AVC supported width range: [64, 4096]",
+                "AVC achievable FPS range: null",
+                "HEVC capabilities: UNREADABLE!",
+                "AV1 capabilities: UNREADABLE!",
+            )
+            .inOrder()
+        assertThat(
+                lines.filter {
+                    it.contains("supported width range") || it.contains("achievable FPS range")
+                }
+            )
+            .hasSize(2)
+    }
+
+    @Test
+    fun `an HEVC decoder that throws is unreadable and the AV1 one is described`() {
+        val lines = crash(withBroken("HEVC")).lines()
+
+        assertThat(lines)
+            .containsAtLeast(
+                "HEVC capabilities: UNREADABLE!",
+                "AV1 supported width range: [64, 4096]",
+                "AV1 achievable FPS range: null",
+            )
+            .inOrder()
+        assertThat(lines.filter { it.startsWith("HEVC supported") }).isEmpty()
+        assertThat(lines.filter { it.startsWith("AV1 capabilities") }).isEmpty()
+    }
+
+    @Test
+    fun `an AV1 decoder that throws is unreadable and the HEVC one is described`() {
+        val lines = crash(withBroken("AV1")).lines()
+
+        assertThat(lines)
+            .containsAtLeast(
+                "HEVC supported width range: [64, 4096]",
+                "HEVC achievable FPS range: null",
+                "AV1 capabilities: UNREADABLE!",
+            )
+            .inOrder()
+        assertThat(lines.filter { it.startsWith("AV1 supported") }).isEmpty()
+        assertThat(lines.filter { it.startsWith("HEVC capabilities") }).isEmpty()
+    }
+
+    // The read of the AVC capabilities is not guarded, unlike the HEVC and AV1 ones: this records
+    // what happens today, and is not a design.
+    @Test
+    fun `an AVC decoder that throws for its capabilities keeps the text from being built`() {
+        install(
+            codec("vendor.test.avc.decoder") {
+                mime = "video/avc"
+                brokenCapabilities = true
+            }
+        )
+        ShadowRecordingVideoCodec.register("vendor.test.avc.decoder", inputBufferSize)
+        val renderer = renderer()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+
+        val thrown = crash(renderer)
+
+        // The error of the decoder is thrown in place of the crash, after the listener was told of
+        // the decode unit that did not fit.
+        assertThat(thrown).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(thrown).hasMessageThat().isEqualTo("buggy decoder")
+        assertThat(crashes.single())
+            .hasMessageThat()
+            .isEqualTo("Decode unit length 100 too large for input buffer 64")
+    }
+
+    @Test
+    fun `the formats of the codec come in the order configured, input, output, adaptive playback`() {
+        val renderer = small()
+
+        val lines = crash(renderer).lines()
+
+        val prefixes =
+            listOf(
+                "Configured format: ",
+                "Input format: ",
+                "Output format: ",
+                "Adaptive playback: ",
+            )
+        val positions = prefixes.map { prefix -> lines.indexOfFirst { it.startsWith(prefix) } }
+        assertThat(positions).doesNotContain(-1)
+        assertThat(positions).isInStrictOrder()
+    }
+
+    @Test
     fun `a size that a decoder does not support at any frame rate is reported as unsupported`() {
         device(DeviceBuild(sdk = Build.VERSION_CODES.R))
         val wide =

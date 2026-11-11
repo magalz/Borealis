@@ -77,6 +77,21 @@ class ButtonTimingCharacterizationTest {
     /** The fastest of five, which a busy machine does not inflate; a wait never takes less. */
     private fun fastest(heldMs: Long): Double = List(5) { releaseTime(heldMs) }.min()
 
+    /** The waits the handler asks its sleeper for when A, held for [heldMs], is let go. */
+    private fun waitsAsked(heldMs: Long): List<Long> {
+        val asked = mutableListOf<Long>()
+        rig.handler.sleeper = { asked += it }
+        pad.release(KEYCODE_BUTTON_A, at = rig.now, downTime = rig.now - heldMs)
+        return asked
+    }
+
+    @Test
+    fun `a key let go at once asks for the whole 25 ms, one held for 24 ms for the last one, and a long hold for none`() {
+        assertThat(waitsAsked(0)).containsExactly(25L)
+        assertThat(waitsAsked(24)).containsExactly(1L)
+        assertThat(waitsAsked(100)).isEmpty()
+    }
+
     @Test
     fun `a key let go at once makes the handler wait 25 ms before the release goes out`() {
         releaseTime(100) // warm up the code the measure runs

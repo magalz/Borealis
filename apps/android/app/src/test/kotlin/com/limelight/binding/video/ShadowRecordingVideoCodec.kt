@@ -10,6 +10,8 @@ import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
@@ -198,6 +200,22 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
         info: MediaCodec.BufferInfo,
         timeoutUs: Long,
     ): Int {
+        if (manualOutput && timeoutUs > 0) {
+            outputParked.release()
+            try {
+                outputSteps.acquire()
+            } catch (ignored: InterruptedException) {
+                // The renderer is stopping: its thread asks again only if it was not told to stop.
+                Thread.currentThread().interrupt()
+                return MediaCodec.INFO_TRY_AGAIN_LATER
+            }
+            // A pass of the stepped thread never waits for a frame: what is ready is what it gets.
+            return dequeueOutput(info, 0)
+        }
+        return dequeueOutput(info, timeoutUs)
+    }
+
+    private fun dequeueOutput(info: MediaCodec.BufferInfo, timeoutUs: Long): Int {
         dequeueOutputCalls.incrementAndGet()
         fire(CodecPoint.DEQUEUE_OUTPUT)
         outputAnswers.poll()?.let {
@@ -248,6 +266,7 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
         /** The size of every input and output buffer of the fake codecs. */
         const val BUFFER_SIZE = 16 * 1024
         private const val STARVE_SLEEP_MS = 1L
+        private const val PARK_BOUND_SECONDS = 30L
         private val ids = AtomicInteger()
 
         @JvmStatic val journal = CopyOnWriteArrayList<CodecEvent>()
@@ -286,6 +305,34 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
          * keeps it. Some decoders return another timestamp than the one they were given.
          */
         @Volatile @JvmStatic var outputTimestamp: ((Long) -> Long)? = null
+
+        /**
+         * While true, the renderer thread (the one that asks for an output buffer with a timeout)
+         * waits in `dequeueOutputBuffer` until a test calls [stepOutput], and then makes one pass
+         * that does not wait. It makes a recovery that needs the renderer thread happen when the
+         * test says so, with no wait that depends on the clock. Set it before the renderer starts.
+         */
+        @Volatile @JvmStatic var manualOutput = false
+
+        private val outputSteps = Semaphore(0)
+        private val outputParked = Semaphore(0)
+
+        /** Lets the renderer thread, parked by [manualOutput], make its next pass. */
+        @JvmStatic
+        fun stepOutput() {
+            outputSteps.release()
+        }
+
+        /**
+         * Waits until the renderer thread is parked by [manualOutput]: once for each time it has
+         * come back to the codec since the last call. It fails if that takes [PARK_BOUND_SECONDS].
+         */
+        @JvmStatic
+        fun awaitParked() {
+            check(outputParked.tryAcquire(PARK_BOUND_SECONDS, TimeUnit.SECONDS)) {
+                "The renderer thread did not come back to the codec; journal: $journal"
+            }
+        }
 
         private val outputAnswers = ConcurrentLinkedQueue<Int>()
 
@@ -350,6 +397,9 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
             outputAnswers.clear()
             starveInput = false
             starveOutput = false
+            manualOutput = false
+            outputSteps.drainPermits()
+            outputParked.drainPermits()
             nullInputBuffers.set(0)
             outputDelayNanos = 0
             outputTimestamp = null

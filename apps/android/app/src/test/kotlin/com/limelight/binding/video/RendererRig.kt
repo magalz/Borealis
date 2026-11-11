@@ -17,6 +17,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import org.junit.After
 import org.junit.Assert.fail
 import org.junit.Before
@@ -57,6 +59,40 @@ class FakeSurfaceHolder(private val surface: Surface) : SurfaceHolder {
     override fun getSurfaceFrame(): Rect = Rect()
 
     override fun getSurface(): Surface = surface
+}
+
+/**
+ * A call that runs on a thread of its own, the input thread of the renderer (the caller of
+ * `submitDecodeUnit`), so that the test thread can play the others and a test that goes wrong ends
+ * by itself.
+ */
+class InputCall<T>(block: () -> T) {
+    /** What the call ended with, and whether that thread was interrupted then. */
+    class Outcome<T>(val result: Result<T>, val interrupted: Boolean)
+
+    private val outcome = AtomicReference<Outcome<T>>()
+    private val input =
+        thread(name = "input") {
+            val result = runCatching(block)
+            outcome.set(Outcome(result, Thread.currentThread().isInterrupted))
+        }
+
+    fun interrupt() = input.interrupt()
+
+    /** Waits for the call to end; fails if it does not end within half a minute. */
+    fun outcome(): Outcome<T> {
+        input.join(JOIN_MS)
+        check(!input.isAlive) { "The input thread is still blocked" }
+        return outcome.get()
+    }
+
+    fun result(): T = outcome().result.getOrThrow()
+
+    fun failure(): Throwable = checkNotNull(outcome().result.exceptionOrNull())
+
+    private companion object {
+        const val JOIN_MS = 30_000L
+    }
 }
 
 /**

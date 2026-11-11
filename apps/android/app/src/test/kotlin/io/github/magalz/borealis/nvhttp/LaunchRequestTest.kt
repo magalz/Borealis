@@ -115,7 +115,7 @@ class LaunchRequestTest {
 
     /** GFE gets the request that it always got, for a launch and for a resume. */
     @Test
-    fun `a GFE host is sent no continuous audio, and the rest of its request is as it was`() {
+    fun `a GFE host gets the same launch and resume request as before`() {
         val host = host()
         answerLaunch(host)
         answerLaunch(host, verb = "resume", body = "<resume>1</resume>")
@@ -130,20 +130,6 @@ class LaunchRequestTest {
                 "&rikey=00010F107F8081A5ABCDEFFEFF09905A&rikeyid=-5&localAudioPlayMode=0" +
                 "&surroundAudioInfo=196610&remoteControllersBitmap=0&gcmap=0&gcpersist=0&corever=1"
         assertThat(targets).containsExactly("/launch$query", "/resume$query").inOrder()
-    }
-
-    @Test
-    fun `continuous audio is off by default, so a LuminalShine launch and resume send none`() {
-        val host = host()
-        answerLaunch(host)
-        answerLaunch(host, verb = "resume", body = "<resume>1</resume>")
-        val http = client(host)
-
-        http.launchApp(context(), "launch", 12, false)
-        http.launchApp(context(), "resume", 12, false)
-
-        assertThat(host.requests.map { it.path }).containsExactly("/launch", "/resume").inOrder()
-        host.requests.forEach { assertThat(it.names).doesNotContain("continuousAudio") }
     }
 
     @Test

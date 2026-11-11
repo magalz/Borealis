@@ -18,6 +18,7 @@ import io.github.magalz.borealis.library.testing.FakeAppRepository
 import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
+import io.github.magalz.borealis.library.testing.snapshot
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,30 +34,10 @@ class AppsRouteTest {
     private val streams = mutableListOf<StreamRequest>()
     private val closes = mutableListOf<String?>()
 
-    private fun snapshot(
-        running: Boolean = true,
-        reachability: Reachability = Reachability.ONLINE,
-        paired: Boolean = true,
-        known: Boolean = true,
-    ) =
-        AppsSnapshot(
-            host =
-                if (known) {
-                    aHost(
-                        id = "host-1",
-                        name = "Desk PC",
-                        reachability = reachability,
-                        paired = paired,
-                        runningApp = if (running) RunningApp(1, "Desktop") else null,
-                    )
-                } else {
-                    null
-                },
-            apps = listOf(anApp(1, "Desktop"), anApp(2, "Hades II", hdrSupported = true)),
-            loading = false,
-        )
+    private val desktop = anApp(1, "Desktop")
+    private val hades = anApp(2, "Hades II", hdrSupported = true)
 
-    private fun show(snapshot: AppsSnapshot = snapshot()) {
+    private fun show(snapshot: AppsSnapshot = snapshot(desktop, hades, running = desktop)) {
         repository.emit(snapshot)
         val viewModel = AppsViewModel("host-1", repository, shortcuts)
         composeRule.setContent {
@@ -92,7 +73,7 @@ class AppsRouteTest {
 
     @Test
     fun `starting an app when nothing runs starts its stream`() {
-        show(snapshot(running = false))
+        show(snapshot(desktop, hades))
 
         composeRule.onNodeWithContentDescription("Hades II").performClick()
         composeRule.waitForIdle()
@@ -102,21 +83,27 @@ class AppsRouteTest {
 
     @Test
     fun `an unknown host closes the screen with a message`() {
-        show(snapshot(known = false))
+        show(snapshot(desktop, hades, host = null))
 
         assertThat(closes).containsExactly("This PC is no longer in your list.")
     }
 
     @Test
     fun `a host that is not paired closes the screen with a message`() {
-        show(snapshot(paired = false))
+        show(
+            snapshot(
+                desktop,
+                hades,
+                host = aHost(paired = false, runningApp = RunningApp(desktop.id, desktop.name)),
+            )
+        )
 
         assertThat(closes).containsExactly("This PC is not paired. Pair it first.")
     }
 
     @Test
     fun `an offline host closes the screen with a message`() {
-        show(snapshot(reachability = Reachability.OFFLINE))
+        show(snapshot(desktop, hades, running = desktop, reachability = Reachability.OFFLINE))
 
         assertThat(closes).containsExactly("This PC is offline.")
     }
@@ -189,7 +176,7 @@ class AppsRouteTest {
 
     @Test
     fun `adding an app to the home screen pins it and says so when the launcher refuses`() {
-        show(snapshot(running = false))
+        show(snapshot(desktop, hades))
         composeRule.onNodeWithContentDescription("Hades II").performTouchInput { longClick() }
         composeRule.waitForIdle()
 

@@ -3,6 +3,7 @@ package io.github.magalz.borealis.input.feedback
 import android.hardware.BatteryState
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.testing.ANDROID_11
 import org.cgutman.shieldcontrollerextensions.SceChargingState
 import org.cgutman.shieldcontrollerextensions.SceConnectionType
 import org.junit.Test
@@ -286,7 +287,7 @@ class ShieldControllerTest : ShieldContract() {
 
 /** Android 11, which has no battery state on input devices: the service is the only source. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [30])
+@Config(sdk = [ANDROID_11])
 class ShieldControllerAndroid11Test : ShieldContract() {
     @Test
     fun `a pad the service does not know reports no battery`() {

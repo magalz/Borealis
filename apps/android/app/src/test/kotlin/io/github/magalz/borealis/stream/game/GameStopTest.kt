@@ -3,6 +3,7 @@ package io.github.magalz.borealis.stream.game
 import android.net.wifi.WifiManager
 import android.os.HandlerThread
 import android.view.View
+import android.widget.Toast
 import com.google.common.truth.Truth.assertThat
 import com.limelight.binding.input.ControllerHandler
 import com.limelight.binding.input.virtual_controller.VirtualController
@@ -156,6 +157,17 @@ internal class GameStopTest : GameTestBase() {
             .isEqualTo(
                 "Average frame decoding latency: 30 ms (hardware decoder latency: 5 ms) [H.264]"
             )
+    }
+
+    @Test
+    fun `onStop shows the latency of the stream for a long time`() {
+        rig.preference("checkbox_enable_post_stream_toast", true)
+        rig.streaming()
+        decodedFrames(10, 300, 50, MoonBridge.VIDEO_FORMAT_H264)
+
+        rig.stop()
+
+        assertThat(ShadowToast.getLatestToast().duration).isEqualTo(Toast.LENGTH_LONG)
     }
 
     @Test

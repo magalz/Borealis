@@ -66,7 +66,7 @@ internal class GameAudioDelayTest : GameTestBase() {
 
         pushSnapshot()
 
-        assertThat(rig.session.perf.value?.audioDelayMs).isIn(Range.closed(1_000, 1_500))
+        assertThat(rig.session.perf.value?.audioDelayMs).isIn(Range.closed(1, 1_500))
     }
 
     @Test

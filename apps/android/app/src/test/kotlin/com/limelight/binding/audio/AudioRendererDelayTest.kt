@@ -141,14 +141,17 @@ class AudioRendererDelayTest : AudioRendererTestBase() {
     @Test
     fun `without a clock the delay reads the clock of the system`() {
         val renderer = ready()
-        repeat(10) { renderer.write(240) }
-        played(1_200, atNanos = System.nanoTime())
+        // 300 packets of 240 frames are 1.5 s at 48 kHz, none of them played: the wait is long
+        // enough that a slow run still has frames waiting when the question comes.
+        repeat(300) { renderer.write(240) }
+        played(0, atNanos = System.nanoTime())
 
-        // 25 ms less the time that the test takes between the timestamp and the question.
+        // 1,500 ms less the time that the test takes between the timestamp and the question. A
+        // clock far from the one of the timestamp would give a delay far from this range.
         val delay = renderer.audioDelayMs()
         assertThat(delay).isNotNull()
-        assertThat(delay).isAtLeast(0)
-        assertThat(delay).isAtMost(25)
+        assertThat(delay).isAtLeast(1)
+        assertThat(delay).isAtMost(1_500)
     }
 
     private companion object {

@@ -1120,7 +1120,6 @@ class Game :
     )
     private fun prepareDisplayForRendering(): Float {
         val display = windowManager.defaultDisplay
-        val windowLayoutParams = window.attributes
 
         // Pick the optimal display mode explicitly
         var bestMode = display.mode
@@ -1228,7 +1227,20 @@ class Game :
             "Best display mode: ${bestMode.physicalWidth}x${bestMode.physicalHeight}x${bestMode.refreshRate}"
         )
 
-        // Only apply new window layout parameters if we've actually changed the display mode
+        applyDisplayMode(display, bestMode)
+
+        val displayRefreshRate = bestMode.refreshRate
+
+        sizeStreamView()
+
+        // Set the desired refresh rate that will get passed into setFrameRate() later
+        desiredRefreshRate = displayRefreshRate
+
+        return reportedRefreshRate(displayRefreshRate)
+    }
+
+    // Only apply new window layout parameters if we've actually changed the display mode
+    private fun applyDisplayMode(display: Display, bestMode: Display.Mode) {
         if (display.mode.modeId != bestMode.modeId) {
             // If we only changed refresh rate and we're on an OS that supports
             // Surface.setFrameRate() use that instead of using preferredDisplayModeId to avoid the
@@ -1240,6 +1252,7 @@ class Game :
                     display.mode.physicalHeight != bestMode.physicalHeight
             ) {
                 // Apply the display mode change
+                val windowLayoutParams = window.attributes
                 windowLayoutParams.preferredDisplayModeId = bestMode.modeId
                 window.attributes = windowLayoutParams
             } else {
@@ -1250,15 +1263,6 @@ class Game :
         } else {
             LimeLog.info("Current display mode is already the best display mode")
         }
-
-        val displayRefreshRate = bestMode.refreshRate
-
-        sizeStreamView()
-
-        // Set the desired refresh rate that will get passed into setFrameRate() later
-        desiredRefreshRate = displayRefreshRate
-
-        return reportedRefreshRate(displayRefreshRate)
     }
 
     private fun sizeStreamView() {

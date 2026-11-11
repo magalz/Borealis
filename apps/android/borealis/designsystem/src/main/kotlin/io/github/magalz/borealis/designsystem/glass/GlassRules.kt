@@ -12,9 +12,12 @@ import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.designsystem.theme.borealisColors
 import kotlin.math.max
 
-/**
- * The tint and the blur of [Transparency.Reduced], and of the glass of a device that cannot blur.
- */
+/** The tint of [Transparency.Reduced] in percent, and of the glass of a device that cannot blur. */
+const val REDUCED_GLASS_TINT_PERCENT = 0
+
+/** The blur of [Transparency.Reduced] in dp (ADR 0057). */
+const val REDUCED_GLASS_BLUR_DP = 0
+
 private const val REDUCED_TINT_PERCENT = 85
 private const val REDUCED_BLUR_DP = 48
 private const val NO_BLUR_DP = 0

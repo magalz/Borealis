@@ -135,7 +135,11 @@ open class ShadowRecordingVideoCodec : ShadowMediaCodec() {
     @Implementation
     protected override fun getBuffer(input: Boolean, index: Int): ByteBuffer? {
         if (input && nullInputBuffers.getAndDecrement() > 0) return null
-        return super.getBuffer(input, index)
+        val buffer = super.getBuffer(input, index)
+        // A real codec hands out an input buffer that is empty. Robolectric leaves one that was
+        // queued as it is until its output is released, and a restart does not clear it.
+        if (input) buffer?.clear()
+        return buffer
     }
 
     @Implementation

@@ -392,14 +392,7 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setUpWindow()
-        readSettingsAndFitWindow()
-
+    private fun bindStreamViews() {
         // Listen for non-touch events on the game surface
         streamView = findViewById(R.id.surfaceView)
         streamView.setOnGenericMotionListener(this)
@@ -442,12 +435,25 @@ class Game :
         streamView.setOnCapturedPointerListener { view, motionEvent ->
             handleMotionEvent(view, motionEvent)
         }
+    }
 
+    private fun warnIfMetered() {
         // Warn the user if they're on a metered connection
         val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (connMgr.isActiveNetworkMetered) {
             displayTransientMessage(resources.getString(R.string.conn_metered))
         }
+    }
+
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setUpWindow()
+        readSettingsAndFitWindow()
+        bindStreamViews()
+        warnIfMetered()
 
         // Make sure Wi-Fi is fully powered up
         val wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager

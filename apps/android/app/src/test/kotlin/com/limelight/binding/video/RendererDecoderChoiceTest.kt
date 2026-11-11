@@ -393,6 +393,26 @@ class RendererDecoderChoiceTest : RendererTestBase() {
         assertThat(renderer.isHevcSupported()).isTrue()
     }
 
+    @Test
+    fun `performance points win over measured frame rates when a decoder lists both`() {
+        val points =
+            limitedCodec("vendor.both.avc.decoder", "video/avc") {
+                performancePoints = mapOf("1920x1080" to "60-60")
+                measuredRates = mapOf("1920x1080" to "30-45")
+            }
+        val other =
+            limitedCodec("vendor.both.hevc.decoder", "video/hevc") {
+                performancePoints = mapOf("1920x1080" to "30-30")
+                measuredRates = mapOf("1920x1080" to "60-90")
+                profiles = listOf(CodecProfileLevel.HEVCProfileMain)
+            }
+        install(points, other)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isHevcSupported()).isFalse()
+    }
+
     // AV1
 
     @Test

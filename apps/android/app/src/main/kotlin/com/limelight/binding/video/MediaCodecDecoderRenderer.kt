@@ -91,7 +91,8 @@ private const val ERROR_DECODER_UNAVAILABLE = -2
 private const val ERROR_UNKNOWN_FORMAT = -3
 private const val ERROR_CONFIGURATION_FAILED = -5
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+// Converted as is from the inherited Java; LargeClass and TooManyFunctions stay because the class
+// waits for its split (Sprint 18d backlog).
 @Suppress("LargeClass", "TooManyFunctions")
 class MediaCodecDecoderRenderer(
     private val activity: Activity,
@@ -295,55 +296,51 @@ class MediaCodecDecoderRenderer(
             MediaCodecInfo.CodecProfileLevel.AVCProfileHigh,
         ) ?: MediaCodecHelper.findFirstDecoder("video/avc")
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
     private fun decoderCanMeetPerformancePoint(
         caps: MediaCodecInfo.VideoCapabilities,
         prefs: PreferenceConfiguration,
-    ): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val targetPerfPoint =
-                MediaCodecInfo.VideoCapabilities.PerformancePoint(
-                    prefs.width,
-                    prefs.height,
-                    prefs.fps,
-                )
-            val perfPoints = caps.supportedPerformancePoints
-            if (perfPoints != null) {
-                for (perfPoint in perfPoints) {
-                    // If we find a performance point that covers our target, we're good to go
-                    if (perfPoint.covers(targetPerfPoint)) {
-                        return true
-                    }
-                }
+    ): Boolean =
+        meetsPerformancePoints(caps, prefs)
+            ?: meetsAchievableFrameRates(caps, prefs)
+            // As a last resort, we will use areSizeAndRateSupported() which is explicitly NOT a
+            // performance metric, but it can work at least for the purpose of determining if
+            // the codec is going to die when given a stream with the specified settings.
+            ?: caps.areSizeAndRateSupported(prefs.width, prefs.height, prefs.fps.toDouble())
 
-                // We had performance point data but none met the specified streaming settings
-                return false
-            }
-
-            // Fall-through to try the Android M API if there's no performance point data
+    // The answer of the performance points (Android 10 and later), or null when there is no
+    // performance point data to go by.
+    private fun meetsPerformancePoints(
+        caps: MediaCodecInfo.VideoCapabilities,
+        prefs: PreferenceConfiguration,
+    ): Boolean? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return null
         }
+        val targetPerfPoint =
+            MediaCodecInfo.VideoCapabilities.PerformancePoint(prefs.width, prefs.height, prefs.fps)
+        val perfPoints = caps.supportedPerformancePoints ?: return null
 
+        // If we find a performance point that covers our target, we're good to go. With
+        // performance point data and none that covers it, the specified streaming settings are
+        // not met.
+        return perfPoints.any { it.covers(targetPerfPoint) }
+    }
+
+    // The answer of the achievable frame rates, or null when the decoder has none for this size.
+    private fun meetsAchievableFrameRates(
+        caps: MediaCodecInfo.VideoCapabilities,
+        prefs: PreferenceConfiguration,
+    ): Boolean? =
         try {
             // We'll ask the decoder what it can do for us at this resolution and see if our
             // requested frame rate falls below or inside the range of achievable frame rates.
             val fpsRange: Range<Double>? =
                 caps.getAchievableFrameRatesFor(prefs.width, prefs.height)
-            if (fpsRange != null) {
-                return prefs.fps <= fpsRange.upper
-            }
-
-            // Fall-through to try the Android L API if there's no performance point data
+            fpsRange?.let { prefs.fps <= it.upper }
         } catch (ignored: IllegalArgumentException) {
             // Video size not supported at any frame rate
-            return false
+            false
         }
-
-        // As a last resort, we will use areSizeAndRateSupported() which is explicitly NOT a
-        // performance metric, but it can work at least for the purpose of determining if
-        // the codec is going to die when given a stream with the specified settings.
-        return caps.areSizeAndRateSupported(prefs.width, prefs.height, prefs.fps.toDouble())
-    }
 
     // BOREALIS: HEVC and AV1 may use a decoder that throws for its capabilities, as AVC may, and
     // that decoder has no capabilities to ask about (what the Main10 answers and the crash text
@@ -464,12 +461,11 @@ class MediaCodecDecoderRenderer(
 
     fun isAvcSupported(): Boolean = avcDecoder != null
 
-    @Suppress("ReturnCount")
     fun isHevcMain10Hdr10Supported(): Boolean {
         val decoder = hevcDecoder ?: return false
-        val capabilities = capabilitiesOrNull(decoder, "video/hevc") ?: return false
+        val capabilities = capabilitiesOrNull(decoder, "video/hevc")
 
-        for (profileLevel in capabilities.profileLevels) {
+        for (profileLevel in capabilities?.profileLevels.orEmpty()) {
             if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10) {
                 LimeLog.info("HEVC decoder " + decoder.name + " supports HEVC Main10 HDR10")
                 return true
@@ -481,12 +477,11 @@ class MediaCodecDecoderRenderer(
 
     fun isAv1Supported(): Boolean = av1Decoder != null
 
-    @Suppress("ReturnCount")
     fun isAv1Main10Supported(): Boolean {
         val decoder = av1Decoder ?: return false
-        val capabilities = capabilitiesOrNull(decoder, "video/av01") ?: return false
+        val capabilities = capabilitiesOrNull(decoder, "video/av01")
 
-        for (profileLevel in capabilities.profileLevels) {
+        for (profileLevel in capabilities?.profileLevels.orEmpty()) {
             if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.AV1ProfileMain10HDR10) {
                 LimeLog.info("AV1 decoder " + decoder.name + " supports AV1 Main 10 HDR10")
                 return true
@@ -1130,7 +1125,7 @@ class MediaCodecDecoderRenderer(
     }
 
     // WindowManager.getDefaultDisplay is deprecated since API 30; the Java used it.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The stack trace that the Java printed to stderr also stays as it was (Sprint 18c backlog).
     @Suppress("DEPRECATION", "PrintStackTrace")
     override fun doFrame(frameTimeNanos: Long) {
         // Do nothing if we're stopping
@@ -1408,7 +1403,7 @@ class MediaCodecDecoderRenderer(
     // !!! May be called even if setup()/start() fails !!!
     // Object.notifyAll is not a member of Kotlin's Any, so the monitor is cast to java.lang.Object,
     // as the Java used it.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The cast stays: its monitor is the lock of the codec recovery (Sprint 18c backlog).
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     fun prepareForStop() {
         // Let the decoding code know to ignore codec exceptions now
@@ -1433,7 +1428,7 @@ class MediaCodecDecoderRenderer(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The stack trace that the Java printed to stderr stays as it was (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     override fun stop() {
         // May be called already, but we'll call it now to be safe

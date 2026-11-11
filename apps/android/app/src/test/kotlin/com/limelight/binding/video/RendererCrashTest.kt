@@ -8,6 +8,8 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration.FormatOption
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
 
 /**
  * Characterizes the failure that a renderer cannot recover from and reports: when the crash
@@ -567,5 +569,57 @@ class RendererCrashTest : RendererTestBase() {
         renderer.prepare(MoonBridge.VIDEO_FORMAT_H265_MAIN10)
 
         assertThat(crash(renderer).lines().first()).isEqualTo("PreSPSErrorFormat: 200")
+    }
+
+    // What a codec exception adds to the text
+
+    /** The last five lines of the text of a crash caused by [failure], as the renderer makes it. */
+    private fun codecCrashLines(failure: MediaCodec.CodecException): List<String> {
+        val exception =
+            ReflectionHelpers.callConstructor(
+                Class.forName(
+                    "com.limelight.binding.video.MediaCodecDecoderRenderer\$RendererException"
+                ),
+                ClassParameter.from(MediaCodecDecoderRenderer::class.java, small()),
+                ClassParameter.from(Exception::class.java, failure),
+            ) as RuntimeException
+        return exception.lines().takeLast(5)
+    }
+
+    @Test
+    fun `a codec exception adds its diagnostic info, its flags and its error code before its own text`() {
+        assertThat(
+                codecCrashLines(
+                    codecException(errorCode = -38, actionCode = ACTION_NONE, message = "dead")
+                )
+            )
+            .containsExactly(
+                "Diagnostic Info: android.media.MediaCodec.error_neg_38",
+                "Recoverable: false",
+                "Transient: false",
+                "Codec Error Code: -38",
+                "android.media.MediaCodec\$CodecException: dead",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a recoverable codec exception says that it is recoverable and not transient`() {
+        assertThat(
+                codecCrashLines(codecException(errorCode = -1, actionCode = ACTION_RECOVERABLE))
+                    .subList(1, 3)
+            )
+            .containsExactly("Recoverable: true", "Transient: false")
+            .inOrder()
+    }
+
+    @Test
+    fun `a transient codec exception says that it is transient and not recoverable`() {
+        assertThat(
+                codecCrashLines(codecException(errorCode = -2, actionCode = ACTION_TRANSIENT))
+                    .subList(1, 3)
+            )
+            .containsExactly("Recoverable: false", "Transient: true")
+            .inOrder()
     }
 }

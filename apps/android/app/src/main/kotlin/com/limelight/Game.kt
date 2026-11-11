@@ -1253,6 +1253,15 @@ class Game :
 
         val displayRefreshRate = bestMode.refreshRate
 
+        sizeStreamView()
+
+        // Set the desired refresh rate that will get passed into setFrameRate() later
+        desiredRefreshRate = displayRefreshRate
+
+        return reportedRefreshRate(displayRefreshRate)
+    }
+
+    private fun sizeStreamView() {
         if (prefConfig.stretchVideo) {
             // Set the surface to the size of the video
             streamView.holder.setFixedSize(prefConfig.width, prefConfig.height)
@@ -1262,22 +1271,23 @@ class Game :
                 prefConfig.width.toDouble() / prefConfig.height.toDouble()
             )
         }
+    }
 
-        // Set the desired refresh rate that will get passed into setFrameRate() later
-        desiredRefreshRate = displayRefreshRate
-
-        if (
+    // The inherited TODO below keeps ForbiddenComment (Sprint 18c backlog).
+    @Suppress("ForbiddenComment")
+    private fun reportedRefreshRate(displayRefreshRate: Float): Float {
+        return if (
             packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
                 packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
         ) {
             // TVs may take a few moments to switch refresh rates, and we can probably assume
             // it will be eventually activated.
             // TODO: Improve this
-            return displayRefreshRate
+            displayRefreshRate
         } else {
             // Use the lower of the current refresh rate and the selected refresh rate.
             // The preferred refresh rate may not actually be applied (ex: Battery Saver mode).
-            return min(windowManager.defaultDisplay.refreshRate, displayRefreshRate)
+            min(windowManager.defaultDisplay.refreshRate, displayRefreshRate)
         }
     }
 

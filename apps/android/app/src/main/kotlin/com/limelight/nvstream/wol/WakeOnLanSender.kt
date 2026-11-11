@@ -40,6 +40,8 @@ object WakeOnLanSender {
     private const val PAYLOAD_BYTES = 102
     private const val HEX_RADIX = 16
 
+    internal fun openWolSocket(): DatagramSocket = DatagramSocket(0)
+
     // The stack traces go to the standard error stream, as in the inherited Java. Logging them
     // instead is a behaviour change (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
@@ -94,17 +96,23 @@ object WakeOnLanSender {
         }
     }
 
-    // Converted as is from the inherited Java; the stack traces go to the standard error stream
-    // as they did, and logging them instead is a behaviour change (Sprint 18c backlog).
     @JvmStatic
     @Throws(IOException::class)
-    @Suppress("PrintStackTrace")
     fun sendWolPacket(computer: ComputerDetails) {
+        sendWolPacket(computer, ::openWolSocket)
+    }
+
+    // Converted as is from the inherited Java; the stack traces go to the standard error stream
+    // as they did, and logging them instead is a behaviour change (Sprint 18c backlog).
+    // [openSocket] opens the one socket of the call; the tests give it a socket that sends nothing.
+    @Throws(IOException::class)
+    @Suppress("PrintStackTrace")
+    internal fun sendWolPacket(computer: ComputerDetails, openSocket: () -> DatagramSocket) {
         val payload = createWolPayload(computer)
         var lastException: IOException? = null
         var sentWolPacket = false
 
-        DatagramSocket(0).use { sock ->
+        openSocket().use { sock ->
             // Try all resolved remote and local addresses and broadcast addresses.
             // The broadcast address is required to avoid stale ARP cache entries
             // making the sleeping machine unreachable.

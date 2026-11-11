@@ -915,7 +915,8 @@ class RendererRecoveryTest : RendererTestBase() {
     fun `the flaky cases pass under load`() {
         val passes = System.getenv(LOAD_VARIABLE)?.toIntOrNull() ?: 0
         assumeTrue("Set $LOAD_VARIABLE to the number of passes to run this", passes > 0)
-        lengthenWatchdog(LOAD_WATCHDOG_SECONDS)
+        // The cases read the log of the thread only: the capture of the rule would grow for ever.
+        log.close()
         val cases =
             listOf(
                 "goes on after a recovery" to
@@ -933,6 +934,8 @@ class RendererRecoveryTest : RendererTestBase() {
         System.setErr(PrintStream(OutputStream.nullOutputStream()))
         try {
             for (pass in 1..passes) {
+                // The watchdog bounds one pass, not the run.
+                lengthenWatchdog(PASS_WATCHDOG_SECONDS)
                 for ((name, case) in cases) {
                     try {
                         case()
@@ -990,7 +993,7 @@ class RendererRecoveryTest : RendererTestBase() {
 
     private companion object {
         const val LOAD_VARIABLE = "BOREALIS_RENDERER_LOAD"
-        const val LOAD_WATCHDOG_SECONDS = 3_600L
+        const val PASS_WATCHDOG_SECONDS = 60L
         const val DUMPED_LINES = 30
         const val LIVE_CHUNKS = 64
         const val CHUNK_BYTES = 1 shl 20

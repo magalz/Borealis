@@ -90,6 +90,12 @@ class ThreadedLog : Handler() {
 
     override fun close() = Unit
 
+    /** Forgets every line and every wait. */
+    fun clear() {
+        written.clear()
+        waits.clear()
+    }
+
     /** Forgets the waits seen so far: the next [awaitWaiting] sees only the ones that come now. */
     fun forgetWaits() = waits.clear()
 
@@ -288,7 +294,7 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
         ShadowRecordingVideoCodec.forgetEverything()
         ShadowRecordingBridge.reset()
         crashes.clear()
-        threadLog.forgetWaits()
+        threadLog.clear()
     }
 
     /** What to add to a failure when a thread waited for a recovery without its own bit. */

@@ -413,6 +413,19 @@ class RendererDecoderChoiceTest : RendererTestBase() {
         assertThat(renderer.isHevcSupported()).isFalse()
     }
 
+    @Test
+    fun `one performance point that covers the stream is enough among several`() {
+        val several =
+            limitedCodec("vendor.several.avc.decoder", "video/avc") {
+                performancePoints = mapOf("1280x720" to "30-30", "1920x1080" to "60-120")
+            }
+        install(several, fastHevc)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isHevcSupported()).isFalse()
+    }
+
     // AV1
 
     @Test

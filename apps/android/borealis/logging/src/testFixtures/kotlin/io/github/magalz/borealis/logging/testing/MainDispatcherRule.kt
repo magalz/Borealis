@@ -1,6 +1,7 @@
-package io.github.magalz.borealis.library.testing
+package io.github.magalz.borealis.logging.testing
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -9,6 +10,7 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
 /** Runs `Dispatchers.Main` (and so `viewModelScope`) on a test dispatcher, so time is virtual. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule(private val dispatcher: TestDispatcher = StandardTestDispatcher()) :
     TestWatcher() {
     override fun starting(description: Description) {

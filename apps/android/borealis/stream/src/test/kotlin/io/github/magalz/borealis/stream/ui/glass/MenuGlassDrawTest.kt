@@ -7,6 +7,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.stream.testing.PIXEL_TOLERANCE
+import io.github.magalz.borealis.stream.testing.assertNear
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,9 +30,9 @@ class MenuGlassDrawTest {
     private val surface = BorealisColors().surface
 
     private fun assertSolid(pixel: Color) {
-        assertThat(pixel.red).isWithin(TOLERANCE).of(surface.red)
-        assertThat(pixel.green).isWithin(TOLERANCE).of(surface.green)
-        assertThat(pixel.blue).isWithin(TOLERANCE).of(surface.blue)
+        assertThat(pixel.red).isWithin(PIXEL_TOLERANCE).of(surface.red)
+        assertThat(pixel.green).isWithin(PIXEL_TOLERANCE).of(surface.green)
+        assertThat(pixel.blue).isWithin(PIXEL_TOLERANCE).of(surface.blue)
     }
 
     /**
@@ -40,8 +42,8 @@ class MenuGlassDrawTest {
     private fun assertGlassOverRed(pixel: Color, expected: Float = PANEL_TINT) {
         val tint = (1f - pixel.red) / (1f - surface.red)
         assertThat(tint).isWithin(TINT_TOLERANCE).of(expected)
-        assertThat(pixel.green).isWithin(TOLERANCE).of(surface.green * tint)
-        assertThat(pixel.blue).isWithin(TOLERANCE).of(surface.blue * tint)
+        assertThat(pixel.green).isWithin(PIXEL_TOLERANCE).of(surface.green * tint)
+        assertThat(pixel.blue).isWithin(PIXEL_TOLERANCE).of(surface.blue * tint)
     }
 
     private fun fixture(source: FakeVideoSource) = GlassFixture(composeRule, source)
@@ -120,16 +122,9 @@ class MenuGlassDrawTest {
         assertNear(glass.popup().rightPixel(), firm)
     }
 
-    private fun assertNear(pixel: Color, expected: Color) {
-        assertThat(pixel.red).isWithin(TOLERANCE).of(expected.red)
-        assertThat(pixel.green).isWithin(TOLERANCE).of(expected.green)
-        assertThat(pixel.blue).isWithin(TOLERANCE).of(expected.blue)
-    }
-
     private companion object {
         const val PANEL_TINT = 0.4f
         const val POPUP_TINT = 0.85f
         const val TINT_TOLERANCE = 0.02f
-        const val TOLERANCE = 0.012f
     }
 }

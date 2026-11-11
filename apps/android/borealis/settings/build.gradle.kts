@@ -22,6 +22,7 @@ dependencies {
     // The repository contract exposes Flow and StateFlow.
     api(libs.kotlinx.coroutines.android)
     testImplementation(testFixtures(project(":borealis:designsystem")))
+    testImplementation(testFixtures(project(":borealis:logging")))
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     // The tests of the About links decode the QR code that the dialog draws.

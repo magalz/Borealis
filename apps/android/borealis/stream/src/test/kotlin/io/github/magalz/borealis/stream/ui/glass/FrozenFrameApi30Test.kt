@@ -23,6 +23,8 @@ import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSessionOverBackground
+import io.github.magalz.borealis.stream.testing.distanceFrom
+import io.github.magalz.borealis.stream.testing.farthestFrom
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import kotlin.math.abs

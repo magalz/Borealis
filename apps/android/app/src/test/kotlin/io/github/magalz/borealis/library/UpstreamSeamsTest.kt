@@ -10,6 +10,7 @@ import com.limelight.nvstream.http.ComputerDetails.AddressTuple
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -30,14 +31,14 @@ class UpstreamSeamsTest {
         assertThat(networks.all { it.prefixLength in 0..32 }).isTrue()
     }
 
+    // The packets themselves are pinned on a recording socket by the tests of `WakeOnLanSender`.
+    // This one only shows that the adapter reaches the sender, and it sends nothing: the payload
+    // is built from the MAC address before any socket opens.
     @Test
-    fun `wake packets are sent to the addresses of a host`() {
-        val host =
-            details().reported(mac = "AA:BB:CC:DD:EE:FF").also {
-                it.manualAddress = AddressTuple("127.0.0.1", 47989)
-            }
+    fun `a wake reaches the sender, which fails on a host with no MAC address`() {
+        val host = details().also { it.manualAddress = AddressTuple("127.0.0.1", 47989) }
 
-        UpstreamWakeSender().send(host)
+        assertThrows(NullPointerException::class.java) { UpstreamWakeSender().send(host) }
     }
 
     @Test

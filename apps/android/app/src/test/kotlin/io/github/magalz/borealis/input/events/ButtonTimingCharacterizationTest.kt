@@ -67,33 +67,19 @@ class ButtonTimingCharacterizationTest {
         }
     }
 
-    /** How long the handler took to let go of A held for [heldMs], in real milliseconds. */
-    private fun releaseTime(heldMs: Long): Double {
-        val start = System.nanoTime()
+    /** The waits the handler asks its sleeper for when A, held for [heldMs], is let go. */
+    private fun waitsAsked(heldMs: Long): List<Long> {
+        val asked = mutableListOf<Long>()
+        rig.handler.sleeper = { asked += it }
         pad.release(KEYCODE_BUTTON_A, at = rig.now, downTime = rig.now - heldMs)
-        return (System.nanoTime() - start) / 1_000_000.0
+        return asked
     }
 
-    /** The fastest of five, which a busy machine does not inflate; a wait never takes less. */
-    private fun fastest(heldMs: Long): Double = List(5) { releaseTime(heldMs) }.min()
-
     @Test
-    fun `a key let go at once makes the handler wait 25 ms before the release goes out`() {
-        releaseTime(100) // warm up the code the measure runs
-
-        val instant = fastest(0)
-        val nearly = fastest(24)
-        val long = fastest(100)
-
-        assertThat(instant).isAtLeast(22.0)
-        // A long hold waits for nothing.
-        assertThat(instant - long).isAtLeast(12.0)
-        // Held for 24 ms, only the missing millisecond is waited. On Windows a 1 ms sleep can take
-        // a
-        // whole timer tick (15.6 ms), so the gap is usually about 15 ms and its floor about 9.4 ms
-        // (it came out at 9.6 and 9.9 in the phase review); only a clear gap is asked for.
-        // The 25 ms threshold itself is pinned without a clock by the test after this one.
-        assertThat(instant - nearly).isAtLeast(5.0)
+    fun `the handler asks to wait 25 ms for an instant release, 1 ms for 24 ms held, and none for a long hold`() {
+        assertThat(waitsAsked(0)).containsExactly(25L)
+        assertThat(waitsAsked(24)).containsExactly(1L)
+        assertThat(waitsAsked(100)).isEmpty()
     }
 
     @Test

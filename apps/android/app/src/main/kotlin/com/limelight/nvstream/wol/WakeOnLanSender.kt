@@ -42,6 +42,8 @@ object WakeOnLanSender {
 
     internal fun openWolSocket(): DatagramSocket = DatagramSocket(0)
 
+    internal fun sendWolPacket(computer: ComputerDetails, openSocket: () -> DatagramSocket) = Unit
+
     // The stack traces go to the standard error stream, as in the inherited Java. Logging them
     // instead is a behaviour change (Sprint 18c backlog).
     @Suppress("PrintStackTrace")

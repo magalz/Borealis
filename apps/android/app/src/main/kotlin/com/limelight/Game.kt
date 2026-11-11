@@ -445,16 +445,9 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setUpWindow()
-        readSettingsAndFitWindow()
-        bindStreamViews()
-        warnIfMetered()
-
+    // The stack trace of the SecurityException stays as it was (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun acquireWifiLocks() {
         // Make sure Wi-Fi is fully powered up
         val wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         try {
@@ -482,6 +475,18 @@ class Game :
             // WifiLock.acquire() even though we have android.permission.WAKE_LOCK in our manifest.
             e.printStackTrace()
         }
+    }
+
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setUpWindow()
+        readSettingsAndFitWindow()
+        bindStreamViews()
+        warnIfMetered()
+        acquireWifiLocks()
 
         appName = intent.getStringExtra(EXTRA_APP_NAME)
         pcName = intent.getStringExtra(EXTRA_PC_NAME)

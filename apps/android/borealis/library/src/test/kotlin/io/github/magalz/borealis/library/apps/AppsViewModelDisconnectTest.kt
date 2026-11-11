@@ -3,6 +3,7 @@ package io.github.magalz.borealis.library.apps
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.testing.anApp
+import io.github.magalz.borealis.library.testing.snapshot
 import io.github.magalz.borealis.library.testing.subscribe
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent

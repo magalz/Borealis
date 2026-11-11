@@ -40,6 +40,9 @@ import io.github.magalz.borealis.stream.testing.aDefaults
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionOverBackground
+import io.github.magalz.borealis.stream.testing.assertNear
+import io.github.magalz.borealis.stream.testing.distanceFrom
+import io.github.magalz.borealis.stream.testing.farthestFrom
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import io.github.magalz.borealis.stream.ui.background.OUTSIDE_GAME_BACKGROUND_TAG
@@ -144,12 +147,6 @@ class FrozenFrameScreenTest {
     /** The scrim over [behind]: the page of the look at 35 percent, not the 72 of the dialogs. */
     private fun scrimOver(behind: Color) =
         BorealisColors().page.copy(alpha = SCRIM).compositeOver(behind)
-
-    private fun assertNear(pixel: Color, expected: Color) {
-        assertThat(pixel.red).isWithin(TOLERANCE).of(expected.red)
-        assertThat(pixel.green).isWithin(TOLERANCE).of(expected.green)
-        assertThat(pixel.blue).isWithin(TOLERANCE).of(expected.blue)
-    }
 
     /** The largest step in luminance between neighbouring pixels across the strip at the edge. */
     private fun edgeStep(): Float {
@@ -508,7 +505,6 @@ class FrozenFrameScreenTest {
         const val MIN_GLOW = 0.05f
         const val SCRIM = 0.35f
         const val POPUP_TINT = 0.85f
-        const val TOLERANCE = 0.012f
         const val SOLID = 0.01f
     }
 }

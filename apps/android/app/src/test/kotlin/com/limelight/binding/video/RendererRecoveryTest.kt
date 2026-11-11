@@ -889,13 +889,14 @@ class RendererRecoveryTest : RendererTestBase() {
 
     @Test
     fun `a renderer that crashed throws the same exception again and tells nobody twice`() {
-        val renderer = running()
+        val renderer = running(stepped = true)
         for (number in 1..10) {
             ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
-            renderer.submit(pFrame(number))
+            assertThat(recoveredByRendererThread { renderer.submit(pFrame(number)) })
+                .isEqualTo(MoonBridge.DR_NEED_IDR)
         }
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
-        renderer.submit(pFrame(11))
+        assertThat(renderer.submit(pFrame(11))).isEqualTo(MoonBridge.DR_NEED_IDR)
         advanceClock(3_000)
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 2, stateFailure)
         val first = assertThrows(RuntimeException::class.java) { renderer.submit(pFrame(12)) }

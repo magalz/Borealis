@@ -236,6 +236,18 @@ internal class GameDisplayChoiceTest : GameTestBase() {
     }
 
     @Test
+    fun `a mode of the same refresh rate is taken when the rate may be reduced`() {
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160", pacing = "smoothness"),
+                DisplayMode(0, 3840, 2160, 60f),
+                DisplayMode(2, 4096, 2160, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(2, 60f, 6000))
+    }
+
+    @Test
     fun `a stream under 4K keeps the resolution of the display`() {
         val picked =
             pick(

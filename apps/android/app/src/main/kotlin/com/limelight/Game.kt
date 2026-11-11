@@ -342,11 +342,7 @@ class Game :
         private const val SIDE_CHORD_MS = 250L
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
+    private fun setUpWindow() {
         // We don't want a title bar
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
@@ -370,7 +366,9 @@ class Game :
 
         // Inflate the content
         setContentView(R.layout.activity_game)
+    }
 
+    private fun readSettingsAndFitWindow() {
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this)
         tombstonePrefs = getSharedPreferences("DecoderTombstone", 0)
@@ -392,6 +390,15 @@ class Game :
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
+    }
+
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setUpWindow()
+        readSettingsAndFitWindow()
 
         // Listen for non-touch events on the game surface
         streamView = findViewById(R.id.surfaceView)

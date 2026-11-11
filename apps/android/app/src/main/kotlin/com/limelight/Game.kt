@@ -112,7 +112,9 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+// Converted as is from the inherited Java; LargeClass and TooManyFunctions stay because the class
+// waits for its split (Sprint 18d backlog); DEPRECATION and OVERRIDE_DEPRECATION stay because the
+// deprecated platform APIs it calls and overrides carry behaviour (Sprint 18c backlog).
 @Suppress("DEPRECATION", "LargeClass", "OVERRIDE_DEPRECATION", "TooManyFunctions")
 class Game :
     ComponentActivity(),
@@ -800,7 +802,8 @@ class Game :
         streamView.holder.addCallback(this)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; SourceLockedOrientationActivity stays because
+    // locking the orientation is behaviour (Sprint 18c backlog).
     @SuppressLint("SourceLockedOrientationActivity")
     private fun setPreferredOrientationForCurrentDisplay() {
         val display = windowManager.defaultDisplay
@@ -921,9 +924,10 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; PrintStackTrace stays because the reflected Samsung
+    // call writes its failures to the standard error stream, as the Java did (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
-    fun setMetaKeyCaptureState(enabled: Boolean) {
+    private fun setMetaKeyCaptureState(enabled: Boolean) {
         // Android has native keyboard capture support starting in API 36.1
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
@@ -961,7 +965,8 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; PrintStackTrace and TooGenericExceptionCaught stay
+    // because entering PiP eats any exception and prints it, as the Java did (Sprint 18c backlog).
     @Suppress("PrintStackTrace", "TooGenericExceptionCaught")
     public override fun onUserLeaveHint() {
         super.onUserLeaveHint()
@@ -1021,8 +1026,6 @@ class Game :
             Math.round(refreshRate) % prefConfig.fps <= REFRESH_RATE_TOLERANCE
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ComplexCondition")
     private fun shouldIgnoreInsetsForResolution(width: Int, height: Int): Boolean {
         // Never ignore insets for non-native resolutions
         if (!PreferenceConfiguration.isNativeResolution(width, height)) {
@@ -1032,16 +1035,18 @@ class Game :
         val display = windowManager.defaultDisplay
         for (candidate in display.supportedModes) {
             // Ignore insets if this is an exact match for the display resolution
-            if (
-                (width == candidate.physicalWidth && height == candidate.physicalHeight) ||
-                    (height == candidate.physicalWidth && width == candidate.physicalHeight)
-            ) {
+            if (isModeSize(width, height, candidate)) {
                 return true
             }
         }
 
         return false
     }
+
+    /** Whether [width] x [height], or the same size turned the other way round, is [mode]'s. */
+    private fun isModeSize(width: Int, height: Int, mode: Display.Mode): Boolean =
+        (width == mode.physicalWidth && height == mode.physicalHeight) ||
+            (height == mode.physicalWidth && width == mode.physicalHeight)
 
     private fun mayReduceRefreshRate(): Boolean {
         return prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS ||
@@ -1276,9 +1281,9 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; ForbiddenComment stays for the inherited TODO below
+    // (Sprint 18c backlog).
     @Suppress("ForbiddenComment")
-    @SuppressLint("InlinedApi")
     private val hideSystemUi = Runnable {
         // TODO: Do we want to use WindowInsetsController here on R+ instead of
         // SYSTEM_UI_FLAG_IMMERSIVE_STICKY? They seem to do the same thing as of S...
@@ -3055,7 +3060,9 @@ class Game :
         return handleMotionEvent(view, event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; ClickableViewAccessibility stays because the
+    // background touch view handles its touches itself and has no click action
+    // (Sprint 18c backlog).
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(view: View, event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) {

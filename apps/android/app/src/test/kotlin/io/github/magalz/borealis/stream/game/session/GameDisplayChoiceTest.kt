@@ -200,6 +200,18 @@ internal class GameDisplayChoiceTest : GameTestBase() {
     }
 
     @Test
+    fun `a stream at 4K at 60 frames takes no smaller resolution that fits it`() {
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160", fps = 60),
+                DisplayMode(0, 4096, 2160, 60f),
+                DisplayMode(2, 3840, 2160, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
+    }
+
+    @Test
     fun `a stream above 60 frames takes no resolution that is too small for it`() {
         val picked =
             pick(
@@ -267,6 +279,30 @@ internal class GameDisplayChoiceTest : GameTestBase() {
             )
 
         assertThat(picked).isEqualTo(Picked(2, 60f, 6000))
+    }
+
+    @Test
+    fun `a mode wider than 4K is left alone by a stream at 4K`() {
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160"),
+                DisplayMode(0, 3840, 2160, 60f),
+                DisplayMode(2, 5120, 2880, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
+    }
+
+    @Test
+    fun `a mode wider than 4K is left alone by a stream that is 4096 wide`() {
+        val picked =
+            pick(
+                Wanted(resolution = "4096x2160"),
+                DisplayMode(0, 4096, 2160, 60f),
+                DisplayMode(2, 5120, 2880, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
     }
 
     // The modes that differ from the current one, or from the stream, in a single side

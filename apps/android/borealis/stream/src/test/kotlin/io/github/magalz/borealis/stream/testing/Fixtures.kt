@@ -1,5 +1,6 @@
 package io.github.magalz.borealis.stream.testing
 
+import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.stream.LatencyRange
@@ -8,14 +9,21 @@ import io.github.magalz.borealis.stream.PerfSnapshot
 import io.github.magalz.borealis.stream.SessionInfo
 import io.github.magalz.borealis.stream.StreamDefaults
 import io.github.magalz.borealis.stream.StreamSession
+import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.TouchMode
 
+/**
+ * No background: the default one moves on the screens outside the game, and a test that ends with
+ * it still drawing leaves the frames of the next test unscheduled in the same JVM. A test that
+ * needs the background asks for it in its own visuals.
+ */
 val aDefaults =
     StreamDefaults(
         overlay = OverlayMode.OFF,
         touchMode = TouchMode.TRACKPAD,
         gamepadMouse = false,
         showMenuHint = true,
+        visuals = StreamVisuals(backgroundStyle = BackgroundStyle.Off),
     )
 
 val aSessionInfo =
@@ -50,3 +58,9 @@ fun aSession(
     dockKeyboard: () -> Boolean = { false },
     clockMs: () -> Long = { 0L },
 ) = StreamSession("Desktop", "Gaming PC", defaults, dockKeyboard, actions, clockMs)
+
+/**
+ * A session for a test that asserts something about the background, which is the moving default.
+ */
+fun aSessionOverBackground(actions: RecordingActions = RecordingActions()) =
+    aSession(actions, aDefaults.copy(visuals = StreamVisuals()))

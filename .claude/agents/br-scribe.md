@@ -2,7 +2,7 @@
 name: br-scribe
 description: Writes Borealis text from orchestrator notes - pull request descriptions, release notes, changelog entries, issue text, ADRs and documentation copy-edits. Edits only the text files its brief names; never writes code and never publishes anything.
 model: haiku
-effort: medium
+effort: max
 tools: Read, Grep, Glob, Write, Edit, Bash, PowerShell
 ---
 

@@ -13,13 +13,11 @@ import io.github.magalz.borealis.designsystem.theme.borealisColors
 import kotlin.math.max
 
 /** The tint of [Transparency.Reduced] in percent, and of the glass of a device that cannot blur. */
-const val REDUCED_GLASS_TINT_PERCENT = 0
+const val REDUCED_GLASS_TINT_PERCENT = 85
 
 /** The blur of [Transparency.Reduced] in dp (ADR 0057). */
-const val REDUCED_GLASS_BLUR_DP = 0
+const val REDUCED_GLASS_BLUR_DP = 48
 
-private const val REDUCED_TINT_PERCENT = 85
-private const val REDUCED_BLUR_DP = 48
 private const val NO_BLUR_DP = 0
 private const val PERCENT = 100
 
@@ -70,8 +68,8 @@ internal fun glassSpec(look: BorealisLook, style: BackgroundStyle, sdk: Int): Gl
     return if (look.transparency == Transparency.Reduced || !canBlur) {
         GlassSpec(
             solid = false,
-            tintPercent = REDUCED_TINT_PERCENT,
-            blurDp = if (canBlur) REDUCED_BLUR_DP else NO_BLUR_DP,
+            tintPercent = REDUCED_GLASS_TINT_PERCENT,
+            blurDp = if (canBlur) REDUCED_GLASS_BLUR_DP else NO_BLUR_DP,
         )
     } else {
         val tint = look.glassTintPercent.coerceIn(0, PERCENT)

@@ -395,6 +395,34 @@ class WakeOnLanSenderCharacterizationTest {
         ports.sockets.forEach { assertThat(it.take(ownPacket)).isEqualTo(ownPacket) }
     }
 
+    @Test
+    fun `the socket of a call is bound to an ephemeral port on every address and may broadcast`() {
+        WakeOnLanSender.openWolSocket().use { socket ->
+            assertThat(socket.isBound).isTrue()
+            assertThat(socket.isConnected).isFalse()
+            assertThat(socket.localPort).isGreaterThan(0)
+            assertThat(socket.localAddress.isAnyLocalAddress).isTrue()
+            assertThat(socket.broadcast).isTrue()
+        }
+    }
+
+    @Test
+    fun `the socket of a call sends a packet from its own port`() {
+        val receiver = bind(0)
+        assumeNotNull(receiver)
+
+        WakeOnLanSender.openWolSocket().use { socket ->
+            val bytes = ownPacket
+            socket.send(DatagramPacket(bytes, bytes.size, loopback, receiver!!.localPort))
+
+            val packet = DatagramPacket(ByteArray(BUFFER_BYTES), BUFFER_BYTES)
+            receiver.soTimeout = RECEIVE_MS
+            receiver.receive(packet)
+            assertThat(packet.data.copyOf(packet.length)).isEqualTo(bytes)
+            assertThat(packet.port).isEqualTo(socket.localPort)
+        }
+    }
+
     private companion object {
         const val BIND_TRIES = 50
         const val FIRST_PORT_MIN = 20_000

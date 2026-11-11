@@ -7,6 +7,7 @@ import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.SocketAddress
 import java.util.Scanner
 
 object WakeOnLanSender {
@@ -39,6 +40,8 @@ object WakeOnLanSender {
     private const val MAC_ADDRESS_REPETITIONS = 16
     private const val PAYLOAD_BYTES = 102
     private const val HEX_RADIX = 16
+
+    internal fun openWolSocket(): DatagramSocket = DatagramSocket(null as SocketAddress?)
 
     // The stack traces go to the standard error stream, as in the inherited Java. Logging them
     // instead is a behaviour change (Sprint 18c backlog).

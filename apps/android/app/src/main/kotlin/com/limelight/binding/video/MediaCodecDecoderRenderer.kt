@@ -91,7 +91,8 @@ private const val ERROR_DECODER_UNAVAILABLE = -2
 private const val ERROR_UNKNOWN_FORMAT = -3
 private const val ERROR_CONFIGURATION_FAILED = -5
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+// Converted as is from the inherited Java; LargeClass and TooManyFunctions stay because the class
+// waits for its split (Sprint 18d backlog).
 @Suppress("LargeClass", "TooManyFunctions")
 class MediaCodecDecoderRenderer(
     private val activity: Activity,
@@ -1124,7 +1125,7 @@ class MediaCodecDecoderRenderer(
     }
 
     // WindowManager.getDefaultDisplay is deprecated since API 30; the Java used it.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The stack trace that the Java printed to stderr also stays as it was (Sprint 18c backlog).
     @Suppress("DEPRECATION", "PrintStackTrace")
     override fun doFrame(frameTimeNanos: Long) {
         // Do nothing if we're stopping
@@ -1402,7 +1403,7 @@ class MediaCodecDecoderRenderer(
     // !!! May be called even if setup()/start() fails !!!
     // Object.notifyAll is not a member of Kotlin's Any, so the monitor is cast to java.lang.Object,
     // as the Java used it.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The cast stays: its monitor is the lock of the codec recovery (Sprint 18c backlog).
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     fun prepareForStop() {
         // Let the decoding code know to ignore codec exceptions now
@@ -1427,7 +1428,7 @@ class MediaCodecDecoderRenderer(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The stack trace that the Java printed to stderr stays as it was (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     override fun stop() {
         // May be called already, but we'll call it now to be safe

@@ -8,6 +8,7 @@ import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.Redactor
+import io.github.magalz.borealis.logging.testing.WorkerDispatcherRule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel

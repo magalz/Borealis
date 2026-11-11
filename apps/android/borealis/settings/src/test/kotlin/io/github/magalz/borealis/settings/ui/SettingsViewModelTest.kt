@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.settings.ui
 
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.logging.testing.MainDispatcherRule
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.device.OscLayoutReset
@@ -14,7 +15,6 @@ import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeDeviceFactsSource
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository.Write
-import io.github.magalz.borealis.settings.testing.MainDispatcherRule
 import io.github.magalz.borealis.settings.testing.deviceFacts
 import io.github.magalz.borealis.settings.testing.subscribe
 import java.util.concurrent.CountDownLatch

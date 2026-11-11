@@ -9,6 +9,7 @@ import io.github.magalz.borealis.library.domain.StreamRequest
 import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
+import io.github.magalz.borealis.library.testing.snapshot
 import io.github.magalz.borealis.library.testing.subscribe
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent

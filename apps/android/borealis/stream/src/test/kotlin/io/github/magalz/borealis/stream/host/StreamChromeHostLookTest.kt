@@ -22,6 +22,7 @@ import io.github.magalz.borealis.nativecore.LaunchCategory
 import io.github.magalz.borealis.stream.LaunchRetry
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.testing.aSession
+import io.github.magalz.borealis.stream.testing.aSessionOverBackground
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,7 +38,7 @@ class StreamChromeHostLookTest {
     @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     /** The Starting screen of [session], in a host built with [look]. */
-    private fun showChrome(look: BorealisLook?, session: StreamSession = aSession()) {
+    private fun showChrome(look: BorealisLook?, session: StreamSession = aSessionOverBackground()) {
         composeRule.runOnUiThread {
             val activity = composeRule.activity
             val stream = View(activity)

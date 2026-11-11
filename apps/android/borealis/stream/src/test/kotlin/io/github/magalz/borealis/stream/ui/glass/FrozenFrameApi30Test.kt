@@ -22,7 +22,7 @@ import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.aFailure
-import io.github.magalz.borealis.stream.testing.aSession
+import io.github.magalz.borealis.stream.testing.aSessionOverBackground
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import kotlin.math.abs
@@ -71,7 +71,7 @@ class FrozenFrameApi30Test {
         composeRule.waitForIdle()
     }
 
-    private fun failure() = aSession().also { it.onFailed(aFailure) }
+    private fun failure() = aSessionOverBackground().also { it.onFailed(aFailure) }
 
     /**
      * With no frame the popup is over the background, and it draws what it draws with no frozen

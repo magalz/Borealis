@@ -39,6 +39,7 @@ import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.aDefaults
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSession
+import io.github.magalz.borealis.stream.testing.aSessionOverBackground
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import io.github.magalz.borealis.stream.ui.background.OUTSIDE_GAME_BACKGROUND_TAG
@@ -322,7 +323,7 @@ class FrozenFrameScreenTest {
         assertNear(picture()[x, y], without[x, y])
     }
 
-    private fun stillFailure() = aSession(actions).also { it.onFailed(aFailure) }
+    private fun stillFailure() = aSessionOverBackground(actions).also { it.onFailed(aFailure) }
 
     @Test
     fun `with no copy asked for, the popup draws what it draws with no frozen frame`() =

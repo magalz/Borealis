@@ -182,6 +182,31 @@ internal class GameDisplayChoiceTest : GameTestBase() {
         assertThat(picked).isEqualTo(Picked(0, 120f, 12000))
     }
 
+    @Test
+    fun `a match is judged by the best mode so far, not by the mode that the display shows`() {
+        // The display shows 50 hertz, no match; the 120 hertz mode that follows is one, and the
+        // 60 hertz mode after it is a match that is lower than the best one so far.
+        val picked = pick(Wanted(), hd(0, 50f), hd(2, 120f), hd(3, 60f))
+
+        assertThat(picked).isEqualTo(Picked(0, 120f, 5000))
+    }
+
+    @Test
+    fun `a match is taken over a refresh rate that is no match, whatever the equal margin`() {
+        // 144 hertz is no match for 60 frames; 120 hertz is one, though not within three hertz.
+        val picked = pick(Wanted(), hd(0, 144f), hd(2, 120f))
+
+        assertThat(picked).isEqualTo(Picked(0, 120f, 12000))
+    }
+
+    @Test
+    fun `a match is not kept for being within the equal margin when the rate may be reduced`() {
+        // 180 hertz is a match for 60 frames but no equal one: only an equal match is held on to.
+        val picked = pick(Wanted(pacing = "smoothness"), hd(0, 180f), hd(2, 120f))
+
+        assertThat(picked).isEqualTo(Picked(0, 120f, 12000))
+    }
+
     // The resolution
 
     @Test
@@ -230,6 +255,21 @@ internal class GameDisplayChoiceTest : GameTestBase() {
                 Wanted(resolution = "3840x2160"),
                 DisplayMode(0, 3840, 2160, 60f),
                 DisplayMode(2, 4096, 2160, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(2, 60f, 6000))
+    }
+
+    @Test
+    fun `a resolution is a reduction of the best mode so far, not of the mode that the display shows`() {
+        // The 3840 mode is narrower than the 4096 one taken before it, though wider than the 2560
+        // one that the display shows, and a stream at 60 frames takes no reduction.
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160"),
+                DisplayMode(0, 2560, 1440, 60f),
+                DisplayMode(2, 4096, 2160, 60f),
+                DisplayMode(3, 3840, 2160, 60f),
             )
 
         assertThat(picked).isEqualTo(Picked(2, 60f, 6000))

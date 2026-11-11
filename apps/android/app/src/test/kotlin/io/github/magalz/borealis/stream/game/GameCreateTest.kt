@@ -2,6 +2,8 @@ package io.github.magalz.borealis.stream.game
 
 import android.content.Context
 import android.net.wifi.WifiManager
+import android.view.InputDevice
+import android.view.View
 import android.view.WindowManager
 import com.google.common.truth.Truth.assertThat
 import com.limelight.R
@@ -13,6 +15,7 @@ import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamPhase
 import org.junit.Test
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.util.ReflectionHelpers
 
 /** What `Game.onCreate` builds and wires from the intent of a pinned shortcut. */
@@ -20,6 +23,27 @@ internal class GameCreateTest : GameTestBase() {
     private fun heldWifiLocks(): Int =
         shadowOf(rig.application.getSystemService(Context.WIFI_SERVICE) as WifiManager)
             .activeLockCount
+
+    /**
+     * The input classes that the activity handles: keyboards, gamepads, pointers, touchpads and
+     * mice.
+     */
+    private val everyInputClass =
+        InputDevice.SOURCE_CLASS_BUTTON or
+            InputDevice.SOURCE_CLASS_JOYSTICK or
+            InputDevice.SOURCE_CLASS_POINTER or
+            InputDevice.SOURCE_CLASS_POSITION or
+            InputDevice.SOURCE_CLASS_TRACKBALL
+
+    private fun unbufferedSources(view: View): Int =
+        ReflectionHelpers.getField(view, "mUnbufferedInputSource")
+
+    /** The listener that a view of the activity holds in the field [name] of its listener info. */
+    private fun listenerOf(view: View, name: String): Any? =
+        ReflectionHelpers.getField<Any?>(
+            ReflectionHelpers.getField<Any>(view, "mListenerInfo"),
+            name,
+        )
 
     private fun nothingWasBuilt() {
         for (name in listOf("conn", "decoderRenderer", "streamSession", "controllerHandler")) {
@@ -51,6 +75,17 @@ internal class GameCreateTest : GameTestBase() {
         rig.destroyActivity()
 
         assertThat(heldWifiLocks()).isEqualTo(0)
+    }
+
+    @Test
+    fun `the Wi-Fi locks do not count their references`() {
+        rig.create()
+
+        for (name in listOf("highPerfWifiLock", "lowLatencyWifiLock")) {
+            // The shadow of the lock keeps what the activity told the lock.
+            val shadow = Shadow.extract<Any>(rig.field<WifiManager.WifiLock>(name))
+            assertThat(ReflectionHelpers.getField<Boolean>(shadow, "refCounted")).isFalse()
+        }
     }
 
     @Test
@@ -146,5 +181,29 @@ internal class GameCreateTest : GameTestBase() {
         val view = rig.game.findViewById<StreamView>(R.id.surfaceView)
         assertThat(shadowOf(view).fakeSurfaceHolder.callbacks).isEmpty()
         assertThat(rig.game.isFinishing).isFalse()
+    }
+
+    @Test
+    fun `the stream view asks for unbuffered input of every class that the activity handles`() {
+        rig.create()
+
+        val view = rig.game.findViewById<View>(R.id.surfaceView)
+        assertThat(unbufferedSources(view)).isEqualTo(everyInputClass)
+    }
+
+    @Test
+    fun `the background touch view asks for unbuffered input of every class too`() {
+        rig.create()
+
+        val view = rig.game.findViewById<View>(R.id.backgroundTouchView)
+        assertThat(unbufferedSources(view)).isEqualTo(everyInputClass)
+    }
+
+    @Test
+    fun `the stream view gives its keys to the activity through its key listener`() {
+        rig.create()
+
+        val view = rig.game.findViewById<View>(R.id.surfaceView)
+        assertThat(listenerOf(view, "mOnKeyListener")).isSameInstanceAs(rig.game)
     }
 }

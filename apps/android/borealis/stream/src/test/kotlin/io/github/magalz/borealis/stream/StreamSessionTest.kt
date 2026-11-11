@@ -38,7 +38,12 @@ class StreamSessionTest {
     fun `starts connecting with the names it was given`() {
         assertThat(session.state.value)
             .isEqualTo(
-                StreamUiState("Desktop", "Gaming PC", StreamPhase.Starting(StartStage.CONNECTING))
+                StreamUiState(
+                    "Desktop",
+                    "Gaming PC",
+                    StreamPhase.Starting(StartStage.CONNECTING),
+                    visuals = aDefaults.visuals,
+                )
             )
         assertThat(session.perf.value).isNull()
     }

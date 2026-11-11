@@ -14,9 +14,15 @@ import io.github.magalz.borealis.testing.LimeLogCapture
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import java.util.logging.Handler
+import java.util.logging.LogRecord
+import java.util.logging.Logger
+import kotlin.concurrent.thread
 import org.junit.After
 import org.junit.Assert.fail
 import org.junit.Before
@@ -60,6 +66,112 @@ class FakeSurfaceHolder(private val surface: Surface) : SurfaceHolder {
 }
 
 /**
+ * What `LimeLog` wrote, line by line, and the thread that wrote it. [LimeLogCapture] keeps no
+ * thread, and a recovery that waits is told by who waits and for whom.
+ */
+class ThreadedLog : Handler() {
+    class Line(val thread: String, val message: String) {
+        override fun toString() = "[$thread] $message"
+    }
+
+    private val written = CopyOnWriteArrayList<Line>()
+    private val waits = LinkedBlockingQueue<Int>()
+
+    val lines: List<Line>
+        get() = written.toList()
+
+    override fun publish(record: LogRecord) {
+        val line = Line(Thread.currentThread().name, record.message)
+        written += line
+        quiesceFlags(line)?.let { waits.add(it) }
+    }
+
+    override fun flush() = Unit
+
+    override fun close() = Unit
+
+    /** Forgets every line and every wait. */
+    fun clear() {
+        written.clear()
+        waits.clear()
+    }
+
+    /** Forgets the waits seen so far: the next [awaitWaiting] sees only the ones that come now. */
+    fun forgetWaits() = waits.clear()
+
+    /**
+     * Blocks until a thread logs that it waits to quiesce with exactly [flags] (the bits of the
+     * threads that have come), and fails if none does within [WAIT_BOUND_SECONDS].
+     */
+    fun awaitWaiting(flags: Int) {
+        while (true) {
+            val seen =
+                checkNotNull(waits.poll(WAIT_BOUND_SECONDS, TimeUnit.SECONDS)) {
+                    "No thread waited to quiesce with $flags; log: ${written.takeLast(TAIL)}"
+                }
+            if (seen == flags) return
+        }
+    }
+
+    /**
+     * The lines of a thread that waits for a recovery whose bit is not among those it printed, so
+     * that nobody counts it as arrived: such a thread waits for ever (BORE-121).
+     */
+    fun waitsWithoutOwnBit(): List<Line> = written.filter { line ->
+        val bit = OWN_BITS[line.thread] ?: return@filter false
+        quiesceFlags(line)?.let { it and bit == 0 } ?: false
+    }
+
+    private fun quiesceFlags(line: Line): Int? =
+        line.message
+            .takeIf { it.startsWith(QUIESCE_PREFIX) }
+            ?.substringAfterLast(": ")
+            ?.toIntOrNull()
+
+    private companion object {
+        const val QUIESCE_PREFIX = "Waiting to quiesce decoder threads: "
+        const val WAIT_BOUND_SECONDS = 30L
+        const val TAIL = 30
+        val OWN_BITS =
+            mapOf(INPUT_CALL_THREAD to INPUT_THREAD, RENDERER_THREAD_NAME to RENDERER_THREAD)
+    }
+}
+
+/**
+ * A call that runs on a thread of its own, the input thread of the renderer (the caller of
+ * `submitDecodeUnit`), so that the test thread can play the others and a test that goes wrong ends
+ * by itself.
+ */
+class InputCall<T>(block: () -> T) {
+    /** What the call ended with, and whether that thread was interrupted then. */
+    class Outcome<T>(val result: Result<T>, val interrupted: Boolean)
+
+    private val outcome = AtomicReference<Outcome<T>>()
+    private val input =
+        thread(name = INPUT_CALL_THREAD) {
+            val result = runCatching(block)
+            outcome.set(Outcome(result, Thread.currentThread().isInterrupted))
+        }
+
+    fun interrupt() = input.interrupt()
+
+    /** Waits for the call to end; fails if it does not end within half a minute. */
+    fun outcome(): Outcome<T> {
+        input.join(JOIN_MS)
+        check(!input.isAlive) { "The input thread is still blocked" }
+        return outcome.get()
+    }
+
+    fun result(): T = outcome().result.getOrThrow()
+
+    fun failure(): Throwable = checkNotNull(outcome().result.exceptionOrNull())
+
+    private companion object {
+        const val JOIN_MS = 30_000L
+    }
+}
+
+/**
  * The Robolectric setup that every test of `MediaCodecDecoderRenderer` shares: the native bridge
  * and the video codec are replaced by shadows (the canonical [ShadowRecordingBridge] and
  * [ShadowRecordingVideoCodec]), the decoders the device lists are what a test installs, and the
@@ -79,11 +191,15 @@ class FakeSurfaceHolder(private val surface: Surface) : SurfaceHolder {
 abstract class RendererTestBase : MediaCodecHelperTestBase() {
     @get:Rule val log = LimeLogCapture()
 
+    /** The same lines with the thread that wrote each, and the waits of the recoveries. */
+    protected val threadLog = ThreadedLog()
+
     /** What the crash listener of the renderers was told, in order. */
     protected val crashes = CopyOnWriteArrayList<Exception>()
 
     private val realHelper = HelperHandle(MediaCodecHelper::class.java)
     private lateinit var helperBefore: HelperHandle.State
+    private val limeLog = Logger.getLogger("com.limelight.LimeLog")
     private val socBefore = Build.SOC_MANUFACTURER to Build.SOC_MODEL
     private val texture = SurfaceTexture(0)
     protected val surface = Surface(texture)
@@ -96,6 +212,8 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     }
     private var alarm: ScheduledFuture<*>? = null
     private val overran = AtomicBoolean()
+
+    private var watchdogSeconds = WATCHDOG_SECONDS
 
     /** An activity, which the renderer asks for the display; made on first use. */
     protected val activity: Activity
@@ -115,7 +233,15 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
         // unless they are paused: the tests call `doFrame` themselves.
         ShadowChoreographer.setPaused(true)
         device()
-        alarm = watchdog.schedule(::overrun, WATCHDOG_SECONDS, TimeUnit.SECONDS)
+        limeLog.addHandler(threadLog)
+        alarm = watchdog.schedule(::overrun, watchdogSeconds, TimeUnit.SECONDS)
+    }
+
+    /** Moves the watchdog to [seconds] from now, for a test that loops over many passes. */
+    protected fun lengthenWatchdog(seconds: Long) {
+        alarm?.cancel(false)
+        watchdogSeconds = seconds
+        alarm = watchdog.schedule(::overrun, seconds, TimeUnit.SECONDS)
     }
 
     /** What the watchdog does: it lets go every thread that waits for the renderers. */
@@ -129,10 +255,7 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     fun releaseDevice() {
         alarm?.cancel(false)
         try {
-            started.forEach { renderer ->
-                renderer.prepareForStop()
-                renderer.stop()
-            }
+            stopRenderers()
             screen?.destroy()
             surface.release()
             texture.release()
@@ -141,15 +264,49 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
             ShadowRecordingBridge.reset()
             ShadowRecordingVideoCodec.forgetEverything()
         } finally {
+            limeLog.removeHandler(threadLog)
             watchdog.shutdownNow()
         }
         if (overran.get()) {
             fail(
-                "The test ran for more than $WATCHDOG_SECONDS s: a thread of the renderer was " +
-                    "probably waiting for another, and the watchdog told the renderers to stop."
+                "The test ran for more than $watchdogSeconds s: a thread of the renderer was " +
+                    "probably waiting for another, and the watchdog told the renderers to stop." +
+                    raceEvidence()
             )
         }
     }
+
+    private fun stopRenderers() {
+        started.forEach { renderer ->
+            renderer.prepareForStop()
+            renderer.stop()
+        }
+        started.clear()
+        renderers.clear()
+    }
+
+    /**
+     * Ends a pass of a test that makes many, so that the next one begins as a test does: the
+     * renderers stopped, and the fake codecs, the bridge and the crashes forgotten.
+     */
+    protected fun endPass() {
+        stopRenderers()
+        ShadowRecordingVideoCodec.forgetEverything()
+        ShadowRecordingBridge.reset()
+        crashes.clear()
+        threadLog.clear()
+    }
+
+    /** What to add to a failure when a thread waited for a recovery without its own bit. */
+    protected fun raceEvidence(): String =
+        threadLog.waitsWithoutOwnBit().let { lines ->
+            if (lines.isEmpty()) {
+                ""
+            } else {
+                "\nA thread waited to quiesce without its own bit in the flags, the race of " +
+                    "BORE-121: $lines"
+            }
+        }
 
     /**
      * The threads that have come to wait for a recovery, as the bits that the renderer prints in
@@ -237,6 +394,42 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
         }
     }
 
+    /**
+     * Starts [this] with a renderer thread that makes a pass only when
+     * `ShadowRecordingVideoCodec.stepOutput` says so, and waits until that thread is parked at the
+     * codec, before its first pass.
+     */
+    protected fun MediaCodecDecoderRenderer.beginStepped() {
+        ShadowRecordingVideoCodec.manualOutput = true
+        begin()
+        ShadowRecordingVideoCodec.awaitParked()
+    }
+
+    /**
+     * Runs [call] on the input thread, which meets a failure of the codec there and waits for the
+     * renderer thread; lets the parked renderer thread make its pass, which comes last and does the
+     * recovery; and waits until the input thread is released and the renderer thread is parked
+     * again. Nothing waits for the clock, and no other thread can ask for a recovery meanwhile, so
+     * every thread meets the one recovery of the round. Returns what the call returned.
+     */
+    protected fun <T> recoveredByRendererThread(call: () -> T): T {
+        threadLog.forgetWaits()
+        val input = InputCall(call)
+        // The input thread is the only one that has come; the renderer has no choreographer.
+        threadLog.awaitWaiting(INPUT_THREAD or CHOREOGRAPHER)
+        ShadowRecordingVideoCodec.stepOutput()
+        // Only a call that does not end is the race; what the call itself throws is its own.
+        val outcome =
+            try {
+                input.outcome()
+            } catch (e: IllegalStateException) {
+                throw IllegalStateException(e.message + raceEvidence(), e)
+            }
+        val result = outcome.result.getOrThrow()
+        ShadowRecordingVideoCodec.awaitParked()
+        return result
+    }
+
     /** Gives [this] its render target and sets it up for [format] at 1920x1080 and 60 FPS. */
     protected fun MediaCodecDecoderRenderer.prepare(
         format: Int,
@@ -264,6 +457,9 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     }
 }
 
+/** The names of the two threads of the renderer that a test can tell apart in the log. */
+internal const val INPUT_CALL_THREAD = "input"
+internal const val RENDERER_THREAD_NAME = "Video - Renderer (MediaCodec)"
 private const val AWAIT_NANOS = 30_000_000_000L
 private const val POLL_MS = 2L
 

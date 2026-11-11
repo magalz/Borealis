@@ -364,6 +364,52 @@ class StartConflictTest {
         assertThat(rig.paths()).doesNotContain("/launch")
     }
 
+    /**
+     * The quit request itself fails, not only its answer: the step is the quit whatever the failure
+     * is, so a change to `quitAndLaunch` must set it before the request is sent.
+     */
+    @Test
+    fun `a quit that the host refuses with a status fails at the quit step with that status`() {
+        rig.script.running(OTHER_ID)
+        rig.script.cancelReplies += HostReply.failure("500", "boom")
+        listener.conflictChoice = ConflictChoice.QUIT_AND_RELAUNCH
+
+        startAndFail()
+
+        assertThat(listener.events.drop(2))
+            .containsExactly("stageFailed quit ports=0 error=500")
+            .inOrder()
+        assertThat(rig.paths()).doesNotContain("/launch")
+    }
+
+    @Test
+    fun `a quit that the host answers with a broken XML fails at the quit step with the two ports of the pairing`() {
+        rig.script.running(OTHER_ID)
+        rig.script.cancelReplies += HostReply.xml("""<root status_code="200"><cancel>""")
+        listener.conflictChoice = ConflictChoice.QUIT_AND_RELAUNCH
+
+        startAndFail()
+
+        assertThat(listener.events.drop(2))
+            .containsExactly("stageFailed quit ports=3 error=0")
+            .inOrder()
+        assertThat(rig.paths()).doesNotContain("/launch")
+    }
+
+    @Test
+    fun `a quit that the host closes without an answer fails at the quit step with the two ports of the pairing`() {
+        rig.script.running(OTHER_ID)
+        rig.script.cancelReplies += HostReply.raw(ByteArray(0))
+        listener.conflictChoice = ConflictChoice.QUIT_AND_RELAUNCH
+
+        startAndFail()
+
+        assertThat(listener.events.drop(2))
+            .containsExactly("stageFailed quit ports=3 error=0")
+            .inOrder()
+        assertThat(rig.paths()).doesNotContain("/launch")
+    }
+
     @Test
     fun `a launch that the host refuses because an app runs is a conflict, and quit then launches`() {
         raceWithOtherApp()

@@ -235,8 +235,9 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(result).isEqualTo(MoonBridge.DR_OK)
         // The first frame was shown before the restart, and the failed one was never queued. The
         // buffers of the restarted codec begin again at 0.
-        assertThat(journal.indexOfFirst { it is CodecEvent.Output })
-            .isLessThan(journal.indexOfFirst { it is CodecEvent.Stopped })
+        val shown = journal.indexOfFirst { it is CodecEvent.Output }
+        assertThat(shown).isAtLeast(0)
+        assertThat(shown).isLessThan(journal.indexOfFirst { it is CodecEvent.Stopped })
         assertThat(events<CodecEvent.Queued>().map { it.index }).containsExactly(0, 0).inOrder()
     }
 

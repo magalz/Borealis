@@ -208,6 +208,26 @@ class RendererRecoveryTest : RendererTestBase() {
     }
 
     @Test
+    fun `a restart with the first frame still in the codec`() {
+        install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        renderer.submit(pFrame(1))
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, recoverable)
+        val failing = InputCall { renderer.submit(pFrame(2)) }
+        // The renderer thread starts only now, so its first pass finds the recovery waiting for it
+        // and restarts the codec before it has shown the first frame.
+        awaitQuiesced(INPUT_THREAD)
+        renderer.begin()
+        assertThat(failing.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        val result = renderer.submit(pFrame(3))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        assertThat(events<CodecEvent.Queued>().map { it.index }).containsExactly(0, 0).inOrder()
+    }
+
+    @Test
     fun `a failing input buffer dequeue is recovered like a failing queue`() {
         val renderer = running()
         ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, recoverable)

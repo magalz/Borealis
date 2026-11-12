@@ -220,7 +220,9 @@ From Sprint 17b the work of Borealis is tracked in the itsaplan project `ignis-d
   followed. The damage: a worktree's git index full of zeros (moved aside and rebuilt with `git reset`), a
   source file full of NUL bytes (restored from git), and broken build outputs (the worktree's own `build`
   folders deleted). What limited the loss: a commit after each finished step, a progress file updated right
-  after each commit, and loops resumed from their journal.
+  after each commit, and loops resumed from their journal. The same crash came back three times on the
+  morning of 2026-11-12; it zeroed two more git indexes, tore one source file, and left reviewers' mutants
+  live in their worktrees, so each restart began with a check of every worktree.
 - **The CI result of a push was not always read before the next push**, as in 18a: read it every time. The
   Android job failed on flakes (BORE-152 once, BORE-151 twice), and reading the log, not the rerun, is what
   found BORE-121 and the empty code generation of BORE-151.
@@ -238,12 +240,13 @@ From Sprint 17b the work of Borealis is tracked in the itsaplan project `ignis-d
   and two ellipses into mojibake. Read and write the bytes as UTF-8, and check the result after each edit.
 - **Editing the build-slot helper while a run reads it** made that run report a false failure (exit 2 after
   `BUILD SUCCESSFUL`). Change it only when no run is going.
-- **The Memtrace graph lagged behind the checkout for the whole phase.** Version 1.2.19 upgraded the store's
+- **The Memtrace graph lagged behind the checkout for most of the phase.** Version 1.2.19 upgraded the store's
   index once (about 35 minutes, and it starts again if cut), and afterwards the daemon stayed "catching up"
   with its graph behind the phase head; the session's own Memtrace connection was closed too. Tasks used one
   test call through the daemon helper, then Grep, ranged reads and mutants, and wrote "Memtrace blocked" when
   it did not answer.
-- **A usage limit stopped a lane session** on 2026-11-12; the main session went on with another model.
+- **A usage limit stopped both lane sessions** on 2026-11-12, and the main session with them; the owner moved
+  all three to Opus 5.5, and each lane resumed from its ledger and the state of its worktrees.
 - **A dependency update merged in the middle of the sprint caused a CI flake.** The KSP update that Dependabot
   proposed and the owner merged on 2026-11-11 made the Library tests fail now and then. The CI logs pointed at
   the version, and the tool's own release page named the defect. Read the release notes of a tool before the

@@ -155,6 +155,10 @@ class InputCall<T>(block: () -> T) {
 
     fun interrupt() = input.interrupt()
 
+    /** Whether the call has ended, so that a test can wait for it with another condition. */
+    val isFinished: Boolean
+        get() = outcome.get() != null
+
     /** Waits for the call to end; fails if it does not end within half a minute. */
     fun outcome(): Outcome<T> {
         input.join(JOIN_MS)

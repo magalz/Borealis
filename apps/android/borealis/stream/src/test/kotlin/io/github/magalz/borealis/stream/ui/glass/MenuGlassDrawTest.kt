@@ -5,8 +5,8 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.PIXEL_TOLERANCE
 import io.github.magalz.borealis.stream.testing.assertNear
 import org.junit.Rule

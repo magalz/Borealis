@@ -18,7 +18,10 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -165,8 +168,5 @@ class TouchTargetTest {
         val SEGMENTS = listOf("30", "60", "120")
         val GROUPS = listOf("Stream", "Video", "Audio")
         const val ROUNDED_48 = 47.99f
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
-        const val HANDHELD = "w800dp-h480dp-land-hdpi"
     }
 }

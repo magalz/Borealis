@@ -42,10 +42,10 @@ class BackgroundFrameExport {
     @get:Rule val composeRule = createComposeRule()
 
     /** A TV at 1920 x 1080 pixels. */
-    @Test @Config(qualifiers = TV) fun tv() = export("tv")
+    @Test @Config(qualifiers = TV_FRAME) fun tv() = export("tv")
 
     /** A phone upright at 1233 x 2673 pixels. */
-    @Test @Config(qualifiers = PHONE) fun phone() = export("phone")
+    @Test @Config(qualifiers = PHONE_FRAME) fun phone() = export("phone")
 
     private fun export(device: String) {
         val out = System.getenv(OUT)
@@ -77,7 +77,7 @@ class BackgroundFrameExport {
 
         const val BACKGROUND = "background"
         const val FRAMES = 24
-        const val TV = "w960dp-h540dp-xhdpi"
-        const val PHONE = "w411dp-h891dp-xxhdpi"
+        const val TV_FRAME = "w960dp-h540dp-xhdpi"
+        const val PHONE_FRAME = "w411dp-h891dp-xxhdpi"
     }
 }

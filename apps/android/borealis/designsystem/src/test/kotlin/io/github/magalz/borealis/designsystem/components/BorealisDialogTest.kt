@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -253,8 +255,6 @@ class BorealisDialogTest {
 
     private companion object {
         const val DIALOG = "dialog"
-        const val PHONE = "w360dp-h640dp-xhdpi"
         const val SHORT_PHONE = "w360dp-h360dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }

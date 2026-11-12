@@ -11,6 +11,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.background.CycleLoop
 import io.github.magalz.borealis.designsystem.background.LocalCycleLoop
 import io.github.magalz.borealis.designsystem.background.runCycleLoop
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
@@ -28,7 +29,7 @@ import org.robolectric.annotation.Config
  * second instead of 30 (ADR 0057), and nothing else is slowed.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class GlassHostPaceTest {
     @get:Rule val composeRule = createComposeRule()
 

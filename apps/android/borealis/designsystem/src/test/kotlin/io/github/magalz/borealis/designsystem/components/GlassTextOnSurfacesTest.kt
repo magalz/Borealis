@@ -18,6 +18,7 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsValueR
 import io.github.magalz.borealis.designsystem.glass.GlassHostOver
 import io.github.magalz.borealis.designsystem.glass.GlassSpec
 import io.github.magalz.borealis.designsystem.glass.onGlass
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
@@ -37,7 +38,7 @@ import org.robolectric.annotation.Config
  * is solid the text has the tokens as they are.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class GlassTextOnSurfacesTest {
     @get:Rule val composeRule = createComposeRule()
 

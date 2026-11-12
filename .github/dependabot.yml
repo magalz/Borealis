@@ -17,6 +17,11 @@ updates:
       include: scope
     ignore:
       - dependency-name: com.android.tools.build:gradle
+      # KSP 2.3.13 has a regression that its maintainers flag on the release (google/ksp#3286):
+      # concurrent KSP runs in one build can silently generate nothing, which left the Hilt test
+      # components of :borealis:library ungenerated in CI (BORE-151). Skip that version only.
+      - dependency-name: com.google.devtools.ksp*
+        versions: ['2.3.13']
     groups:
       kotlin-and-ksp:
         patterns: ['org.jetbrains.kotlin*', 'com.google.devtools.ksp*']

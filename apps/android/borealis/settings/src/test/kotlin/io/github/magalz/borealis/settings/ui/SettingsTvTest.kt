@@ -29,7 +29,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.testing.FakeInputModeManager
+import io.github.magalz.borealis.designsystem.testing.HANDHELD_NO_TOUCH
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DisabledReason
@@ -535,7 +537,7 @@ class SettingsTvTest : SettingsScreenTestBase() {
 
 /** The settings screen on a handheld: two panes, like a TV. */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = HANDHELD)
+@Config(qualifiers = HANDHELD_NO_TOUCH)
 class SettingsHandheldTest : SettingsScreenTestBase() {
     @Test
     fun `a handheld shows the groups and the rows in two panes`() {

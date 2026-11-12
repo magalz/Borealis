@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import io.github.magalz.borealis.designsystem.testing.FitCase
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.cardFitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -36,7 +37,7 @@ import org.robolectric.annotation.Config
  * that the letter spacing at its end does not cover.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class HostCardPhoneFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 

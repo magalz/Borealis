@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.FitCase
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.cardFitCases
 import io.github.magalz.borealis.designsystem.testing.tvHostCardMinHeight
@@ -43,7 +44,7 @@ import org.robolectric.annotation.Config
  * at the largest text: 130 percent over a system font scale of 1.3.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class HostCardFontFitTest(case: FitCase) {
     @get:Rule val composeRule = createComposeRule()
 

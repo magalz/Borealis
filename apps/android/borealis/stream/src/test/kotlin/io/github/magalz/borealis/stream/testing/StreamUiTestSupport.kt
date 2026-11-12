@@ -17,14 +17,6 @@ import io.github.magalz.borealis.stream.StreamIntents
 import io.github.magalz.borealis.stream.TouchMode
 import io.github.magalz.borealis.stream.keys.KeyChord
 
-/** Robolectric qualifiers of the devices the stream chrome is laid out for. */
-internal const val PHONE = "w360dp-h640dp-xhdpi"
-internal const val TV = "w960dp-h540dp-land-television-xhdpi"
-internal const val HANDHELD = "w800dp-h480dp-land-hdpi"
-
-/** A phone held sideways, which is how a stream is played: the panels get their 52% of 640dp. */
-internal const val PHONE_LANDSCAPE = "w640dp-h360dp-land-xhdpi"
-
 /** Sets [content] in the theme `StreamChromeRoot` wraps every screen in. */
 internal fun ComposeContentTestRule.setChrome(
     formFactor: FormFactor,

@@ -8,11 +8,6 @@ import io.github.magalz.borealis.settings.options.ResolutionKind
 import io.github.magalz.borealis.settings.testing.FakeSettingsOptions
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
-/** Robolectric qualifiers of the devices that the settings screen is laid out for. */
-const val PHONE = "w360dp-h640dp-xhdpi"
-const val TV = "w960dp-h540dp-land-television-xhdpi"
-const val HANDHELD = "w800dp-h480dp-land-hdpi-notouch"
-
 /** The standard resolutions that a recent display and decoder offer. */
 val STANDARD_RESOLUTIONS =
     listOf(

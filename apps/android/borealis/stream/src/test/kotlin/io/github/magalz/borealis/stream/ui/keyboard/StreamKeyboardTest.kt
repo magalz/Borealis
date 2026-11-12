@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.height
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -40,10 +43,7 @@ import io.github.magalz.borealis.stream.keys.KeyModifier.ALT
 import io.github.magalz.borealis.stream.keys.KeyModifier.CTRL
 import io.github.magalz.borealis.stream.keys.KeyModifier.SHIFT
 import io.github.magalz.borealis.stream.keys.Shortcuts
-import io.github.magalz.borealis.stream.testing.HANDHELD
-import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.ui.StreamKeyboard
 import java.io.File
 import org.junit.Rule

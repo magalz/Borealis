@@ -8,13 +8,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.connect
 import io.github.magalz.borealis.designsystem.testing.inputDevice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.Panel
-import io.github.magalz.borealis.stream.testing.HANDHELD
-import io.github.magalz.borealis.stream.testing.PHONE
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.setChrome
 import io.github.magalz.borealis.stream.ui.LayerFixture
 import io.github.magalz.borealis.stream.ui.aStreaming

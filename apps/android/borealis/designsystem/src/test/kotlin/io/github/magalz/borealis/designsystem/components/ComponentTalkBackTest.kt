@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.headings
 import io.github.magalz.borealis.designsystem.testing.paneTitles
 import io.github.magalz.borealis.designsystem.testing.readingOrder
@@ -153,10 +155,5 @@ class ComponentTalkBackTest {
                 onDismiss = {},
             )
         }
-    }
-
-    private companion object {
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }

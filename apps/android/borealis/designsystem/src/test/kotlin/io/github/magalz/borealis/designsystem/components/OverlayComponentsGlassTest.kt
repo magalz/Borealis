@@ -4,12 +4,11 @@ import androidx.compose.runtime.Composable
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceOption
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceSheet
 import io.github.magalz.borealis.designsystem.glass.OverlayGlassCases
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import org.robolectric.annotation.Config
-
-private const val PHONE = "w360dp-h640dp-xhdpi"
-private const val TV = "w960dp-h540dp-land-television-xhdpi"
 
 /** The dialog frame over a glass host. */
 @Config(qualifiers = TV)

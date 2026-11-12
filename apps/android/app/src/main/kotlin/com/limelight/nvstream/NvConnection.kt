@@ -774,7 +774,6 @@ open class NvConnection(
         return false
     }
 
-    @Suppress("ReturnCount")
     @Throws(IOException::class, XmlPullParserException::class)
     protected open fun quitAndLaunch(h: NvHTTP, context: ConnectionContext): Boolean {
         // BOREALIS: the user left, possibly with the answer Quit: the host's app, which may belong
@@ -783,34 +782,44 @@ open class NvConnection(
             return false
         }
         startStep = StartSteps.QUIT // BOREALIS: host.failure
-        try {
-            if (!h.quitApp()) {
-                context.listener.displayMessage(
-                    "Failed to quit previous session! You must quit it manually"
-                )
-                return false
+        // false when the host did not take the quit or refused it, both already told to the
+        // listener
+        val ended =
+            try {
+                h.quitApp() || quitNotTaken(context)
+            } catch (e: HostHttpResponseException) {
+                refusedQuit(e, context)
             }
-        } catch (e: HostHttpResponseException) {
-            if (e.errorCode == STATUS_NOT_YOUR_SESSION_TO_QUIT) {
-                context.listener.displayMessage(
-                    "This session wasn't started by this device," +
-                        " so it cannot be quit. End streaming on the original " +
-                        "device or the PC itself. (Error code: " +
-                        e.errorCode +
-                        ")"
-                )
-                return false
-            } else {
-                throw e
-            }
-        }
 
         // BOREALIS: left while the host ended the app: no launch, and no word to the listener
         // (host.launch)
-        if (launchCancelled) {
+        if (!ended || launchCancelled) {
             return false
         }
         return launchNotRunningApp(h, context)
+    }
+
+    private fun quitNotTaken(context: ConnectionContext): Boolean {
+        context.listener.displayMessage(
+            "Failed to quit previous session! You must quit it manually"
+        )
+        return false
+    }
+
+    // The host refused the quit. One of its statuses has a message of its own; any other one goes
+    // up to the start.
+    private fun refusedQuit(e: HostHttpResponseException, context: ConnectionContext): Boolean {
+        if (e.errorCode != STATUS_NOT_YOUR_SESSION_TO_QUIT) {
+            throw e
+        }
+        context.listener.displayMessage(
+            "This session wasn't started by this device," +
+                " so it cannot be quit. End streaming on the original " +
+                "device or the PC itself. (Error code: " +
+                e.errorCode +
+                ")"
+        )
+        return false
     }
 
     @Throws(IOException::class, XmlPullParserException::class)

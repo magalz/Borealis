@@ -3,6 +3,9 @@ package com.limelight.binding.video
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.jni.MoonBridge
+import java.util.logging.Level
+import java.util.logging.LogRecord
+import kotlin.concurrent.thread
 import org.junit.Test
 import org.robolectric.util.ReflectionHelpers
 
@@ -61,5 +64,73 @@ class RendererRecoveryRaceTest : RendererTestBase() {
         assertThat(input.result()).isEqualTo(MoonBridge.DR_NEED_IDR to MoonBridge.DR_NEED_IDR)
         assertThat(events<CodecEvent.Reset>()).hasSize(2)
         assertThat(log.lines()).contains("INFO: Codec recovery attempt: 2")
+    }
+
+    // How the log knows which role a thread plays, which decides whether a wait is the race
+
+    @Test
+    fun `the test thread that submits is the input thread for the log`() {
+        val renderer = stepped()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
+        threadLog.forgetWaits()
+        // The renderer thread comes once the test thread, which is the input thread here, waits.
+        thread(name = "stepper", isDaemon = true) {
+            threadLog.awaitWaiting(INPUT_THREAD or CHOREOGRAPHER)
+            ShadowRecordingVideoCodec.stepOutput()
+        }
+
+        assertThat(renderer.submit(pFrame(1))).isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        val waits =
+            threadLog.lines.filter {
+                it.thread == Thread.currentThread().name &&
+                    it.message.startsWith("Waiting to quiesce decoder threads: ")
+            }
+        assertThat(waits).isNotEmpty()
+        assertThat(waits.map { it.bit }.distinct()).containsExactly(INPUT_THREAD)
+    }
+
+    private fun fetchNextInputBuffer(action: () -> Unit) = action()
+
+    private fun doFrame(action: () -> Unit) = action()
+
+    /** What a log that is not the rig's makes of the wait [flags] of a thread that [role] names. */
+    private fun waitsOf(threadName: String, flags: Int, role: ((() -> Unit) -> Unit)? = null) =
+        ThreadedLog()
+            .also { fresh ->
+                thread(name = threadName) {
+                        val wait = {
+                            fresh.publish(
+                                LogRecord(Level.INFO, "Waiting to quiesce decoder threads: $flags")
+                            )
+                        }
+                        if (role == null) wait() else role(wait)
+                    }
+                    .join()
+            }
+            .waitsWithoutOwnBit()
+
+    @Test
+    fun `a thread in the frame callback is the choreographer, whatever its name`() {
+        assertThat(waitsOf("test thread", CHOREOGRAPHER, ::doFrame)).isEmpty()
+        assertThat(waitsOf("test thread", INPUT_THREAD or RENDERER_THREAD, ::doFrame)).hasSize(1)
+    }
+
+    @Test
+    fun `a thread in the input buffer functions is the input thread, whatever its name`() {
+        assertThat(waitsOf("test thread", INPUT_THREAD, ::fetchNextInputBuffer)).isEmpty()
+        assertThat(waitsOf("test thread", RENDERER_THREAD or CHOREOGRAPHER, ::fetchNextInputBuffer))
+            .hasSize(1)
+    }
+
+    @Test
+    fun `the choreographer thread is known by its name`() {
+        assertThat(waitsOf(CHOREOGRAPHER_THREAD_NAME, CHOREOGRAPHER)).isEmpty()
+        assertThat(waitsOf(CHOREOGRAPHER_THREAD_NAME, INPUT_THREAD or RENDERER_THREAD)).hasSize(1)
+    }
+
+    @Test
+    fun `a thread that is not named and in none of those functions is never judged`() {
+        assertThat(waitsOf("somebody", INPUT_THREAD)).isEmpty()
     }
 }

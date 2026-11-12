@@ -44,49 +44,6 @@ class ThreadedLogTest {
     }
 
     @Test
-    fun `the choreographer thread is known by its name`() {
-        waiting(CHOREOGRAPHER_THREAD_NAME, INPUT_THREAD or RENDERER_THREAD)
-
-        assertThat(log.waitsWithoutOwnBit().map { it.thread })
-            .containsExactly(CHOREOGRAPHER_THREAD_NAME)
-    }
-
-    // The renderer functions that the threads of a test wait in, by name: the test thread plays the
-    // input thread and the choreographer, and its name says neither.
-    private fun fetchNextInputBuffer(action: () -> Unit) = action()
-
-    private fun doFrame(action: () -> Unit) = action()
-
-    private fun waitingIn(role: (() -> Unit) -> Unit, flags: Int) {
-        thread(name = "test thread") {
-                role {
-                    log.publish(LogRecord(Level.INFO, "Waiting to quiesce decoder threads: $flags"))
-                }
-            }
-            .join()
-    }
-
-    @Test
-    fun `a thread that is in the frame callback is the choreographer`() {
-        waitingIn(::doFrame, CHOREOGRAPHER)
-        assertThat(log.waitsWithoutOwnBit()).isEmpty()
-
-        waitingIn(::doFrame, INPUT_THREAD or RENDERER_THREAD)
-
-        assertThat(log.waitsWithoutOwnBit()).hasSize(1)
-    }
-
-    @Test
-    fun `a thread that is in the input buffer functions is the input thread`() {
-        waitingIn(::fetchNextInputBuffer, INPUT_THREAD or CHOREOGRAPHER)
-        assertThat(log.waitsWithoutOwnBit()).isEmpty()
-
-        waitingIn(::fetchNextInputBuffer, RENDERER_THREAD or CHOREOGRAPHER)
-
-        assertThat(log.waitsWithoutOwnBit()).hasSize(1)
-    }
-
-    @Test
     fun `a wait of a thread that the log does not know is never the race`() {
         waiting("another thread", INPUT_THREAD)
 

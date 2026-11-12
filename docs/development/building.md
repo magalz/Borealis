@@ -223,6 +223,11 @@ Record the references on Windows, after a change that alters a screen:
 ./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug :borealis:stream:recordRoborazziDebug :borealis:settings:recordRoborazziDebug
 ```
 
+Passing `--rerun` to `recordRoborazziDebug` alone does not run the tests again: the recording copies the
+images of the last test run into the references. A real recording reruns the test task in the same
+command, for example `./gradlew :borealis:stream:testDebugUnitTest --rerun :borealis:stream:recordRoborazziDebug`
+(found by BORE-116).
+
 Verify the screens against the committed references:
 
 ```sh

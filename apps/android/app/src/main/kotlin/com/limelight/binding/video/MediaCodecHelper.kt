@@ -506,8 +506,6 @@ object MediaCodecHelper {
         return isDecoderInList(qualcommDecoderPrefixes, decoderName) && !isAdreno620
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
     @JvmStatic
     fun setDecoderLowLatencyOptions(
         videoFormat: MediaFormat,
@@ -560,14 +558,32 @@ object MediaCodecHelper {
         }
 
         if (tryNumber < OPERATING_RATE_TRY_BOUND) {
-            if (decoderSupportsMaxOperatingRate(decoderInfo.name)) {
-                videoFormat.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
-                setNewOption = true
-            } else {
-                videoFormat.setInteger(MediaFormat.KEY_PRIORITY, 0)
-                setNewOption = true
-            }
+            setOperatingRateOrPriority(videoFormat, decoderInfo.name)
+            setNewOption = true
         }
+
+        if (setVendorLowLatencyOptions(videoFormat, decoderInfo.name, tryNumber)) {
+            setNewOption = true
+        }
+
+        return setNewOption
+    }
+
+    private fun setOperatingRateOrPriority(format: MediaFormat, decoderName: String) {
+        if (decoderSupportsMaxOperatingRate(decoderName)) {
+            format.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
+        } else {
+            format.setInteger(MediaFormat.KEY_PRIORITY, 0)
+        }
+    }
+
+    // Sets the vendor keys of the decoder's family for the try number; true when it set one.
+    private fun setVendorLowLatencyOptions(
+        format: MediaFormat,
+        decoderName: String,
+        tryNumber: Int,
+    ): Boolean {
+        var setNewOption = false
 
         // MediaCodec supports vendor-defined format keys using the
         // "vendor.<extension name>.<parameter name>" syntax. These allow access to functionality
@@ -579,7 +595,7 @@ object MediaCodecHelper {
         // Try vendor-specific low latency options
         //
         // NOTE: Update knownVendorLowLatencyOptions if you modify this code!
-        if (isDecoderInList(qualcommDecoderPrefixes, decoderInfo.name)) {
+        if (isDecoderInList(qualcommDecoderPrefixes, decoderName)) {
             // Examples of Qualcomm's vendor extensions for Snapdragon 845:
             // https://cs.android.com/android/platform/superproject/+/master:hardware/qcom/sdm845/media/mm-video-v4l2/vidc/vdec/src/omx_vdec_extensions.hpp
             // https://cs.android.com/android/_/android/platform/hardware/qcom/sm8150/media/+/0621ceb1c1b19564999db8293574a0e12952ff6c
@@ -587,38 +603,38 @@ object MediaCodecHelper {
             // We will first try both, then try vendor.qti-ext-dec-low-latency.enable alone if that
             // fails
             if (tryNumber < VENDOR_OPTIONS_TRY_BOUND) {
-                videoFormat.setInteger("vendor.qti-ext-dec-picture-order.enable", 1)
+                format.setInteger("vendor.qti-ext-dec-picture-order.enable", 1)
                 setNewOption = true
             }
             if (tryNumber < QUALCOMM_LOW_LATENCY_TRY_BOUND) {
-                videoFormat.setInteger("vendor.qti-ext-dec-low-latency.enable", 1)
+                format.setInteger("vendor.qti-ext-dec-low-latency.enable", 1)
                 setNewOption = true
             }
-        } else if (isDecoderInList(kirinDecoderPrefixes, decoderInfo.name)) {
+        } else if (isDecoderInList(kirinDecoderPrefixes, decoderName)) {
             if (tryNumber < VENDOR_OPTIONS_TRY_BOUND) {
                 // Kirin low latency options
                 // https://developer.huawei.com/consumer/cn/forum/topic/0202325564295980115
-                videoFormat.setInteger(
+                format.setInteger(
                     "vendor.hisi-ext-low-latency-video-dec.video-scene-for-low-latency-req",
                     1,
                 )
-                videoFormat.setInteger(
+                format.setInteger(
                     "vendor.hisi-ext-low-latency-video-dec.video-scene-for-low-latency-rdy",
                     -1,
                 )
                 setNewOption = true
             }
-        } else if (isDecoderInList(exynosDecoderPrefixes, decoderInfo.name)) {
+        } else if (isDecoderInList(exynosDecoderPrefixes, decoderName)) {
             if (tryNumber < VENDOR_OPTIONS_TRY_BOUND) {
                 // Exynos low latency option for H.264 decoder
-                videoFormat.setInteger("vendor.rtc-ext-dec-low-latency.enable", 1)
+                format.setInteger("vendor.rtc-ext-dec-low-latency.enable", 1)
                 setNewOption = true
             }
-        } else if (isDecoderInList(amlogicDecoderPrefixes, decoderInfo.name)) {
+        } else if (isDecoderInList(amlogicDecoderPrefixes, decoderName)) {
             if (tryNumber < VENDOR_OPTIONS_TRY_BOUND) {
                 // Amlogic low latency vendor extension
                 // https://github.com/codewalkerster/android_vendor_amlogic_common_prebuilt_libstagefrighthw/commit/41fefc4e035c476d58491324a5fe7666bfc2989e
-                videoFormat.setInteger("vendor.low-latency.enable", 1)
+                format.setInteger("vendor.low-latency.enable", 1)
                 setNewOption = true
             }
         }

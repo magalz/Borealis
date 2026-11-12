@@ -129,6 +129,56 @@ internal class GameSpecialKeysTest : GameTestBase() {
     }
 
     @Test
+    fun `the chord key that repeats after the chord ran keeps its key up eaten`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_Z)
+        rig.releaseCtrlAltShift()
+
+        // The Z is still held and repeats, and no chord waits now: a repeat is not a new key down.
+        rig.game.dispatchKeyEvent(keyboardKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_Z, repeat = 1))
+        forgetCalls()
+        val released = rig.up(KeyEvent.KEYCODE_Z)
+
+        assertThat(released).isTrue()
+        assertThat(sentKeys()).isEmpty()
+    }
+
+    @Test
+    fun `a stray key up of the chord key after a whole chord goes to the host`() {
+        streamingAndCapturing()
+        rig.chord(KeyEvent.KEYCODE_Z)
+        forgetCalls()
+
+        // The chord took the key up of its Z, and nothing else is eaten for it.
+        rig.up(KeyEvent.KEYCODE_Z)
+
+        assertThat(sentKeys()).containsExactly(sent(0x805A, up, 0))
+    }
+
+    @Test
+    fun `the chord is still set while its action runs, and reset when it is done`() {
+        streamingAndCapturing()
+        rig.chord(KeyEvent.KEYCODE_Z)
+        idle(250)
+        val capture = rig.recordCapture()
+        var keyDuringAction: Int? = null
+        var waitingDuringAction: Boolean? = null
+        capture.onEnable = {
+            keyDuringAction = rig.field("specialKeyCode")
+            waitingDuringAction = rig.field("waitingForAllModifiersUp")
+        }
+
+        // The cursor chord grabs the input first, which asks the capture provider.
+        rig.chord(KeyEvent.KEYCODE_C)
+
+        assertThat(keyDuringAction).isEqualTo(KeyEvent.KEYCODE_C)
+        assertThat(waitingDuringAction).isTrue()
+        assertThat(rig.field<Int>("specialKeyCode")).isEqualTo(KeyEvent.KEYCODE_UNKNOWN)
+        assertThat(rig.field<Boolean>("waitingForAllModifiersUp")).isFalse()
+    }
+
+    @Test
     fun `the grab toggle that waits for its time brings back the cursor that the user had shown`() {
         streamingAndCapturing()
         rig.chord(KeyEvent.KEYCODE_C)

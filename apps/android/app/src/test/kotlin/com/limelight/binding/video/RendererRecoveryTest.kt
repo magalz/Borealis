@@ -943,6 +943,8 @@ class RendererRecoveryTest : RendererTestBase() {
             }
 
         assertThat(thrown).hasMessageThat().isEqualTo("codec state")
+        // The wait without a bit was made up for this case: it is not a race to fail the test with.
+        threadLog.clear()
     }
 
     // The load entry
@@ -994,6 +996,7 @@ class RendererRecoveryTest : RendererTestBase() {
                 for ((name, case) in cases) {
                     try {
                         case()
+                        failOnLostArrival()
                     } catch (e: Throwable) {
                         System.setErr(stderr)
                         dumpFailure(pass, name, e)

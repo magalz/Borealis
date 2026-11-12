@@ -961,6 +961,13 @@ class MediaCodecDecoderRenderer(
                 // If we haven't quiesced all threads yet, wait to be signalled after recovery.
                 // The final thread to be quiesced will handle the codec recovery.
                 while (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
+                    // A recovery that ended while we waited cleared our mark, so a recovery asked
+                    // for since then has not counted us: arrive again for it, as the last thread if
+                    // we are (the monitor is held, so the type cannot become NONE in between).
+                    if ((codecRecoveryThreadQuiescedFlags and quiescenceFlag) == 0) {
+                        return doCodecRecoveryIfRequired(quiescenceFlag)
+                    }
+
                     try {
                         LimeLog.info(
                             "Waiting to quiesce decoder threads: $codecRecoveryThreadQuiescedFlags"

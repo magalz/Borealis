@@ -12,9 +12,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * A copy whose request the platform refuses, because the surface went away between the check of
- * the source and the request: it fails like any other copy that cannot be made, later and on the
- * main thread, and nothing reaches the caller.
+ * A copy whose request the platform refuses, because the surface went away between the check of the
+ * source and the request: it fails like any other copy that cannot be made, later and on the main
+ * thread, and nothing reaches the caller.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(shadows = [ShadowRefusingPixelCopy::class])

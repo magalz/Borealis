@@ -396,8 +396,8 @@ reading the `sandboxesByKey` map of `SandboxManager` during a full run of each
 module: `:app` 24, `:borealis:library` 1, `:borealis:settings` 1,
 `:borealis:stream` 2 and `:borealis:designsystem` 4. Counting the distinct
 `@Config(sdk, shadows)` texts in the `:app` sources gives 39, the figure of
-Sprint 14; it is higher than the keys of a run because annotations that spell
-the same levels or shadows differently can share one sandbox.
+Sprint 14. The first figure counts annotation text and the second the sandboxes
+of a real run; the difference between them has not been explained line by line.
 
 A new SDK level or a new shadow set is a new sandbox: reuse an existing
 `@Config` where the test allows it, and recount when a module comes within three

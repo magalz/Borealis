@@ -1351,8 +1351,6 @@ class MediaCodecDecoderRenderer(
         thread.start()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
     private fun fetchNextInputBuffer(): Boolean {
         if (nextInputBuffer != null) {
             // We already have an input buffer
@@ -1362,6 +1360,35 @@ class MediaCodecDecoderRenderer(
         val startTime = SystemClock.uptimeMillis()
 
         val codecRecovered: Boolean
+        val dequeued =
+            try {
+                tryDequeueInput()
+            } finally {
+                codecRecovered = doCodecRecoveryIfRequired(CR_FLAG_INPUT_THREAD)
+            }
+
+        // If codec recovery is required, always return false to ensure the caller will request
+        // an IDR frame to complete the codec recovery.
+        if (!dequeued || codecRecovered) {
+            return false
+        }
+
+        val deltaMs = (SystemClock.uptimeMillis() - startTime).toInt()
+
+        if (deltaMs >= LONG_DEQUEUE_MS) {
+            LimeLog.warning("Dequeue input buffer ran long: $deltaMs ms")
+        }
+
+        if (nextInputBuffer == null) {
+            reportIfHung(deltaMs)
+        }
+
+        return nextInputBuffer != null
+    }
+
+    // Waits for an input buffer index and takes the buffer of that index. Answers false when the
+    // codec threw, after handleDecoderException.
+    private fun tryDequeueInput(): Boolean {
         try {
             // If we don't have an input buffer index yet, fetch one now
             while (nextInputBufferIndex < 0 && !stopping) {
@@ -1383,38 +1410,21 @@ class MediaCodecDecoderRenderer(
         } catch (e: IllegalStateException) {
             handleDecoderException(e)
             return false
-        } finally {
-            codecRecovered = doCodecRecoveryIfRequired(CR_FLAG_INPUT_THREAD)
         }
-
-        // If codec recovery is required, always return false to ensure the caller will request
-        // an IDR frame to complete the codec recovery.
-        if (codecRecovered) {
-            return false
-        }
-
-        val deltaMs = (SystemClock.uptimeMillis() - startTime).toInt()
-
-        if (deltaMs >= LONG_DEQUEUE_MS) {
-            LimeLog.warning("Dequeue input buffer ran long: $deltaMs ms")
-        }
-
-        if (nextInputBuffer == null) {
-            // We've been hung for 5 seconds and no other exception was reported,
-            // so generate a decoder hung exception
-            if (deltaMs >= DECODER_HUNG_MS && initialException == null) {
-                val decoderHungException = DecoderHungException(deltaMs)
-                if (!reportedCrash) {
-                    reportedCrash = true
-                    crashListener.notifyCrash(decoderHungException)
-                }
-                throw RendererException(this, decoderHungException)
-            }
-
-            return false
-        }
-
         return true
+    }
+
+    // We've been hung for 5 seconds and no other exception was reported, so generate a decoder
+    // hung exception.
+    private fun reportIfHung(deltaMs: Int) {
+        if (deltaMs >= DECODER_HUNG_MS && initialException == null) {
+            val decoderHungException = DecoderHungException(deltaMs)
+            if (!reportedCrash) {
+                reportedCrash = true
+                crashListener.notifyCrash(decoderHungException)
+            }
+            throw RendererException(this, decoderHungException)
+        }
     }
 
     override fun start() {

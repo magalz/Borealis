@@ -223,6 +223,11 @@ Record the references on Windows, after a change that alters a screen:
 ./gradlew :borealis:designsystem:recordRoborazziDebug :borealis:library:recordRoborazziDebug :borealis:stream:recordRoborazziDebug :borealis:settings:recordRoborazziDebug
 ```
 
+Passing `--rerun` to `recordRoborazziDebug` alone does not run the tests again: the recording copies the
+images of the last test run into the references. A real recording reruns the test task in the same
+command, for example `./gradlew :borealis:stream:testDebugUnitTest --rerun :borealis:stream:recordRoborazziDebug`
+(found by BORE-116).
+
 Verify the screens against the committed references:
 
 ```sh
@@ -379,8 +384,9 @@ still holds garbage that the old generation had not given back yet.
 | `:borealis:stream` | 981 MB | 907 MB | default |
 | `:borealis:designsystem` | 877 MB | 852 MB | default |
 
-The heap of a library module is about twice its "after GC" figure, rounded up to
-the next of 768 MB, 1 GB, 1.5 GB and 2 GB. On the default, `:borealis:library`
+A library module whose tests ran out of memory gets about twice its "after GC"
+figure, rounded up to the next of 768 MB, 1 GB, 1.5 GB and 2 GB; the others keep
+the default until they do (BORE-155 tracks Stream and Design system). On the default, `:borealis:library`
 (430 MB in use, 383 MB after GC) and `:borealis:settings` (473 MB and 406 MB)
 passed with the heap close to its limit. `:app` has its own 2 GB: on that limit
 its run needed a full collection, which left 1735 MB. Measure again when a

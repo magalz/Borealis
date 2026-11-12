@@ -11,7 +11,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.concurrent.thread
 import org.junit.Assert.assertThrows
 import org.junit.Assume.assumeTrue
@@ -966,7 +965,9 @@ class RendererRecoveryTest : RendererTestBase() {
     fun `a recovery that was cancelled before it began is not counted and does nothing`() {
         val renderer = prepared()
         // The stop comes after this thread passed the check for a recovery, as the renderer
-        // thread of a stop does while the last thread is on its way to the monitor.
+        // thread of a stop does while the last thread is on its way to the monitor. The case
+        // relies on the buffers being dropped before the attempt is counted, the order of the
+        // recovery: the stop arrives while the output queue is cleared.
         ReflectionHelpers.setField(
             renderer,
             "outputBufferQueue",
@@ -987,30 +988,31 @@ class RendererRecoveryTest : RendererTestBase() {
         val renderer = prepared()
         val monitor = ReflectionHelpers.getField<Any>(renderer, "codecRecoveryMonitor")
         val waiting = CountDownLatch(1)
-        val waitedMs = AtomicLong(-1)
-        // The wait is long enough that only a notification ends it early; the waiter holds the
+        // The waiter has no timeout of its own, so only a notification ends its wait; it holds the
         // monitor until it waits, so the monitor is free again only when it does.
         val waiter =
             thread(name = "waiter", isDaemon = true) {
                 synchronized(monitor) {
-                    val began = System.nanoTime()
                     waiting.countDown()
-                    waitFor(monitor, WAITER_BOUND_MS)
-                    waitedMs.set((System.nanoTime() - began) / NANOS_PER_MS)
+                    waitFor(monitor)
                 }
             }
-        check(waiting.await(JOIN_MS, TimeUnit.MILLISECONDS)) { "The waiter did not start" }
-        synchronized(monitor) {}
+        try {
+            check(waiting.await(JOIN_MS, TimeUnit.MILLISECONDS)) { "The waiter did not start" }
+            synchronized(monitor) {}
 
-        renderer.recoverAsLastThread(RECOVERY_RESTART)
+            renderer.recoverAsLastThread(RECOVERY_RESTART)
 
-        waiter.join(JOIN_MS)
-        check(!waiter.isAlive) { "The waiter was never woken" }
-        assertThat(waitedMs.get()).isLessThan(WAITER_BOUND_MS / 2)
+            waiter.join(JOIN_MS)
+            check(!waiter.isAlive) { "The waiter was never woken" }
+        } finally {
+            // A run that failed leaves no thread waiting.
+            waiter.interrupt()
+        }
     }
 
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-    private fun waitFor(monitor: Any, millis: Long) = (monitor as Object).wait(millis)
+    private fun waitFor(monitor: Any) = (monitor as Object).wait()
 
     // Too many recoveries
 
@@ -1271,16 +1273,18 @@ class RendererRecoveryTest : RendererTestBase() {
     fun `a failure of the call that a recovery waits for comes out with its own message`() {
         running(stepped = true)
         val before = threadLog.lines
+        // A wait without the bit of this thread, which the rig reads as the race of BORE-121, and
+        // then the wait that it expects of the input thread.
+        val madeUpWaits =
+            listOf(
+                "Waiting to quiesce decoder threads: $CHOREOGRAPHER",
+                "Waiting to quiesce decoder threads: ${INPUT_THREAD or CHOREOGRAPHER}",
+            )
 
         val thrown =
             assertThrows(IllegalStateException::class.java) {
                 recoveredByRendererThread<Unit> {
-                    // A wait without the bit of this thread, which the rig reads as the race of
-                    // BORE-121, and then the wait that it expects of the input thread.
-                    LimeLog.info("Waiting to quiesce decoder threads: $CHOREOGRAPHER")
-                    LimeLog.info(
-                        "Waiting to quiesce decoder threads: ${INPUT_THREAD or CHOREOGRAPHER}"
-                    )
+                    madeUpWaits.forEach { LimeLog.info(it) }
                     throw stateFailure()
                 }
             }
@@ -1288,7 +1292,9 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(thrown).hasMessageThat().isEqualTo("codec state")
         // The waits were made up for this case: they are not a race to fail the test with.
         threadLog.forget(
-            (threadLog.lines - before.toSet()).filter { it.thread == INPUT_CALL_THREAD }
+            (threadLog.lines - before.toSet()).filter {
+                it.thread == INPUT_CALL_THREAD && it.message in madeUpWaits
+            }
         )
     }
 
@@ -1402,8 +1408,6 @@ class RendererRecoveryTest : RendererTestBase() {
         const val UNKNOWN_RECOVERY = 7
         const val MAX_PASSES_FOR_A_FRAME = 4
         const val FRAME_US = 777L
-        const val WAITER_BOUND_MS = 10_000L
-        const val NANOS_PER_MS = 1_000_000L
         const val JOIN_MS = 30_000L
         const val PASS_WATCHDOG_SECONDS = 60L
         const val DUMPED_LINES = 30

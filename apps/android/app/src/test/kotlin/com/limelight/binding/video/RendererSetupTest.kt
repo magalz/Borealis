@@ -628,6 +628,16 @@ class RendererSetupTest : RendererTestBase() {
     }
 
     @Test
+    fun `setup accepts HEVC and AV1 over 4096 wide or tall`() {
+        install(avc(), hevc(), av1())
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 })
+
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H265, width = 4097)).isEqualTo(0)
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H265, height = 4097)).isEqualTo(0)
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_AV1_MAIN8, width = 4097)).isEqualTo(0)
+    }
+
+    @Test
     fun `setup returns minus 2 without an HEVC decoder`() {
         install(avc())
         val renderer = renderer()

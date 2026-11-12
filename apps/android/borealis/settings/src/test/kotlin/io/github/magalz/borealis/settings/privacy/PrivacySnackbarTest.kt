@@ -3,6 +3,7 @@ package io.github.magalz.borealis.settings.privacy
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.StaysAsSnackbar
 import io.github.magalz.borealis.designsystem.testing.assertSnackbarIsAsWideAsItsText
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -13,7 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class PrivacySnackbarTest {
     @get:Rule val composeRule = createComposeRule()
 

@@ -2,6 +2,7 @@ package io.github.magalz.borealis.settings.privacy
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.assertHalo
 import org.junit.Rule
 import org.junit.Test

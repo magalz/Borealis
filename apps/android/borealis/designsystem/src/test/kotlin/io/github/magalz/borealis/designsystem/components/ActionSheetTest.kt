@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -197,11 +199,9 @@ class ActionSheetTest {
 
     private companion object {
         const val HANDHELD = "w800dp-h360dp-land-xhdpi"
-        const val PHONE = "w360dp-h640dp-xhdpi"
         const val SHORT_PHONE = "w360dp-h360dp-xhdpi"
         const val SHORT_TV = "w960dp-h360dp-land-television-xhdpi"
         val SIX_ACTIONS =
             (1..6).map { ActionSheetAction("a$it", "Action $it", "What action $it does") }
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }

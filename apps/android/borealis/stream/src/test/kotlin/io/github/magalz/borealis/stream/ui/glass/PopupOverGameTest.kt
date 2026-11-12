@@ -8,14 +8,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.rootFrame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.designsystem.theme.borealisColors
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.stream.testing.assertNear
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -114,16 +114,9 @@ class PopupOverGameTest {
         }
     }
 
-    private fun assertNear(pixel: Color, expected: Color) {
-        assertThat(pixel.red).isWithin(TOLERANCE).of(expected.red)
-        assertThat(pixel.green).isWithin(TOLERANCE).of(expected.green)
-        assertThat(pixel.blue).isWithin(TOLERANCE).of(expected.blue)
-    }
-
     private companion object {
         const val SCRIM = 0.35f
         const val POPUP_TINT = 0.85f
-        const val TOLERANCE = 0.012f
         const val MARGIN_PX = 10
     }
 }

@@ -1,6 +1,5 @@
 package io.github.magalz.borealis.stream.ui.glass
 
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.SemanticsActions
@@ -17,12 +16,13 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.components.BackdropIconHalo
 import io.github.magalz.borealis.designsystem.components.BackdropTextHalo
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.designsystem.theme.borealisColors
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.stream.testing.assertNear
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -167,16 +167,9 @@ class MenuGlassHaloTest {
         assertThat(contrastOver(selected, wcagLuminance(chosen))).isAtLeast(AA_RATIO)
     }
 
-    private fun assertNear(pixel: Color, expected: Color) {
-        assertThat(pixel.red).isWithin(TOLERANCE).of(expected.red)
-        assertThat(pixel.green).isWithin(TOLERANCE).of(expected.green)
-        assertThat(pixel.blue).isWithin(TOLERANCE).of(expected.blue)
-    }
-
     private companion object {
         /** Left of a segment: past the 1 dp border (2 px at xhdpi), in the 3 dp of padding. */
         const val CONTAINER_PX = 3
-        const val TOLERANCE = 0.012f
 
         /** Inside a segment, outside its label. */
         const val SEGMENT_PX = 4

@@ -23,6 +23,7 @@ import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntOffset
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.testing.assertNoHalo
 import io.github.magalz.borealis.designsystem.testing.rootFrame
@@ -34,11 +35,14 @@ import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.stream.MenuGlass
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.aDefaults
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSession
+import io.github.magalz.borealis.stream.testing.aSessionOverBackground
+import io.github.magalz.borealis.stream.testing.assertNear
+import io.github.magalz.borealis.stream.testing.distanceFrom
+import io.github.magalz.borealis.stream.testing.farthestFrom
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import io.github.magalz.borealis.stream.ui.background.OUTSIDE_GAME_BACKGROUND_TAG
@@ -143,12 +147,6 @@ class FrozenFrameScreenTest {
     /** The scrim over [behind]: the page of the look at 35 percent, not the 72 of the dialogs. */
     private fun scrimOver(behind: Color) =
         BorealisColors().page.copy(alpha = SCRIM).compositeOver(behind)
-
-    private fun assertNear(pixel: Color, expected: Color) {
-        assertThat(pixel.red).isWithin(TOLERANCE).of(expected.red)
-        assertThat(pixel.green).isWithin(TOLERANCE).of(expected.green)
-        assertThat(pixel.blue).isWithin(TOLERANCE).of(expected.blue)
-    }
 
     /** The largest step in luminance between neighbouring pixels across the strip at the edge. */
     private fun edgeStep(): Float {
@@ -322,7 +320,7 @@ class FrozenFrameScreenTest {
         assertNear(picture()[x, y], without[x, y])
     }
 
-    private fun stillFailure() = aSession(actions).also { it.onFailed(aFailure) }
+    private fun stillFailure() = aSessionOverBackground(actions).also { it.onFailed(aFailure) }
 
     @Test
     fun `with no copy asked for, the popup draws what it draws with no frozen frame`() =
@@ -507,7 +505,6 @@ class FrozenFrameScreenTest {
         const val MIN_GLOW = 0.05f
         const val SCRIM = 0.35f
         const val POPUP_TINT = 0.85f
-        const val TOLERANCE = 0.012f
         const val SOLID = 0.01f
     }
 }

@@ -7,10 +7,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.Panel
-import io.github.magalz.borealis.stream.testing.HANDHELD
-import io.github.magalz.borealis.stream.testing.PHONE
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

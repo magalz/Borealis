@@ -1,8 +1,8 @@
 ---
 name: br-reviewer
 description: Independently reviews a Borealis task or phase diff against its brief, the inherited-code rules and the project conventions, runs the relevant checks, and reports prioritized findings. Read-only; never edits files.
-model: sonnet
-effort: xhigh
+model: claude-opus-5-5
+effort: medium
 tools: Read, Grep, Glob, Bash, PowerShell, Skill, mcp__memtrace__*
 ---
 

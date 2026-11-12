@@ -24,6 +24,7 @@ import io.github.magalz.borealis.designsystem.components.LocalTextHalo
 import io.github.magalz.borealis.designsystem.components.TextHaloStyle
 import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.luminance
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
@@ -44,7 +45,7 @@ import org.robolectric.annotation.Config
  * it was. Every case is a 100dp square on a 24dp frame (xhdpi: 2 pixels per dp).
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class FocusOverGlassTest {
     @get:Rule val composeRule = createComposeRule()
     private val focus = FocusRequester()

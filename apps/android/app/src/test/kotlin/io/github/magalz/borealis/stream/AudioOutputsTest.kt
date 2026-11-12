@@ -6,6 +6,7 @@ import android.media.AudioManager
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.testing.ANDROID_12
 import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -103,7 +104,7 @@ class AudioOutputsTest {
 
     // Below Android 13, where nothing says what the platform routes to
 
-    @Config(sdk = [31])
+    @Config(sdk = [ANDROID_12])
     @Test
     fun `below Android 13 a connected Bluetooth output is the one`() {
         audio.setOutputDevices(
@@ -116,7 +117,7 @@ class AudioOutputsTest {
         assertThat(outputs.current()).isEqualTo(AudioOutput(channelCount = 2, bluetooth = true))
     }
 
-    @Config(sdk = [31])
+    @Config(sdk = [ANDROID_12])
     @Test
     fun `below Android 13 the output is the first of HDMI, USB, wired and built-in`() {
         // Each output takes a different number of channels, to tell which one was chosen.
@@ -138,7 +139,7 @@ class AudioOutputsTest {
         assertThat(channels).containsExactly(8, 6, 2, 1).inOrder()
     }
 
-    @Config(sdk = [31])
+    @Config(sdk = [ANDROID_12])
     @Test
     fun `below Android 13 no output has no channel count`() {
         assertThat(outputs.current()).isEqualTo(AudioOutput(channelCount = null, bluetooth = false))

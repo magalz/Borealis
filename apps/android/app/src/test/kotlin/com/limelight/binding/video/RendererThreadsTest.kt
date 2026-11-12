@@ -3,8 +3,6 @@ package com.limelight.binding.video
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.concurrent.thread
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -24,32 +22,6 @@ class RendererThreadsTest : RendererTestBase() {
         assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
         renderer.begin()
         return renderer
-    }
-
-    /** What a call on the input thread ended with, and whether that thread was interrupted then. */
-    private class Outcome<T>(val result: Result<T>, val interrupted: Boolean)
-
-    /** A call that runs on a thread of its own, the input thread. */
-    private class InputCall<T>(block: () -> T) {
-        private val outcome = AtomicReference<Outcome<T>>()
-        private val input =
-            thread(name = "input") {
-                val result = runCatching(block)
-                outcome.set(Outcome(result, Thread.currentThread().isInterrupted))
-            }
-
-        fun interrupt() = input.interrupt()
-
-        /** Waits for the call to end; fails if it does not end within half a minute. */
-        fun outcome(): Outcome<T> {
-            input.join(JOIN_MS)
-            check(!input.isAlive) { "The input thread is still blocked" }
-            return outcome.get()
-        }
-
-        fun result(): T = outcome().result.getOrThrow()
-
-        fun failure(): Throwable = checkNotNull(outcome().result.exceptionOrNull())
     }
 
     private fun onInputThread(block: () -> Int) = InputCall(block)
@@ -246,7 +218,6 @@ class RendererThreadsTest : RendererTestBase() {
     }
 
     private companion object {
-        const val JOIN_MS = 30_000L
         const val FRAME_TIME = 1_000_000_000L
     }
 }

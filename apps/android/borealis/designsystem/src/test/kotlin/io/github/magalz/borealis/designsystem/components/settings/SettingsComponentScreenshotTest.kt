@@ -41,7 +41,7 @@ class SettingsComponentScreenshotTest {
     @get:Rule val composeRule = createComposeRule()
 
     @Test
-    @Config(qualifiers = PHONE)
+    @Config(qualifiers = PHONE_SETTINGS)
     fun rowsPhone() {
         composeRule.setContent { Page(FormFactor.Phone) { PhoneList() } }
 
@@ -49,7 +49,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = TV)
+    @Config(qualifiers = TV_SETTINGS)
     fun rowsTvFocused() {
         composeRule.setContentInKeyboardMode {
             Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
@@ -60,7 +60,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = TV)
+    @Config(qualifiers = TV_SETTINGS)
     fun rowsTvDisabledFocused() {
         composeRule.setContentInKeyboardMode {
             Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
@@ -71,7 +71,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = TV)
+    @Config(qualifiers = TV_SETTINGS)
     fun rowsTvDangerFocused() {
         composeRule.setContentInKeyboardMode {
             Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
@@ -82,7 +82,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = TV)
+    @Config(qualifiers = TV_SETTINGS)
     fun sliderTvFocused() {
         composeRule.setContentInKeyboardMode {
             Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
@@ -93,7 +93,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = TV)
+    @Config(qualifiers = TV_SETTINGS)
     fun sliderTvDisabledFocused() {
         composeRule.setContentInKeyboardMode {
             Page(FormFactor.Tv) { Rows(Modifier.width(560.dp)) }
@@ -104,7 +104,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = PHONE)
+    @Config(qualifiers = PHONE_SETTINGS)
     fun choiceSheetPhone() {
         composeRule.setContent { Page(FormFactor.Phone) { Sheet() } }
         composeRule.waitForIdle()
@@ -113,7 +113,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = TV)
+    @Config(qualifiers = TV_SETTINGS)
     fun choiceSheetTv() {
         composeRule.setContent { Page(FormFactor.Tv) { Sheet() } }
         composeRule.waitForIdle()
@@ -122,7 +122,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = TV)
+    @Config(qualifiers = TV_SETTINGS)
     fun twoPaneTvFocused() {
         composeRule.setContentInKeyboardMode { Page(FormFactor.Tv, padded = false) { TwoPane() } }
 
@@ -131,7 +131,7 @@ class SettingsComponentScreenshotTest {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_SETTINGS)
     fun twoPaneHandheld() {
         composeRule.setContent { Page(FormFactor.Handheld, padded = false) { TwoPane() } }
 
@@ -251,8 +251,8 @@ class SettingsComponentScreenshotTest {
     }
 
     private companion object {
-        const val HANDHELD = "w640dp-h360dp-land-xhdpi"
-        const val PHONE = "w360dp-h900dp-xhdpi"
-        const val TV = "w960dp-h640dp-land-television-xhdpi"
+        const val HANDHELD_SETTINGS = "w640dp-h360dp-land-xhdpi"
+        const val PHONE_SETTINGS = "w360dp-h900dp-xhdpi"
+        const val TV_SETTINGS = "w960dp-h640dp-land-television-xhdpi"
     }
 }

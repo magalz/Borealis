@@ -9,7 +9,7 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.library.domain.PairingInstructions
 import io.github.magalz.borealis.library.domain.PairingOutcome
 import io.github.magalz.borealis.library.testing.FakePairingService
-import io.github.magalz.borealis.library.testing.MainDispatcherRule
+import io.github.magalz.borealis.logging.testing.MainDispatcherRule
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.test.advanceTimeBy

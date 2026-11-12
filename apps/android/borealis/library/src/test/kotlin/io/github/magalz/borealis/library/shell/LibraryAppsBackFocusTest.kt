@@ -30,6 +30,8 @@ import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import io.github.magalz.borealis.designsystem.testing.HANDHELD_NO_TOUCH
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.library.domain.AppRepository
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.Host
@@ -48,7 +50,6 @@ import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.FakeLegacyBridge
 import io.github.magalz.borealis.library.testing.FakePairingService
 import io.github.magalz.borealis.library.testing.FakeStreamLauncher
-import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.anApp
 import org.junit.After
@@ -101,7 +102,7 @@ class LibraryAppsBackFocusTest {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun `on a handheld Back from Apps focuses the card of the second host`() {
         launch(tv = false)
         openLivingApps()
@@ -139,7 +140,7 @@ class LibraryAppsBackFocusTest {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun `on a handheld the card keeps the focus when the host went offline meanwhile`() {
         launch(tv = false)
         openLivingApps()
@@ -163,7 +164,7 @@ class LibraryAppsBackFocusTest {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun `on a handheld Back from Apps focuses the card where the refreshed list put it`() {
         launch(tv = false)
         openLivingApps()
@@ -187,7 +188,7 @@ class LibraryAppsBackFocusTest {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun `on a handheld Back from Apps focuses the first card when the host is gone`() {
         launch(tv = false)
         openLivingApps()
@@ -225,7 +226,7 @@ class LibraryAppsBackFocusTest {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun `on a handheld Back from Apps focuses the host card, not a Continue card above it`() {
         launch(tv = false)
         val running = living.copy(runningApp = RunningApp(1, "Desktop"))
@@ -238,7 +239,7 @@ class LibraryAppsBackFocusTest {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun `on a handheld a tap on a card is enough for Back from Apps to focus it`() {
         launch(tv = false)
         hosts.emit(aardvark, living, studio)
@@ -401,9 +402,6 @@ class LibraryAppsBackFocusTest {
         }
 
     private companion object {
-        /** A wide window with no touch screen is a handheld. */
-        const val HANDHELD = "w800dp-h480dp-land-hdpi-notouch"
-
         /** Hosts enough for the grid to scroll. */
         const val LONG_LIST = 30
     }

@@ -29,6 +29,7 @@ import io.github.magalz.borealis.designsystem.glass.backdropLuminance
 import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.glassSpec
 import io.github.magalz.borealis.designsystem.glass.luminance as wcagLuminance
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
@@ -40,8 +41,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
-
-private const val PHONE = "w360dp-h640dp-xhdpi"
 
 /**
  * The container of the text field is a glass surface (issue #33): over a background it shows the

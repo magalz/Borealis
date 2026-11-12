@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -25,7 +26,7 @@ import org.robolectric.annotation.Config
  * brings its own groups and its own rows.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 // Abstract so that the runner does not take it for a test class of its own.
 @Suppress("AbstractClassCanBeConcreteClass")
 abstract class SettingsTwoPaneTestBase(initialSelection: String) {

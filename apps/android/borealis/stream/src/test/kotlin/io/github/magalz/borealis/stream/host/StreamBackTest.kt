@@ -6,14 +6,11 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.host.launch.ConflictAnswer
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
-import io.github.magalz.borealis.stream.StreamVisuals
 import io.github.magalz.borealis.stream.testing.RecordingActions
-import io.github.magalz.borealis.stream.testing.aDefaults
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo
@@ -29,13 +26,7 @@ import org.robolectric.Shadows.shadowOf
 class StreamBackTest {
     private lateinit var activity: ComponentActivity
     private val actions = RecordingActions()
-    // No background, which animates on the screens outside the game: a test that ends with one
-    // still drawing leaves the frames of the next test unscheduled in the same JVM.
-    private val session: StreamSession =
-        aSession(
-            actions,
-            aDefaults.copy(visuals = StreamVisuals(backgroundStyle = BackgroundStyle.Off)),
-        )
+    private val session: StreamSession = aSession(actions)
 
     @Before
     fun setUp() {
@@ -48,6 +39,19 @@ class StreamBackTest {
     private fun back() {
         activity.onBackPressedDispatcher.onBackPressed()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
+    }
+
+    /**
+     * Lets the main thread run in steps until [done], for a call that a recomposition makes, which
+     * lands a frame or two after the state changed and not at a fixed time. The wait ends before
+     * the menu hint's own six seconds, so a call that only the timer made would not count.
+     */
+    private fun idleUntil(done: () -> Boolean) {
+        repeat(MAX_STEPS) {
+            if (done()) return
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(STEP_MS))
+        }
+        check(done()) { "Nothing happened in ${MAX_STEPS * STEP_MS} ms; calls: ${actions.calls}" }
     }
 
     private fun stream() {
@@ -87,7 +91,9 @@ class StreamBackTest {
     fun `back opens the menu while streaming with nothing open`() {
         stream()
 
-        back()
+        activity.onBackPressedDispatcher.onBackPressed()
+        idleUntil { "menuHintShown" in actions.calls }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(SETTLE_MS))
 
         assertThat(panel).isEqualTo(Panel.MENU)
         // The menu hint was waiting: opening the menu marks it as seen, and nothing else happens.
@@ -107,3 +113,7 @@ class StreamBackTest {
         assertThat(panel).isEqualTo(Panel.NONE)
     }
 }
+
+private const val STEP_MS = 50L
+private const val MAX_STEPS = 80
+private const val SETTLE_MS = 200L

@@ -14,12 +14,11 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.glass.GlassSurfaceCases
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import org.robolectric.annotation.Config
-
-private const val PHONE = "w360dp-h640dp-xhdpi"
-private const val TV = "w960dp-h540dp-land-television-xhdpi"
 
 /**
  * The Host card is a glass surface: 1dp of `line` round it, and the `surface` colour where solid.

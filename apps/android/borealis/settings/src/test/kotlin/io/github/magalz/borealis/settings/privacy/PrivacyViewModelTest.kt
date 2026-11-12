@@ -4,10 +4,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.diagnostics.bundle.ExportResult
+import io.github.magalz.borealis.logging.testing.MainDispatcherRule
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsSnapshot
 import io.github.magalz.borealis.settings.testing.FakeSettingsRepository
-import io.github.magalz.borealis.settings.testing.MainDispatcherRule
 import io.github.magalz.borealis.settings.testing.subscribe
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runCurrent

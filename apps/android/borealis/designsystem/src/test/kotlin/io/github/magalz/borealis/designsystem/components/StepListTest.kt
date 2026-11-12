@@ -14,6 +14,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.sp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -23,7 +25,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class StepListTest {
     @get:Rule val composeRule = createComposeRule()
 
@@ -148,7 +150,6 @@ class StepListTest {
 
     private companion object {
         val STEPS = listOf("Find the host", "Pair", "Start the app")
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
         const val HANDHELD = "w800dp-h360dp-land-xhdpi"
     }
 }

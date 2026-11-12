@@ -16,10 +16,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
-const val PHONE = "w360dp-h640dp-xhdpi"
-const val TV = "w960dp-h540dp-land-television-xhdpi"
-const val HANDHELD = "w800dp-h480dp-land-hdpi"
-
 /** Privacy actions that do nothing, for a screen that is only looked at. */
 internal fun noopPrivacyActions() =
     PrivacyActions({}, {}, {}, {}, {}, PrivacyDialogActions({}, {}, {}, { _: File, _: String -> }))

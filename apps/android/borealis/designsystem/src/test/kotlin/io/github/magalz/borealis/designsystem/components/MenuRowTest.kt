@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -38,7 +40,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class MenuRowTest {
     @get:Rule val composeRule = createComposeRule()
     private var clicks = 0
@@ -138,7 +140,7 @@ class MenuRowTest {
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `a row is 44dp high on a phone`() {
         composeRule.setContent {
             Specimen(FormFactor.Phone) { MenuRow("Resume", {}, modifier = Modifier.testTag(ROW)) }

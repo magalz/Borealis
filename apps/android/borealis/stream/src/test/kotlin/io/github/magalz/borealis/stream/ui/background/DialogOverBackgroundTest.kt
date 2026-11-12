@@ -4,28 +4,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamVisuals
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.aFailure
+import io.github.magalz.borealis.stream.testing.distanceFrom
+import io.github.magalz.borealis.stream.testing.farthestFrom
 import io.github.magalz.borealis.stream.testing.setChrome
 import io.github.magalz.borealis.stream.ui.CONFLICT_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.ConflictDialog
 import io.github.magalz.borealis.stream.ui.ConnectionErrorScreen
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.glass.leftPixel
-import kotlin.math.abs
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -79,19 +79,10 @@ class DialogOverBackgroundTest {
         composeRule.waitForIdle()
     }
 
-    private fun Color.distanceFrom(other: Color) =
-        abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue)
-
-    /** Where the background is farthest from the page colour, in the band over the dialog. */
-    private fun brightestSpot(picture: PixelMap): Pair<Int, Int> =
-        (0 until picture.width)
-            .flatMap { x -> (0 until picture.height / BAND).map { y -> x to y } }
-            .maxBy { (x, y) -> picture[x, y].distanceFrom(page) }
-
     private fun assertNoScrim() {
         show()
         val before = picture()
-        val (x, y) = brightestSpot(before)
+        val (x, y) = before.farthestFrom(page)
         assertThat(before[x, y].distanceFrom(page)).isGreaterThan(MIN_GLOW)
 
         openDialog()
@@ -162,7 +153,6 @@ class DialogOverBackgroundTest {
     }
 
     private companion object {
-        const val BAND = 10
         const val MIN_GLOW = 0.05f
         const val KEPT = 0.6f
         const val TINTED = 0.01f

@@ -6,7 +6,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.HANDHELD_NO_TOUCH
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.settings.testing.InGlassHost
@@ -69,7 +72,7 @@ class SettingsAccessibilityChecksTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun `Stream settings on a handheld`() {
         showSettings(FormFactor.Handheld, SettingsGroupId.STREAM)
 
@@ -77,7 +80,7 @@ class SettingsAccessibilityChecksTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun `Accessibility settings on a handheld`() {
         showSettings(FormFactor.Handheld, SettingsGroupId.ACCESSIBILITY)
 

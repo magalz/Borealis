@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -84,8 +86,6 @@ class OverlayTextSizeTest {
     private companion object {
         const val EPSILON = 0.001f
         const val EXPECTED = SYSTEM_SCALE * 1.3f
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }
 

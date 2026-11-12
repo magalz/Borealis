@@ -15,14 +15,16 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.rootFrame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.stream.StreamSession
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.aFailure
-import io.github.magalz.borealis.stream.testing.aSession
+import io.github.magalz.borealis.stream.testing.aSessionOverBackground
+import io.github.magalz.borealis.stream.testing.distanceFrom
+import io.github.magalz.borealis.stream.testing.farthestFrom
 import io.github.magalz.borealis.stream.ui.ERROR_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import kotlin.math.abs
@@ -71,7 +73,7 @@ class FrozenFrameApi30Test {
         composeRule.waitForIdle()
     }
 
-    private fun failure() = aSession().also { it.onFailed(aFailure) }
+    private fun failure() = aSessionOverBackground().also { it.onFailed(aFailure) }
 
     /**
      * With no frame the popup is over the background, and it draws what it draws with no frozen

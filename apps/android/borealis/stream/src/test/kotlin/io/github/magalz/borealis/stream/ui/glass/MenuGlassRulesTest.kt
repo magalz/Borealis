@@ -9,11 +9,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.designsystem.theme.Transparency
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test

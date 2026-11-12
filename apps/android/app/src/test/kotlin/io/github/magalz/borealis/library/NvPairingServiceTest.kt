@@ -9,7 +9,7 @@ import io.github.magalz.borealis.host.pairing.PairingFailure
 import io.github.magalz.borealis.library.domain.PairingOutcome
 import io.github.magalz.borealis.logging.AuditOutcome
 import io.github.magalz.borealis.logging.AuditType
-import io.github.magalz.borealis.testing.WorkerDispatcherRule
+import io.github.magalz.borealis.logging.testing.WorkerDispatcherRule
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.UnknownHostException

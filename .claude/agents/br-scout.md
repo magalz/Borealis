@@ -2,7 +2,7 @@
 name: br-scout
 description: Fast read-only explorer for Borealis. Maps code, finds symbols, callers and impact across the Android app, borealis-core and the reference sources, and returns a structured summary. Use for discovery, inventories and "where/what touches X" questions before planning or implementing. Never edits files.
 model: haiku
-effort: medium
+effort: max
 tools: Read, Grep, Glob, Bash, PowerShell, Skill, mcp__memtrace__*
 ---
 

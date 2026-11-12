@@ -6,6 +6,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.FitCase
+import io.github.magalz.borealis.designsystem.testing.HANDHELD_NO_TOUCH
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -96,7 +99,7 @@ class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
+    @Config(qualifiers = HANDHELD_NO_TOUCH, fontScale = SYSTEM_SCALE)
     fun `Stream settings on a handheld fit`() {
         showLargest(FormFactor.Handheld, SettingsGroupId.STREAM)
 
@@ -104,7 +107,7 @@ class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
+    @Config(qualifiers = HANDHELD_NO_TOUCH, fontScale = SYSTEM_SCALE)
     fun `Accessibility settings on a handheld fit`() {
         showLargest(FormFactor.Handheld, SettingsGroupId.ACCESSIBILITY)
 
@@ -121,7 +124,7 @@ class SettingsTextSizeFitTest(case: FitCase) : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD, fontScale = SYSTEM_SCALE)
+    @Config(qualifiers = HANDHELD_NO_TOUCH, fontScale = SYSTEM_SCALE)
     fun `Audio settings on a handheld fit`() {
         showLargest(FormFactor.Handheld, SettingsGroupId.AUDIO)
         assertAudioEffectsShown()

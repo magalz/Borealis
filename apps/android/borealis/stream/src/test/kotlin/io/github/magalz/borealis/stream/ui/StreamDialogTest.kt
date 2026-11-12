@@ -23,9 +23,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.components.BorealisButtonStyle
 import io.github.magalz.borealis.designsystem.components.Text
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.assertWidthNear
 import io.github.magalz.borealis.stream.testing.setChrome
 import org.junit.Rule

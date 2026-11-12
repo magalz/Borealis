@@ -4,6 +4,7 @@ import android.hardware.Sensor
 import android.view.Surface
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.testing.ANDROID_11
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -260,5 +261,5 @@ abstract class PhoneSensorsContract : FeedbackTestBase() {
 
 /** Android 11, which has no sensors on input devices: the phone's are the only ones there are. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [30])
+@Config(sdk = [ANDROID_11])
 class PhoneSensorsAndroid11Test : PhoneSensorsContract()

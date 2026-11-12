@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.components.Text
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,11 +58,6 @@ class ThemeScreenshotTest {
         composeRule.setContent { BorealisTheme(FormFactor.Tv) { TypeSpecimen(columns = 2) } }
 
         composeRule.onRoot().captureRoboImage("src/test/screenshots/typography_tv.png")
-    }
-
-    private companion object {
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }
 

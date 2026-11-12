@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.PIXELS_PER_DP
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -198,8 +200,6 @@ class BorealisSnackbarHostTest {
         composeRule.onNodeWithText(message).textLayout().lineCount
 
     private companion object {
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
         const val WINDOW_PHONE = 360f
         const val WINDOW_TV = 960f
         const val TOLERANCE = 0.02f

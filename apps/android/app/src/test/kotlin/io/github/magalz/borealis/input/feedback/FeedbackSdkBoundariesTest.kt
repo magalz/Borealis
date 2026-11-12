@@ -3,6 +3,8 @@ package io.github.magalz.borealis.input.feedback
 import android.hardware.Sensor
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.testing.ANDROID_13
+import io.github.magalz.borealis.testing.ANDROID_14
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -13,7 +15,7 @@ import org.robolectric.annotation.Config
  * sensors.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
+@Config(sdk = [ANDROID_13])
 class FeedbackAndroid13Test : FeedbackTestBase() {
     @Test
     fun `a pair of vibrators is driven with the media usage`() {
@@ -90,7 +92,7 @@ class FeedbackAndroid13Test : FeedbackTestBase() {
  * Android 14 is where `Light.hasRgbControl()` can be trusted, so every vendor's pad takes a colour.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [ANDROID_14])
 class FeedbackAndroid14Test : FeedbackTestBase() {
     private val lights =
         Hardware.lightsManager(listOf(Hardware.plainLight(2), Hardware.rgbLight(1)))

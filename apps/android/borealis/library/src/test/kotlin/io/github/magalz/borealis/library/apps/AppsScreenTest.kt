@@ -21,6 +21,9 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
 import org.junit.Test
@@ -637,9 +640,6 @@ class AppsScreenTest {
 
     private companion object {
         val STATE = SemanticsProperties.StateDescription
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
-        const val HANDHELD = "w800dp-h480dp-land-hdpi"
 
         // What Quit says for Desktop: it ends the stream and closes no program. One sentence a
         // line.

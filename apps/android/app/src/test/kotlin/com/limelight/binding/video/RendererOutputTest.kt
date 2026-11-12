@@ -7,6 +7,7 @@ import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.stream.PerfSnapshot
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Test
 import org.robolectric.shadow.api.Shadow
@@ -298,6 +299,98 @@ class RendererOutputTest : RendererTestBase() {
         // The failed frame did not count as shown, so the next frame time is due at once.
         renderer.doFrame(FRAME_TIME + 1)
         assertThat(outputs().last().index).isEqualTo(queuedIndexes()[2])
+    }
+
+    // One pass of the renderer thread at a time: it waits at the codec until the test steps it. The
+    // first pass finds only the change of the output format, and the next takes what is waiting.
+
+    /** Lets the parked renderer thread make one pass, and waits until it is parked again. */
+    private fun step() {
+        ShadowRecordingVideoCodec.stepOutput()
+        ShadowRecordingVideoCodec.awaitParked()
+    }
+
+    private fun MediaCodecDecoderRenderer.framesOut() =
+        ReflectionHelpers.getField<Int>(this, "numFramesOut")
+
+    private fun MediaCodecDecoderRenderer.waitingForFrameTime() =
+        ReflectionHelpers.getField<LinkedBlockingQueue<Int>>(this, "outputBufferQueue").toList()
+
+    @Test
+    fun `a pass counts the frame it takes and each one it takes after it`() {
+        val renderer = withFrames(PreferenceConfiguration.FRAME_PACING_MIN_LATENCY, frames = 3)
+        renderer.beginStepped()
+        step()
+        assertThat(renderer.framesOut()).isEqualTo(0)
+
+        step()
+
+        assertThat(outputs()).hasSize(3)
+        assertThat(renderer.framesOut()).isEqualTo(3)
+    }
+
+    @Test
+    fun `balanced pacing takes one frame a pass and counts it`() {
+        val renderer = withFrames(PreferenceConfiguration.FRAME_PACING_BALANCED, frames = 2)
+        renderer.beginStepped()
+        step()
+
+        step()
+        assertThat(renderer.framesOut()).isEqualTo(1)
+        step()
+
+        assertThat(renderer.framesOut()).isEqualTo(2)
+        assertThat(outputs()).isEmpty()
+    }
+
+    @Test
+    fun `balanced pacing drops the oldest waiting frame only when a third one comes`() {
+        val renderer = withFrames(PreferenceConfiguration.FRAME_PACING_BALANCED, frames = 4)
+        renderer.beginStepped()
+        step()
+
+        step()
+        step()
+
+        // Two frames wait for their frame times, which is the limit: nothing is dropped yet.
+        assertThat(outputs()).isEmpty()
+        assertThat(renderer.waitingForFrameTime())
+            .containsExactly(queuedIndexes()[0], queuedIndexes()[1])
+            .inOrder()
+        step()
+
+        // The third frame comes: the oldest is dropped and the new one waits behind the other.
+        assertThat(outputs().map { it.index to it.render })
+            .containsExactly(queuedIndexes()[0] to false)
+        assertThat(renderer.waitingForFrameTime())
+            .containsExactly(queuedIndexes()[1], queuedIndexes()[2])
+            .inOrder()
+        step()
+
+        assertThat(outputs().map { it.index to it.render })
+            .containsExactly(queuedIndexes()[0] to false, queuedIndexes()[1] to false)
+            .inOrder()
+        assertThat(renderer.waitingForFrameTime())
+            .containsExactly(queuedIndexes()[2], queuedIndexes()[3])
+            .inOrder()
+    }
+
+    @Suppress("DEPRECATION") // The renderer ignores this answer, which is no longer sent.
+    @Test
+    fun `a codec answer that is neither a frame nor a change of the format stores no format`() {
+        val renderer = withFrames(PreferenceConfiguration.FRAME_PACING_MIN_LATENCY, frames = 1)
+        ShadowRecordingVideoCodec.answerNextOutputDequeue(MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED)
+        ShadowRecordingVideoCodec.answerNextOutputDequeue(MediaCodec.INFO_TRY_AGAIN_LATER)
+        renderer.beginStepped()
+
+        step()
+        step()
+
+        assertThat(log.lines()).doesNotContain("INFO: Output format changed")
+        assertThat(ReflectionHelpers.getField<Any?>(renderer, "outputFormat")).isNull()
+        step()
+        assertThat(log.lines().filter { it == "INFO: Output format changed" }).hasSize(1)
+        assertThat(ReflectionHelpers.getField<Any?>(renderer, "outputFormat")).isNotNull()
     }
 
     /** Makes the default display report [nanos] as the offset of the vsync that the app gets. */

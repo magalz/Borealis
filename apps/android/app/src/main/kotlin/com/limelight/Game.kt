@@ -656,6 +656,74 @@ class Game :
         return chosenFrameRate
     }
 
+    // What the intent says about the app. The other extras are read where they are used: the intent
+    // does not change while the stream is built.
+    private fun readStreamIntent() {
+        appName = intent.getStringExtra(EXTRA_APP_NAME)
+        pcName = intent.getStringExtra(EXTRA_PC_NAME)
+
+        val appId = intent.getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
+        val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
+
+        app = NvApp(appName ?: "app", appId, appSupportsHdr)
+    }
+
+    // The stream to ask the host for. The frame rate is the one that streamFrameRate holds.
+    private fun buildStreamConfiguration(
+        videoFormats: Int,
+        gamepadMask: Int,
+        displayRefreshRate: Float,
+    ): StreamConfiguration {
+        // BOREALIS: the output that the audio goes to when the stream starts decides the audio that
+        // the host is asked for (audio)
+        audioOutputs = AudioOutputs(applicationContext)
+        val audioOutput = audioOutputs.current()
+        startedOnBluetooth = audioOutput.bluetooth
+        audioOnBluetooth = startedOnBluetooth
+        // BOREALIS: absent, as in a shortcut of an older version, it is false (stream)
+        val resumeChosen = intent.getBooleanExtra(EXTRA_RESUME_CHOSEN, false)
+
+        return StreamConfiguration.Builder()
+            .setResolution(prefConfig.width, prefConfig.height)
+            .setLaunchRefreshRate(prefConfig.fps)
+            .setRefreshRate(streamFrameRate)
+            .setApp(app)
+            .setBitrate(prefConfig.bitrate)
+            .setEnableSops(prefConfig.enableSops)
+            .enableLocalAudioPlayback(prefConfig.playHostAudio)
+            .setMaxPacketSize(MAX_PACKET_SIZE)
+            // NvConnection will perform LAN and VPN detection
+            .setRemoteConfiguration(StreamConfiguration.STREAM_CFG_AUTO)
+            .setSupportedVideoFormats(videoFormats)
+            .setAttachedGamepadMask(gamepadMask)
+            .setClientRefreshRateX100((displayRefreshRate * X100).toInt())
+            .setAudioConfiguration(audioConfigurationFor(audioOutput))
+            .setColorSpace(decoderRenderer.getPreferredColorSpace())
+            .setColorRange(decoderRenderer.getPreferredColorRange())
+            .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
+            .setResumeChosen(resumeChosen) // BOREALIS: host.launch
+            .build()
+    }
+
+    private fun createConnection(config: StreamConfiguration, serverCert: X509Certificate?) {
+        val host = intent.getStringExtra(EXTRA_HOST)
+        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
+        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0) // 0 is treated as unknown
+        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
+
+        // Initialize the connection
+        conn =
+            NvConnection(
+                applicationContext,
+                ComputerDetails.AddressTuple(host, port),
+                httpsPort,
+                uniqueId,
+                config,
+                PlatformBinding.getCryptoProvider(this),
+                serverCert,
+            )
+    }
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress("LongMethod")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -667,23 +735,11 @@ class Game :
         warnIfMetered()
         acquireWifiLocks()
 
-        appName = intent.getStringExtra(EXTRA_APP_NAME)
-        pcName = intent.getStringExtra(EXTRA_PC_NAME)
-
-        val host = intent.getStringExtra(EXTRA_HOST)
-        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
-        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0) // 0 is treated as unknown
-        val appId = intent.getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
-        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
-        val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
-        // BOREALIS: absent, as in a shortcut of an older version, it is false (stream)
-        val resumeChosen = intent.getBooleanExtra(EXTRA_RESUME_CHOSEN, false)
-
-        app = NvApp(appName ?: "app", appId, appSupportsHdr)
+        readStreamIntent()
 
         val serverCert = readServerCertificate()
 
-        if (appId == StreamConfiguration.INVALID_APP_ID) {
+        if (app.appId == StreamConfiguration.INVALID_APP_ID) {
             finish()
             return
         }
@@ -703,49 +759,12 @@ class Game :
         val displayRefreshRate = prepareDisplayForRendering()
         LimeLog.info("Display refresh rate: $displayRefreshRate")
 
-        val chosenFrameRate = chooseFrameRate(displayRefreshRate)
-
         // BOREALIS: audited as negotiated, not as requested (host.launch)
-        streamFrameRate = chosenFrameRate
-        // BOREALIS: the output that the audio goes to when the stream starts decides the audio that
-        // the host is asked for (audio)
-        audioOutputs = AudioOutputs(applicationContext)
-        val audioOutput = audioOutputs.current()
-        startedOnBluetooth = audioOutput.bluetooth
-        audioOnBluetooth = startedOnBluetooth
+        streamFrameRate = chooseFrameRate(displayRefreshRate)
         val config =
-            StreamConfiguration.Builder()
-                .setResolution(prefConfig.width, prefConfig.height)
-                .setLaunchRefreshRate(prefConfig.fps)
-                .setRefreshRate(chosenFrameRate)
-                .setApp(app)
-                .setBitrate(prefConfig.bitrate)
-                .setEnableSops(prefConfig.enableSops)
-                .enableLocalAudioPlayback(prefConfig.playHostAudio)
-                .setMaxPacketSize(MAX_PACKET_SIZE)
-                // NvConnection will perform LAN and VPN detection
-                .setRemoteConfiguration(StreamConfiguration.STREAM_CFG_AUTO)
-                .setSupportedVideoFormats(supportedVideoFormats)
-                .setAttachedGamepadMask(gamepadMask)
-                .setClientRefreshRateX100((displayRefreshRate * X100).toInt())
-                .setAudioConfiguration(audioConfigurationFor(audioOutput))
-                .setColorSpace(decoderRenderer.getPreferredColorSpace())
-                .setColorRange(decoderRenderer.getPreferredColorRange())
-                .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
-                .setResumeChosen(resumeChosen) // BOREALIS: host.launch
-                .build()
+            buildStreamConfiguration(supportedVideoFormats, gamepadMask, displayRefreshRate)
 
-        // Initialize the connection
-        conn =
-            NvConnection(
-                applicationContext,
-                ComputerDetails.AddressTuple(host, port),
-                httpsPort,
-                uniqueId,
-                config,
-                PlatformBinding.getCryptoProvider(this),
-                serverCert,
-            )
+        createConnection(config, serverCert)
         controllerHandler = ControllerHandler(this, conn, prefConfig)
         keyboardTranslator = KeyboardTranslator()
 

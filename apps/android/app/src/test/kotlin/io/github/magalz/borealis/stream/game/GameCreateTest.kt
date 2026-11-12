@@ -152,6 +152,21 @@ internal class GameCreateTest : GameTestBase() {
     }
 
     @Test
+    fun `an intent without the HDR extra says the app does not support HDR`() {
+        rig.create(GameIntent(hdr = null))
+
+        assertThat(checkNotNull(rig.streamConfiguration.app).isHdrSupported).isFalse()
+    }
+
+    @Test
+    fun `the session shows the app and the PC of the extras`() {
+        rig.create()
+
+        assertThat(rig.session.state.value.appName).isEqualTo("Desktop")
+        assertThat(rig.session.state.value.hostName).isEqualTo("Den PC")
+    }
+
+    @Test
     fun `an app without a name is called app`() {
         rig.create(GameIntent(appName = null))
 

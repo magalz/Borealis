@@ -136,6 +136,16 @@ internal class GameConfigurationTest : GameTestBase() {
     }
 
     @Test
+    fun `capping the frame rate leaves the refresh rate that the client reports at the display's`() {
+        rig.preference("frame_pacing", "cap-fps")
+
+        rig.create()
+
+        assertThat(config.refreshRate).isEqualTo(59)
+        assertThat(config.clientRefreshRateX100).isEqualTo(6000)
+    }
+
+    @Test
     fun `capping a frame rate that is far above the display drops frames instead`() {
         rig.preference("frame_pacing", "cap-fps")
         rig.preference("list_fps", "90")

@@ -4,9 +4,12 @@ import android.media.MediaCodec
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration.FormatOption
+import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.io.PrintStream
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes `setup` and `initializeDecoder`: the format that the codec is configured with for
@@ -226,6 +229,192 @@ class RendererSetupTest : RendererTestBase() {
                 "INFO: Decoder omx.intel.avc.decoder needs baseline SPS hack",
                 "INFO: Decoder omx.intel.avc.decoder needs constrained high profile",
             )
+            .inOrder()
+    }
+
+    @Test
+    fun `a decoder that needs no H264 fixups clears the ones that an earlier setup left`() {
+        install(avc())
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        ReflectionHelpers.setField(renderer, "needsBaselineSpsHack", true)
+        ReflectionHelpers.setField(renderer, "constrainedHighProfile", true)
+
+        assertThat(renderer.initializeDecoder(false)).isEqualTo(0)
+
+        assertThat(ReflectionHelpers.getField<Boolean>(renderer, "needsBaselineSpsHack")).isFalse()
+        assertThat(ReflectionHelpers.getField<Boolean>(renderer, "constrainedHighProfile"))
+            .isFalse()
+    }
+
+    @Test
+    fun `a refused H264 stream leaves the quirks of the last setup as they were`() {
+        install(avc())
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        for (field in QUIRK_FIELDS) ReflectionHelpers.setField(renderer, field, true)
+
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264, width = 4097)).isEqualTo(-1)
+
+        for (field in QUIRK_FIELDS) {
+            assertThat(ReflectionHelpers.getField<Boolean>(renderer, field)).isTrue()
+        }
+    }
+
+    // The reference frame invalidation of the stream, from the decoder of its codec
+
+    private fun invalidationActive(renderer: MediaCodecDecoderRenderer): Boolean =
+        ReflectionHelpers.getField(renderer, "refFrameInvalidationActive")
+
+    @Test
+    fun `the reference frame invalidation of an H264 stream is the one of the AVC decoder`() {
+        install(avc("c2.qti.avc.decoder"), hevc(), av1())
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 })
+
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isTrue()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H265)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isFalse()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_AV1_MAIN8)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isFalse()
+    }
+
+    @Test
+    fun `the reference frame invalidation of an HEVC stream is the one of the HEVC decoder`() {
+        install(
+            avc(),
+            codec("c2.test.hevc.decoder") {
+                mime = "video/hevc"
+                lowLatency = true
+            },
+            av1(),
+        )
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 })
+
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isFalse()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H265)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isTrue()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_AV1_MAIN8)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isFalse()
+    }
+
+    @Test
+    fun `the reference frame invalidation of an AV1 stream is the one of the AV1 decoder`() {
+        install(
+            avc(),
+            hevc(),
+            codec("vendor.test.av1.decoder") {
+                mime = "video/av01"
+                lowLatency = true
+            },
+        )
+        val renderer = renderer(prefs { videoFormat = FormatOption.FORCE_AV1 })
+
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isFalse()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H265)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isFalse()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_AV1_MAIN8)).isEqualTo(0)
+        assertThat(invalidationActive(renderer)).isTrue()
+    }
+
+    @Test
+    fun `adaptive playback is asked of the decoder before fused IDR frames`() {
+        install(avc(change = { adaptivePlayback = true }))
+        val renderer = renderer()
+
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+
+        assertThat(log.lines())
+            .containsAtLeast(
+                "INFO: Adaptive playback supported (FEATURE_AdaptivePlayback)",
+                "INFO: Decoder supports fused IDR frames (FEATURE_AdaptivePlayback)",
+                "INFO: Decoder configuration try: 0",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a codec that failed every try is not kept`() {
+        install(avc())
+        val renderer = renderer()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 4) {
+            IllegalArgumentException("rejected")
+        }
+
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(-5)
+
+        assertThat(ReflectionHelpers.getField<Any?>(renderer, "videoDecoder")).isNull()
+    }
+
+    @Test
+    fun `a codec that failed the last try is not kept when the failure is thrown`() {
+        install(avc())
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 4) {
+            IllegalStateException("rejected at the end")
+        }
+
+        assertThrows(IllegalStateException::class.java) { renderer.initializeDecoder(true) }
+
+        assertThat(events<CodecEvent.Released>()).hasSize(4)
+        assertThat(ReflectionHelpers.getField<Any?>(renderer, "videoDecoder")).isNull()
+    }
+
+    @Test
+    fun `the stack of each failed try is printed, of the kinds the codec fails with`() {
+        install(avc())
+        val renderer = renderer()
+        ShadowRecordingVideoCodec.failNext(
+            CodecPoint.CREATE,
+            1,
+            ShadowRecordingVideoCodec.ioFailure(),
+        )
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            IllegalArgumentException("bad argument")
+        }
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            IllegalStateException("bad state")
+        }
+
+        val printed = printedToStderr {
+            assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+        }
+
+        assertThat(printed).contains("java.io.IOException: no such codec")
+        assertThat(printed).contains("java.lang.IllegalArgumentException: bad argument")
+        assertThat(printed).contains("java.lang.IllegalStateException: bad state")
+    }
+
+    @Test
+    fun `the stack of a failed try is printed before it is thrown`() {
+        install(avc())
+        val renderer = renderer()
+        renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 4) {
+            IllegalStateException("rejected at the end")
+        }
+
+        val printed = printedToStderr {
+            assertThrows(IllegalStateException::class.java) { renderer.initializeDecoder(true) }
+        }
+
+        assertThat(printed).contains("java.lang.IllegalStateException: rejected at the end")
+    }
+
+    /** What [action] prints to the standard error stream. */
+    private fun printedToStderr(action: () -> Unit): String {
+        val stderr = System.err
+        val printed = ByteArrayOutputStream()
+        System.setErr(PrintStream(printed, true))
+        try {
+            action()
+        } finally {
+            System.setErr(stderr)
+        }
+        return printed.toString()
     }
 
     // The ladder of low latency options
@@ -499,6 +688,10 @@ class RendererSetupTest : RendererTestBase() {
         const val FULL_RANGE = 1
         const val SDR_TRANSFER = 3
         const val BT709 = 1
+
+        // The H264 fixups and the reference frame invalidation that a setup decides.
+        val QUIRK_FIELDS =
+            listOf("needsBaselineSpsHack", "constrainedHighProfile", "refFrameInvalidationActive")
 
         // Outside the masks of H264 (0xF), HEVC (0xF00) and AV1 (0xF000).
         const val UNKNOWN_FORMAT = 0x10

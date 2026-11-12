@@ -2042,18 +2042,19 @@ class Game :
         return handleKeyDown(event) || super.onKeyDown(keyCode, event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "ReturnCount")
     override fun handleKeyDown(event: KeyEvent): Boolean {
         if (keyIsNotForStream(event)) return false
 
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click. This event WILL repeat if
         // the right mouse button is held down, so we ignore those.
-        if (handleMouseSideKey(event, down = true)) return true
+        if (handleMouseSideKey(event, down = true) || padTookKey(event, down = true)) return true
+        return keyDownForHost(event)
+    }
 
-        if (padTookKey(event, down = true)) return true
-
+    // A key down that no pad took: the special keys, then the host as a key or as text. Returns
+    // whether the key was handled.
+    private fun keyDownForHost(event: KeyEvent): Boolean {
         // Let this method take duplicate key down events
         if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
             return true
@@ -2067,23 +2068,27 @@ class Game :
         // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
         // as UTF-8 text (if it's a printable character).
         val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
-        if (translated.toInt() == 0) {
-            // NB: We need to be sure this happens before the getRepeatCount() check because
-            // UTF-8 events don't auto-repeat on the host side.
-            val unicodeChar = event.unicodeChar
-            if (isTextChar(unicodeChar)) {
-                // BOREALIS: the whole code point, as a surrogate pair outside the basic plane
-                conn.sendUtf8Text(String(Character.toChars(unicodeChar)))
-                return true
-            }
-
-            return false
+        return if (translated.toInt() == 0) {
+            keyDownAsText(event)
+        } else {
+            sendKeyDown(event, translated)
+            true
         }
+    }
 
+    // NB: We need to be sure this happens before the getRepeatCount() check because UTF-8 events
+    // don't auto-repeat on the host side.
+    private fun keyDownAsText(event: KeyEvent): Boolean {
+        val unicodeChar = event.unicodeChar
+        if (!isTextChar(unicodeChar)) return false
+        // BOREALIS: the whole code point, as a surrogate pair outside the basic plane
+        conn.sendUtf8Text(String(Character.toChars(unicodeChar)))
+        return true
+    }
+
+    private fun sendKeyDown(event: KeyEvent, translated: Short) {
         // Eat repeat down events
-        if (event.repeatCount > 0) {
-            return true
-        }
+        if (event.repeatCount > 0) return
 
         conn.sendKeyboardInput(
             translated,
@@ -2094,8 +2099,6 @@ class Game :
         )
         // BOREALIS: keys held down are released when the chrome takes the input
         heldKeys.down(translated.toInt() and VIRTUAL_KEY_MASK)
-
-        return true
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
@@ -2107,17 +2110,18 @@ class Game :
         return handleKeyUp(event) || super.onKeyUp(keyCode, event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "ReturnCount")
     override fun handleKeyUp(event: KeyEvent): Boolean {
         if (keyIsNotForStream(event)) return false
 
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click.
-        if (handleMouseSideKey(event, down = false)) return true
+        if (handleMouseSideKey(event, down = false) || padTookKey(event, down = false)) return true
+        return keyUpForHost(event)
+    }
 
-        if (padTookKey(event, down = false)) return true
-
+    // A key up that no pad took: the special keys, then the host as a key. Returns whether the key
+    // was handled.
+    private fun keyUpForHost(event: KeyEvent): Boolean {
         if (handleSpecialKeys(event.keyCode, false, false)) {
             return true
         }
@@ -2128,12 +2132,17 @@ class Game :
         }
 
         val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
-        if (translated.toInt() == 0) {
+        return if (translated.toInt() == 0) {
             // If we sent this event as UTF-8 on key down, also report that it was handled
             // when we get the key up event for it.
-            return isTextChar(event.unicodeChar)
+            isTextChar(event.unicodeChar)
+        } else {
+            sendKeyUp(event, translated)
+            true
         }
+    }
 
+    private fun sendKeyUp(event: KeyEvent, translated: Short) {
         conn.sendKeyboardInput(
             translated,
             KeyboardPacket.KEY_UP,
@@ -2143,8 +2152,6 @@ class Game :
         )
         // BOREALIS: keys held down are released when the chrome takes the input
         heldKeys.up(translated.toInt() and VIRTUAL_KEY_MASK)
-
-        return true
     }
 
     override fun onKeyMultiple(keyCode: Int, repeatCount: Int, event: KeyEvent): Boolean {

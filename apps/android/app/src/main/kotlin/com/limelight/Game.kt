@@ -445,7 +445,9 @@ class Game :
         }
     }
 
-    // The stack trace of the SecurityException stays as it was (Sprint 18c backlog).
+    // Converted as is from the inherited Java; the SecurityException that some Samsung devices
+    // throw from WifiLock.acquire() is printed to the standard error stream, as the Java did
+    // (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     private fun acquireWifiLocks() {
         // Make sure Wi-Fi is fully powered up

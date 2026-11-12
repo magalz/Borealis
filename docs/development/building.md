@@ -355,9 +355,53 @@ of the checkout's drive, unique per checkout, module and task, so that
 Robolectric's SQLite paths stay under the 260 characters Windows allows.
 Elsewhere it is `build/tmp/<task>/jvm-tmp`. The task empties the folder before a
 run and deletes it after the run. A failed or killed run leaves the folder until
-the next run of that task. The `:app` unit-test JVM has a 2 GB heap
-(`BorealisUnitTestHeap.kt`), because Robolectric keeps a sandbox for each SDK
-level and set of shadows.
+the next run of that task.
+
+### Test heap and Robolectric sandboxes
+
+Gradle gives a unit-test JVM 512 MB. `BorealisUnitTestHeap.kt` lists the modules
+whose tests need more; a module that is not listed keeps the default. The
+sandboxes that Robolectric keeps are what fills the heap, and the Compose
+accessibility tests of `:borealis:library` and `:borealis:settings` ran out of
+it under load (Sprint 15), now that up to three Gradle runs share a machine.
+
+Measured on 2026-11-12 at `eed7fcc03`: a full `testDebugUnitTest --rerun` of the
+module on a 4 GB heap, with the GC log of the test JVM (`-Xlog:gc*`; one test
+JVM for each module). "In use" is the largest heap before a collection and
+"after GC" the largest heap after one. No full collection ran, so "after GC"
+still holds garbage that the old generation had not given back yet.
+
+| Module | In use | After GC | Heap |
+| --- | --- | --- | --- |
+| `:borealis:library` | 582 MB | 449 MB | 1 GB |
+| `:borealis:settings` | 788 MB | 753 MB | 1.5 GB |
+| `:app` | 2479 MB | 2313 MB | 2 GB |
+| `:borealis:stream` | 981 MB | 907 MB | default |
+| `:borealis:designsystem` | 877 MB | 852 MB | default |
+
+The heap of a library module is about twice its "after GC" figure, rounded up to
+the next of 768 MB, 1 GB, 1.5 GB and 2 GB. On the default, `:borealis:library`
+(430 MB in use, 383 MB after GC) and `:borealis:settings` (473 MB and 406 MB)
+passed with the heap close to its limit. `:app` has its own 2 GB: on that limit
+its run needed a full collection, which left 1735 MB. Measure again when a
+module's run runs out of memory or its tests grow.
+
+Robolectric keeps one sandbox for each key in a cache of 42 (three times the 14
+SDK levels of Robolectric 4.17) and evicts the least recently used one, which a
+later test then builds again. The key (`SandboxManager.SandboxKey`) is made of
+the instrumentation configuration (the instrumented packages and the shadows of
+`@Config(shadows = ...)` and `robolectric.properties`), the SDK level and the
+resources, looper and graphics modes. Counted on 2026-11-12 at `eed7fcc03`, by
+reading the `sandboxesByKey` map of `SandboxManager` during a full run of each
+module: `:app` 24, `:borealis:library` 1, `:borealis:settings` 1,
+`:borealis:stream` 2 and `:borealis:designsystem` 4. Counting the distinct
+`@Config(sdk, shadows)` texts in the `:app` sources gives 39, the figure of
+Sprint 14; it is higher than the keys of a run because annotations that spell
+the same levels or shadows differently can share one sandbox.
+
+A new SDK level or a new shadow set is a new sandbox: reuse an existing
+`@Config` where the test allows it, and recount when a module comes within three
+of the limit.
 
 ## borealis-core (C++)
 

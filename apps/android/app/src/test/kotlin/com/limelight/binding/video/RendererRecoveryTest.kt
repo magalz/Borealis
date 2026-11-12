@@ -35,8 +35,9 @@ class RendererRecoveryTest : RendererTestBase() {
     private fun running(
         pacing: Int = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY,
         stepped: Boolean = false,
+        decoder: String = "vendor.test.avc.decoder",
     ): MediaCodecDecoderRenderer {
-        install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
+        install(codec(decoder) { mime = "video/avc" })
         val renderer = renderer(prefs { framePacing = pacing })
         assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
         if (stepped) renderer.beginStepped() else renderer.begin()
@@ -635,6 +636,51 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(events<CodecEvent.Started>().last().codec).isEqualTo(second.codec)
         assertThat(log.lines()).contains("WARNING: Trying to recreate decoder after CodecException")
         assertThat(renderer.submit(pFrame(2))).isEqualTo(MoonBridge.DR_OK)
+    }
+
+    @Test
+    fun `a recreated Intel decoder says baseline again`() {
+        val renderer = running(stepped = true, decoder = "omx.intel.avc.decoder")
+        renderer.sendParameterSets()
+        assertThat(renderer.submit(idrSlice())).isEqualTo(MoonBridge.DR_OK)
+        // The replay is done: the decoder does not need the hack any more.
+        assertThat(log.lines().filter { it == "INFO: SPS replay complete" }).hasSize(1)
+        // The reset is refused as well, so the codec is thrown away and a new one is made.
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            IllegalStateException("reset refused")
+        }
+        assertThat(recoveredByRendererThread { renderer.submit(pFrame(2)) })
+            .isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(events<CodecEvent.Created>()).hasSize(2)
+
+        renderer.sendParameterSets(3)
+        val result = renderer.submit(idrSlice(3))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        // The new codec is sent the baseline SPS first and the real profile after it, as the
+        // first one was.
+        assertThat(events<CodecEvent.Queued>().map { it.flags })
+            .containsExactly(
+                CODEC_CONFIG,
+                CODEC_CONFIG,
+                SYNC_FRAME,
+                CODEC_CONFIG,
+                CODEC_CONFIG,
+                SYNC_FRAME,
+            )
+            .inOrder()
+        val queued = events<CodecEvent.Queued>()
+        assertThat(queued[3].hex).isEqualTo(queued[0].hex)
+        assertThat(queued[4].hex).isEqualTo(queued[1].hex)
+        assertThat(log.lines().filter { it == "INFO: Hacking SPS to baseline" }).hasSize(2)
+        assertThat(log.lines().filter { it == "INFO: SPS replay complete" }).hasSize(2)
+        assertThat(
+                log.lines().filter {
+                    it == "INFO: Decoder omx.intel.avc.decoder needs baseline SPS hack"
+                }
+            )
+            .hasSize(2)
     }
 
     @Test

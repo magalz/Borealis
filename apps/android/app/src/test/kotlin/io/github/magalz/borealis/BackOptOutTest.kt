@@ -1,6 +1,7 @@
 package io.github.magalz.borealis
 
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.testing.ANDROID_NS
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Test
@@ -39,9 +40,5 @@ class BackOptOutTest {
                 .single { it.getAttributeNS(ANDROID_NS, "name") == ".Game" }
 
         assertThat(game.backCallback()).isEqualTo("false")
-    }
-
-    private companion object {
-        const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
     }
 }

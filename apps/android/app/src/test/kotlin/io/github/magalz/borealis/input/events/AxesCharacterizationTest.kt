@@ -27,6 +27,9 @@ import com.limelight.nvstream.input.ControllerPacket.LEFT_FLAG
 import com.limelight.nvstream.input.ControllerPacket.RIGHT_FLAG
 import com.limelight.nvstream.input.ControllerPacket.UP_FLAG
 import io.github.magalz.borealis.input.FakeUsbController
+import io.github.magalz.borealis.testing.ANDROID_10
+import io.github.magalz.borealis.testing.ANDROID_11
+import io.github.magalz.borealis.testing.ANDROID_15
 import io.github.magalz.borealis.testing.OwnedResources
 import org.junit.Rule
 import org.junit.Test
@@ -709,7 +712,7 @@ class AxesCharacterizationTest {
     }
 
     @Test
-    @Config(sdk = [30])
+    @Config(sdk = [ANDROID_11])
     fun `on Android 11 the virtual device -1 is the default context even when a pad context has its id`() {
         val virtual = rig.addPad(-1, controllerNumber = 3)
 
@@ -720,7 +723,7 @@ class AxesCharacterizationTest {
     }
 
     @Test
-    @Config(sdk = [35])
+    @Config(sdk = [ANDROID_15])
     fun `on a newer Android the device -1 has its own context`() {
         val virtual = rig.addPad(-1, controllerNumber = 3)
 
@@ -730,7 +733,7 @@ class AxesCharacterizationTest {
     }
 
     @Test
-    @Config(sdk = [29])
+    @Config(sdk = [ANDROID_10])
     fun `on Android 10 the device -1 has its own context`() {
         val virtual = rig.addPad(-1, controllerNumber = 3)
 

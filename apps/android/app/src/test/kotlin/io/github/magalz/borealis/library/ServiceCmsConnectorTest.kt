@@ -6,7 +6,7 @@ import android.os.Binder
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.limelight.computers.ComputerManagerService
-import io.github.magalz.borealis.testing.WorkerDispatcherRule
+import io.github.magalz.borealis.logging.testing.WorkerDispatcherRule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

@@ -14,9 +14,9 @@ import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
+import io.github.magalz.borealis.logging.testing.WorkerDispatcherRule
 import io.github.magalz.borealis.settings.catalog.Setting
 import io.github.magalz.borealis.settings.catalog.Settings
-import io.github.magalz.borealis.settings.testing.WorkerDispatcherRule
 import io.github.magalz.borealis.settings.testing.eventually
 import java.io.File
 import java.io.IOException

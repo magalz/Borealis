@@ -10,9 +10,9 @@ import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
 import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.library.testing.FakeHostRepository
-import io.github.magalz.borealis.library.testing.MainDispatcherRule
 import io.github.magalz.borealis.library.testing.aHost
 import io.github.magalz.borealis.library.testing.subscribe
+import io.github.magalz.borealis.logging.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow

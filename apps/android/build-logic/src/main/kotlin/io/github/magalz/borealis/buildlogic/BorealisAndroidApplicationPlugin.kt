@@ -54,11 +54,7 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
                 )) {
                 dependencies.add("testImplementation", libs.findLibrary(name).get())
             }
-            // The input device helpers of the controller tests.
-            dependencies.add(
-                "testImplementation",
-                dependencies.testFixtures(project(":borealis:designsystem")),
-            )
+            addSharedTestFixtures()
             addInstrumentedTestDependencies()
         }
 
@@ -210,5 +206,15 @@ class BorealisAndroidApplicationPlugin : Plugin<Project> {
             "Release builds need an android-vMAJOR.MINOR.PATCH git tag in the history " +
                 "(git describe found none, so the version would be 0.0.0-dev). " +
                 "Fetch tags (CI: fetch-depth: 0) or tag the release, e.g. 'git tag android-v1.0.0'."
+    }
+}
+
+/**
+ * The test fixtures that the unit tests of `:app` share with the Borealis modules: the input device
+ * helpers of the controller tests, and the coroutine rules.
+ */
+internal fun Project.addSharedTestFixtures() {
+    for (module in listOf(":borealis:designsystem", ":borealis:logging")) {
+        dependencies.add("testImplementation", dependencies.testFixtures(project(module)))
     }
 }

@@ -20,8 +20,8 @@ import io.github.magalz.borealis.designsystem.theme.borealisColors
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.testing.HANDHELD
 import io.github.magalz.borealis.stream.testing.TV
+import io.github.magalz.borealis.stream.testing.near
 import io.github.magalz.borealis.stream.ui.aStreaming
-import kotlin.math.abs
 import kotlin.math.roundToInt
 import org.junit.Rule
 import org.junit.Test
@@ -68,9 +68,6 @@ class MenuGlassCasingTest {
             phase = aStreaming(Panel.MENU, touchMode = null, gamepadMouse = false)
         }
     }
-
-    private fun Color.near(other: Color) =
-        abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue) < NEAR
 
     private fun pixels(): PixelMap = composeRule.onRoot().captureToImage().toPixelMap()
 
@@ -219,7 +216,6 @@ class MenuGlassCasingTest {
         const val FOCUS_RATIO = 3.0
         const val OUTLINE_REACH_DP = 9
         const val CASING_DP = 1.5
-        const val NEAR = 0.08f
         const val SETTLE_MS = 100L
         val TV_SCREEN = VideoBounds(0, 0, 1920, 1080)
         val HANDHELD_SCREEN = VideoBounds(0, 0, 1200, 720)

@@ -62,3 +62,5 @@ Lifecycle: brief, then a worktree at `D:\Repos\Borealis-worktrees\<phase>-<task>
 See [0013](0013-github-flow-with-merge-commits.md), [0025](0025-review-and-ai-assisted-development-policy.md) and [0019](0019-decision-and-change-records.md).
 
 Amended by an owner decision of 2026-10-17: `br-implementer` and `br-reviewer` run at extra high effort (`xhigh`), not high. See [orchestration](../development/orchestration.md) and the agent files in `.claude/agents/`.
+
+Amended by an owner decision of 2026-11-11: from Sprint 18b on, `br-implementer` runs Sonnet 5.5 at high effort, `br-reviewer` runs Opus 5.5 (`claude-opus-5-5`) at medium effort, and `br-scout` and `br-scribe` run Haiku 5.5 at maximum effort. This replaces the efforts of the amendment of 2026-10-17. See [orchestration](../development/orchestration.md) and the agent files in `.claude/agents/`.

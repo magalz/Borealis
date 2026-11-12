@@ -1252,6 +1252,30 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(renderer.initialException()).isSameInstanceAs(thrown)
     }
 
+    // A decoder that gives no input buffer after a failure that was held back
+
+    @Test
+    fun `a five second starvation after a first failure that was held back is not a hung decoder`() {
+        val renderer = running()
+        ReflectionHelpers.setField(renderer, "codecRecoveryAttempts", 10)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, stateFailure)
+        assertThat(renderer.submit(pFrame(1))).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(renderer.initialException()).isNotNull()
+        ShadowRecordingVideoCodec.starveInput = true
+        val polls = ShadowRecordingVideoCodec.dequeueInputCalls.get()
+        val call = InputCall { renderer.submit(pFrame(2)) }
+        await("the input thread to wait for an input buffer") {
+            ShadowRecordingVideoCodec.dequeueInputCalls.get() > polls
+        }
+
+        advanceClock(5_000)
+        renderer.prepareForStop()
+
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).contains("WARNING: Dequeue input buffer ran long: 5000 ms")
+    }
+
     @Test
     fun `a recovery type that no failure leaves behind is an error with its number`() {
         val renderer = prepared()

@@ -145,6 +145,21 @@ internal class GameSpecialKeysTest : GameTestBase() {
     }
 
     @Test
+    fun `a second key up of the chord key while the chord waits is eaten too`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_Z)
+        rig.up(KeyEvent.KEYCODE_Z)
+        forgetCalls()
+
+        // The modifiers are still down, so the chord waits: any key up of its Z is not the host's.
+        val released = rig.up(KeyEvent.KEYCODE_Z)
+
+        assertThat(released).isTrue()
+        assertThat(sentKeys()).isEmpty()
+    }
+
+    @Test
     fun `a stray key up of the chord key after a whole chord goes to the host`() {
         streamingAndCapturing()
         rig.chord(KeyEvent.KEYCODE_Z)

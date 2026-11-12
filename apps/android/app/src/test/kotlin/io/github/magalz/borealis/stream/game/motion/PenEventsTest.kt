@@ -110,6 +110,30 @@ internal class PenEventsTest : MotionTestBase() {
     }
 
     @Test
+    fun `an action for one of two pointers takes the tool of that pointer, not of the first`() {
+        streaming()
+        fun mixed(first: Int, second: Int) =
+            motionEventOf(source, MotionEvent.ACTION_POINTER_DOWN) {
+                device = fullPen
+                pointer(32f, 18f, first)
+                pointer(160f, 90f, second)
+                actionIndex = 1
+            }
+
+        // The pointer that went down is a finger: no pen, whatever the first pointer is.
+        val finger = mixed(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_FINGER)
+        assertThat(send(finger)).isTrue()
+        assertThat(pens()).isEmpty()
+        forgetSent()
+
+        // The pointer that went down is an eraser: a pen event of its tool, at its place.
+        send(mixed(MotionEvent.TOOL_TYPE_MOUSE, MotionEvent.TOOL_TYPE_ERASER))
+        val eraser = onlyPen()
+        assertThat(eraser.tool).isEqualTo(MoonBridge.LI_TOOL_TYPE_ERASER.toInt())
+        assertThat(eraser.x).isWithin(EPSILON).of(0.5f)
+    }
+
+    @Test
     fun `a cancel is a cancel of every pen, with nothing known about the pen`() {
         streaming()
 

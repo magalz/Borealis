@@ -457,7 +457,7 @@ object MediaCodecHelper {
     }
 
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("TooGenericExceptionCaught", "PrintStackTrace", "NestedBlockDepth")
+    @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     private fun decoderSupportsKnownVendorLowLatencyOption(decoderName: String): Boolean {
         // It's only possible to probe vendor parameters on Android 12 and above.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -467,22 +467,25 @@ object MediaCodecHelper {
                 // options.
                 testCodec = MediaCodec.createByCodecName(decoderName)
 
-                // See if any of the vendor parameters match ones we know about
-                for (supportedOption in testCodec.supportedVendorParameters) {
-                    for (knownLowLatencyOption in knownVendorLowLatencyOptions) {
-                        if (supportedOption.equals(knownLowLatencyOption, ignoreCase = true)) {
-                            LimeLog.info(
-                                "$decoderName supports known low latency option: $supportedOption"
-                            )
-                            return true
-                        }
-                    }
-                }
+                return hasKnownVendorOption(decoderName, testCodec.supportedVendorParameters)
             } catch (e: Exception) {
                 // Tolerate buggy codecs
                 e.printStackTrace()
             } finally {
                 testCodec?.release()
+            }
+        }
+        return false
+    }
+
+    // See if any of the vendor parameters match ones we know about
+    private fun hasKnownVendorOption(decoderName: String, options: List<String>): Boolean {
+        for (supportedOption in options) {
+            for (knownLowLatencyOption in knownVendorLowLatencyOptions) {
+                if (supportedOption.equals(knownLowLatencyOption, ignoreCase = true)) {
+                    LimeLog.info("$decoderName supports known low latency option: $supportedOption")
+                    return true
+                }
             }
         }
         return false
@@ -754,34 +757,37 @@ object MediaCodecHelper {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
     @JvmStatic
     fun decoderIsWhitelistedForHevc(decoderInfo: MediaCodecInfo): Boolean {
         requireInitialized()
 
-        //
-        // Software decoders are terrible and we never want to use them.
-        // We want to catch decoders like:
-        // OMX.qcom.video.decoder.hevcswvdec
-        // OMX.SEC.hevc.sw.dec
-        //
-        if (decoderInfo.name.contains("sw", ignoreCase = true)) {
-            LimeLog.info("Disallowing HEVC on software decoder: " + decoderInfo.name)
-            return false
-        } else if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                (!decoderInfo.isHardwareAccelerated || decoderInfo.isSoftwareOnly)
-        ) {
+        if (isSoftwareDecoder(decoderInfo)) {
             LimeLog.info("Disallowing HEVC on software decoder: " + decoderInfo.name)
             return false
         }
 
-        // If this device is media performance class 12 or higher, we will assume any hardware
-        // HEVC decoder present is fast and modern enough for streaming.
-        //
-        // [5.3/H-1-1] MUST NOT drop more than 2 frames in 10 seconds (i.e less than 0.333 percent
-        // frame drop) for a 1080p 60 fps video session under load.
+        // Otherwise, we use our list of known working HEVC decoders
+        return hevcAllowedByPerformanceClass() ||
+            hevcAllowedByLowLatency(decoderInfo) ||
+            isDecoderInList(whitelistedHevcDecoders, decoderInfo.name)
+    }
+
+    // Software decoders are terrible and we never want to use them.
+    // We want to catch decoders like:
+    // OMX.qcom.video.decoder.hevcswvdec
+    // OMX.SEC.hevc.sw.dec
+    private fun isSoftwareDecoder(decoderInfo: MediaCodecInfo): Boolean {
+        return decoderInfo.name.contains("sw", ignoreCase = true) ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                (!decoderInfo.isHardwareAccelerated || decoderInfo.isSoftwareOnly))
+    }
+
+    // If this device is media performance class 12 or higher, we will assume any hardware
+    // HEVC decoder present is fast and modern enough for streaming.
+    //
+    // [5.3/H-1-1] MUST NOT drop more than 2 frames in 10 seconds (i.e less than 0.333 percent
+    // frame drop) for a 1080p 60 fps video session under load.
+    private fun hevcAllowedByPerformanceClass(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             LimeLog.info("Media performance class: " + Build.VERSION.MEDIA_PERFORMANCE_CLASS)
             if (Build.VERSION.MEDIA_PERFORMANCE_CLASS >= Build.VERSION_CODES.S) {
@@ -789,20 +795,19 @@ object MediaCodecHelper {
                 return true
             }
         }
+        return false
+    }
 
-        // If the decoder supports FEATURE_LowLatency, we will assume it is fast and modern enough
-        // to be preferable for streaming over H.264 decoders.
+    // If the decoder supports FEATURE_LowLatency, we will assume it is fast and modern enough
+    // to be preferable for streaming over H.264 decoders.
+    private fun hevcAllowedByLowLatency(decoderInfo: MediaCodecInfo): Boolean {
         if (decoderSupportsAndroidRLowLatency(decoderInfo, "video/hevc")) {
             LimeLog.info("Allowing HEVC based on FEATURE_LowLatency support")
             return true
         }
-
-        // Otherwise, we use our list of known working HEVC decoders
-        return isDecoderInList(whitelistedHevcDecoders, decoderInfo.name)
+        return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
     @JvmStatic
     fun isDecoderWhitelistedForAv1(decoderInfo: MediaCodecInfo): Boolean {
         requireInitialized()
@@ -813,16 +818,7 @@ object MediaCodecHelper {
             return false
         }
 
-        //
-        // Software decoders are terrible and we never want to use them.
-        // We want to catch decoders like:
-        // OMX.qcom.video.decoder.hevcswvdec
-        // OMX.SEC.hevc.sw.dec
-        //
-        if (decoderInfo.name.contains("sw", ignoreCase = true)) {
-            LimeLog.info("Disallowing AV1 on software decoder: " + decoderInfo.name)
-            return false
-        } else if (!decoderInfo.isHardwareAccelerated || decoderInfo.isSoftwareOnly) {
+        if (isSoftwareDecoder(decoderInfo)) {
             LimeLog.info("Disallowing AV1 on software decoder: " + decoderInfo.name)
             return false
         }

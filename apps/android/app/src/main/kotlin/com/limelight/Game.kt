@@ -2588,26 +2588,27 @@ class Game :
             MoonBridge.LI_ROT_UNKNOWN,
         )
 
-    // True when the host took the event, false when it answered that touch is not supported.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
-    private fun sendTouchEvents(view: View, event: MotionEvent, eventType: Byte): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
-            // Move events may impact all active pointers
-            for (i in 0 until event.pointerCount) {
-                if (!sendTouchEventForPointer(view, event, eventType, i)) {
-                    return false
-                }
+    // Sends each pointer of a move to the host, in index order, and stops at the first that the
+    // host refuses (false).
+    private fun sendTouchMove(view: View, event: MotionEvent, eventType: Byte): Boolean {
+        for (i in 0 until event.pointerCount) {
+            if (!sendTouchEventForPointer(view, event, eventType, i)) {
+                return false
             }
-            return true
-        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-            // Cancel impacts all active pointers
-            return sendCancelAllTouches() != MoonBridge.LI_ERR_UNSUPPORTED
-        } else {
-            // Up, Down, and Hover events are specific to the action index
-            return sendTouchEventForPointer(view, event, eventType, event.actionIndex)
         }
+        return true
     }
+
+    // True when the host took the event, false when it answered that touch is not supported.
+    private fun sendTouchEvents(view: View, event: MotionEvent, eventType: Byte): Boolean =
+        when (event.actionMasked) {
+            // Move events may impact all active pointers
+            MotionEvent.ACTION_MOVE -> sendTouchMove(view, event, eventType)
+            // Cancel impacts all active pointers
+            MotionEvent.ACTION_CANCEL -> sendCancelAllTouches() != MoonBridge.LI_ERR_UNSUPPORTED
+            // Up, Down, and Hover events are specific to the action index
+            else -> sendTouchEventForPointer(view, event, eventType, event.actionIndex)
+        }
 
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback

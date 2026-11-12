@@ -2,6 +2,7 @@ package com.limelight.binding.video
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
+import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.stream.PerfSnapshot
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
@@ -23,9 +24,11 @@ import org.junit.Test
 class RendererDecodeTimeTest : RendererTestBase() {
     private val snapshots = CopyOnWriteArrayList<PerfSnapshot>()
 
-    private fun decoding(): MediaCodecDecoderRenderer {
+    private fun decoding(
+        pacing: Int = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY
+    ): MediaCodecDecoderRenderer {
         install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
-        val renderer = renderer()
+        val renderer = renderer(prefs { framePacing = pacing })
         assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
         renderer.setPerfEnabled(true)
         renderer.setPerfSink { snapshots += it }
@@ -203,6 +206,26 @@ class RendererDecodeTimeTest : RendererTestBase() {
 
         // 300 ms of uptime less the 50 ms of the timestamp of the newest, over two frames.
         assertThat(snapshots.single().decodeMs).isEqualTo(125f)
+    }
+
+    @Test
+    fun `with balanced pacing the time is counted when the frame is queued for its frame time`() {
+        ShadowRecordingVideoCodec.outputTimestamp = { 0 }
+        val renderer = decoding(PreferenceConfiguration.FRAME_PACING_BALANCED)
+        advanceClock(200)
+        assertThat(renderer.submit(pFrame(1))).isEqualTo(MoonBridge.DR_OK)
+        renderer.beginStepped()
+        // The first pass finds the change of the output format, the second queues the frame.
+        repeat(2) {
+            ShadowRecordingVideoCodec.stepOutput()
+            ShadowRecordingVideoCodec.awaitParked()
+        }
+        advanceClock(1_000)
+
+        renderer.submit(pFrame(2))
+
+        assertThat(events<CodecEvent.Output>()).isEmpty()
+        assertThat(snapshots.single().decodeMs).isEqualTo(300f)
     }
 
     private companion object {

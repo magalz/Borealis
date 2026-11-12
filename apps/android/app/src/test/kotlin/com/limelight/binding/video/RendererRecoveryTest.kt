@@ -969,6 +969,170 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(log.lines()).contains("INFO: Codec recovery attempt: 1")
     }
 
+    // What the renderer decides for each failure, asked directly: the states that these cases need
+    // (ten recoveries done, a recovery pending at the same time, a recovery type that no failure
+    // leaves behind) cannot be brought about by the threads of a test, and no thread is started
+
+    /** A renderer that is set up and has no thread, so that nothing meets the failures but us. */
+    private fun prepared(): MediaCodecDecoderRenderer {
+        install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+        return renderer
+    }
+
+    /** What `handleDecoderException` answers for [failure]; a crash comes out as an exception. */
+    private fun MediaCodecDecoderRenderer.decide(failure: IllegalStateException): Boolean =
+        ReflectionHelpers.callInstanceMethod(
+            this,
+            "handleDecoderException",
+            ReflectionHelpers.ClassParameter.from(IllegalStateException::class.java, failure),
+        )
+
+    private fun MediaCodecDecoderRenderer.recoveryType() =
+        ReflectionHelpers.getField<AtomicInteger>(this, "codecRecoveryType")
+
+    private fun MediaCodecDecoderRenderer.initialException(): Any? =
+        ReflectionHelpers.getField(this, "initialException")
+
+    /** The recovery that [failure] asks for when [attempts] recoveries were already made. */
+    private fun MediaCodecDecoderRenderer.askedFor(
+        attempts: Int,
+        failure: IllegalStateException,
+    ): Int {
+        recoveryType().set(RECOVERY_NONE)
+        ReflectionHelpers.setField(this, "codecRecoveryAttempts", attempts)
+        assertThat(decide(failure)).isFalse()
+        return recoveryType().get()
+    }
+
+    @Test
+    fun `a renderer that is stopping lets every failure go before it logs anything`() {
+        val renderer = prepared()
+        ReflectionHelpers.setField(renderer, "stopping", true)
+        val before = log.lines()
+
+        for (failure in listOf(transient(), recoverable(), unrecoverable(), stateFailure())) {
+            assertThat(renderer.decide(failure)).isFalse()
+        }
+
+        assertThat(log.lines()).isEqualTo(before)
+        assertThat(renderer.recoveryType().get()).isEqualTo(RECOVERY_NONE)
+        assertThat(renderer.initialException()).isNull()
+    }
+
+    @Test
+    fun `a transient codec error is let go as a warning, whatever the recoveries made`() {
+        val renderer = prepared()
+        ReflectionHelpers.setField(renderer, "codecRecoveryAttempts", 10)
+        val failure = transient()
+
+        assertThat(renderer.decide(failure)).isTrue()
+
+        assertThat(log.lines().filter { it.contains(failure.diagnosticInfo) })
+            .containsExactly("WARNING: ${failure.diagnosticInfo}")
+        assertThat(renderer.recoveryType().get()).isEqualTo(RECOVERY_NONE)
+        assertThat(renderer.initialException()).isNull()
+    }
+
+    @Test
+    fun `a codec error is logged as severe before the recovery that it asks for`() {
+        val renderer = prepared()
+        val restarted = recoverable()
+        val reset = unrecoverable()
+
+        renderer.askedFor(0, restarted)
+        renderer.askedFor(0, reset)
+
+        assertThat(log.lines())
+            .containsAtLeast(
+                "SEVERE: ${restarted.diagnosticInfo}",
+                "INFO: Decoder requires restart for recoverable CodecException",
+                "SEVERE: ${reset.diagnosticInfo}",
+                "INFO: Decoder requires reset for non-recoverable CodecException",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a failure asks for a recovery up to the tenth attempt and no more`() {
+        val renderer = prepared()
+
+        assertThat(renderer.askedFor(9, recoverable())).isEqualTo(RECOVERY_RESTART)
+        assertThat(renderer.askedFor(9, unrecoverable())).isEqualTo(RECOVERY_RESET)
+        assertThat(renderer.askedFor(9, stateFailure())).isEqualTo(RECOVERY_RESET)
+        assertThat(renderer.initialException()).isNull()
+        val seen = log.lines().size
+
+        assertThat(renderer.askedFor(10, recoverable())).isEqualTo(RECOVERY_NONE)
+        assertThat(renderer.initialException()).isNotNull()
+        assertThat(renderer.askedFor(10, unrecoverable())).isEqualTo(RECOVERY_NONE)
+        assertThat(renderer.askedFor(10, stateFailure())).isEqualTo(RECOVERY_NONE)
+        assertThat(log.lines().drop(seen).filter { it.startsWith("INFO: Decoder") }).isEmpty()
+    }
+
+    @Test
+    fun `a failure that meets a pending recovery is not held back`() {
+        val renderer = prepared()
+        ReflectionHelpers.setField(renderer, "codecRecoveryAttempts", 10)
+        renderer.recoveryType().set(RECOVERY_RESET)
+
+        assertThat(renderer.decide(stateFailure())).isFalse()
+
+        assertThat(renderer.initialException()).isNull()
+        assertThat(renderer.recoveryType().get()).isEqualTo(RECOVERY_RESET)
+
+        // Three seconds after a failure that was held back, a pending recovery still goes first.
+        renderer.recoveryType().set(RECOVERY_NONE)
+        assertThat(renderer.decide(stateFailure())).isFalse()
+        advanceClock(3_000)
+        renderer.recoveryType().set(RECOVERY_RESTART)
+
+        assertThat(renderer.decide(stateFailure())).isFalse()
+
+        assertThat(crashes).isEmpty()
+        assertThat(renderer.recoveryType().get()).isEqualTo(RECOVERY_RESTART)
+    }
+
+    @Test
+    fun `the first failure that was held back is thrown exactly three seconds after it`() {
+        val renderer = prepared()
+        ReflectionHelpers.setField(renderer, "codecRecoveryAttempts", 10)
+        val first = codecException(errorCode = -38, actionCode = ACTION_NONE, message = "dead")
+        assertThat(renderer.decide(first)).isFalse()
+        // A later failure does not move the time that the three seconds are counted from.
+        advanceClock(2_000)
+        assertThat(renderer.decide(stateFailure())).isFalse()
+        advanceClock(999)
+        assertThat(renderer.decide(stateFailure())).isFalse()
+        assertThat(crashes).isEmpty()
+        advanceClock(1)
+
+        val thrown = assertThrows(RuntimeException::class.java) { renderer.decide(stateFailure()) }
+
+        assertThat(thrown.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(thrown.toString().split("\n").last())
+            .isEqualTo("android.media.MediaCodec\$CodecException: dead")
+        assertThat(crashes).containsExactly(thrown)
+        assertThat(renderer.initialException()).isSameInstanceAs(thrown)
+    }
+
+    @Test
+    fun `a recovery type that no failure leaves behind is an error with its number`() {
+        val renderer = prepared()
+
+        for (failure in listOf(recoverable(), unrecoverable(), stateFailure())) {
+            renderer.recoveryType().set(UNKNOWN_RECOVERY)
+
+            val thrown =
+                assertThrows(IllegalStateException::class.java) { renderer.decide(failure) }
+
+            assertThat(thrown)
+                .hasMessageThat()
+                .isEqualTo("Unexpected codec recovery type: $UNKNOWN_RECOVERY")
+        }
+    }
+
     // The rig of the stepped renderer thread
 
     @Test
@@ -1097,6 +1261,10 @@ class RendererRecoveryTest : RendererTestBase() {
 
     private companion object {
         const val LOAD_VARIABLE = "BOREALIS_RENDERER_LOAD"
+        const val RECOVERY_NONE = 0
+        const val RECOVERY_RESTART = 2
+        const val RECOVERY_RESET = 3
+        const val UNKNOWN_RECOVERY = 7
         const val MAX_PASSES_FOR_A_FRAME = 4
         const val PASS_WATCHDOG_SECONDS = 60L
         const val DUMPED_LINES = 30

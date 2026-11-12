@@ -856,33 +856,25 @@ object MediaCodecHelper {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("LoopWithTooManyJumpStatements")
+    // Encoders, and the compatibility aliases that Android 10 lists, are not candidates.
+    private fun isEncoderOrAlias(codecInfo: MediaCodecInfo): Boolean {
+        return codecInfo.isEncoder ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && codecInfo.isAlias)
+    }
+
     @JvmStatic
     fun findFirstDecoder(mimeType: String): MediaCodecInfo? {
         requireInitialized()
 
         for (codecInfo in getMediaCodecList()) {
-            // Skip encoders
-            if (codecInfo.isEncoder) {
+            if (isEncoderOrAlias(codecInfo)) {
                 continue
             }
 
-            // Skip compatibility aliases on Q+
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                if (codecInfo.isAlias) {
-                    continue
-                }
-            }
-
-            // Find a decoder that supports the specified video format
+            // Find a decoder that supports the specified video format. A blacklisted decoder is
+            // logged once for each listing of the type and the walk goes on.
             for (mime in codecInfo.supportedTypes) {
-                if (mime.equals(mimeType, ignoreCase = true)) {
-                    // Skip blacklisted codecs
-                    if (isCodecBlacklisted(codecInfo)) {
-                        continue
-                    }
-
+                if (mime.equals(mimeType, ignoreCase = true) && !isCodecBlacklisted(codecInfo)) {
                     LimeLog.info("First decoder choice is " + codecInfo.name)
                     return codecInfo
                 }
@@ -905,26 +897,17 @@ object MediaCodecHelper {
     // device without a decoder. This answers the first decoder of the type, with the candidates of
     // that search (no encoder, alias or blacklisted decoder), when every one of them throws; it
     // answers null when there is none, or when one can be read, which the search would have found.
-    @Suppress("LoopWithTooManyJumpStatements")
     @JvmStatic
     fun findDecoderWhenAllThrow(mimeType: String): MediaCodecInfo? {
         requireInitialized()
 
         var first: MediaCodecInfo? = null
         for (codecInfo in getMediaCodecList()) {
-            if (codecInfo.isEncoder) {
-                continue
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && codecInfo.isAlias) {
-                continue
-            }
-
             val mime =
-                codecInfo.supportedTypes.firstOrNull { it.equals(mimeType, ignoreCase = true) }
-                    ?: continue
+                if (isEncoderOrAlias(codecInfo)) null
+                else codecInfo.supportedTypes.firstOrNull { it.equals(mimeType, ignoreCase = true) }
 
-            if (isCodecBlacklisted(codecInfo)) {
+            if (mime == null || isCodecBlacklisted(codecInfo)) {
                 continue
             }
 
@@ -974,8 +957,50 @@ object MediaCodecHelper {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("NestedBlockDepth", "LoopWithTooManyJumpStatements", "CyclomaticComplexMethod")
+    // The capabilities of one listing of the type of a decoder in a round (0 is the first), or null
+    // when the listing is skipped: the decoder is blacklisted or throws for its capabilities, or it
+    // lacks FEATURE_LowLatency in the first round.
+    private fun readSafeCapabilities(
+        codecInfo: MediaCodecInfo,
+        mime: String,
+        round: Int,
+    ): CodecCapabilities? {
+        LimeLog.info("Examining decoder capabilities of ${codecInfo.name} (round ${round + 1})")
+
+        // Skip blacklisted codecs
+        if (isCodecBlacklisted(codecInfo)) {
+            return null
+        }
+
+        val caps = readCapabilities(codecInfo, mime)
+
+        if (caps != null && round == 0 && !supportsLowLatencyFeature(codecInfo, caps)) {
+            LimeLog.info("Skipping decoder that lacks FEATURE_LowLatency for round 1")
+            return null
+        }
+
+        return caps
+    }
+
+    // Any profile is good when none is required.
+    private fun supportsRequiredProfile(
+        codecInfo: MediaCodecInfo,
+        caps: CodecCapabilities,
+        requiredProfile: Int,
+    ): Boolean {
+        if (requiredProfile == -1) {
+            return true
+        }
+
+        if (caps.profileLevels.any { it.profile == requiredProfile }) {
+            LimeLog.info("Decoder ${codecInfo.name} supports required profile")
+            return true
+        }
+
+        LimeLog.info("Decoder ${codecInfo.name} does NOT support required profile")
+        return false
+    }
+
     private fun findKnownSafeDecoder(mimeType: String, requiredProfile: Int): MediaCodecInfo? {
         // Some devices (Exynos devces, at least) have two sets of decoders.
         // The first set of decoders are C2 which do not support FEATURE_LowLatency,
@@ -985,57 +1010,21 @@ object MediaCodecHelper {
         // (like c2.qti.hevc.decoder.low_latency) that advertise FEATURE_LowLatency while
         // the standard ones (like c2.qti.hevc.decoder) do not. Like Exynos, the decoders
         // with FEATURE_LowLatency support are listed after the standard ones.
-        for (i in 0 until 2) {
+        for (round in 0 until 2) {
             for (codecInfo in getMediaCodecList()) {
-                // Skip encoders
-                if (codecInfo.isEncoder) {
+                if (isEncoderOrAlias(codecInfo)) {
                     continue
-                }
-
-                // Skip compatibility aliases on Q+
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    if (codecInfo.isAlias) {
-                        continue
-                    }
                 }
 
                 // Find a decoder that supports the requested video format
                 for (mime in codecInfo.supportedTypes) {
-                    if (mime.equals(mimeType, ignoreCase = true)) {
-                        LimeLog.info(
-                            "Examining decoder capabilities of ${codecInfo.name} (round ${i + 1})"
-                        )
+                    if (!mime.equals(mimeType, ignoreCase = true)) {
+                        continue
+                    }
 
-                        // Skip blacklisted codecs
-                        if (isCodecBlacklisted(codecInfo)) {
-                            continue
-                        }
-
-                        val caps = readCapabilities(codecInfo, mime) ?: continue
-
-                        if (i == 0 && !supportsLowLatencyFeature(codecInfo, caps)) {
-                            LimeLog.info(
-                                "Skipping decoder that lacks FEATURE_LowLatency for round 1"
-                            )
-                            continue
-                        }
-
-                        if (requiredProfile != -1) {
-                            for (profile in caps.profileLevels) {
-                                if (profile.profile == requiredProfile) {
-                                    LimeLog.info(
-                                        "Decoder ${codecInfo.name} supports required profile"
-                                    )
-                                    return codecInfo
-                                }
-                            }
-
-                            LimeLog.info(
-                                "Decoder ${codecInfo.name} does NOT support required profile"
-                            )
-                        } else {
-                            return codecInfo
-                        }
+                    val caps = readSafeCapabilities(codecInfo, mime, round)
+                    if (caps != null && supportsRequiredProfile(codecInfo, caps, requiredProfile)) {
+                        return codecInfo
                     }
                 }
             }

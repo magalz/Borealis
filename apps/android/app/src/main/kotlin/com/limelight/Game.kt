@@ -2013,89 +2013,92 @@ class Game :
         return modifierFlags.toByte()
     }
 
+    // Whether the key is left to the chrome, the Android keyboard or the system, not the stream.
+    private fun keyIsNotForStream(event: KeyEvent): Boolean =
+        // BOREALIS: the chrome takes the keys while it is modal
+        chromeInput.toChrome(event) ||
+            // BOREALIS: the Android keyboard keeps a gamepad's D-pad, Enter and Back
+            imeKeys.toIme(event) ||
+            // Pass-through virtual navigation keys
+            (event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0
+
+    // Always try the controller handler first, unless it's an alphanumeric keyboard device.
+    // Otherwise, controller handler will eat keyboard d-pad events.
+    private fun padTookKey(event: KeyEvent, down: Boolean): Boolean =
+        ControllerHandler.isGameControllerDevice(event.device) &&
+            if (down) controllerHandler.handleButtonDown(event)
+            else controllerHandler.handleButtonUp(event)
+
+    // Make sure it has a valid Unicode representation and it's not a dead character (which we
+    // don't support): then it can be sent as UTF-8 text.
+    private fun isTextChar(unicodeChar: Int): Boolean =
+        (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
+            (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
+            Character.isValidCodePoint(unicodeChar)
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         // BOREALIS: the hardware Escape key acts as Back while the chrome is modal
         if (chromeInput.actsAsBack(event)) return true
         return handleKeyDown(event) || super.onKeyDown(keyCode, event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "ReturnCount")
     override fun handleKeyDown(event: KeyEvent): Boolean {
-        // BOREALIS: the chrome takes the keys while it is modal
-        if (chromeInput.toChrome(event)) return false
-        // BOREALIS: the Android keyboard keeps a gamepad's D-pad, Enter and Back
-        if (imeKeys.toIme(event)) return false
-        // Pass-through virtual navigation keys
-        if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
-            return false
-        }
+        if (keyIsNotForStream(event)) return false
 
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click. This event WILL repeat if
         // the right mouse button is held down, so we ignore those.
-        if (handleMouseSideKey(event, down = true)) return true
+        if (handleMouseSideKey(event, down = true) || padTookKey(event, down = true)) return true
+        return keyDownForHost(event)
+    }
 
-        var handled = false
-
-        if (ControllerHandler.isGameControllerDevice(event.device)) {
-            // Always try the controller handler first, unless it's an alphanumeric keyboard device.
-            // Otherwise, controller handler will eat keyboard d-pad events.
-            handled = controllerHandler.handleButtonDown(event)
+    // A key down that no pad took: the special keys, then the host as a key or as text. Returns
+    // whether the key was handled.
+    private fun keyDownForHost(event: KeyEvent): Boolean {
+        // Let this method take duplicate key down events
+        if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
+            return true
         }
 
-        // Try the keyboard handler if it wasn't handled as a game controller
-        if (!handled) {
-            // Let this method take duplicate key down events
-            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
-                return true
-            }
-
-            // Pass through keyboard input if we're not grabbing
-            if (!grabbedInput) {
-                return false
-            }
-
-            // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
-            // as UTF-8 text (if it's a printable character).
-            val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
-            if (translated.toInt() == 0) {
-                // Make sure it has a valid Unicode representation and it's not a dead character
-                // (which we don't support). If those are true, we can send it as UTF-8 text.
-                //
-                // NB: We need to be sure this happens before the getRepeatCount() check because
-                // UTF-8 events don't auto-repeat on the host side.
-                val unicodeChar = event.unicodeChar
-                if (
-                    (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
-                        (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
-                        Character.isValidCodePoint(unicodeChar)
-                ) {
-                    // BOREALIS: the whole code point, as a surrogate pair outside the basic plane
-                    conn.sendUtf8Text(String(Character.toChars(unicodeChar)))
-                    return true
-                }
-
-                return false
-            }
-
-            // Eat repeat down events
-            if (event.repeatCount > 0) {
-                return true
-            }
-
-            conn.sendKeyboardInput(
-                translated,
-                KeyboardPacket.KEY_DOWN,
-                getModifierState(event),
-                if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
-                else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED,
-            )
-            // BOREALIS: keys held down are released when the chrome takes the input
-            heldKeys.down(translated.toInt() and VIRTUAL_KEY_MASK)
+        // Pass through keyboard input if we're not grabbing
+        if (!grabbedInput) {
+            return false
         }
 
+        // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
+        // as UTF-8 text (if it's a printable character).
+        val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
+        return if (translated.toInt() == 0) {
+            keyDownAsText(event)
+        } else {
+            sendKeyDown(event, translated)
+            true
+        }
+    }
+
+    // NB: We need to be sure this happens before the getRepeatCount() check because UTF-8 events
+    // don't auto-repeat on the host side.
+    private fun keyDownAsText(event: KeyEvent): Boolean {
+        val unicodeChar = event.unicodeChar
+        if (!isTextChar(unicodeChar)) return false
+        // BOREALIS: the whole code point, as a surrogate pair outside the basic plane
+        conn.sendUtf8Text(String(Character.toChars(unicodeChar)))
         return true
+    }
+
+    private fun sendKeyDown(event: KeyEvent, translated: Short) {
+        // Eat repeat down events
+        if (event.repeatCount > 0) return
+
+        conn.sendKeyboardInput(
+            translated,
+            KeyboardPacket.KEY_DOWN,
+            getModifierState(event),
+            if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
+            else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED,
+        )
+        // BOREALIS: keys held down are released when the chrome takes the input
+        heldKeys.down(translated.toInt() and VIRTUAL_KEY_MASK)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
@@ -2107,62 +2110,48 @@ class Game :
         return handleKeyUp(event) || super.onKeyUp(keyCode, event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "ReturnCount")
     override fun handleKeyUp(event: KeyEvent): Boolean {
-        // BOREALIS: the chrome takes the keys while it is modal
-        if (chromeInput.toChrome(event)) return false
-        // BOREALIS: the Android keyboard keeps a gamepad's D-pad, Enter and Back
-        if (imeKeys.toIme(event)) return false
-        // Pass-through virtual navigation keys
-        if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
-            return false
-        }
+        if (keyIsNotForStream(event)) return false
 
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click.
-        if (handleMouseSideKey(event, down = false)) return true
+        if (handleMouseSideKey(event, down = false) || padTookKey(event, down = false)) return true
+        return keyUpForHost(event)
+    }
 
-        var handled = false
-        if (ControllerHandler.isGameControllerDevice(event.device)) {
-            // Always try the controller handler first, unless it's an alphanumeric keyboard device.
-            // Otherwise, controller handler will eat keyboard d-pad events.
-            handled = controllerHandler.handleButtonUp(event)
+    // A key up that no pad took: the special keys, then the host as a key. Returns whether the key
+    // was handled.
+    private fun keyUpForHost(event: KeyEvent): Boolean {
+        if (handleSpecialKeys(event.keyCode, false, false)) {
+            return true
         }
 
-        // Try the keyboard handler if it wasn't handled as a game controller
-        if (!handled) {
-            if (handleSpecialKeys(event.keyCode, false, false)) {
-                return true
-            }
-
-            // Pass through keyboard input if we're not grabbing
-            if (!grabbedInput) {
-                return false
-            }
-
-            val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
-            if (translated.toInt() == 0) {
-                // If we sent this event as UTF-8 on key down, also report that it was handled
-                // when we get the key up event for it.
-                val unicodeChar = event.unicodeChar
-                return (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
-                    (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
-                    Character.isValidCodePoint(unicodeChar)
-            }
-
-            conn.sendKeyboardInput(
-                translated,
-                KeyboardPacket.KEY_UP,
-                getModifierState(event),
-                if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
-                else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED,
-            )
-            // BOREALIS: keys held down are released when the chrome takes the input
-            heldKeys.up(translated.toInt() and VIRTUAL_KEY_MASK)
+        // Pass through keyboard input if we're not grabbing
+        if (!grabbedInput) {
+            return false
         }
 
-        return true
+        val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
+        return if (translated.toInt() == 0) {
+            // If we sent this event as UTF-8 on key down, also report that it was handled
+            // when we get the key up event for it.
+            isTextChar(event.unicodeChar)
+        } else {
+            sendKeyUp(event, translated)
+            true
+        }
+    }
+
+    private fun sendKeyUp(event: KeyEvent, translated: Short) {
+        conn.sendKeyboardInput(
+            translated,
+            KeyboardPacket.KEY_UP,
+            getModifierState(event),
+            if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
+            else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED,
+        )
+        // BOREALIS: keys held down are released when the chrome takes the input
+        heldKeys.up(translated.toInt() and VIRTUAL_KEY_MASK)
     }
 
     override fun onKeyMultiple(keyCode: Int, repeatCount: Int, event: KeyEvent): Boolean {

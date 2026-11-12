@@ -205,6 +205,24 @@ class MediaCodecHelperLogTest : MediaCodecHelperTestBase() {
                 )
             }
         }
+        rows.check(
+            "not hardware accelerated",
+            infos("Disallowing AV1 on software decoder: c2.vendor.av1"),
+        ) {
+            val helper = helper()
+            logged {
+                helper.whitelistedForAv1(
+                    codec("c2.vendor.av1") {
+                        mime = av1
+                        hardwareAccelerated = false
+                    }
+                )
+            }
+        }
+        rows.check("a software decoder before Android 10 logs nothing", emptyList()) {
+            val helper = helper(DeviceBuild(sdk = Build.VERSION_CODES.P))
+            logged { helper.whitelistedForAv1(codec("c2.vendor.sw.av1") { mime = av1 }) }
+        }
         rows.check("a hardware decoder", emptyList()) {
             val helper = helper()
             logged { helper.whitelistedForAv1(codec("c2.vendor.av1") { mime = av1 }) }

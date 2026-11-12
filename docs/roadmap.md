@@ -448,7 +448,7 @@ with any number of sprints. The phase pull requests stay small and easy to test.
 | 17a | General fixes: audio, video and the stream screens, and the stream session |
 | 17b | General fixes: Library and Settings, input, pads, and accessibility and layout |
 | 18a | Refactor of the converted code: network, host and input (and the duplication of Sprint 17b) |
-| 18b | Refactor of the converted code: video, audio and the stream activity, and the test and tooling items |
+| 18b | Refactor of the converted code: video, audio and the stream activity, and the test and tooling items (two pull requests: test and tooling, then the refactor) |
 | 18c | The behaviour-bound places of the converted code |
 | 18d | Splitting the large converted classes |
 | 19 | SecOps |
@@ -2173,8 +2173,16 @@ The numbers of the later sprints do not change.
 
 ### Sprint 18b: refactor of the converted code (video, audio and the stream activity) and test tooling
 
-Planned, not started. Phase card BORE-86. Split from Sprint 18 by the owner on 2026-11-05; see
+In progress since 2026-11-11, in two pull requests, with both Phase cards: BORE-105 for 18b-1 and BORE-86 for 18b-2. Split from Sprint 18 by the owner on 2026-11-05; see
 [Sprint 18a](#sprint-18a-refactor-of-the-converted-code-network-host-and-input).
+
+Owner decisions of 2026-11-11: Sprint 18b runs as two pull requests, the test and tooling first.
+
+- **18b-1, test and tooling:** Phase card BORE-105, pull request #134, branch `phase/s18b1-test-tooling`, cut from `main` at `52069315d`. CI checks it alone.
+- **18b-2, the refactor:** Phase card BORE-86, branch `phase/s18b2-refactor-video-audio-game`, cut from the head of 18b-1 and kept up to date with it by merges.
+- **Lanes:** 18b-2 runs in two sessions of its own besides the main session: lane G (`Game.kt`) and lane V (video and audio).
+- **Wave 0 of 18b-2** fixes known bugs before the refactor: BORE-52 (the audio delay line of the overlay said 0 ms while the PC played no sound) and BORE-121 (the decoder recovery race, below). BORE-33 stays in the backlog, and BORE-102 stays in [Sprint 18c](#sprint-18c-the-behaviour-bound-places-of-the-converted-code).
+- **Extras** are only the small ones, inside the tasks that already touch the place. The Java-facing annotations (`@JvmStatic`, `@JvmField`, `@JvmOverloads`, `@Throws`) go to [Sprint 18d](#sprint-18d-splitting-the-large-converted-classes). The six stateless helpers of `Game` stay members until the class split of 18d.
 
 - **The Sprint 14 markers that a refactor can clear**, under the marker rule, in `Game.kt`,
   `binding/video/MediaCodecDecoderRenderer.kt`, `binding/video/MediaCodecHelper.kt` and
@@ -2207,51 +2215,126 @@ Planned, not started. Phase card BORE-86. Split from Sprint 18 by the owner on 2
   `MenuChordDetector.update`.
   - **Notes from Sprint 18a**, recorded on BORE-86:
     - the Wake-on-LAN test sends to the streaming ports, and no test runs the rethrow branch of the
-      sender: the test that reaches it skips on a machine with a network;
+      sender: the test that reaches it skips on a machine with a network. **Done in Sprint 18b-1
+      (BORE-108).** The sender opens its socket through a function that the tests replace, so they send
+      nothing to the network, and both rethrow branches are tested on every machine;
     - `LaunchRequestTest` keeps a test that is now redundant ("continuous audio is off by default, so a
       LuminalShine launch and resume send none", which the test that pins no `continuousAudio` in the
-      query repeats), and the name of its GFE test still mentions continuous audio;
+      query repeats), and the name of its GFE test still mentions continuous audio. **Done in Sprint 18b-1
+      (BORE-110).** The redundant test is gone; the GFE test is renamed "a GFE host gets the same launch and
+      resume request as before";
     - `AppsRouteTest` has its own private `snapshot(...)` builder, beside the shared one of
-      `AppsViewModelTestBase` that BORE-73 made (decision D14).
-  - item (c) of the block "From the Sprint 14 conversion": `GameWiringTest` keeps 6 tests that read
-    text (3 read `NvConnection.kt`, 3 read `src/main/res`); test code repeats across modules
-    (`MainDispatcherRule`, `WorkerDispatcherRule` and the device qualifiers); the smaller leftovers
-    (`ANDROID_NS`, the `@Config(sdk = [30])` literals, the name of `BorealisCoverageTest`, and line 16
-    of `apps/android/borealis/README.md`); and the Robolectric limit;
+      `AppsViewModelTestBase` that BORE-73 made (decision D14). **Done in Sprint 18b-1 (BORE-110).** One
+      top-level `snapshot` builder in `library/testing/Fixtures.kt` serves it and the `AppsViewModel*Test`
+      classes.
+  - item (c) of the block "From the Sprint 14 conversion", in four parts:
+    - `GameWiringTest` keeps 6 tests that read text (3 read `NvConnection.kt`, 3 read `src/main/res`).
+      **Done in Sprint 18b-1 (BORE-107).** The three resource tests read the compiled `R` classes. The
+      three `NvConnection.kt` text tests are gone: two are covered by existing start tests, and one is
+      replaced by three behaviour tests of a refused, broken or unanswered quit (`StartConflictTest`);
+    - test code repeats across modules (`MainDispatcherRule`, `WorkerDispatcherRule` and the device
+      qualifiers). **Done in Sprint 18b-1 (BORE-117 and BORE-118).** Both rules are declared once, in the
+      test fixtures of `:borealis:logging`. `PHONE` and `TV` are declared once, in the design system's test
+      fixtures (`apps/android/borealis/designsystem/src/testFixtures/kotlin/io/github/magalz/borealis/designsystem/testing/Devices.kt`),
+      with three more constants for values that several modules shared: `PHONE_LANDSCAPE`, `HANDHELD` and
+      `HANDHELD_NO_TOUCH`. Values that differ keep their own names in their own files: the taller settings
+      screenshots, the background frame export, and a 360 dp high handheld in five design system tests. A
+      list of all 1,310 qualifier uses, resolved to their strings, is identical before and after, and the
+      screenshot verify of the four Compose modules passed with no re-recording. Raw qualifier literals went
+      from 139 to 45. The App tests were not touched by BORE-118 (one App literal still equals `TV`);
+    - the smaller leftovers (`ANDROID_NS`, the `@Config(sdk = [30])` literals, the name of
+      `BorealisCoverageTest`, and line 16 of `apps/android/borealis/README.md`). **Done in Sprint 18b-1
+      (BORE-110).** One `ANDROID_NS`; 27 numeric levels in 12 files use the `AndroidLevels` constants, with
+      a new `ANDROID_15`; the coverage test is named "the converted stream classes are counted"; the README
+      line says what Spotless formats today;
+    - the Robolectric limit. **Done in Sprint 18b-1 (BORE-119),** see the Robolectric sandbox limit below.
   - the open entries of item (c) of the block "From the Sprint 13 conversion": the wall-clock test
     (`ButtonTimingCharacterizationTest`) and the Robolectric sandbox limit. Its entries marked
-    "Done in Sprint 14" are done;
+    "Done in Sprint 14" are done:
+    - the wall-clock test. **Done in Sprint 18b-1 (BORE-109).** The release wait goes through an injectable
+      sleeper (default `Thread.sleep`), and the test asserts the requested wait;
+    - the Robolectric sandbox limit. **Done in Sprint 18b-1 (BORE-119).** Counted from a real run on
+      2026-11-12: `:app` 24 sandboxes of the 42 that Robolectric 4.17 keeps (the text count of Sprint 14's
+      method still gives 39; the difference is not explained). The build guide records the key of a
+      sandbox, the counts and the rule for a new configuration;
   - **Test fixtures and the Reduced glass values**, from [Sprint 15](#sprint-15-the-stream-screens-and-glass)
     (the reviews of #104): other tests that end on a screen outside the game with the default look
     (the default background style, which moves) have the order hazard that `StreamBackTest` had, so
     consider a background Off default in the test fixtures; and `VideoGlassSpec.kt`
     (`:borealis:stream`) repeats the Reduced values (85 percent, 48 dp) that `GlassRules` keeps
-    private, with a comment that points at ADR 0057, so keep them in one place.
+    private, with a comment that points at ADR 0057, so keep them in one place. **Done in Sprint 18b-1
+    (BORE-111 and BORE-115).** The stream test fixtures build their session with no background, and the
+    tests that need the moving one ask for it (BORE-111). The design system exposes the Reduced values (85
+    percent, 48 dp), and `VideoGlassSpec.kt` reads them (BORE-115).
   - **Two flaky tests and the duplicated pixel helpers**, from Sprint 15 (the gates and reviews of
-    the phase; the owner listed them for the backlog on 2026-10-30). `StreamChromeHostFrozenFrameTest`
-    failed once under load with a Robolectric `NullPointerException` before the body of the test,
-    and `StreamBackTest` "back opens the menu…" failed once on the timing of `menuHintShown`. The
-    stream tests also repeat pixel helpers: `ui/glass/PixelSupport.kt` against the private copies in
-    `DialogOverBackgroundTest` and `DialogOverBackgroundApi30Test`, and the private `assertNear`
-    copies in four stream tests. Make the two tests deterministic, and keep the helpers in one place.
+    the phase; the owner listed them for the backlog on 2026-10-30):
+    - `StreamChromeHostFrozenFrameTest` failed once under load with a Robolectric `NullPointerException`
+      before the body of the test. **Not reproduced in Sprint 18b-1 (BORE-112), and nothing changed:**
+      2,100 loaded runs and 20 runs of the class had no failure, after the still background of BORE-111.
+      Each timing suspect was read, and none can cross from one test into the next.
+    - `StreamBackTest` "back opens the menu…" failed once on the timing of `menuHintShown`. **Moved to
+      Backlog card BORE-154.** BORE-111 made it wait for the menu hint instead of a fixed window. The
+      original failure was not reproduced, and the moving default background was shown to stall a second
+      run of the test. It failed once more on 2026-11-12, after that change, in an unrelated probe run.
+    - The stream tests also repeat pixel helpers: `ui/glass/PixelSupport.kt` against the private copies in
+      `DialogOverBackgroundTest` and `DialogOverBackgroundApi30Test`, and the private `assertNear` copies in
+      four stream tests. **Done in Sprint 18b-1 (BORE-113).** `distanceFrom`, the farthest-pixel search,
+      `assertNear` and `near` are declared once, in the stream test support.
   - **The Failed phase of `StreamChromeHost.handleBack` and two untested branches**, from Sprint 15
     (the known limits): the branch is unreachable while the popup is composed, and `FrozenFrame.kt`
     (the copy worked but the view has no bounds when it ends) and `VideoSource.kt` (a refused
-    `PixelCopy` request) have no test. Remove the first, and test or delete the others.
+    `PixelCopy` request) have no test. **Done in Sprint 18b-1 (BORE-114), with a correction.** The Failed
+    entry is reachable: a Back that arrives right after the failure, before the error popup is drawn,
+    reaches it, and an existing test covers that way in. The plan's idea that it is reached after a stop
+    and a start with the popup up is wrong, because the popup still takes Back. So the branch was not
+    removed: it stays, with a direct test. The two other branches have tests now: `FrozenFrame.kt` (a copy
+    that worked but ends with the video gone), and `VideoSource.kt` (a refused `PixelCopy` request, with a
+    stand-in that refuses, which adds one Robolectric configuration to the stream tests).
   - **The test heap of `:borealis:library` and `:borealis:settings`**, from Sprint 15: under load
-    (two Gradle runs at once on 2026-10-29) their accessibility tests ran out of memory. Only `:app`
-    gets the 2 GB heap of `BorealisUnitTestHeap` (`build-logic`); decide whether these two modules
-    need it too, or whether one Gradle run at a time stays the rule.
+    (two Gradle runs at once on 2026-10-29) their accessibility tests ran out of memory. **Done in Sprint 18b-1 (BORE-119).** Measured on
+    2026-11-12, Library used 449 MB and Settings 753 MB after a collection (on the 512 MB default they
+    passed with almost no margin). They now get 1 GB and 1.5 GB through `BorealisUnitTestHeap`
+    (`build-logic`), and `:app` keeps its 2 GB. Follow-up BORE-155: the `:app` tests now reach their 2 GB,
+    and Stream and Design system run near the default.
   - **A flaky renderer test**, from Sprint 16 (the gates of #113): `RendererRecoveryTest`, "three
     seconds after the first failure that is not recovered …", failed once in a full gate under
     load, and passed 5 times out of 5 alone at the base and at the head of the batch. Make it
-    deterministic. This is BORE-37.
+    deterministic. **Done in Sprint 18b-1 (BORE-37), with two findings:**
+    - The first flaky case ("the stream goes on after a recovery, with buffers of the restarted codec")
+      was a gap of the fake codec in the tests, not of the app: after a restart it handed out an input
+      buffer that was not cleared. The fake is fixed.
+    - The two flaky cases now run on an opt-in stepped renderer thread, with no sleep or poll. BORE-152
+      moved two more recovery cases to it, the held-back-failure case and the crashed-twice case.
+    - A third case ("a renderer that crashed throws the same exception again and tells nobody twice")
+      failed once in the CI of #134 (BORE-152). Under load it was reproduced after about 3,540 passes, and
+      its cause is a defect of the app: the decoder recovery race, BORE-121.
   - **The `menu_glass_*` Roborazzi references**, from Sprint 17a. Four of the eight under
     `apps/android/borealis/stream/src/test/screenshots/` (`menu_glass_handheld`,
     `menu_glass_phone`, `menu_glass_phone_white-frame`, `menu_glass_tv_focused`) changed when two
     tasks re-recorded the module on Windows, with no change to the menu; the tasks kept the
-    committed ones, and the verify passes with them. Find why they move.
-- **Ends with a picture-and-sound device round.**
+    committed ones, and the verify passes with them. **Research done in Sprint 18b-1 (BORE-116), with no
+    change.** 25 recordings (ten plain, the rest under load, in a full module run and after 1 to 32 copies
+    of the video) gave one image per reference: the copy loop does not move the capture. The only pixels
+    that differ from four committed references are the anti-aliased edges of two chevron icons, by one
+    colour level. The likely cause is the machine's rounding of the icon edges (not confirmed). The verify
+    passes. Open for the owner: a deliberate compare threshold, or one fixed recording machine, if the
+    references must never move.
+- **18b-2 ends with a picture-and-sound device round.**
+- **New findings.**
+  - **BORE-121, the decoder recovery race** (Bug, fixed first in 18b-2, wave 0): when a second recovery is
+    asked for right as the first ends, a waiting thread stays in the wait of the old recovery without
+    marking itself again, and the decoder threads wait for ever. For the user, a frozen picture with no
+    crash report after two decoder errors close together. It was read from the code while 18b was planned,
+    then observed twice: once in the CI of #134, and once under load (BORE-152).
+  - **BORE-151, a CI flake, found and fixed in 18b-1 (task K18).** Twice in about fifteen runs of the Android
+    job, 127 Library activity tests failed at once because the Hilt test components were not generated: the
+    code generation step of the Library unit tests ran and produced nothing. A survey of every Android job
+    log from 2026-10-30 found it twice in 15 jobs with KSP 2.3.13 and never in about 60 with 2.3.12. KSP's
+    maintainers mark 2.3.13 as "Defect in release" (google/ksp#3286: concurrent KSP runs in one build can
+    silently generate nothing); the fix is merged upstream but not released. KSP is back on 2.3.12, and
+    Dependabot skips 2.3.13 only, so the next release is proposed as usual.
+  - **BORE-153** (Bug, for 18c): a decoder crash loses its crash text when the H.264 decoder throws for its
+    capabilities.
 
 ### Sprint 18c: the behaviour-bound places of the converted code
 
@@ -3022,12 +3105,12 @@ took item (b), and each of its entries now ends with its triage id and what Spri
   - One wall-clock test: `ButtonTimingCharacterizationTest` compares real sleep times with a
     25 ms threshold. It failed in two runs of the phase review, because on Windows a 1 ms sleep
     can take a whole 15.6 ms timer tick. The phase fixes loosened it, and the `waited` test pins
-    the same threshold without the clock.
+    the same threshold without the clock. **Done in Sprint 18b-1 (BORE-109).**
   - Robolectric caches its sandboxes up to a limit (3 times the supported SDK levels, 42 in
     Robolectric 4.17) and evicts the least recently used one. Each distinct
     `@Config(shadows = ...)` set and SDK level needs a sandbox. The phase review counted 32
     distinct sandboxes at `895d0419a`, and the `:app` test heap peaked at 1.17 GB of its 2 GB
-    (the heap is 2 GB since Sprint 13).
+    (the heap is 2 GB since Sprint 13). **Done in Sprint 18b-1 (BORE-119).**
 - **(d) Found in the Sprint 13 device round (2026-10-26), on the S22.** None is a Sprint 13
   regression. The results are in
   [device-validation section 18](development/device-validation.md#18-results-sprint-13).
@@ -3322,22 +3405,25 @@ test is named, none pins the item.
       [Sprint 19](#sprint-19-secops) looks at it again with the JNI audit.
 - **(c) Test and tooling items.**
   - `GameWiringTest` (`io/github/magalz/borealis/stream/`) keeps 6 tests that read text: 3 read
-    `NvConnection.kt` and 3 read `src/main/res`. Replace them with behaviour tests.
+    `NvConnection.kt` and 3 read `src/main/res`. Replace them with behaviour tests. **Done in Sprint 18b-1
+    (BORE-107).**
   - Test code repeats across modules, and sharing it needs `testFixtures` build changes:
     `MainDispatcherRule` is in `:borealis:library` and `:borealis:settings`,
     `WorkerDispatcherRule` is in `:borealis:diagnostics`, `:borealis:settings` and `:app`, and
     the `PHONE`, `TV` and `HANDHELD` device qualifiers are declared in each module that uses them.
+    **Done in Sprint 18b-1 (BORE-117 and BORE-118).** The App tests were not touched by BORE-118.
   - Smaller leftovers:
     - `ANDROID_NS` is declared in 3 test files of `:app` (`BackOptOutTest`,
-      `ManifestActivitiesTest` and `ShortcutIconTest`).
+      `ManifestActivitiesTest` and `ShortcutIconTest`). **Done in Sprint 18b-1 (BORE-110).**
     - 24 literals of the form `@Config(sdk = [30])` remain in the `:app` tests, and could use the
-      constants of `AndroidLevels`.
+      constants of `AndroidLevels`. **Done in Sprint 18b-1 (BORE-110).**
     - The `BorealisCoverageTest` test (in `build-logic`) is named "the Java that sprint 14
-      converts is counted", and no Java is left.
+      converts is counted", and no Java is left. **Done in Sprint 18b-1 (BORE-110).**
     - `apps/android/borealis/README.md`, line 16, says that "Upstream Java/Groovy/C is never
-      formatted".
+      formatted". **Done in Sprint 18b-1 (BORE-110).**
   - Robolectric has 39 distinct configurations at the end of Sprint 14 (41 before `s14-tests-app`).
-    The limit is 42 sandboxes, so a new one needs a look at what the tests share.
+    The limit is 42 sandboxes, so a new one needs a look at what the tests share. **Done in Sprint 18b-1
+    (BORE-119).**
 - **(d) Found in the Sprint 14 device round (2026-10-28).** The owner put these in the backlog on
   2026-10-28: the audio runs and `findExternalAddressIP4` from the agent part, the rest from the
   owner's part and the UAT. The owner organized them the same day, in two steps. First, four moved

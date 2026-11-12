@@ -771,48 +771,7 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("LongMethod")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setUpWindow()
-        readSettingsAndFitWindow()
-        bindStreamViews()
-        warnIfMetered()
-        acquireWifiLocks()
-
-        readStreamIntent()
-
-        val serverCert = readServerCertificate()
-
-        if (app.appId == StreamConfiguration.INVALID_APP_ID) {
-            finish()
-            return
-        }
-
-        // Initialize the MediaCodec helper before creating the decoder
-        val glPrefs = GlPreferences.readPreferences(this)
-        MediaCodecHelper.initialize(this, glPrefs.glRenderer)
-
-        val displayHdr = displaySupportsHdr10()
-        createDecoderRenderer(displayHdr, glPrefs.glRenderer)
-        val streamHdr = checkDecoderFormats(displayHdr)
-        val supportedVideoFormats = videoFormatMask(streamHdr)
-
-        val gamepadMask = attachedGamepadMask()
-
-        // Set to the optimal mode for streaming
-        val displayRefreshRate = prepareDisplayForRendering()
-        LimeLog.info("Display refresh rate: $displayRefreshRate")
-
-        // BOREALIS: audited as negotiated, not as requested (host.launch)
-        streamFrameRate = chooseFrameRate(displayRefreshRate)
-        val config =
-            buildStreamConfiguration(supportedVideoFormats, gamepadMask, displayRefreshRate)
-
-        createConnection(config, serverCert)
-        createTouchAndPads()
+    private fun createStreamChrome() {
         // BOREALIS: the stream chrome over the stream view shows the start, the conflict and the
         // failures (stream)
         streamActions =
@@ -855,6 +814,9 @@ class Game :
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
+    }
+
+    private fun wireStreamSession() {
         // BOREALIS: the controller opens the menu and navigates the chrome; the decoder numbers and
         // the gamepad mouse follow the session (stream)
         controllerHandler.setMenuChordListener(streamSession::openMenu)
@@ -869,6 +831,50 @@ class Game :
         GamepadMouseSync.bind(lifecycleScope, streamSession) {
             controllerHandler.isMouseEmulationOnAnyPad
         }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setUpWindow()
+        readSettingsAndFitWindow()
+        bindStreamViews()
+        warnIfMetered()
+        acquireWifiLocks()
+
+        readStreamIntent()
+
+        val serverCert = readServerCertificate()
+
+        if (app.appId == StreamConfiguration.INVALID_APP_ID) {
+            finish()
+            return
+        }
+
+        // Initialize the MediaCodec helper before creating the decoder
+        val glPrefs = GlPreferences.readPreferences(this)
+        MediaCodecHelper.initialize(this, glPrefs.glRenderer)
+
+        val displayHdr = displaySupportsHdr10()
+        createDecoderRenderer(displayHdr, glPrefs.glRenderer)
+        val streamHdr = checkDecoderFormats(displayHdr)
+        val supportedVideoFormats = videoFormatMask(streamHdr)
+
+        val gamepadMask = attachedGamepadMask()
+
+        // Set to the optimal mode for streaming
+        val displayRefreshRate = prepareDisplayForRendering()
+        LimeLog.info("Display refresh rate: $displayRefreshRate")
+
+        // BOREALIS: audited as negotiated, not as requested (host.launch)
+        streamFrameRate = chooseFrameRate(displayRefreshRate)
+        val config =
+            buildStreamConfiguration(supportedVideoFormats, gamepadMask, displayRefreshRate)
+
+        createConnection(config, serverCert)
+        createTouchAndPads()
+        createStreamChrome()
+        wireStreamSession()
 
         if (!decoderRenderer.isAvcSupported()) {
             // If we can't find an AVC decoder, we can't proceed

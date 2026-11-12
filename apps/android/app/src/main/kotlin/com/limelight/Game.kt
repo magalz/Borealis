@@ -305,6 +305,12 @@ class Game :
         // asks instead); absent, as in an older shortcut, it is false (stream)
         const val EXTRA_RESUME_CHOSEN = "ResumeChosen"
 
+        // The modifiers that start the chords of the client: Ctrl, Alt and Shift
+        private const val CHORD_MODIFIERS =
+            KeyboardPacket.MODIFIER_CTRL.toInt() or
+                KeyboardPacket.MODIFIER_ALT.toInt() or
+                KeyboardPacket.MODIFIER_SHIFT.toInt()
+
         private const val STYLUS_DOWN_DEAD_ZONE_DELAY = 100
         private const val STYLUS_DOWN_DEAD_ZONE_RADIUS = 20
 
@@ -1833,35 +1839,8 @@ class Game :
     private val toggleGrab = Runnable { setInputGrabState(!grabbedInput) }
 
     // Returns true if the key stroke was consumed
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, repeat: Boolean): Boolean {
-        var modifierMask = 0
-        var nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN
-
-        if (
-            androidKeyCode == KeyEvent.KEYCODE_CTRL_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_CTRL_RIGHT
-        ) {
-            modifierMask = KeyboardPacket.MODIFIER_CTRL.toInt()
-        } else if (
-            androidKeyCode == KeyEvent.KEYCODE_SHIFT_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_SHIFT_RIGHT
-        ) {
-            modifierMask = KeyboardPacket.MODIFIER_SHIFT.toInt()
-        } else if (
-            androidKeyCode == KeyEvent.KEYCODE_ALT_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_ALT_RIGHT
-        ) {
-            modifierMask = KeyboardPacket.MODIFIER_ALT.toInt()
-        } else if (
-            androidKeyCode == KeyEvent.KEYCODE_META_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_META_RIGHT
-        ) {
-            modifierMask = KeyboardPacket.MODIFIER_META.toInt()
-        } else {
-            nonModifierKeyCode = androidKeyCode
-        }
+        val modifierMask = modifierMaskOf(androidKeyCode)
 
         if (down) {
             this.modifierFlags = this.modifierFlags or modifierMask
@@ -1883,97 +1862,127 @@ class Game :
 
         // Handle the special combos on the key up
         if (chordWaits) {
-            if (specialKeyCode == androidKeyCode) {
-                // If this is a key up for the special key itself, eat that because the host never
-                // saw the original key down (BOREALIS: a key down of it eats its key up too, which
-                // may come after the modifiers)
-                if (down) {
-                    keysEatenByChord.add(androidKeyCode)
-                }
-                return true
-            } else if (modifierFlags != 0) {
-                // While we're waiting for modifiers to come up, eat all key downs and allow all key
-                // ups to pass (BOREALIS: except those of the keys whose key down was eaten here; a
-                // repeat is of a key whose first key down the host saw)
-                if (down && !repeat) {
-                    keysEatenByChord.add(androidKeyCode)
-                }
-                return down || eatenKeyUp
-            } else {
-                // When all modifiers are up, perform the special action
-                when (specialKeyCode) {
-                    // Toggle input grab
-                    KeyEvent.KEYCODE_Z -> {
-                        val h = window.decorView.handler
-                        if (h != null) {
-                            h.postDelayed(toggleGrab, TOGGLE_GRAB_DELAY_MS)
-                        }
-                    }
-
-                    // Disconnect (BOREALIS: the flow of the menu's Disconnect, with its screen and
-                    // its notice, not a finish)
-                    KeyEvent.KEYCODE_Q -> streamSession.disconnect()
-
-                    // BOREALIS: open the in-game menu
-                    KeyEvent.KEYCODE_M -> streamSession.openMenu()
-
-                    // Toggle cursor visibility
-                    KeyEvent.KEYCODE_C -> {
-                        if (!grabbedInput) {
-                            inputCaptureProvider.enableCapture()
-                            grabbedInput = true
-                        }
-                        cursorVisible = !cursorVisible
-                        if (cursorVisible) {
-                            inputCaptureProvider.showCursor()
-                        } else {
-                            inputCaptureProvider.hideCursor()
-                        }
-                    }
-
-                    else -> {}
-                }
-
-                // Reset special key state
-                specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-                waitingForAllModifiersUp = false
-            }
-        }
-        // Check if Ctrl+Alt+Shift is down when a non-modifier key is pressed
-        else if (
-            (modifierFlags and
-                (KeyboardPacket.MODIFIER_CTRL.toInt() or
-                    KeyboardPacket.MODIFIER_ALT.toInt() or
-                    KeyboardPacket.MODIFIER_SHIFT.toInt())) ==
-                (KeyboardPacket.MODIFIER_CTRL.toInt() or
-                    KeyboardPacket.MODIFIER_ALT.toInt() or
-                    KeyboardPacket.MODIFIER_SHIFT.toInt()) &&
-                (down && nonModifierKeyCode != KeyEvent.KEYCODE_UNKNOWN)
-        ) {
-            when (androidKeyCode) {
-                KeyEvent.KEYCODE_Z,
-                KeyEvent.KEYCODE_Q,
-                KeyEvent.KEYCODE_C,
-                KeyEvent.KEYCODE_M -> {
-                    // Remember that a special key combo was activated, so we can consume all key
-                    // events until the modifiers come up
-                    specialKeyCode = androidKeyCode
-                    waitingForAllModifiersUp = true
-                    // BOREALIS: the host never sees this key down, so its key up is eaten even
-                    // when it comes after the modifiers, which end the chord
-                    keysEatenByChord.add(androidKeyCode)
-                    return true
-                }
-
-                else -> {
-                    // This isn't a special combo that we consume on the client side
-                    return false
-                }
-            }
+            return keyWhileChordWaits(androidKeyCode, down, repeat, eatenKeyUp)
         }
 
         // Not a special combo
+        if (!isChordStart(androidKeyCode, down, modifierMask)) {
+            return eatenKeyUp
+        }
+
+        // Ctrl+Alt+Shift is down when a non-modifier key is pressed
+        return when (androidKeyCode) {
+            KeyEvent.KEYCODE_Z,
+            KeyEvent.KEYCODE_Q,
+            KeyEvent.KEYCODE_C,
+            KeyEvent.KEYCODE_M -> {
+                armChord(androidKeyCode)
+                true
+            }
+
+            // This isn't a special combo that we consume on the client side
+            else -> false
+        }
+    }
+
+    // A key event while a chord waits for its modifiers to come up; returns what
+    // handleSpecialKeys returns
+    private fun keyWhileChordWaits(
+        androidKeyCode: Int,
+        down: Boolean,
+        repeat: Boolean,
+        eatenKeyUp: Boolean,
+    ): Boolean {
+        if (specialKeyCode == androidKeyCode) {
+            // If this is a key up for the special key itself, eat that because the host never saw
+            // the original key down (BOREALIS: a key down of it eats its key up too, which may
+            // come after the modifiers)
+            if (down) {
+                keysEatenByChord.add(androidKeyCode)
+            }
+            return true
+        }
+        if (modifierFlags != 0) {
+            // While we're waiting for modifiers to come up, eat all key downs and allow all key
+            // ups to pass (BOREALIS: except those of the keys whose key down was eaten here; a
+            // repeat is of a key whose first key down the host saw)
+            if (down && !repeat) {
+                keysEatenByChord.add(androidKeyCode)
+            }
+            return down || eatenKeyUp
+        }
+
+        // When all modifiers are up, perform the special action
+        runChord()
+
+        // Reset special key state
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+        waitingForAllModifiersUp = false
         return eatenKeyUp
+    }
+
+    private fun runChord() {
+        when (specialKeyCode) {
+            // Toggle input grab
+            KeyEvent.KEYCODE_Z -> {
+                val h = window.decorView.handler
+                if (h != null) {
+                    h.postDelayed(toggleGrab, TOGGLE_GRAB_DELAY_MS)
+                }
+            }
+
+            // Disconnect (BOREALIS: the flow of the menu's Disconnect, with its screen and its
+            // notice, not a finish)
+            KeyEvent.KEYCODE_Q -> streamSession.disconnect()
+
+            // BOREALIS: open the in-game menu
+            KeyEvent.KEYCODE_M -> streamSession.openMenu()
+
+            // Toggle cursor visibility
+            KeyEvent.KEYCODE_C -> {
+                if (!grabbedInput) {
+                    inputCaptureProvider.enableCapture()
+                    grabbedInput = true
+                }
+                cursorVisible = !cursorVisible
+                if (cursorVisible) {
+                    inputCaptureProvider.showCursor()
+                } else {
+                    inputCaptureProvider.hideCursor()
+                }
+            }
+
+            else -> {}
+        }
+    }
+
+    // The bit of the modifier that a key code is a key of, or 0 for any other key
+    private fun modifierMaskOf(keyCode: Int): Int =
+        when (keyCode) {
+            KeyEvent.KEYCODE_CTRL_LEFT,
+            KeyEvent.KEYCODE_CTRL_RIGHT -> KeyboardPacket.MODIFIER_CTRL.toInt()
+            KeyEvent.KEYCODE_SHIFT_LEFT,
+            KeyEvent.KEYCODE_SHIFT_RIGHT -> KeyboardPacket.MODIFIER_SHIFT.toInt()
+            KeyEvent.KEYCODE_ALT_LEFT,
+            KeyEvent.KEYCODE_ALT_RIGHT -> KeyboardPacket.MODIFIER_ALT.toInt()
+            KeyEvent.KEYCODE_META_LEFT,
+            KeyEvent.KEYCODE_META_RIGHT -> KeyboardPacket.MODIFIER_META.toInt()
+            else -> 0
+        }
+
+    // A key down of a non-modifier key while Ctrl, Alt and Shift are held starts a chord
+    private fun isChordStart(androidKeyCode: Int, down: Boolean, modifierMask: Int): Boolean =
+        (modifierFlags and CHORD_MODIFIERS) == CHORD_MODIFIERS &&
+            (down && modifierMask == 0 && androidKeyCode != KeyEvent.KEYCODE_UNKNOWN)
+
+    private fun armChord(code: Int) {
+        // Remember that a special key combo was activated, so we can consume all key events until
+        // the modifiers come up
+        specialKeyCode = code
+        waitingForAllModifiersUp = true
+        // BOREALIS: the host never sees this key down, so its key up is eaten even when it comes
+        // after the modifiers, which end the chord
+        keysEatenByChord.add(code)
     }
 
     // We cannot simply use modifierFlags for all key event processing, because

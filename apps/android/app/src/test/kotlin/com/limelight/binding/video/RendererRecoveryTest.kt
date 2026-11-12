@@ -838,10 +838,11 @@ class RendererRecoveryTest : RendererTestBase() {
 
     @Test
     fun `after ten recoveries a failure is not recovered but held back for three seconds`() {
-        val renderer = running()
+        val renderer = running(stepped = true)
         for (number in 1..10) {
             ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
-            assertThat(renderer.submit(pFrame(number))).isEqualTo(MoonBridge.DR_NEED_IDR)
+            assertThat(recoveredByRendererThread { renderer.submit(pFrame(number)) })
+                .isEqualTo(MoonBridge.DR_NEED_IDR)
         }
         assertThat(events<CodecEvent.Reset>()).hasSize(10)
 

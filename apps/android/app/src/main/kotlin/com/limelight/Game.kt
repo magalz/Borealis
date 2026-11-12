@@ -3097,8 +3097,13 @@ class Game :
         return handleMotionEvent(null, event) || super.onGenericMotionEvent(event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ComplexCondition")
+    // Only one stylus or eraser on its own has the dead zones of updateMousePosition
+    private fun isLoneStylus(event: MotionEvent): Boolean =
+        event.pointerCount == 1 &&
+            event.actionIndex == 0 &&
+            (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
+                event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
+
     private fun updateMousePosition(touchedView: View, event: MotionEvent) {
         // X and Y are already relative to the provided view object
         var eventX: Float
@@ -3115,12 +3120,7 @@ class Game :
             eventY = event.getY(0) - streamView.y
         }
 
-        if (
-            event.pointerCount == 1 &&
-                event.actionIndex == 0 &&
-                (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
-                    event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
-        ) {
+        if (isLoneStylus(event)) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN,
                 MotionEvent.ACTION_HOVER_ENTER,

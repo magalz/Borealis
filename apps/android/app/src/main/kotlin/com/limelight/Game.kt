@@ -613,8 +613,51 @@ class Game :
         return supportedVideoFormats
     }
 
+    private fun attachedGamepadMask(): Int {
+        var gamepadMask = ControllerHandler.getAttachedControllerMask(this).toInt()
+        if (!prefConfig.multiController) {
+            // Always set gamepad 1 present for when multi-controller is
+            // disabled for games that don't properly support detection
+            // of gamepads removed and replugged at runtime.
+            gamepadMask = 1
+        }
+        if (prefConfig.onscreenController) {
+            // If we're using OSC, always set at least gamepad 1.
+            gamepadMask = gamepadMask or 1
+        }
+
+        return gamepadMask
+    }
+
+    // The frame rate to ask the host for. A capped frame rate changes the pacing to balanced when
+    // the display cannot take it.
+    private fun chooseFrameRate(displayRefreshRate: Float): Int {
+        // If the user requested frame pacing using a capped FPS, we will need to change our
+        // desired FPS setting here in accordance with the active display refresh rate.
+        val roundedRefreshRate = Math.round(displayRefreshRate)
+        var chosenFrameRate = prefConfig.fps
+        if (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS) {
+            if (prefConfig.fps >= roundedRefreshRate) {
+                if (prefConfig.fps > roundedRefreshRate + REFRESH_RATE_TOLERANCE) {
+                    // Use frame drops when rendering above the screen frame rate
+                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED
+                    LimeLog.info("Using drop mode for FPS > Hz")
+                } else if (roundedRefreshRate <= BOGUS_REFRESH_RATE_LIMIT) {
+                    // Let's avoid clearly bogus refresh rates and fall back to legacy rendering
+                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED
+                    LimeLog.info("Bogus refresh rate: $roundedRefreshRate")
+                } else {
+                    chosenFrameRate = roundedRefreshRate - 1
+                    LimeLog.info("Adjusting FPS target for screen to $chosenFrameRate")
+                }
+            }
+        }
+
+        return chosenFrameRate
+    }
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
+    @Suppress("LongMethod")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -654,42 +697,13 @@ class Game :
         val streamHdr = checkDecoderFormats(displayHdr)
         val supportedVideoFormats = videoFormatMask(streamHdr)
 
-        var gamepadMask = ControllerHandler.getAttachedControllerMask(this).toInt()
-        if (!prefConfig.multiController) {
-            // Always set gamepad 1 present for when multi-controller is
-            // disabled for games that don't properly support detection
-            // of gamepads removed and replugged at runtime.
-            gamepadMask = 1
-        }
-        if (prefConfig.onscreenController) {
-            // If we're using OSC, always set at least gamepad 1.
-            gamepadMask = gamepadMask or 1
-        }
+        val gamepadMask = attachedGamepadMask()
 
         // Set to the optimal mode for streaming
         val displayRefreshRate = prepareDisplayForRendering()
         LimeLog.info("Display refresh rate: $displayRefreshRate")
 
-        // If the user requested frame pacing using a capped FPS, we will need to change our
-        // desired FPS setting here in accordance with the active display refresh rate.
-        val roundedRefreshRate = Math.round(displayRefreshRate)
-        var chosenFrameRate = prefConfig.fps
-        if (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS) {
-            if (prefConfig.fps >= roundedRefreshRate) {
-                if (prefConfig.fps > roundedRefreshRate + REFRESH_RATE_TOLERANCE) {
-                    // Use frame drops when rendering above the screen frame rate
-                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED
-                    LimeLog.info("Using drop mode for FPS > Hz")
-                } else if (roundedRefreshRate <= BOGUS_REFRESH_RATE_LIMIT) {
-                    // Let's avoid clearly bogus refresh rates and fall back to legacy rendering
-                    prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED
-                    LimeLog.info("Bogus refresh rate: $roundedRefreshRate")
-                } else {
-                    chosenFrameRate = roundedRefreshRate - 1
-                    LimeLog.info("Adjusting FPS target for screen to $chosenFrameRate")
-                }
-            }
-        }
+        val chosenFrameRate = chooseFrameRate(displayRefreshRate)
 
         // BOREALIS: audited as negotiated, not as requested (host.launch)
         streamFrameRate = chosenFrameRate

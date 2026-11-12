@@ -3,8 +3,11 @@ package com.limelight.binding.video
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes what needs two threads to happen: the codec that does not give an input buffer for
@@ -217,7 +220,52 @@ class RendererThreadsTest : RendererTestBase() {
         assertThat(events<CodecEvent.Reset>()).isEmpty()
     }
 
+    // An interrupted renderer thread
+
+    /** An output queue whose take finds its thread interrupted, as it does after a stop. */
+    private class QueueThatTakesInterrupted : LinkedBlockingQueue<Int>() {
+        override fun take(): Int {
+            Thread.currentThread().interrupt()
+            return super.take()
+        }
+    }
+
+    @Test
+    fun `a renderer thread interrupted while it drops the oldest frame ends after the recovery it owes`() {
+        install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
+        val renderer =
+            renderer(prefs { framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED })
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+        ReflectionHelpers.setField(renderer, "outputBufferQueue", QueueThatTakesInterrupted())
+        for (number in 1..3) assertThat(renderer.submit(pFrame(number))).isEqualTo(0)
+        renderer.beginStepped()
+        // The change of the output format, then the first two frames: the queue is full.
+        repeat(3) {
+            ShadowRecordingVideoCodec.stepOutput()
+            ShadowRecordingVideoCodec.awaitParked()
+        }
+        // The other two threads wait for a recovery that only the renderer thread is missing.
+        ReflectionHelpers.setField(
+            renderer,
+            "codecRecoveryThreadQuiescedFlags",
+            INPUT_THREAD or CHOREOGRAPHER,
+        )
+        ReflectionHelpers.getField<AtomicInteger>(renderer, "codecRecoveryType").set(RESTART)
+
+        // The third frame meets the full queue and the interrupt.
+        ShadowRecordingVideoCodec.stepOutput()
+
+        val thread = ReflectionHelpers.getField<Thread>(renderer, "rendererThread")
+        thread.join(JOIN_MS)
+        assertThat(thread.isAlive).isFalse()
+        assertThat(events<CodecEvent.Output>()).isEmpty()
+        assertThat(events<CodecEvent.Stopped>()).hasSize(1)
+        assertThat(log.lines()).contains("INFO: Codec recovery attempt: 1")
+    }
+
     private companion object {
         const val FRAME_TIME = 1_000_000_000L
+        const val JOIN_MS = 10_000L
+        const val RESTART = 2
     }
 }

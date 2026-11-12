@@ -1031,8 +1031,6 @@ class MediaCodecDecoderRenderer(
     }
 
     // Returns true if the exception is transient
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     private fun handleDecoderException(e: IllegalStateException): Boolean {
         // Eat decoder exceptions if we're in the process of stopping
         if (stopping) {
@@ -1047,81 +1045,59 @@ class MediaCodecDecoderRenderer(
             }
 
             LimeLog.severe(e.diagnosticInfo)
+        }
 
-            // We can attempt a recovery or reset at this stage to try to start decoding again
-            if (codecRecoveryAttempts < CR_MAX_TRIES) {
-                // If the exception is non-recoverable or we already require a reset, perform a
-                // reset. If we have no prior unrecoverable failure, we will try a restart instead.
-                if (e.isRecoverable) {
-                    if (
-                        codecRecoveryType.compareAndSet(
-                            CR_RECOVERY_TYPE_NONE,
-                            CR_RECOVERY_TYPE_RESTART,
-                        )
-                    ) {
-                        LimeLog.info("Decoder requires restart for recoverable CodecException")
-                        e.printStackTrace()
-                    } else if (
-                        codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET &&
-                            codecRecoveryType.get() != CR_RECOVERY_TYPE_RESTART
-                    ) {
-                        error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
-                    }
-                } else {
-                    if (
-                        codecRecoveryType.compareAndSet(
-                            CR_RECOVERY_TYPE_NONE,
-                            CR_RECOVERY_TYPE_RESET,
-                        )
-                    ) {
-                        LimeLog.info("Decoder requires reset for non-recoverable CodecException")
-                        e.printStackTrace()
-                    } else if (
-                        codecRecoveryType.compareAndSet(
-                            CR_RECOVERY_TYPE_RESTART,
-                            CR_RECOVERY_TYPE_RESET,
-                        )
-                    ) {
-                        LimeLog.info(
-                            "Decoder restart promoted to reset for non-recoverable CodecException"
-                        )
-                        e.printStackTrace()
-                    } else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET) {
-                        error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
-                    }
-                }
-
-                // The recovery will take place when all threads reach doCodecRecoveryIfRequired().
-                return false
-            }
-        } else {
+        // We can attempt a recovery or reset at this stage to try to start decoding again. The
+        // recovery will take place when all threads reach doCodecRecoveryIfRequired().
+        if (codecRecoveryAttempts >= CR_MAX_TRIES) {
+            reportIfStillFailing(e)
+        } else if (e !is MediaCodec.CodecException) {
             // IllegalStateException was primarily used prior to the introduction of CodecException.
             // Recovery from this requires a full decoder reset.
             //
             // NB: CodecException is an IllegalStateException, so we must check for it first.
-            if (codecRecoveryAttempts < CR_MAX_TRIES) {
-                if (
-                    codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)
-                ) {
-                    LimeLog.info("Decoder requires reset for IllegalStateException")
-                    e.printStackTrace()
-                } else if (
-                    codecRecoveryType.compareAndSet(
-                        CR_RECOVERY_TYPE_RESTART,
-                        CR_RECOVERY_TYPE_RESET,
-                    )
-                ) {
-                    LimeLog.info("Decoder restart promoted to reset for IllegalStateException")
-                    e.printStackTrace()
-                } else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET) {
-                    error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
-                }
-
-                return false
-            }
+            requestReset(e, "IllegalStateException")
+        } else if (e.isRecoverable) {
+            requestRestart(e)
+        } else {
+            requestReset(e, "non-recoverable CodecException")
         }
 
-        // Only throw if we're not in the middle of codec recovery
+        // Not transient
+        return false
+    }
+
+    // A recoverable exception asks for a restart, unless a restart or a reset is already pending.
+    private fun requestRestart(e: IllegalStateException) {
+        if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
+            LimeLog.info("Decoder requires restart for recoverable CodecException")
+            e.printStackTrace()
+        } else if (
+            codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET &&
+                codecRecoveryType.get() != CR_RECOVERY_TYPE_RESTART
+        ) {
+            error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
+        }
+    }
+
+    // If the exception is non-recoverable or we already require a reset, perform a reset. A
+    // pending restart is promoted to a reset. [cause] names the exception in the log.
+    private fun requestReset(e: IllegalStateException, cause: String) {
+        if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)) {
+            LimeLog.info("Decoder requires reset for $cause")
+            e.printStackTrace()
+        } else if (
+            codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_RESTART, CR_RECOVERY_TYPE_RESET)
+        ) {
+            LimeLog.info("Decoder restart promoted to reset for $cause")
+            e.printStackTrace()
+        } else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET) {
+            error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
+        }
+    }
+
+    // No recovery is left. Only throw if we're not in the middle of codec recovery.
+    private fun reportIfStillFailing(e: IllegalStateException) {
         if (codecRecoveryType.get() == CR_RECOVERY_TYPE_NONE) {
             //
             // There seems to be a race condition with decoder/surface teardown causing some
@@ -1151,9 +1127,6 @@ class MediaCodecDecoderRenderer(
                 initialExceptionTimestamp = SystemClock.uptimeMillis()
             }
         }
-
-        // Not transient
-        return false
     }
 
     // WindowManager.getDefaultDisplay is deprecated since API 30; the Java used it.

@@ -1130,6 +1130,12 @@ class RendererRecoveryTest : RendererTestBase() {
     private fun MediaCodecDecoderRenderer.initialException(): Any? =
         ReflectionHelpers.getField(this, "initialException")
 
+    private fun MediaCodecDecoderRenderer.heldInputBuffer(): Any? =
+        ReflectionHelpers.getField(this, "nextInputBuffer")
+
+    private fun MediaCodecDecoderRenderer.fetchNextInputBuffer(): Boolean =
+        ReflectionHelpers.callInstanceMethod(this, "fetchNextInputBuffer")
+
     /** The recovery that [failure] asks for when [attempts] recoveries were already made. */
     private fun MediaCodecDecoderRenderer.askedFor(
         attempts: Int,
@@ -1252,7 +1258,34 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(renderer.initialException()).isSameInstanceAs(thrown)
     }
 
-    // A decoder that gives no input buffer after a failure that was held back
+    // The input buffer of the next frame
+
+    /**
+     * Starts [block] on the input thread while the codec gives no input buffer, and waits until
+     * that thread asks for one. The caller moves the clock and then lets the codec give one, or
+     * stops the renderer.
+     */
+    private fun starved(block: () -> Int): InputCall<Int> {
+        ShadowRecordingVideoCodec.starveInput = true
+        val polls = ShadowRecordingVideoCodec.dequeueInputCalls.get()
+        val call = InputCall(block)
+        await("the input thread to wait for an input buffer") {
+            ShadowRecordingVideoCodec.dequeueInputCalls.get() > polls
+        }
+        return call
+    }
+
+    /**
+     * A frame whose input buffer takes five seconds and then is no buffer at all: a hung decoder.
+     * Returns what the input thread threw.
+     */
+    private fun MediaCodecDecoderRenderer.hangs(number: Int): Throwable {
+        ShadowRecordingVideoCodec.nullInputBuffers.set(1)
+        val call = starved { submit(pFrame(number)) }
+        advanceClock(5_000)
+        ShadowRecordingVideoCodec.starveInput = false
+        return call.failure()
+    }
 
     @Test
     fun `a five second starvation after a first failure that was held back is not a hung decoder`() {
@@ -1261,12 +1294,7 @@ class RendererRecoveryTest : RendererTestBase() {
         ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, stateFailure)
         assertThat(renderer.submit(pFrame(1))).isEqualTo(MoonBridge.DR_NEED_IDR)
         assertThat(renderer.initialException()).isNotNull()
-        ShadowRecordingVideoCodec.starveInput = true
-        val polls = ShadowRecordingVideoCodec.dequeueInputCalls.get()
-        val call = InputCall { renderer.submit(pFrame(2)) }
-        await("the input thread to wait for an input buffer") {
-            ShadowRecordingVideoCodec.dequeueInputCalls.get() > polls
-        }
+        val call = starved { renderer.submit(pFrame(2)) }
 
         advanceClock(5_000)
         renderer.prepareForStop()
@@ -1274,6 +1302,95 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(call.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
         assertThat(crashes).isEmpty()
         assertThat(log.lines()).contains("WARNING: Dequeue input buffer ran long: 5000 ms")
+    }
+
+    @Test
+    fun `an input buffer that comes after five seconds is a slow frame, not a hung decoder`() {
+        val renderer = running()
+        val call = starved { renderer.submit(pFrame(1)) }
+
+        advanceClock(5_000)
+        ShadowRecordingVideoCodec.starveInput = false
+
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_OK)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).contains("WARNING: Dequeue input buffer ran long: 5000 ms")
+    }
+
+    @Test
+    fun `a hung decoder tells the listener once and crashes the renderer every time`() {
+        val renderer = running()
+
+        val first = renderer.hangs(1)
+        val second = renderer.hangs(2)
+
+        assertThat(first.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(second.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(second).isNotSameInstanceAs(first)
+        assertThat(crashes).hasSize(1)
+        assertThat(crashes.single().javaClass.simpleName).isEqualTo("DecoderHungException")
+    }
+
+    @Test
+    fun `a held input buffer is handed out without asking the codec for it again`() {
+        val renderer = running()
+        renderer.submit(pFrame(1))
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, transient)
+        assertThat(renderer.submit(pFrame(2))).isEqualTo(MoonBridge.DR_NEED_IDR)
+        // The codec would answer null for the buffer that the renderer already holds.
+        ShadowRecordingVideoCodec.nullInputBuffers.set(1)
+
+        renderer.submit(pFrame(3))
+
+        assertThat(events<CodecEvent.Queued>().map { it.index }).containsExactly(0, 1).inOrder()
+    }
+
+    @Test
+    fun `a recovery that was given up still answers false for the buffer that it left`() {
+        val renderer = prepared()
+        renderer.recoveryType().set(RECOVERY_RESET)
+        val call = InputCall { renderer.fetchNextInputBuffer() }
+        awaitQuiesced(INPUT_THREAD)
+
+        call.interrupt()
+
+        val outcome = call.outcome()
+        assertThat(outcome.result.getOrThrow()).isFalse()
+        assertThat(outcome.interrupted).isTrue()
+        // Nobody recovered: the buffer that the call fetched is still held.
+        assertThat(renderer.heldInputBuffer()).isNotNull()
+    }
+
+    @Test
+    fun `a recovery that took five seconds answers false and is not a hung decoder`() {
+        val renderer = running(PreferenceConfiguration.FRAME_PACING_BALANCED)
+        renderer.metByRendererThread(stateFailure)
+        val call = InputCall { renderer.submit(pFrame(1)) }
+        awaitQuiesced(INPUT_THREAD or RENDERER_THREAD)
+
+        advanceClock(5_000)
+        // The choreographer comes last and does the recovery that the input thread waited for.
+        renderer.doFrame(FRAME_TIME_NS)
+
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(events<CodecEvent.Reset>()).hasSize(1)
+        assertThat(crashes).isEmpty()
+    }
+
+    @Test
+    fun `an input thread that meets an error still meets the recovery that is pending`() {
+        val renderer = prepared()
+        renderer.recoveryType().set(UNKNOWN_RECOVERY)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, stateFailure)
+        val call = InputCall { renderer.fetchNextInputBuffer() }
+        // The error of the failure does not keep the thread from waiting for the others.
+        awaitQuiesced(INPUT_THREAD)
+
+        renderer.prepareForStop()
+
+        assertThat(call.failure())
+            .hasMessageThat()
+            .isEqualTo("Unexpected codec recovery type: $UNKNOWN_RECOVERY")
     }
 
     @Test
@@ -1431,6 +1548,7 @@ class RendererRecoveryTest : RendererTestBase() {
         const val RECOVERY_RESTART = 2
         const val RECOVERY_RESET = 3
         const val UNKNOWN_RECOVERY = 7
+        const val FRAME_TIME_NS = 1_000_000_000L
         const val MAX_PASSES_FOR_A_FRAME = 4
         const val FRAME_US = 777L
         const val JOIN_MS = 30_000L

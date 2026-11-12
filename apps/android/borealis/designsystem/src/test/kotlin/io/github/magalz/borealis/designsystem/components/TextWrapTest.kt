@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -38,7 +39,7 @@ import org.robolectric.annotation.Config
  * line past the width.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi", fontScale = 1.3f)
+@Config(qualifiers = PHONE, fontScale = 1.3f)
 class TextWrapTest(private val font: FontChoice) {
     @get:Rule val composeRule = createComposeRule()
 

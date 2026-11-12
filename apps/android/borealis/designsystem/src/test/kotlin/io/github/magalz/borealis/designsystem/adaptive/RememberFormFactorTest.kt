@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.connect
 import io.github.magalz.borealis.designsystem.testing.disconnect
 import io.github.magalz.borealis.designsystem.testing.inputDevice
@@ -30,13 +31,13 @@ class RememberFormFactorTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `a touch phone is a phone`() {
         assertThat(detected()).isEqualTo(FormFactor.Phone)
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `the leanback feature makes a TV`() {
         shadowOf(context.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
 
@@ -44,7 +45,7 @@ class RememberFormFactorTest {
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `the television UI mode makes a TV`() {
         val uiModeManager = context.getSystemService(UiModeManager::class.java)
         shadowOf(uiModeManager).setCurrentModeType(Configuration.UI_MODE_TYPE_TELEVISION)

@@ -15,6 +15,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceOption
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceSheet
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -34,7 +35,7 @@ import org.robolectric.annotation.Config
  * worst for violet.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class ChoiceSheetOnGlassTest {
     @get:Rule val composeRule = createComposeRule()
 

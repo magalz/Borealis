@@ -23,6 +23,8 @@ import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -33,7 +35,7 @@ import org.robolectric.annotation.Config
 
 /** A host card is one focus stop: the D-pad moves from card to card and never into the card. */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class HostCardNavigationTest {
     @get:Rule val composeRule = createComposeRule()
     private var opened = 0
@@ -60,7 +62,7 @@ class HostCardNavigationTest {
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `on a phone Right from the card moves on to what is beside it`() {
         composeRule.setContentInKeyboardMode {
             Specimen(formFactor = FormFactor.Phone, withNeighbourBeside = true)

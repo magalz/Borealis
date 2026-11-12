@@ -26,6 +26,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundTags
 import io.github.magalz.borealis.designsystem.background.FakeBackgroundPlayers
 import io.github.magalz.borealis.designsystem.background.LocalBackgroundPlayerFactory
 import io.github.magalz.borealis.designsystem.background.TestLifecycle
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -45,7 +46,7 @@ import org.robolectric.annotation.Config
  * sharp. Nothing here wires a dialog: a test composable stands for the panel.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class PanelGlassTest {
     @get:Rule val composeRule = createComposeRule()
 

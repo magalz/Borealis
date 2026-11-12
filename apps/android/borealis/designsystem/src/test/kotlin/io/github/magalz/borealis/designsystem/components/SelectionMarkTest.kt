@@ -29,6 +29,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.pixelAt
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -50,7 +51,7 @@ import org.robolectric.annotation.Config
  * accents have no bar.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class SelectionMarkTest {
     @get:Rule val composeRule = createComposeRule()
 

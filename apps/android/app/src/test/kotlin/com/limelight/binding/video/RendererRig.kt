@@ -68,9 +68,15 @@ class FakeSurfaceHolder(private val surface: Surface) : SurfaceHolder {
 /**
  * What `LimeLog` wrote, line by line, and the thread that wrote it. [LimeLogCapture] keeps no
  * thread, and a recovery that waits is told by who waits and for whom.
+ *
+ * A line that says a thread waits to quiesce also keeps the bit of that thread in the flags it
+ * prints (the role it plays in the recovery), which is known by the name of the renderer thread, of
+ * the choreographer thread and of an [InputCall], and for any other thread (the test thread plays
+ * the input thread when it submits, and the choreographer when it calls `doFrame`) by the renderer
+ * function that it waits in.
  */
 class ThreadedLog : Handler() {
-    class Line(val thread: String, val message: String) {
+    class Line(val thread: String, val message: String, val bit: Int? = null) {
         override fun toString() = "[$thread] $message"
     }
 
@@ -81,9 +87,22 @@ class ThreadedLog : Handler() {
         get() = written.toList()
 
     override fun publish(record: LogRecord) {
-        val line = Line(Thread.currentThread().name, record.message)
+        val flags = quiesceFlags(record.message)
+        val line = Line(Thread.currentThread().name, record.message, flags?.let { ownBit() })
         written += line
-        quiesceFlags(line)?.let { waits.add(it) }
+        flags?.let { waits.add(it) }
+    }
+
+    /**
+     * The bit of the role that the current thread plays in a recovery, or null if it is unknown.
+     */
+    private fun ownBit(): Int? {
+        OWN_BITS[Thread.currentThread().name]?.let {
+            return it
+        }
+        return Thread.currentThread().stackTrace.firstNotNullOfOrNull {
+            ROLE_FUNCTIONS[it.methodName]
+        }
     }
 
     override fun flush() = Unit
@@ -118,22 +137,31 @@ class ThreadedLog : Handler() {
      * that nobody counts it as arrived: such a thread waits for ever (BORE-121).
      */
     fun waitsWithoutOwnBit(): List<Line> = written.filter { line ->
-        val bit = OWN_BITS[line.thread] ?: return@filter false
-        quiesceFlags(line)?.let { it and bit == 0 } ?: false
+        val bit = line.bit ?: return@filter false
+        quiesceFlags(line.message)?.let { it and bit == 0 } ?: false
     }
 
-    private fun quiesceFlags(line: Line): Int? =
-        line.message
-            .takeIf { it.startsWith(QUIESCE_PREFIX) }
-            ?.substringAfterLast(": ")
-            ?.toIntOrNull()
+    private fun quiesceFlags(message: String): Int? =
+        message.takeIf { it.startsWith(QUIESCE_PREFIX) }?.substringAfterLast(": ")?.toIntOrNull()
 
     private companion object {
         const val QUIESCE_PREFIX = "Waiting to quiesce decoder threads: "
         const val WAIT_BOUND_SECONDS = 30L
         const val TAIL = 30
         val OWN_BITS =
-            mapOf(INPUT_CALL_THREAD to INPUT_THREAD, RENDERER_THREAD_NAME to RENDERER_THREAD)
+            mapOf(
+                INPUT_CALL_THREAD to INPUT_THREAD,
+                RENDERER_THREAD_NAME to RENDERER_THREAD,
+                CHOREOGRAPHER_THREAD_NAME to CHOREOGRAPHER,
+            )
+
+        /** The functions of the renderer that a thread is in when it comes to the recovery. */
+        val ROLE_FUNCTIONS =
+            mapOf(
+                "fetchNextInputBuffer" to INPUT_THREAD,
+                "queueNextInputBuffer" to INPUT_THREAD,
+                "doFrame" to CHOREOGRAPHER,
+            )
     }
 }
 
@@ -276,6 +304,24 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
                 "The test ran for more than $watchdogSeconds s: a thread of the renderer was " +
                     "probably waiting for another, and the watchdog told the renderers to stop." +
                     raceEvidence()
+            )
+        }
+        failOnLostArrival()
+    }
+
+    /**
+     * Fails if a thread waited to quiesce without its own bit in the flags it printed: a recovery
+     * that ended while it waited had cleared the bit and the thread did not count itself in again
+     * for the next recovery, so that one could never see every thread (BORE-121). The test runs
+     * this after its renderers have stopped, and the entry that loops over many passes after each
+     * one.
+     */
+    protected fun failOnLostArrival() {
+        val lines = threadLog.waitsWithoutOwnBit()
+        if (lines.isNotEmpty()) {
+            fail(
+                "A thread waited to quiesce without its own bit in the flags, the race of " +
+                    "BORE-121: $lines"
             )
         }
     }
@@ -461,9 +507,10 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     }
 }
 
-/** The names of the two threads of the renderer that a test can tell apart in the log. */
+/** The names of the threads of the renderer that a test can tell apart in the log. */
 internal const val INPUT_CALL_THREAD = "input"
 internal const val RENDERER_THREAD_NAME = "Video - Renderer (MediaCodec)"
+internal const val CHOREOGRAPHER_THREAD_NAME = "Video - Choreographer"
 private const val AWAIT_NANOS = 30_000_000_000L
 private const val POLL_MS = 2L
 

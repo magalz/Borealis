@@ -2303,11 +2303,12 @@ Owner decisions of 2026-11-11: Sprint 18b runs as two pull requests, the test an
     - The first flaky case ("the stream goes on after a recovery, with buffers of the restarted codec")
       was a gap of the fake codec in the tests, not of the app: after a restart it handed out an input
       buffer that was not cleared. The fake is fixed.
-    - The two flaky cases now run on an opt-in stepped renderer thread, with no sleep or poll. BORE-152
-      moved two more recovery cases to it, the held-back-failure case and the crashed-twice case.
     - A third case ("a renderer that crashed throws the same exception again and tells nobody twice")
       failed once in the CI of #134 (BORE-152). Under load it was reproduced after about 3,540 passes, and
       its cause is a defect of the app: the decoder recovery race, BORE-121.
+    - The two flaky cases now run on an opt-in stepped renderer thread, with no sleep or poll. BORE-152
+      moved two more recovery cases to it: the third case above, and "after ten recoveries a failure is not
+      recovered but held back for three seconds".
   - **The `menu_glass_*` Roborazzi references**, from Sprint 17a. Four of the eight under
     `apps/android/borealis/stream/src/test/screenshots/` (`menu_glass_handheld`,
     `menu_glass_phone`, `menu_glass_phone_white-frame`, `menu_glass_tv_focused`) changed when two

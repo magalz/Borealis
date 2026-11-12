@@ -586,7 +586,7 @@ internal class GameKeyRoutingTest : GameTestBase() {
     }
 
     @Test
-    fun `a key that the pad took leaves the chord alone, so a keyboard key of the same code is the chord's or the host's as before`() {
+    fun `a key that the pad took never reaches the special keys, down or up`() {
         rig.streaming()
         rig.holdCtrlAltShift()
         rig.down(KeyEvent.KEYCODE_Z)

@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
@@ -24,7 +25,6 @@ import io.github.magalz.borealis.stream.input.ChromeKeySink
 import io.github.magalz.borealis.stream.input.GamepadButtons
 import io.github.magalz.borealis.stream.input.UsbChromeInput
 import io.github.magalz.borealis.stream.input.UsbChromeKeys
-import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo

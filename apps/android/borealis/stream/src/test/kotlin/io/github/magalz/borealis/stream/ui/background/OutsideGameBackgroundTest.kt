@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.testing.isNear
 import io.github.magalz.borealis.designsystem.theme.BackgroundIntensity
@@ -20,7 +21,6 @@ import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
-import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.aSessionInfo
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import kotlin.math.abs

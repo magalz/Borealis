@@ -3,6 +3,7 @@ package io.github.magalz.borealis.stream.host
 import android.view.InputDevice
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.connect
 import io.github.magalz.borealis.designsystem.testing.disconnect
 import io.github.magalz.borealis.designsystem.testing.inputDevice
@@ -34,7 +35,7 @@ class StreamChromeHostPhoneTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `a TV does not`() {
         assertThat(docks()).isFalse()
     }

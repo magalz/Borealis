@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.testing.assertNoHalo
 import io.github.magalz.borealis.designsystem.testing.frame
@@ -20,7 +21,6 @@ import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.designsystem.theme.borealisColors
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
-import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.ui.STARTING_PANEL_TAG
 import io.github.magalz.borealis.stream.ui.StreamChromeRoot
 import org.junit.Rule

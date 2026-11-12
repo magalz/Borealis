@@ -16,12 +16,12 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.components.BackdropIconHalo
 import io.github.magalz.borealis.designsystem.components.BackdropTextHalo
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.designsystem.theme.borealisColors
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.assertNear
 import org.junit.Rule
 import org.junit.Test

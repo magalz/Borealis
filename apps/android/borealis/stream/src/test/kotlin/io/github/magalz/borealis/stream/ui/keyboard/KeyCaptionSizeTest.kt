@@ -16,6 +16,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.FitCase
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.clippedTexts
 import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.testing.textLayout
@@ -55,7 +56,7 @@ class KeyCaptionSizeTest(private val case: FitCase) {
         assertNoCaptionIsSmaller()
 
     @Test
-    @Config(qualifiers = PHONE_360)
+    @Config(qualifiers = PHONE)
     fun `on a 360dp phone no caption is smaller than with the default look`() =
         assertNoCaptionIsSmaller()
 
@@ -152,7 +153,6 @@ class KeyCaptionSizeTest(private val case: FitCase) {
         fun cases(): List<FitCase> = fitCases()
 
         private const val PHONE_320 = "w320dp-h568dp-xhdpi"
-        private const val PHONE_360 = "w360dp-h640dp-xhdpi"
         private const val EPSILON = 0.05f
 
         /** The first glyph of "Fn" is 5.3dp wide where the caption is shrunk to one line. */

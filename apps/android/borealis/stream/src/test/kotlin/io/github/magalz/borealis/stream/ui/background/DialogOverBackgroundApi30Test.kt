@@ -13,11 +13,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.stream.StreamPhase
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.distanceFrom

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -17,7 +18,6 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.testing.RecordingIntents
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import org.junit.Rule
 import org.junit.Test

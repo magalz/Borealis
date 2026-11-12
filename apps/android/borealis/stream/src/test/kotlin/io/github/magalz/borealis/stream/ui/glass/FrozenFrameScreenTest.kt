@@ -23,6 +23,7 @@ import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntOffset
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.testing.assertNoHalo
 import io.github.magalz.borealis.designsystem.testing.rootFrame
@@ -34,7 +35,6 @@ import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.stream.MenuGlass
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.StreamVisuals
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.aDefaults
 import io.github.magalz.borealis.stream.testing.aFailure

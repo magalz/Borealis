@@ -8,13 +8,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamPhase
-import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
 import io.github.magalz.borealis.stream.testing.setChrome
 import org.junit.Rule

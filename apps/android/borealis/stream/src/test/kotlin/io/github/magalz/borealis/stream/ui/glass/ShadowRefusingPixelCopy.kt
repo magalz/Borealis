@@ -12,18 +12,16 @@ import org.robolectric.annotation.Implements
  * surface went away after the caller checked it: Robolectric's own never refuses one.
  */
 @Implements(PixelCopy::class)
-class ShadowRefusingPixelCopy {
-    companion object {
-        @Implementation
-        @JvmStatic
-        @Suppress("UNUSED_PARAMETER")
-        fun request(
-            source: SurfaceView,
-            dest: Bitmap,
-            listener: PixelCopy.OnPixelCopyFinishedListener,
-            listenerThread: Handler,
-        ) {
-            throw IllegalArgumentException("Source Surface is not valid")
-        }
+object ShadowRefusingPixelCopy {
+    @Implementation
+    @JvmStatic
+    @Suppress("UNUSED_PARAMETER")
+    fun request(
+        source: SurfaceView,
+        dest: Bitmap,
+        listener: PixelCopy.OnPixelCopyFinishedListener,
+        listenerThread: Handler,
+    ) {
+        throw IllegalArgumentException("Source Surface is not valid")
     }
 }

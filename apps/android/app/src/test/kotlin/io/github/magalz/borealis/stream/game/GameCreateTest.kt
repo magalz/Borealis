@@ -23,8 +23,8 @@ import io.github.magalz.borealis.stream.StreamPhase
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Test
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadow.api.Shadow
@@ -362,7 +362,7 @@ internal class GameCreateTest : GameTestBase() {
         ShadowLooper.idleMainLooper()
         val seen = mutableListOf<Pair<StreamPhase, AtFirstFrame>>()
         val watcher =
-            CoroutineScope(Dispatchers.Unconfined).launch {
+            CoroutineScope(UnconfinedTestDispatcher()).launch {
                 rig.session.state.collect {
                     seen +=
                         it.phase to

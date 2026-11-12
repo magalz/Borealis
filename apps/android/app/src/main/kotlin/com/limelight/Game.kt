@@ -479,8 +479,22 @@ class Game :
         }
     }
 
+    // Converted as is from the inherited Java; a server certificate that cannot be read is printed
+    // to the standard error stream, as the Java did (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun readServerCertificate(): X509Certificate? {
+        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT) ?: return null
+        return try {
+            CertificateFactory.getInstance("X.509")
+                .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
+        } catch (e: CertificateException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -499,22 +513,12 @@ class Game :
         val appId = intent.getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
         val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
         val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
-        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT)
         // BOREALIS: absent, as in a shortcut of an older version, it is false (stream)
         val resumeChosen = intent.getBooleanExtra(EXTRA_RESUME_CHOSEN, false)
 
         app = NvApp(appName ?: "app", appId, appSupportsHdr)
 
-        var serverCert: X509Certificate? = null
-        try {
-            if (derCertData != null) {
-                serverCert =
-                    CertificateFactory.getInstance("X.509")
-                        .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
-            }
-        } catch (e: CertificateException) {
-            e.printStackTrace()
-        }
+        val serverCert = readServerCertificate()
 
         if (appId == StreamConfiguration.INVALID_APP_ID) {
             finish()

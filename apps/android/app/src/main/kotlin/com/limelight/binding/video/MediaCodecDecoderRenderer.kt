@@ -91,6 +91,10 @@ private const val ERROR_DECODER_UNAVAILABLE = -2
 private const val ERROR_UNKNOWN_FORMAT = -3
 private const val ERROR_CONFIGURATION_FAILED = -5
 
+private const val MIME_AVC = "video/avc"
+private const val MIME_HEVC = "video/hevc"
+private const val MIME_AV1 = "video/av01"
+
 // Converted as is from the inherited Java; LargeClass and TooManyFunctions stay because the class
 // waits for its split (Sprint 18d backlog).
 @Suppress("LargeClass", "TooManyFunctions")
@@ -670,8 +674,8 @@ class MediaCodecDecoderRenderer(
         requireDecoder().start()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("PrintStackTrace", "ThrowsCount", "TooGenericExceptionThrown")
+    // The printed stack trace and the generic throw stay as they were (Sprint 18c backlog).
+    @Suppress("PrintStackTrace", "TooGenericExceptionThrown")
     private fun tryConfigureDecoder(
         selectedDecoderInfo: MediaCodecInfo,
         format: MediaFormat,
@@ -690,14 +694,10 @@ class MediaCodecDecoderRenderer(
             configured = true
         } catch (e: IllegalArgumentException) {
             e.printStackTrace()
-            if (throwOnCodecError) {
-                throw e
-            }
+            rethrowIf(throwOnCodecError, e)
         } catch (e: IllegalStateException) {
             e.printStackTrace()
-            if (throwOnCodecError) {
-                throw e
-            }
+            rethrowIf(throwOnCodecError, e)
         } catch (e: IOException) {
             e.printStackTrace()
             if (throwOnCodecError) {
@@ -713,74 +713,101 @@ class MediaCodecDecoderRenderer(
         return configured
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
+    private fun rethrowIf(wanted: Boolean, e: Exception) {
+        if (wanted) {
+            throw e
+        }
+    }
+
     fun initializeDecoder(throwOnCodecError: Boolean): Int {
-        val mimeType: String
-        val selectedDecoderInfo: MediaCodecInfo
+        val mimeType = activeMimeType()
+        val selectedDecoderInfo = mimeType?.let { decoderForStream(it) }
 
-        if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
-            mimeType = "video/avc"
-            val avc = avcDecoder
-
-            if (avc == null) {
-                LimeLog.severe("No available AVC decoder!")
-                return ERROR_AVC_UNAVAILABLE
+        return when {
+            mimeType == null -> {
+                LimeLog.severe("Unknown format")
+                ERROR_UNKNOWN_FORMAT
             }
-            selectedDecoderInfo = avc
-
-            if (initialWidth > MAX_AVC_DIMENSION || initialHeight > MAX_AVC_DIMENSION) {
+            selectedDecoderInfo == null -> unavailableError(mimeType)
+            mimeType == MIME_AVC &&
+                (initialWidth > MAX_AVC_DIMENSION || initialHeight > MAX_AVC_DIMENSION) -> {
                 LimeLog.severe("> 4K streaming only supported on HEVC")
-                return ERROR_AVC_UNAVAILABLE
+                ERROR_AVC_UNAVAILABLE
             }
+            else -> {
+                applyDecoderQuirks(mimeType, selectedDecoderInfo)
 
-            // These fixups only apply to H264 decoders
-            needsBaselineSpsHack =
-                MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.name)
-            constrainedHighProfile =
-                MediaCodecHelper.decoderNeedsConstrainedHighProfile(selectedDecoderInfo.name)
-            if (needsBaselineSpsHack) {
-                LimeLog.info("Decoder " + selectedDecoderInfo.name + " needs baseline SPS hack")
+                adaptivePlayback =
+                    MediaCodecHelper.decoderSupportsAdaptivePlayback(selectedDecoderInfo, mimeType)
+                fusedIdrFrame =
+                    MediaCodecHelper.decoderSupportsFusedIdrFrame(selectedDecoderInfo, mimeType)
+
+                configureWithFallbacks(mimeType, selectedDecoderInfo, throwOnCodecError)
             }
-            if (constrainedHighProfile) {
-                LimeLog.info(
-                    "Decoder " + selectedDecoderInfo.name + " needs constrained high profile"
-                )
-            }
+        }
+    }
 
-            refFrameInvalidationActive = refFrameInvalidationAvc
-        } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
-            mimeType = "video/hevc"
-            val hevc = hevcDecoder
-
-            if (hevc == null) {
-                LimeLog.severe("No available HEVC decoder!")
-                return ERROR_DECODER_UNAVAILABLE
-            }
-            selectedDecoderInfo = hevc
-
-            refFrameInvalidationActive = refFrameInvalidationHevc
-        } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
-            mimeType = "video/av01"
-            val av1 = av1Decoder
-
-            if (av1 == null) {
-                LimeLog.severe("No available AV1 decoder!")
-                return ERROR_DECODER_UNAVAILABLE
-            }
-            selectedDecoderInfo = av1
-
-            refFrameInvalidationActive = refFrameInvalidationAv1
-        } else {
-            // Unknown format
-            LimeLog.severe("Unknown format")
-            return ERROR_UNKNOWN_FORMAT
+    // The type of the stream's video format, or null for a format that no decoder is known for.
+    private fun activeMimeType(): String? =
+        when {
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 -> MIME_AVC
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 -> MIME_HEVC
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0 -> MIME_AV1
+            else -> null
         }
 
-        adaptivePlayback =
-            MediaCodecHelper.decoderSupportsAdaptivePlayback(selectedDecoderInfo, mimeType)
-        fusedIdrFrame = MediaCodecHelper.decoderSupportsFusedIdrFrame(selectedDecoderInfo, mimeType)
+    private fun decoderForStream(mimeType: String): MediaCodecInfo? =
+        when (mimeType) {
+            MIME_AVC -> avcDecoder
+            MIME_HEVC -> hevcDecoder
+            else -> av1Decoder
+        }
 
+    private fun unavailableError(mimeType: String): Int =
+        when (mimeType) {
+            MIME_AVC -> {
+                LimeLog.severe("No available AVC decoder!")
+                ERROR_AVC_UNAVAILABLE
+            }
+            MIME_HEVC -> {
+                LimeLog.severe("No available HEVC decoder!")
+                ERROR_DECODER_UNAVAILABLE
+            }
+            else -> {
+                LimeLog.severe("No available AV1 decoder!")
+                ERROR_DECODER_UNAVAILABLE
+            }
+        }
+
+    private fun applyDecoderQuirks(mimeType: String, selectedDecoderInfo: MediaCodecInfo) {
+        when (mimeType) {
+            MIME_AVC -> {
+                // These fixups only apply to H264 decoders
+                needsBaselineSpsHack =
+                    MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.name)
+                constrainedHighProfile =
+                    MediaCodecHelper.decoderNeedsConstrainedHighProfile(selectedDecoderInfo.name)
+                if (needsBaselineSpsHack) {
+                    LimeLog.info("Decoder " + selectedDecoderInfo.name + " needs baseline SPS hack")
+                }
+                if (constrainedHighProfile) {
+                    LimeLog.info(
+                        "Decoder " + selectedDecoderInfo.name + " needs constrained high profile"
+                    )
+                }
+
+                refFrameInvalidationActive = refFrameInvalidationAvc
+            }
+            MIME_HEVC -> refFrameInvalidationActive = refFrameInvalidationHevc
+            else -> refFrameInvalidationActive = refFrameInvalidationAv1
+        }
+    }
+
+    private fun configureWithFallbacks(
+        mimeType: String,
+        selectedDecoderInfo: MediaCodecInfo,
+        throwOnCodecError: Boolean,
+    ): Int {
         var tryNumber = 0
         while (true) {
             LimeLog.info("Decoder configuration try: $tryNumber")
@@ -804,7 +831,7 @@ class MediaCodecDecoderRenderer(
                 )
             ) {
                 // Success!
-                break
+                return 0
             }
 
             if (!newFormat) {
@@ -813,8 +840,6 @@ class MediaCodecDecoderRenderer(
             }
             tryNumber++
         }
-
-        return 0
     }
 
     override fun setup(format: Int, width: Int, height: Int, redrawRate: Int): Int {

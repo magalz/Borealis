@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.letterSpacingEm
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -40,7 +41,7 @@ import org.robolectric.annotation.Config
  * 1.12.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class KeyboardKeyCaptionSpacingTest(private val font: FontChoice) {
     @get:Rule val composeRule = createComposeRule()
 

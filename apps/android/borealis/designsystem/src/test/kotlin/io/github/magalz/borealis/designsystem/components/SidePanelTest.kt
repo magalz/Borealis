@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -238,8 +240,6 @@ class SidePanelTest {
     private companion object {
         const val FRAME = "frame"
         const val CONTENT = "content"
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val PHONE_LANDSCAPE = "w640dp-h360dp-land-xhdpi"
         // The Text size setting at 130 percent over this system scale is a font scale of 1.69.
         const val SYSTEM_SCALE = 1.3f
         const val WIDTH_TOLERANCE = 0.5f

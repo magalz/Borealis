@@ -9,6 +9,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.isSpecified
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.letterSpacingEm
 import io.github.magalz.borealis.designsystem.testing.lineHeightEm
 import io.github.magalz.borealis.designsystem.testing.textLayout
@@ -27,7 +28,7 @@ import org.robolectric.annotation.Config
  * 0058, decisions 2 and 4), and it follows a change of the setting while the picker is open.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class ChoiceSheetSpacingTest {
     @get:Rule val composeRule = createComposeRule()
 

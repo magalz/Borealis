@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.TextSpacing

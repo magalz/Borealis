@@ -23,6 +23,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundTags
 import io.github.magalz.borealis.designsystem.background.FakeBackgroundPlayers
 import io.github.magalz.borealis.designsystem.background.LocalBackgroundPlayerFactory
 import io.github.magalz.borealis.designsystem.background.TestLifecycle
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.frame
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
@@ -39,7 +40,7 @@ import org.robolectric.annotation.Config
  * wires a dialog: a test composable stands for it.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class GlassOverlaysTest {
     @get:Rule val composeRule = createComposeRule()
 

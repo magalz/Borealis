@@ -17,6 +17,8 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsSwitch
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.assumeNormalSpacing
 import io.github.magalz.borealis.designsystem.testing.fitCases
@@ -239,9 +241,6 @@ class LargeTextFitTest(private val case: FitCase) {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun cases(): List<FitCase> = fitCases()
-
-        private const val PHONE = "w360dp-h640dp-xhdpi"
-        private const val TV = "w960dp-h540dp-land-television-xhdpi"
     }
 }
 

@@ -7,6 +7,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.FitCase
+import io.github.magalz.borealis.designsystem.testing.HANDHELD_NO_TOUCH
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.assumeNormalSpacing
 import io.github.magalz.borealis.designsystem.testing.fitCases
@@ -108,7 +111,7 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     }
 
     @Test
-    @Config(qualifiers = HANDHELD, fontScale = SCALE)
+    @Config(qualifiers = HANDHELD_NO_TOUCH, fontScale = SCALE)
     fun `Audio settings on a handheld fit`() {
         showSettings(FormFactor.Handheld, SettingsGroupId.AUDIO)
         assertAudioEffectsShown()
@@ -117,7 +120,7 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     }
 
     @Test
-    @Config(qualifiers = HANDHELD, fontScale = SCALE)
+    @Config(qualifiers = HANDHELD_NO_TOUCH, fontScale = SCALE)
     fun `Audio settings on a handheld fit at the largest text size`() {
         case.assumeNormalSpacing()
         showSettings(FormFactor.Handheld, SettingsGroupId.AUDIO, largest)
@@ -148,7 +151,7 @@ class SettingsLargeTextFitTest(private val case: FitCase) : SettingsScreenTestBa
     }
 
     @Test
-    @Config(qualifiers = HANDHELD, fontScale = SCALE)
+    @Config(qualifiers = HANDHELD_NO_TOUCH, fontScale = SCALE)
     fun `Appearance settings on a handheld fit`() {
         showSettings(FormFactor.Handheld, SettingsGroupId.APPEARANCE)
 

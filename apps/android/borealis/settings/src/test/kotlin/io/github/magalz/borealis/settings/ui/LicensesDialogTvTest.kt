@@ -17,6 +17,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import kotlin.math.abs
 import org.junit.Before

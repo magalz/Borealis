@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.pixelAt
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -32,7 +33,7 @@ import org.robolectric.annotation.Config
  * the teal of the accent, as the app icon has it (issue #50, ADR 0058, decision 5).
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class AuroraLoaderTest {
     @get:Rule val composeRule = createComposeRule()
 

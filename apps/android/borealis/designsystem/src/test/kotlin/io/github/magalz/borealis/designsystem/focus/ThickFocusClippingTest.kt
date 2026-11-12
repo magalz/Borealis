@@ -15,6 +15,7 @@ import io.github.magalz.borealis.designsystem.components.settings.SettingsGroup
 import io.github.magalz.borealis.designsystem.components.settings.SettingsTwoPane
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.testing.Edge
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.colourOutside
 import io.github.magalz.borealis.designsystem.testing.isNear
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
@@ -34,7 +35,7 @@ import org.robolectric.annotation.Config
  * the focused item, which is inside the 2dp to 7dp that it covers.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class ThickFocusClippingTest {
     @get:Rule val composeRule = createComposeRule()
 

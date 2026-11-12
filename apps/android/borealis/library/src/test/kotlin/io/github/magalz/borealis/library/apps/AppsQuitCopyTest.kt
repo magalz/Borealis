@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
 import org.junit.Test
@@ -23,7 +24,7 @@ import org.robolectric.annotation.Config
  * it closes the game and its unsaved progress is lost.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class AppsQuitCopyTest {
     @get:Rule val composeRule = createComposeRule()
     private val chosen = mutableListOf<AppAction>()

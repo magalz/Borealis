@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.isSpecified
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.TextSpacing
@@ -18,7 +19,6 @@ import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.RecordingIntents
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.aSession
 import org.junit.Rule

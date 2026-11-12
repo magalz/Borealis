@@ -20,6 +20,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.DialogWidth
@@ -154,8 +156,6 @@ class VisualRefinementScreenshotTest {
 
     private companion object {
         const val FRAME_MILLIS = 500L
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
         val ICONS: List<Pair<String, ImageVector>> =
             listOf(
                 "Back" to BorealisIcons.Back,

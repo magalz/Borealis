@@ -2,6 +2,7 @@ package io.github.magalz.borealis.settings.privacy
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.settings.testing.FlowingLightGlassCases
 import io.github.magalz.borealis.settings.testing.Probe

@@ -28,6 +28,7 @@ import io.github.magalz.borealis.designsystem.glass.backdropLuminance
 import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.glassSpec
 import io.github.magalz.borealis.designsystem.glass.luminance
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -47,7 +48,7 @@ import org.robolectric.annotation.Config
  * 100dp square 24dp in (xhdpi: 2 pixels per dp).
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class ThickFocusOutlineTest {
     @get:Rule val composeRule = createComposeRule()
     private val focus = FocusRequester()

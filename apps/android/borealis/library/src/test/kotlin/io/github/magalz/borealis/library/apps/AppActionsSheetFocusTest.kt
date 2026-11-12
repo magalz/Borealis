@@ -19,9 +19,9 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.resetWindowFocus
 import org.junit.Rule
 import org.junit.Test

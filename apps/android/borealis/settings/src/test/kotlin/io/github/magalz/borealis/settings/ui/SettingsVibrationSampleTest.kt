@@ -3,6 +3,7 @@ package io.github.magalz.borealis.settings.ui
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.settings.catalog.Settings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher

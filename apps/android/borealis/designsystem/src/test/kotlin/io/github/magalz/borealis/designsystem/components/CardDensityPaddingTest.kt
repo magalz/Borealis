@@ -10,6 +10,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.tvHostCardMinHeight
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -135,9 +138,6 @@ class CardDensityPaddingTest(private val density: CardDensity) {
     private companion object {
         const val CARD = "card"
         const val HALF_DP = 0.5f
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
-        const val HANDHELD = "w800dp-h480dp-land-hdpi"
         val CARD_WIDTH = 260.dp
         val CONTINUE_WIDTH = 320.dp
         val CONTENT_GAP = 14.dp

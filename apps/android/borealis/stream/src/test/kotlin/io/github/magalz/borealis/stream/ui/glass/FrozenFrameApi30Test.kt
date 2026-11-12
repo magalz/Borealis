@@ -15,12 +15,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.designsystem.testing.rootFrame
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.ReduceMotion
 import io.github.magalz.borealis.stream.StreamSession
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.aFailure
 import io.github.magalz.borealis.stream.testing.aSessionOverBackground
 import io.github.magalz.borealis.stream.testing.distanceFrom

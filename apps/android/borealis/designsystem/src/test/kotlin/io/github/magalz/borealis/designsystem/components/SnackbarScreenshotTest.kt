@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
@@ -88,8 +90,6 @@ class SnackbarScreenshotTest {
     }
 
     private companion object {
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
         const val SHORT = "App quit."
         const val LONG =
             "This session wasn't started by this device, so it cannot be quit. End streaming on " +

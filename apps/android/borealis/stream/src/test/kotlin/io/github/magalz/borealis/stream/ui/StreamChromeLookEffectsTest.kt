@@ -18,6 +18,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.Edge
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.colourOutside
 import io.github.magalz.borealis.designsystem.testing.isNear
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
@@ -30,9 +32,7 @@ import io.github.magalz.borealis.designsystem.theme.borealisColors
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
-import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
-import io.github.magalz.borealis.stream.testing.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

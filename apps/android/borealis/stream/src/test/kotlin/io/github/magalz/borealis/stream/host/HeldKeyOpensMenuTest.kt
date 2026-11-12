@@ -13,11 +13,11 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamSession
 import io.github.magalz.borealis.stream.testing.RecordingActions
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo
 import java.time.Duration

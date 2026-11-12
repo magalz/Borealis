@@ -6,6 +6,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import io.github.magalz.borealis.designsystem.testing.FitCase
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -16,12 +20,8 @@ import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
 import io.github.magalz.borealis.stream.OverlayMode
 import io.github.magalz.borealis.stream.Panel
-import io.github.magalz.borealis.stream.testing.HANDHELD
-import io.github.magalz.borealis.stream.testing.PHONE
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.RecordingIntents
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.aSession
 import org.junit.Rule

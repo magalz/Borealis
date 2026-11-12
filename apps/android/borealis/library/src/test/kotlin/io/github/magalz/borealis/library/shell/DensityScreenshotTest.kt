@@ -7,6 +7,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.CardDensity
@@ -23,8 +25,6 @@ import io.github.magalz.borealis.library.hosts.checkingPc
 import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.testing.AppsOf
 import io.github.magalz.borealis.library.testing.HostsOf
-import io.github.magalz.borealis.library.testing.PHONE
-import io.github.magalz.borealis.library.testing.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.tvHostCardMinHeight
 import io.github.magalz.borealis.designsystem.testing.tvHostCardWidth
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -33,7 +34,7 @@ import org.robolectric.annotation.Config
  * handheld and a phone it is as high as its content.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class HostCardSizeTest {
     @get:Rule val composeRule = createComposeRule()
 

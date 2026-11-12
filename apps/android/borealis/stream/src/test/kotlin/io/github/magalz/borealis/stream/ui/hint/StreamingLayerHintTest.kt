@@ -6,10 +6,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.connect
 import io.github.magalz.borealis.designsystem.testing.inputDevice
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.stream.testing.PHONE
 import io.github.magalz.borealis.stream.ui.LayerFixture
 import io.github.magalz.borealis.stream.ui.aStreaming
 import org.junit.Rule

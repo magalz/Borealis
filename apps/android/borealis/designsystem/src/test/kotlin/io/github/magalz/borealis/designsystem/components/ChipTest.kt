@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.assertPixel
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisFonts
@@ -44,7 +46,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class ChipTest {
     @get:Rule val composeRule = createComposeRule()
     private var clicks = 0
@@ -106,7 +108,7 @@ class ChipTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `a focused chip shows the outline in keyboard mode`() {
         composeRule.setContentInKeyboardMode {
             Specimen(FormFactor.Tv) { Chip("Win+D", onClick = {}) }
@@ -230,7 +232,6 @@ class ChipTest {
 
     private companion object {
         const val FRAME = "frame"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
         const val HANDHELD = "w800dp-h360dp-land-xhdpi"
     }
 }

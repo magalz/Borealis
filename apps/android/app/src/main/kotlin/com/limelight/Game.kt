@@ -2437,55 +2437,58 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
+    // Sends each stylus pointer of a move to the host, in index order, and stops at the first
+    // that the host refuses (false). True when the event had a stylus pointer, false when it had
+    // none.
+    private fun sendPenMove(view: View, event: MotionEvent, eventType: Byte): Boolean {
+        var handledStylusEvent = false
+        for (i in 0 until event.pointerCount) {
+            val toolType = convertToolTypeToStylusToolType(event, i)
+            if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
+                // Not a stylus pointer, so skip it
+                continue
+            }
+            // This pointer is a stylus, so we'll report that we handled this event
+            handledStylusEvent = true
+
+            if (!sendPenEventForPointer(view, event, eventType, toolType, i)) {
+                // Pen events aren't supported by the host
+                return false
+            }
+        }
+        return handledStylusEvent
+    }
+
     private fun trySendPenEvent(view: View, event: MotionEvent): Boolean {
         val eventType = getLiTouchTypeFromEvent(event)
         if (eventType < 0) {
             return false
         }
 
-        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
+        return when (event.actionMasked) {
             // Move events may impact all active pointers
-            var handledStylusEvent = false
-            for (i in 0 until event.pointerCount) {
-                val toolType = convertToolTypeToStylusToolType(event, i)
-                if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
-                    // Not a stylus pointer, so skip it
-                    continue
-                } else {
-                    // This pointer is a stylus, so we'll report that we handled this event
-                    handledStylusEvent = true
-                }
-
-                if (!sendPenEventForPointer(view, event, eventType, toolType, i)) {
-                    // Pen events aren't supported by the host
-                    return false
-                }
-            }
-            return handledStylusEvent
-        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            MotionEvent.ACTION_MOVE -> sendPenMove(view, event, eventType)
             // Cancel impacts all active pointers
-            return conn.sendPenEvent(
-                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
-                MoonBridge.LI_TOOL_TYPE_UNKNOWN,
-                0,
-                0f,
-                0f,
-                0f,
-                0f,
-                0f,
-                MoonBridge.LI_ROT_UNKNOWN,
-                MoonBridge.LI_TILT_UNKNOWN,
-            ) != MoonBridge.LI_ERR_UNSUPPORTED
-        } else {
+            MotionEvent.ACTION_CANCEL ->
+                conn.sendPenEvent(
+                    MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+                    MoonBridge.LI_TOOL_TYPE_UNKNOWN,
+                    0,
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    MoonBridge.LI_ROT_UNKNOWN,
+                    MoonBridge.LI_TILT_UNKNOWN,
+                ) != MoonBridge.LI_ERR_UNSUPPORTED
             // Up, Down, and Hover events are specific to the action index
-            val toolType = convertToolTypeToStylusToolType(event, event.actionIndex)
-            if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
-                // Not a stylus event
-                return false
+            else -> {
+                val toolType = convertToolTypeToStylusToolType(event, event.actionIndex)
+                // A pointer that is no stylus is no pen event
+                toolType != MoonBridge.LI_TOOL_TYPE_UNKNOWN &&
+                    sendPenEventForPointer(view, event, eventType, toolType, event.actionIndex)
             }
-            return sendPenEventForPointer(view, event, eventType, toolType, event.actionIndex)
         }
     }
 

@@ -16,7 +16,7 @@ androidx-test-runner = "1.7.0"
 # Robolectric already brings.
 asm = "9.11.1"
 bouncycastle = "1.86"
-cyclonedx = "3.4.1"
+cyclonedx = "3.5.1"
 desugar-jdk-libs = "2.1.5"
 detekt = "2.0.0-alpha.6"
 hilt = "2.60.1"

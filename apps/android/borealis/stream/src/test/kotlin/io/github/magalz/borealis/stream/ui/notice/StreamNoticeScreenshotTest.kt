@@ -10,6 +10,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -17,9 +19,7 @@ import io.github.magalz.borealis.designsystem.theme.LocalBorealisColors
 import io.github.magalz.borealis.designsystem.theme.Transparency
 import io.github.magalz.borealis.stream.StreamNotice
 import io.github.magalz.borealis.stream.SurroundLayout
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingIntents
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.ui.StreamingLayer
 import io.github.magalz.borealis.stream.ui.aStreaming
 import org.junit.Rule

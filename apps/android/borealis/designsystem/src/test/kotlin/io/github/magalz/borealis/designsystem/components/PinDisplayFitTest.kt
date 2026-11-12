@@ -11,6 +11,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import io.github.magalz.borealis.designsystem.testing.FitCase
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.fitCases
 import io.github.magalz.borealis.designsystem.testing.textLayout
@@ -30,7 +31,7 @@ import org.robolectric.annotation.Config
  * cell is never smaller than 56dp by 64dp.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class PinDisplayFitTest(private val case: FitCase) {
     private val font = case.font
 

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.library.domain.PairingInstructions
 import io.github.magalz.borealis.library.domain.PairingOutcome
 import io.github.magalz.borealis.library.testing.FakePairingService
@@ -17,7 +18,7 @@ import org.robolectric.annotation.Config
 
 /** The route wires the ViewModel to the screen and its effects to the navigation callbacks. */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class PairingRouteTest {
     @get:Rule val composeRule = createComposeRule()
     private val service = FakePairingService()

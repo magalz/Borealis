@@ -16,7 +16,10 @@ import androidx.compose.ui.unit.DpRect
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.AcceptedFinding
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -25,10 +28,7 @@ import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.library.hosts.HostsUiState
 import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.testing.AppsOf
-import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.HostsOf
-import io.github.magalz.borealis.library.testing.PHONE
-import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.appTiles
 import io.github.magalz.borealis.library.testing.hostCards
 import io.github.magalz.borealis.library.testing.manyApps

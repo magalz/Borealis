@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
@@ -21,7 +22,6 @@ import io.github.magalz.borealis.library.hosts.deskPc
 import io.github.magalz.borealis.library.hosts.livingRoomPc
 import io.github.magalz.borealis.library.hosts.studio
 import io.github.magalz.borealis.library.hosts.withHosts
-import io.github.magalz.borealis.library.testing.TV
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

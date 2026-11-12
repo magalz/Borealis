@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.fontFileNames
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -19,7 +20,7 @@ import org.robolectric.annotation.Config
 
 /** The id of an app in its details draws in the monospaced companion of the font of the look. */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class AppDetailsFontTest {
     @get:Rule val composeRule = createComposeRule()
 

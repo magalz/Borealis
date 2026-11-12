@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onParent
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import org.junit.Rule
@@ -29,7 +30,7 @@ import org.robolectric.annotation.Config
 
 /** What a screen reader is told about the components. */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class AccessibilityTest {
     @get:Rule val composeRule = createComposeRule()
 

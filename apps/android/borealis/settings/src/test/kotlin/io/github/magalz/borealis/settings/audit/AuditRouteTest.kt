@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.logging.AuditType
 import io.github.magalz.borealis.logging.BorealisAudit
 import io.github.magalz.borealis.logging.Redactor

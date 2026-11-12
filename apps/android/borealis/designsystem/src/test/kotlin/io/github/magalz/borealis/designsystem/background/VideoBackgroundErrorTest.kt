@@ -10,6 +10,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.logging.BorealisLog
 import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogTag
@@ -26,7 +27,7 @@ import org.robolectric.annotation.Config
  * once.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class VideoBackgroundErrorTest {
     @get:Rule val composeRule = createComposeRule()
 

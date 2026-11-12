@@ -9,6 +9,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.magalz.borealis.designsystem.testing.HANDHELD_NO_TOUCH
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.settleWindows
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DisabledReason
@@ -138,7 +141,7 @@ class SettingsScreenshotTest : SettingsScreenTestBase() {
     }
 
     @Test
-    @Config(qualifiers = HANDHELD)
+    @Config(qualifiers = HANDHELD_NO_TOUCH)
     fun handheldStream() {
         show(keyboard = true)
 

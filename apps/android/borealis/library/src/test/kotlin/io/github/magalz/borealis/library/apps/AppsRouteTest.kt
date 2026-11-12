@@ -9,6 +9,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.library.domain.AppsSnapshot
 import io.github.magalz.borealis.library.domain.QuitResult
 import io.github.magalz.borealis.library.domain.Reachability
@@ -26,7 +28,7 @@ import org.robolectric.annotation.Config
 
 /** The route wires the ViewModel to the screen: effects become streams, messages and closing. */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class AppsRouteTest {
     @get:Rule val composeRule = createComposeRule()
     private val repository = FakeAppRepository()
@@ -157,7 +159,7 @@ class AppsRouteTest {
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `the back arrow closes the screen without a message`() {
         show()
 

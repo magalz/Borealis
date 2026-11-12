@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -248,10 +251,6 @@ class StreamComponentScreenshotTest {
     }
 
     private companion object {
-        const val PHONE = "w360dp-h640dp-xhdpi"
-        // The stream is landscape: a phone in portrait would give the panel 187dp.
-        const val PHONE_LANDSCAPE = "w640dp-h360dp-land-xhdpi"
-        const val TV = "w960dp-h540dp-land-television-xhdpi"
         val LAUNCH_STEPS = listOf("Find the host", "Pair", "Start the app", "Open the stream")
     }
 }

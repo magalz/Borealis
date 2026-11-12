@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.paneTitles
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -196,7 +198,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `on a TV Try again has focus`() {
         show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
         composeRule.waitForIdle()
@@ -241,7 +243,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `gamepad B leaves the stream`() {
         show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
         composeRule.waitForIdle()
@@ -252,7 +254,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `a lone key up of gamepad B does nothing`() {
         show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
         composeRule.waitForIdle()
@@ -264,7 +266,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `gamepad B leaves on the first key down only, and its key up and repeats do nothing more`() {
         show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
         composeRule.waitForIdle()
@@ -291,7 +293,7 @@ class ConnectionErrorScreenTest {
         )
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `the buttons come in order, Try again, the state action, Diagnostics, Close`() {
         show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
 
@@ -304,7 +306,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `the buttons are at least 10dp apart horizontally`() {
         show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
 
@@ -315,7 +317,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `on a phone the buttons are stacked, in order, as the buttons of a dialog are`() {
         show(failure(FailureKind.HOST_OFFLINE))
 
@@ -330,7 +332,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `on a phone without a state action the three buttons are still stacked`() {
         show(failure(FailureKind.HOST_BUSY))
 
@@ -345,7 +347,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `on a TV all the buttons stay in one row`() {
         show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)
 
@@ -371,7 +373,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `the popup is as wide as a standard dialog, and the body wraps inside it`() {
         show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
 
@@ -390,7 +392,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `the popup is centred on the screen`() {
         show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
 
@@ -444,7 +446,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    @Config(qualifiers = TV)
     fun `the Back key closes the popup, which leaves the stream`() {
         show(failure(FailureKind.HOST_BUSY), FormFactor.Tv)
         composeRule.waitForIdle()
@@ -473,7 +475,7 @@ class ConnectionErrorScreenTest {
     }
 
     @Test
-    @Config(qualifiers = "w360dp-h640dp-xhdpi")
+    @Config(qualifiers = PHONE)
     fun `wrapped rows of buttons are at least 10dp apart vertically`() {
         // A TV-sized button row wraps on a narrow phone with Wake PC: Close drops to a second row.
         show(failure(FailureKind.HOST_OFFLINE), FormFactor.Tv)

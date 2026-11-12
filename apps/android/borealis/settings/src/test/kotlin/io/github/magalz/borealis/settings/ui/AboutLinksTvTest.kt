@@ -26,6 +26,7 @@ import com.google.zxing.BinaryBitmap
 import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.settings.testing.assertDialogWidth
 import io.github.magalz.borealis.settings.testing.dialogFrame
 import org.junit.Before

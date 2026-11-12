@@ -7,6 +7,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.fontFileNames
 import io.github.magalz.borealis.designsystem.testing.textLayout
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
@@ -23,7 +24,7 @@ import org.robolectric.annotation.Config
  * and the address of the Web UI) in the monospaced companion of that font (ADR 0058, decision 2).
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class PairingFontTest {
     @get:Rule val composeRule = createComposeRule()
 

@@ -19,6 +19,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.settings.CollapsibleSection
 import io.github.magalz.borealis.designsystem.components.settings.SettingsValueRow
 import io.github.magalz.borealis.designsystem.glass.GlassHost
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.recompositions
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -32,7 +33,7 @@ import org.robolectric.annotation.Config
  * under a Host card and a section of the Settings, which show it blurred, and neither recomposes.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class GlassSurfacesRecompositionTest {
     @get:Rule val composeRule = createComposeRule()
 

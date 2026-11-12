@@ -8,12 +8,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.library.domain.Reachability
 import io.github.magalz.borealis.library.domain.RunningApp
 import io.github.magalz.borealis.library.domain.StreamRequest
 import io.github.magalz.borealis.library.domain.WakeResult
 import io.github.magalz.borealis.library.testing.FakeHostRepository
-import io.github.magalz.borealis.library.testing.PHONE
 import io.github.magalz.borealis.library.testing.aHost
 import org.junit.Rule
 import org.junit.Test

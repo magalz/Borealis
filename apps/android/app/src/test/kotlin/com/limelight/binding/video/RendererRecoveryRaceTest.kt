@@ -124,6 +124,12 @@ class RendererRecoveryRaceTest : RendererTestBase() {
     }
 
     @Test
+    fun `a thread named like the input thread is judged by the function it is in first`() {
+        assertThat(waitsOf(INPUT_CALL_THREAD, CHOREOGRAPHER, ::doFrame)).isEmpty()
+        assertThat(waitsOf(INPUT_CALL_THREAD, INPUT_THREAD, ::doFrame)).hasSize(1)
+    }
+
+    @Test
     fun `the choreographer thread is known by its name`() {
         assertThat(waitsOf(CHOREOGRAPHER_THREAD_NAME, CHOREOGRAPHER)).isEmpty()
         assertThat(waitsOf(CHOREOGRAPHER_THREAD_NAME, INPUT_THREAD or RENDERER_THREAD)).hasSize(1)

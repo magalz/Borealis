@@ -1270,6 +1270,7 @@ class RendererRecoveryTest : RendererTestBase() {
     @Test
     fun `a failure of the call that a recovery waits for comes out with its own message`() {
         running(stepped = true)
+        val before = threadLog.lines
 
         val thrown =
             assertThrows(IllegalStateException::class.java) {
@@ -1285,8 +1286,10 @@ class RendererRecoveryTest : RendererTestBase() {
             }
 
         assertThat(thrown).hasMessageThat().isEqualTo("codec state")
-        // The wait without a bit was made up for this case: it is not a race to fail the test with.
-        threadLog.clear()
+        // The waits were made up for this case: they are not a race to fail the test with.
+        threadLog.forget(
+            (threadLog.lines - before.toSet()).filter { it.thread == INPUT_CALL_THREAD }
+        )
     }
 
     // The load entry

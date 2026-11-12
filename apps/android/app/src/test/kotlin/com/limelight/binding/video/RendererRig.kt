@@ -70,10 +70,10 @@ class FakeSurfaceHolder(private val surface: Surface) : SurfaceHolder {
  * thread, and a recovery that waits is told by who waits and for whom.
  *
  * A line that says a thread waits to quiesce also keeps the bit of that thread in the flags it
- * prints (the role it plays in the recovery), which is known by the name of the renderer thread, of
- * the choreographer thread and of an [InputCall], and for any other thread (the test thread plays
- * the input thread when it submits, and the choreographer when it calls `doFrame`) by the renderer
- * function that it waits in.
+ * prints (the role it plays in the recovery), which is known by the renderer function that it waits
+ * in (the test thread plays the input thread when it submits, and the choreographer when it calls
+ * `doFrame`), and for a thread in none of them by the name of the renderer thread, of the
+ * choreographer thread and of an [InputCall].
  */
 class ThreadedLog : Handler() {
     class Line(val thread: String, val message: String, val bit: Int? = null) {
@@ -96,14 +96,9 @@ class ThreadedLog : Handler() {
     /**
      * The bit of the role that the current thread plays in a recovery, or null if it is unknown.
      */
-    private fun ownBit(): Int? {
-        OWN_BITS[Thread.currentThread().name]?.let {
-            return it
-        }
-        return Thread.currentThread().stackTrace.firstNotNullOfOrNull {
-            ROLE_FUNCTIONS[it.methodName]
-        }
-    }
+    private fun ownBit(): Int? =
+        Thread.currentThread().stackTrace.firstNotNullOfOrNull { ROLE_FUNCTIONS[it.methodName] }
+            ?: OWN_BITS[Thread.currentThread().name]
 
     override fun flush() = Unit
 
@@ -113,6 +108,11 @@ class ThreadedLog : Handler() {
     fun clear() {
         written.clear()
         waits.clear()
+    }
+
+    /** Forgets [lines], which a test made up, and nothing else. */
+    fun forget(lines: List<Line>) {
+        written.removeAll(lines.toSet())
     }
 
     /** Forgets the waits seen so far: the next [awaitWaiting] sees only the ones that come now. */
@@ -312,9 +312,9 @@ abstract class RendererTestBase : MediaCodecHelperTestBase() {
     /**
      * Fails if a thread waited to quiesce without its own bit in the flags it printed: a recovery
      * that ended while it waited had cleared the bit and the thread did not count itself in again
-     * for the next recovery, so that one could never see every thread (BORE-121). The test runs
-     * this after its renderers have stopped, and the entry that loops over many passes after each
-     * one.
+     * for the next recovery, so that one could never see every thread (BORE-121). The rule runs
+     * this after the test, once [stopRenderers] has stopped its renderers; the entry that loops
+     * over many passes runs it after each pass's case, before [endPass] stops them.
      */
     protected fun failOnLostArrival() {
         val lines = threadLog.waitsWithoutOwnBit()

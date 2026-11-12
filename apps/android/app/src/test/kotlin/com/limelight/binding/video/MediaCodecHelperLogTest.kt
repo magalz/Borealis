@@ -370,6 +370,85 @@ class MediaCodecHelperLogTest : MediaCodecHelperTestBase() {
         rows.verify()
     }
 
+    // A decoder that lists the type in two cases lists it twice; the framework sorts the types.
+    private val twice = listOf("video/avc", "VIDEO/AVC")
+
+    @Test
+    fun `a decoder that lists the type twice is logged once per listing`() {
+        val skipped = "Skipping blacklisted decoder: OMX.google.h264.decoder"
+        val rows = Rows()
+
+        rows.check("the first decoder logs the blacklist skip twice", infos(skipped, skipped)) {
+            val helper = helper()
+            installCodecs(codec("OMX.google.h264.decoder") { mimes = twice })
+            logged { helper.findFirstDecoder("video/avc") }
+        }
+        rows.check(
+            "the first decoder takes the decoder after the listings",
+            infos(skipped, skipped, "First decoder choice is c2.vendor.avc"),
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("OMX.google.h264.decoder") { mimes = twice },
+                codec("c2.vendor.avc"),
+            )
+            logged { helper.findFirstDecoder("video/avc") }
+        }
+
+        rows.verify()
+    }
+
+    @Test
+    fun `the probable safe decoder logs each listing of a type that a decoder lists twice`() {
+        val skipped = "Skipping blacklisted decoder: OMX.google.h264.decoder"
+        val rows = Rows()
+
+        rows.check(
+            "the probable safe decoder examines and skips each listing in each round",
+            infos(
+                "Examining decoder capabilities of OMX.google.h264.decoder (round 1)",
+                skipped,
+                "Examining decoder capabilities of OMX.google.h264.decoder (round 1)",
+                skipped,
+                "Examining decoder capabilities of OMX.google.h264.decoder (round 2)",
+                skipped,
+                "Examining decoder capabilities of OMX.google.h264.decoder (round 2)",
+                skipped,
+            ),
+        ) {
+            val helper = helper()
+            installCodecs(codec("OMX.google.h264.decoder") { mimes = twice })
+            logged { helper.findProbableSafeDecoder("video/avc", -1) }
+        }
+        rows.check(
+            "the probable safe decoder goes on to the next listing after a profile that fails",
+            infos(
+                "Examining decoder capabilities of c2.vendor.twice (round 1)",
+                "Low latency decoding mode supported (FEATURE_LowLatency)",
+                "Decoder c2.vendor.twice does NOT support required profile",
+                "Examining decoder capabilities of c2.vendor.twice (round 1)",
+                "Low latency decoding mode supported (FEATURE_LowLatency)",
+                "Decoder c2.vendor.twice does NOT support required profile",
+                "Examining decoder capabilities of c2.vendor.twice (round 2)",
+                "Decoder c2.vendor.twice does NOT support required profile",
+                "Examining decoder capabilities of c2.vendor.twice (round 2)",
+                "Decoder c2.vendor.twice does NOT support required profile",
+            ),
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.twice") {
+                    mimes = twice
+                    lowLatency = true
+                    profiles = listOf(CodecProfileLevel.AVCProfileBaseline)
+                }
+            )
+            logged { helper.findProbableSafeDecoder("video/avc", CodecProfileLevel.AVCProfileHigh) }
+        }
+
+        rows.verify()
+    }
+
     @Test
     fun `the probable safe decoder logs each round`() {
         val rows = Rows()

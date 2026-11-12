@@ -1011,6 +1011,7 @@ class RendererRecoveryTest : RendererTestBase() {
         }
     }
 
+    // Only a waiter on the recovery monitor sees whether notifyAll ran; Object.wait needs the cast.
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     private fun waitFor(monitor: Any) = (monitor as Object).wait()
 

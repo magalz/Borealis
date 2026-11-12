@@ -838,10 +838,11 @@ class RendererRecoveryTest : RendererTestBase() {
 
     @Test
     fun `after ten recoveries a failure is not recovered but held back for three seconds`() {
-        val renderer = running()
+        val renderer = running(stepped = true)
         for (number in 1..10) {
             ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
-            assertThat(renderer.submit(pFrame(number))).isEqualTo(MoonBridge.DR_NEED_IDR)
+            assertThat(recoveredByRendererThread { renderer.submit(pFrame(number)) })
+                .isEqualTo(MoonBridge.DR_NEED_IDR)
         }
         assertThat(events<CodecEvent.Reset>()).hasSize(10)
 
@@ -889,13 +890,14 @@ class RendererRecoveryTest : RendererTestBase() {
 
     @Test
     fun `a renderer that crashed throws the same exception again and tells nobody twice`() {
-        val renderer = running()
+        val renderer = running(stepped = true)
         for (number in 1..10) {
             ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
-            renderer.submit(pFrame(number))
+            assertThat(recoveredByRendererThread { renderer.submit(pFrame(number)) })
+                .isEqualTo(MoonBridge.DR_NEED_IDR)
         }
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
-        renderer.submit(pFrame(11))
+        assertThat(renderer.submit(pFrame(11))).isEqualTo(MoonBridge.DR_NEED_IDR)
         advanceClock(3_000)
         ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 2, stateFailure)
         val first = assertThrows(RuntimeException::class.java) { renderer.submit(pFrame(12)) }
@@ -947,13 +949,14 @@ class RendererRecoveryTest : RendererTestBase() {
 
     /**
      * A manual entry, not a test of the suite: it does nothing unless the variable
-     * `BOREALIS_RENDERER_LOAD` holds a number of passes. A pass runs the two cases that used to
-     * fail under load, each on a fresh renderer, in one JVM, while twice as many threads as the
-     * machine has processors spin and one more allocates. On a failure it prints the exception, the
-     * journal, the last 30 lines of the log with the thread that wrote each, and the stacks of all
-     * threads. From `apps/android`, in a shell where the variable is set:
-     * `BOREALIS_RENDERER_LOAD=2000 ./gradlew :app:testDebugUnitTest --tests
-     * '*RendererRecoveryTest*the flaky cases*' --rerun`.
+     * `BOREALIS_RENDERER_LOAD` holds a number of passes. A pass runs the cases that recover the
+     * codec many times on a stepped renderer thread (the two that used to fail under load, and the
+     * two with the same loop of ten recoveries that failed on the free-running thread), each on a
+     * fresh renderer, in one JVM, while twice as many threads as the machine has processors spin
+     * and one more allocates. On a failure it prints the exception, the journal, the last 30 lines
+     * of the log with the thread that wrote each, and the stacks of all threads. From
+     * `apps/android`, in a shell where the variable is set: `BOREALIS_RENDERER_LOAD=2000 ./gradlew
+     * :app:testDebugUnitTest --tests '*RendererRecoveryTest*the flaky cases*' --rerun`.
      */
     @Test
     fun `the flaky cases pass under load`() {
@@ -970,6 +973,14 @@ class RendererRecoveryTest : RendererTestBase() {
                 "crashes after three seconds" to
                     {
                         `three seconds after the first failure that is not recovered the renderer crashes with it`()
+                    },
+                "crashes once" to
+                    {
+                        `a renderer that crashed throws the same exception again and tells nobody twice`()
+                    },
+                "holds a failure back" to
+                    {
+                        `after ten recoveries a failure is not recovered but held back for three seconds`()
                     },
             )
         val burners = Burners()

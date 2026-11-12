@@ -11,6 +11,9 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.FitCase
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.testing.assumeNormalSpacing
 import io.github.magalz.borealis.designsystem.testing.fitCases
@@ -27,9 +30,6 @@ import io.github.magalz.borealis.library.hosts.HostsScreen
 import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.pairing.PairingScreen
 import io.github.magalz.borealis.library.pairing.PairingUiState
-import io.github.magalz.borealis.library.testing.HANDHELD
-import io.github.magalz.borealis.library.testing.PHONE
-import io.github.magalz.borealis.library.testing.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

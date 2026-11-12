@@ -19,6 +19,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.glass.glassSurface
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.noAnimations
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.tokens.BorealisTokens
@@ -34,7 +35,6 @@ import io.github.magalz.borealis.library.testing.FakeHostShortcuts
 import io.github.magalz.borealis.library.testing.FakeLegacyBridge
 import io.github.magalz.borealis.library.testing.FakePairingService
 import io.github.magalz.borealis.library.testing.FakeStreamLauncher
-import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.settings.appearance.rememberLooks
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.repository.SettingsRepository

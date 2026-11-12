@@ -9,6 +9,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.BackdropTextHalo
 import io.github.magalz.borealis.designsystem.glass.GlassHost
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertHalo
 import io.github.magalz.borealis.designsystem.testing.assertNoHalo
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -25,8 +27,6 @@ import io.github.magalz.borealis.library.hosts.withHosts
 import io.github.magalz.borealis.library.pairing.PairingFailure
 import io.github.magalz.borealis.library.pairing.PairingScreen
 import io.github.magalz.borealis.library.pairing.PairingUiState
-import io.github.magalz.borealis.library.testing.PHONE
-import io.github.magalz.borealis.library.testing.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -20,10 +20,10 @@ import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.components.BorealisIcons
 import io.github.magalz.borealis.designsystem.components.RailItem
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.theme.FormFactor
-import io.github.magalz.borealis.library.testing.HANDHELD
-import io.github.magalz.borealis.library.testing.PHONE
-import io.github.magalz.borealis.library.testing.TV
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

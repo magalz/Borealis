@@ -49,6 +49,15 @@ internal class GameWindowTest : GameTestBase() {
     }
 
     @Test
+    fun `the activity listens to the visibility of the system bars of its window`() {
+        rig.create()
+
+        val info = ReflectionHelpers.getField<Any>(decorView, "mListenerInfo")
+        assertThat(ReflectionHelpers.getField<Any?>(info, "mOnSystemUiVisibilityChangeListener"))
+            .isSameInstanceAs(rig.game)
+    }
+
+    @Test
     fun `the pointer is grabbed half a second after the stream connected, whoever held it before`() {
         rig.create()
         // The user had let the pointer go before the chrome took the input: the chrome gives

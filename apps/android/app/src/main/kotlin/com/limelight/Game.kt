@@ -342,11 +342,7 @@ class Game :
         private const val SIDE_CHORD_MS = 250L
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
+    private fun setUpWindow() {
         // We don't want a title bar
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
@@ -370,7 +366,9 @@ class Game :
 
         // Inflate the content
         setContentView(R.layout.activity_game)
+    }
 
+    private fun readSettingsAndFitWindow() {
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this)
         tombstonePrefs = getSharedPreferences("DecoderTombstone", 0)
@@ -392,7 +390,9 @@ class Game :
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
+    }
 
+    private fun bindStreamViews() {
         // Listen for non-touch events on the game surface
         streamView = findViewById(R.id.surfaceView)
         streamView.setOnGenericMotionListener(this)
@@ -435,13 +435,21 @@ class Game :
         streamView.setOnCapturedPointerListener { view, motionEvent ->
             handleMotionEvent(view, motionEvent)
         }
+    }
 
+    private fun warnIfMetered() {
         // Warn the user if they're on a metered connection
         val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (connMgr.isActiveNetworkMetered) {
             displayTransientMessage(resources.getString(R.string.conn_metered))
         }
+    }
 
+    // Converted as is from the inherited Java; the SecurityException that some Samsung devices
+    // throw from WifiLock.acquire() is printed to the standard error stream, as the Java did
+    // (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun acquireWifiLocks() {
         // Make sure Wi-Fi is fully powered up
         val wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         try {
@@ -469,6 +477,18 @@ class Game :
             // WifiLock.acquire() even though we have android.permission.WAKE_LOCK in our manifest.
             e.printStackTrace()
         }
+    }
+
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setUpWindow()
+        readSettingsAndFitWindow()
+        bindStreamViews()
+        warnIfMetered()
+        acquireWifiLocks()
 
         appName = intent.getStringExtra(EXTRA_APP_NAME)
         pcName = intent.getStringExtra(EXTRA_PC_NAME)

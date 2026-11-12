@@ -448,6 +448,40 @@ internal class GameSpecialKeysTest : GameTestBase() {
     }
 
     @Test
+    fun `a key that came up while the chord waited is not eaten for a later key up`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_B)
+        rig.down(KeyEvent.KEYCODE_Z)
+        // The host saw this B go down, so it sees it come up.
+        rig.up(KeyEvent.KEYCODE_B)
+        rig.releaseCtrlAltShift()
+        forgetCalls()
+
+        rig.up(KeyEvent.KEYCODE_B)
+
+        assertThat(sentKeys()).containsExactly(sent(0x8042, up, 0))
+    }
+
+    @Test
+    fun `a modifier that went down while the chord waited is eaten when it comes up last`() {
+        streamingAndCapturing()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_Z)
+        rig.down(KeyEvent.KEYCODE_META_LEFT)
+        rig.up(KeyEvent.KEYCODE_SHIFT_LEFT)
+        rig.up(KeyEvent.KEYCODE_ALT_LEFT)
+        rig.up(KeyEvent.KEYCODE_CTRL_LEFT)
+        forgetCalls()
+
+        // The chord waits for the Meta too; its key down never reached the host.
+        val released = rig.up(KeyEvent.KEYCODE_META_LEFT)
+
+        assertThat(released).isTrue()
+        assertThat(sentKeys()).isEmpty()
+    }
+
+    @Test
     fun `a key that goes down again forgets that its earlier key up was lost, so it reaches the host whole`() {
         streamingAndCapturing()
         rig.holdCtrlAltShift()

@@ -4,8 +4,12 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.LimeLog
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.stream.DecodeTimeTracker
 import java.io.OutputStream
 import java.io.PrintStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import org.junit.Assert.assertThrows
@@ -880,6 +884,136 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(crashes).hasSize(1)
     }
 
+    @Test
+    fun `a new codec that cannot be configured after a crash was reported does not tell the listener again`() {
+        val renderer = running(stepped = true)
+        // The renderer thread meets the failure and waits for the input thread, which is this one.
+        threadLog.forgetWaits()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_OUTPUT, 1, stateFailure)
+        ShadowRecordingVideoCodec.stepOutput()
+        threadLog.awaitWaiting(RENDERER_THREAD or CHOREOGRAPHER)
+        // The listener was told of a crash already, as when a failure was held back too long.
+        ReflectionHelpers.setField(renderer, "reportedCrash", true)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 5) {
+            IllegalStateException("refused for good")
+        }
+
+        val thrown = assertThrows(RuntimeException::class.java) { renderer.submit(pFrame(1)) }
+
+        assertThat(thrown.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(thrown.toString().split("\n").last())
+            .isEqualTo("java.lang.IllegalStateException: refused for good")
+        assertThat(crashes).isEmpty()
+    }
+
+    // What the last thread to quiesce does, called directly: the test thread is that thread, the
+    // other two have arrived (their marks are set), and no thread is started, so that the steps
+    // that no failure of the codec can reach one at a time are seen one at a time
+
+    /** Runs the recovery of [type] as the input thread, the last of the three to arrive. */
+    private fun MediaCodecDecoderRenderer.recoverAsLastThread(type: Int) {
+        ReflectionHelpers.setField(
+            this,
+            "codecRecoveryThreadQuiescedFlags",
+            RENDERER_THREAD or CHOREOGRAPHER,
+        )
+        recoveryType().set(type)
+        ReflectionHelpers.callInstanceMethod<Boolean>(
+            this,
+            "doCodecRecoveryIfRequired",
+            ReflectionHelpers.ClassParameter.from(Int::class.javaPrimitiveType, INPUT_THREAD),
+        )
+    }
+
+    /** An output queue that does what [onClear] says when the recovery empties it. */
+    private class QueueThatMeetsAStop(private val onClear: () -> Unit) :
+        LinkedBlockingQueue<Int>() {
+        override fun clear() {
+            super.clear()
+            onClear()
+        }
+    }
+
+    @Test
+    fun `a recovery forgets the output buffers that were waiting for the codec it replaces`() {
+        val renderer = prepared()
+        val queue =
+            ReflectionHelpers.getField<LinkedBlockingQueue<Int>>(renderer, "outputBufferQueue")
+        queue += listOf(3, 4)
+
+        renderer.recoverAsLastThread(RECOVERY_RESTART)
+
+        assertThat(events<CodecEvent.Stopped>()).hasSize(1)
+        assertThat(queue).isEmpty()
+    }
+
+    @Test
+    fun `a recovery forgets the frames that were queued to the codec it replaces`() {
+        val renderer = prepared()
+        val tracker = ReflectionHelpers.getField<DecodeTimeTracker>(renderer, "decodeTimeTracker")
+        synchronized(tracker) { tracker.onInput(FRAME_US, 0) }
+
+        renderer.recoverAsLastThread(RECOVERY_RESTART)
+
+        assertThat(events<CodecEvent.Stopped>()).hasSize(1)
+        // The output of the new codec with the timestamp of that frame is not paired with it.
+        assertThat(synchronized(tracker) { tracker.onOutput(FRAME_US, 1_000_000) })
+            .isEqualTo(DecodeTimeTracker.NO_MATCH)
+    }
+
+    @Test
+    fun `a recovery that was cancelled before it began is not counted and does nothing`() {
+        val renderer = prepared()
+        // The stop comes after this thread passed the check for a recovery, as the renderer
+        // thread of a stop does while the last thread is on its way to the monitor. The case
+        // relies on the buffers being dropped before the attempt is counted, the order of the
+        // recovery: the stop arrives while the output queue is cleared.
+        ReflectionHelpers.setField(
+            renderer,
+            "outputBufferQueue",
+            QueueThatMeetsAStop { renderer.recoveryType().set(RECOVERY_NONE) },
+        )
+        val before = log.lines()
+
+        renderer.recoverAsLastThread(RECOVERY_RESTART)
+
+        assertThat(ReflectionHelpers.getField<Int>(renderer, "codecRecoveryAttempts")).isEqualTo(0)
+        assertThat(log.lines()).isEqualTo(before)
+        assertThat(events<CodecEvent.Stopped>()).isEmpty()
+        assertThat(events<CodecEvent.Reset>()).isEmpty()
+    }
+
+    @Test
+    fun `a recovery that ends wakes the thread that waits for it at once`() {
+        val renderer = prepared()
+        val monitor = ReflectionHelpers.getField<Any>(renderer, "codecRecoveryMonitor")
+        val waiting = CountDownLatch(1)
+        // The waiter has no timeout of its own, so only a notification ends its wait; it holds the
+        // monitor until it waits, so the monitor is free again only when it does.
+        val waiter =
+            thread(name = "waiter", isDaemon = true) {
+                synchronized(monitor) {
+                    waiting.countDown()
+                    waitFor(monitor)
+                }
+            }
+        try {
+            check(waiting.await(JOIN_MS, TimeUnit.MILLISECONDS)) { "The waiter did not start" }
+            synchronized(monitor) {}
+
+            renderer.recoverAsLastThread(RECOVERY_RESTART)
+
+            waiter.join(JOIN_MS)
+            check(!waiter.isAlive) { "The waiter was never woken" }
+        } finally {
+            // A run that failed leaves no thread waiting.
+            waiter.interrupt()
+        }
+    }
+
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+    private fun waitFor(monitor: Any) = (monitor as Object).wait()
+
     // Too many recoveries
 
     @Test
@@ -1138,23 +1272,30 @@ class RendererRecoveryTest : RendererTestBase() {
     @Test
     fun `a failure of the call that a recovery waits for comes out with its own message`() {
         running(stepped = true)
+        val before = threadLog.lines
+        // A wait without the bit of this thread, which the rig reads as the race of BORE-121, and
+        // then the wait that it expects of the input thread.
+        val madeUpWaits =
+            listOf(
+                "Waiting to quiesce decoder threads: $CHOREOGRAPHER",
+                "Waiting to quiesce decoder threads: ${INPUT_THREAD or CHOREOGRAPHER}",
+            )
 
         val thrown =
             assertThrows(IllegalStateException::class.java) {
                 recoveredByRendererThread<Unit> {
-                    // A wait without the bit of this thread, which the rig reads as the race of
-                    // BORE-121, and then the wait that it expects of the input thread.
-                    LimeLog.info("Waiting to quiesce decoder threads: $CHOREOGRAPHER")
-                    LimeLog.info(
-                        "Waiting to quiesce decoder threads: ${INPUT_THREAD or CHOREOGRAPHER}"
-                    )
+                    madeUpWaits.forEach { LimeLog.info(it) }
                     throw stateFailure()
                 }
             }
 
         assertThat(thrown).hasMessageThat().isEqualTo("codec state")
-        // The wait without a bit was made up for this case: it is not a race to fail the test with.
-        threadLog.clear()
+        // The waits were made up for this case: they are not a race to fail the test with.
+        threadLog.forget(
+            (threadLog.lines - before.toSet()).filter {
+                it.thread == INPUT_CALL_THREAD && it.message in madeUpWaits
+            }
+        )
     }
 
     // The load entry
@@ -1266,6 +1407,8 @@ class RendererRecoveryTest : RendererTestBase() {
         const val RECOVERY_RESET = 3
         const val UNKNOWN_RECOVERY = 7
         const val MAX_PASSES_FOR_A_FRAME = 4
+        const val FRAME_US = 777L
+        const val JOIN_MS = 30_000L
         const val PASS_WATCHDOG_SECONDS = 60L
         const val DUMPED_LINES = 30
         const val LIVE_CHUNKS = 64

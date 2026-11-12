@@ -9,7 +9,10 @@ import io.github.magalz.borealis.stream.game.AVC_DECODER
 import io.github.magalz.borealis.stream.game.GameTestBase
 import io.github.magalz.borealis.stream.game.assertToasts
 import io.github.magalz.borealis.stream.game.streamConfiguration
+import java.util.function.Consumer
 import org.junit.Test
+import org.robolectric.android.internal.DisplayConfig
+import org.robolectric.shadows.ShadowDisplayManager
 
 /**
  * The checks of the HDR setting against the display, in `Game.onCreate`: the display must list
@@ -33,6 +36,41 @@ internal class GameHdrDisplayTest : GameTestBase() {
         rig.displayHdr(*displayTypes)
         rig.decoders(codec(AVC_DECODER), hevcMain10)
         rig.create()
+    }
+
+    /** A display that has no HDR capabilities to ask about: `getHdrCapabilities()` answers null. */
+    private fun streamOnADisplayWithoutHdrCapabilities() {
+        rig.preference("checkbox_enable_hdr", true)
+        val change =
+            ShadowDisplayManager::class
+                .java
+                .getDeclaredMethod("changeDisplay", Int::class.java, Consumer::class.java)
+                .apply { isAccessible = true }
+        change.invoke(
+            null,
+            Display.DEFAULT_DISPLAY,
+            Consumer<DisplayConfig> { it.hdrCapabilities = null },
+        )
+        rig.decoders(codec(AVC_DECODER), hevcMain10)
+        rig.create()
+    }
+
+    @Test
+    fun `a display without HDR capabilities does not support HDR10, and the user is told once`() {
+        streamOnADisplayWithoutHdrCapabilities()
+
+        assertThat(rig.streamConfiguration.supportedVideoFormats)
+            .isEqualTo(MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265)
+        assertToasts("Display does not support HDR10")
+    }
+
+    @Test
+    fun `a display with an empty list of HDR types does not support HDR10, and the user is told once`() {
+        streamWithHdr()
+
+        assertThat(rig.streamConfiguration.supportedVideoFormats)
+            .isEqualTo(MoonBridge.VIDEO_FORMAT_H264 or MoonBridge.VIDEO_FORMAT_H265)
+        assertToasts("Display does not support HDR10")
     }
 
     @Test

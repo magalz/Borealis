@@ -3,20 +3,32 @@ package io.github.magalz.borealis.stream.game
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.wifi.WifiManager
+import android.os.Looper
+import android.os.Message
 import android.view.InputDevice
 import android.view.View
 import android.view.WindowManager
 import com.google.common.truth.Truth.assertThat
 import com.limelight.R
 import com.limelight.nvstream.http.NvApp
+import com.limelight.preferences.GlPreferences
 import com.limelight.ui.StreamView
 import io.github.magalz.borealis.host.failure.FailureKind
 import io.github.magalz.borealis.host.failure.StreamFailure
+import io.github.magalz.borealis.host.video.FirstFrameWatchdog
+import io.github.magalz.borealis.input.devices.connectPad
+import io.github.magalz.borealis.input.devices.pad
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamPhase
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Test
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadow.api.Shadow
+import org.robolectric.shadows.ShadowLooper
 import org.robolectric.util.ReflectionHelpers
 
 /** What `Game.onCreate` builds and wires from the intent of a pinned shortcut. */
@@ -225,5 +237,159 @@ internal class GameCreateTest : GameTestBase() {
 
         val view = rig.game.findViewById<View>(R.id.surfaceView)
         assertThat(listenerOf(view, "mOnKeyListener")).isSameInstanceAs(rig.game)
+    }
+
+    /** What the code run by [block] printed to the standard error stream. */
+    private fun printedToStandardError(block: () -> Unit): String {
+        val original = System.err
+        val captured = ByteArrayOutputStream()
+        System.setErr(PrintStream(captured, true))
+        try {
+            block()
+        } finally {
+            System.setErr(original)
+        }
+        return captured.toString()
+    }
+
+    @Test
+    fun `the certificate is read before the app id ends the activity`() {
+        val printed = printedToStandardError {
+            rig.create(GameIntent(appId = null, serverCert = byteArrayOf(1, 2, 3)))
+        }
+
+        assertThat(printed).contains("CertificateException")
+        assertThat(rig.game.isFinishing).isTrue()
+    }
+
+    @Test
+    fun `a certificate that can be read prints nothing`() {
+        val printed = printedToStandardError {
+            rig.create(GameIntent(serverCert = GameIntent.certificate()))
+        }
+
+        assertThat(printed).doesNotContain("CertificateException")
+    }
+
+    @Test
+    fun `the decoder is told the GL renderer that the GL preferences hold`() {
+        GlPreferences.readPreferences(rig.application).apply {
+            glRenderer = "Test GPU 1"
+            writePreferences()
+        }
+
+        rig.create()
+
+        assertThat(ReflectionHelpers.getField<String?>(rig.renderer, "glRenderer"))
+            .isEqualTo("Test GPU 1")
+    }
+
+    private val gamepadMask: Int
+        get() = rig.streamConfiguration.attachedGamepadMask
+
+    private fun attachTwoGamepads() {
+        connectPad(pad(40))
+        connectPad(pad(7))
+    }
+
+    @Test
+    fun `every gamepad that is attached takes a bit of the mask when multi-controller is on`() {
+        attachTwoGamepads()
+
+        rig.create()
+
+        assertThat(gamepadMask).isEqualTo(0b11)
+    }
+
+    @Test
+    fun `without multi-controller the mask is the first gamepad only, whatever is attached`() {
+        attachTwoGamepads()
+        rig.preference("checkbox_multi_controller", false)
+
+        rig.create()
+
+        assertThat(gamepadMask).isEqualTo(1)
+    }
+
+    @Test
+    fun `the on-screen controller adds the first gamepad to the ones that are attached`() {
+        connectPad(pad(40))
+        connectPad(pad(7))
+        connectPad(pad(9))
+        rig.preference("checkbox_show_onscreen_controls", true)
+
+        rig.create()
+
+        assertThat(gamepadMask).isEqualTo(0b111)
+    }
+
+    @Test
+    fun `without multi-controller the on-screen controller changes nothing`() {
+        attachTwoGamepads()
+        rig.preference("checkbox_multi_controller", false)
+        rig.preference("checkbox_show_onscreen_controls", true)
+
+        rig.create()
+
+        assertThat(gamepadMask).isEqualTo(1)
+    }
+
+    /** How many messages of the USB driver service wait in the queue of the main looper. */
+    private fun serviceMessagesPending(): Int {
+        var pending = 0
+        var message =
+            ReflectionHelpers.getField<Message?>(Looper.getMainLooper().queue, "mMessages")
+        while (message != null) {
+            if (message.callback?.javaClass?.name?.contains("UsbDriverService") == true) pending++
+            message = ReflectionHelpers.getField<Message?>(message, "next")
+        }
+        return pending
+    }
+
+    /** What the activity looked like at the moment the session heard of the first frame. */
+    private data class AtFirstFrame(
+        val firstFrameShown: Boolean,
+        val watchdog: FirstFrameWatchdog.State,
+        val serviceToldYet: Boolean,
+    )
+
+    @Test
+    fun `at the first frame the activity knows it, the watchdog is satisfied and the service is told`() {
+        rig.preference("checkbox_usb_driver", true)
+        rig.usbDriverService()
+        rig.create()
+        rig.game.connectionStarted()
+        ShadowLooper.idleMainLooper()
+        val seen = mutableListOf<Pair<StreamPhase, AtFirstFrame>>()
+        val watcher =
+            CoroutineScope(UnconfinedTestDispatcher()).launch {
+                rig.session.state.collect {
+                    seen +=
+                        it.phase to
+                            AtFirstFrame(
+                                firstFrameShown = rig.field("firstFrameShown"),
+                                watchdog =
+                                    ReflectionHelpers.getField<FirstFrameWatchdog>(
+                                            rig.field<Any>("startupGuard"),
+                                            "watchdog",
+                                        )
+                                        .state,
+                                serviceToldYet = serviceMessagesPending() > 0,
+                            )
+                }
+            }
+
+        rig.firstFrame()
+        watcher.cancel()
+
+        val atStreaming = seen.single { it.first is StreamPhase.Streaming }.second
+        assertThat(atStreaming)
+            .isEqualTo(
+                AtFirstFrame(
+                    firstFrameShown = true,
+                    watchdog = FirstFrameWatchdog.State.SATISFIED,
+                    serviceToldYet = true,
+                )
+            )
     }
 }

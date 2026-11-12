@@ -479,77 +479,48 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setUpWindow()
-        readSettingsAndFitWindow()
-        bindStreamViews()
-        warnIfMetered()
-        acquireWifiLocks()
-
-        appName = intent.getStringExtra(EXTRA_APP_NAME)
-        pcName = intent.getStringExtra(EXTRA_PC_NAME)
-
-        val host = intent.getStringExtra(EXTRA_HOST)
-        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
-        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0) // 0 is treated as unknown
-        val appId = intent.getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
-        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
-        val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
-        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT)
-        // BOREALIS: absent, as in a shortcut of an older version, it is false (stream)
-        val resumeChosen = intent.getBooleanExtra(EXTRA_RESUME_CHOSEN, false)
-
-        app = NvApp(appName ?: "app", appId, appSupportsHdr)
-
-        var serverCert: X509Certificate? = null
-        try {
-            if (derCertData != null) {
-                serverCert =
-                    CertificateFactory.getInstance("X.509")
-                        .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
-            }
+    // Converted as is from the inherited Java; a server certificate that cannot be read is printed
+    // to the standard error stream, as the Java did (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun readServerCertificate(): X509Certificate? {
+        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT) ?: return null
+        return try {
+            CertificateFactory.getInstance("X.509")
+                .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
         } catch (e: CertificateException) {
             e.printStackTrace()
+            null
+        }
+    }
+
+    // Whether the user enabled HDR and the display lists HDR10; the user is told when it does not.
+    private fun displaySupportsHdr10(): Boolean {
+        if (!prefConfig.enableHdr) {
+            return false
         }
 
-        if (appId == StreamConfiguration.INVALID_APP_ID) {
-            finish()
-            return
-        }
+        // Start our HDR checklist
+        val display = windowManager.defaultDisplay
+        val hdrCaps = display.hdrCapabilities
 
-        // Initialize the MediaCodec helper before creating the decoder
-        val glPrefs = GlPreferences.readPreferences(this)
-        MediaCodecHelper.initialize(this, glPrefs.glRenderer)
-
-        // Check if the user has enabled HDR
-        var willStreamHdr = false
-        if (prefConfig.enableHdr) {
-            // Start our HDR checklist
-            val display = windowManager.defaultDisplay
-            val hdrCaps = display.hdrCapabilities
-
-            // We must now ensure our display is compatible with HDR10
-            if (hdrCaps != null) {
-                // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android
-                // 8.0
-                for (hdrType in hdrCaps.supportedHdrTypes) {
-                    if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
-                        willStreamHdr = true
-                        break
-                    }
+        // We must now ensure our display is compatible with HDR10
+        if (hdrCaps != null) {
+            // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android 8.0
+            for (hdrType in hdrCaps.supportedHdrTypes) {
+                if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
+                    return true
                 }
             }
-
-            if (!willStreamHdr) {
-                // Nope, no HDR for us :(
-                Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show()
-            }
         }
 
+        // Nope, no HDR for us :(
+        Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show()
+        return false
+    }
+
+    // The decoder is built with what the display says about HDR, before the checks that may turn
+    // HDR off for the stream.
+    private fun createDecoderRenderer(displayHdr: Boolean, glRenderer: String) {
         decoderRenderer =
             MediaCodecDecoderRenderer(
                 this,
@@ -575,8 +546,8 @@ class Game :
                     }
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
-                willStreamHdr,
-                glPrefs.glRenderer,
+                displayHdr,
+                glRenderer,
             )
         // BOREALIS: first rendered frame ends the watchdog
         decoderRenderer.firstFrameSignal.listener = Runnable {
@@ -588,14 +559,19 @@ class Game :
             startupGuard.onFirstFrame()
             streamSession.onFirstFrame()
         }
+    }
+
+    // Warns about what the decoder cannot do; the answer is whether the stream may use HDR.
+    private fun checkDecoderFormats(displayHdr: Boolean): Boolean {
+        var streamHdr = displayHdr
 
         // Don't stream HDR if the decoder can't support it
         if (
-            willStreamHdr &&
+            streamHdr &&
                 !decoderRenderer.isHevcMain10Hdr10Supported() &&
                 !decoderRenderer.isAv1Main10Supported()
         ) {
-            willStreamHdr = false
+            streamHdr = false
             Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show()
         }
 
@@ -615,21 +591,29 @@ class Game :
             Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
         }
 
+        return streamHdr
+    }
+
+    private fun videoFormatMask(streamHdr: Boolean): Int {
         // H.264 is always supported
         var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
         if (decoderRenderer.isHevcSupported()) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265
-            if (willStreamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
+            if (streamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265_MAIN10
             }
         }
         if (decoderRenderer.isAv1Supported()) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN8
-            if (willStreamHdr && decoderRenderer.isAv1Main10Supported()) {
+            if (streamHdr && decoderRenderer.isAv1Main10Supported()) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN10
             }
         }
 
+        return supportedVideoFormats
+    }
+
+    private fun attachedGamepadMask(): Int {
         var gamepadMask = ControllerHandler.getAttachedControllerMask(this).toInt()
         if (!prefConfig.multiController) {
             // Always set gamepad 1 present for when multi-controller is
@@ -642,10 +626,12 @@ class Game :
             gamepadMask = gamepadMask or 1
         }
 
-        // Set to the optimal mode for streaming
-        val displayRefreshRate = prepareDisplayForRendering()
-        LimeLog.info("Display refresh rate: $displayRefreshRate")
+        return gamepadMask
+    }
 
+    // The frame rate to ask the host for. A capped frame rate changes the pacing to balanced when
+    // the display cannot take it.
+    private fun chooseFrameRate(displayRefreshRate: Float): Int {
         // If the user requested frame pacing using a capped FPS, we will need to change our
         // desired FPS setting here in accordance with the active display refresh rate.
         val roundedRefreshRate = Math.round(displayRefreshRate)
@@ -666,6 +652,58 @@ class Game :
                 }
             }
         }
+
+        return chosenFrameRate
+    }
+
+    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    @Suppress("LongMethod")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setUpWindow()
+        readSettingsAndFitWindow()
+        bindStreamViews()
+        warnIfMetered()
+        acquireWifiLocks()
+
+        appName = intent.getStringExtra(EXTRA_APP_NAME)
+        pcName = intent.getStringExtra(EXTRA_PC_NAME)
+
+        val host = intent.getStringExtra(EXTRA_HOST)
+        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
+        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0) // 0 is treated as unknown
+        val appId = intent.getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
+        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
+        val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
+        // BOREALIS: absent, as in a shortcut of an older version, it is false (stream)
+        val resumeChosen = intent.getBooleanExtra(EXTRA_RESUME_CHOSEN, false)
+
+        app = NvApp(appName ?: "app", appId, appSupportsHdr)
+
+        val serverCert = readServerCertificate()
+
+        if (appId == StreamConfiguration.INVALID_APP_ID) {
+            finish()
+            return
+        }
+
+        // Initialize the MediaCodec helper before creating the decoder
+        val glPrefs = GlPreferences.readPreferences(this)
+        MediaCodecHelper.initialize(this, glPrefs.glRenderer)
+
+        val displayHdr = displaySupportsHdr10()
+        createDecoderRenderer(displayHdr, glPrefs.glRenderer)
+        val streamHdr = checkDecoderFormats(displayHdr)
+        val supportedVideoFormats = videoFormatMask(streamHdr)
+
+        val gamepadMask = attachedGamepadMask()
+
+        // Set to the optimal mode for streaming
+        val displayRefreshRate = prepareDisplayForRendering()
+        LimeLog.info("Display refresh rate: $displayRefreshRate")
+
+        val chosenFrameRate = chooseFrameRate(displayRefreshRate)
 
         // BOREALIS: audited as negotiated, not as requested (host.launch)
         streamFrameRate = chosenFrameRate

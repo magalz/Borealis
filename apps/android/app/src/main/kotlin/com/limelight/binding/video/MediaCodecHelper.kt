@@ -17,7 +17,9 @@ import java.util.LinkedList
 import java.util.Locale
 import java.util.regex.Pattern
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+// Converted as is from the inherited Java; the rest is for later sprints:
+// - TooManyFunctions and LargeClass: the class waits for its split (Sprint 18d backlog).
+// - ForbiddenComment: the inherited TODO notes go in the relabel sweep of this sprint.
 @Suppress("TooManyFunctions", "LargeClass", "ForbiddenComment")
 object MediaCodecHelper {
     private const val NOT_INITIALIZED = "MediaCodecHelper must be initialized before use"
@@ -423,7 +425,7 @@ object MediaCodecHelper {
 
     // A null mime type reaches getCapabilitiesForType as in the Java, whose callers catch what it
     // throws.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Buggy codecs are tolerated and the trace printed, as in the Java (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     private fun decoderSupportsAndroidRLowLatency(
         decoderInfo: MediaCodecInfo,
@@ -456,7 +458,7 @@ object MediaCodecHelper {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Buggy codecs are tolerated and the trace printed, as in the Java (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     private fun decoderSupportsKnownVendorLowLatencyOption(decoderName: String): Boolean {
         // It's only possible to probe vendor parameters on Android 12 and above.
@@ -624,7 +626,7 @@ object MediaCodecHelper {
         return setNewOption
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Buggy codecs are tolerated and the trace printed, as in the Java (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     @JvmStatic
     fun decoderSupportsFusedIdrFrame(decoderInfo: MediaCodecInfo, mimeType: String): Boolean {
@@ -648,7 +650,7 @@ object MediaCodecHelper {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Buggy codecs are tolerated and the trace printed, as in the Java (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     @JvmStatic
     fun decoderSupportsAdaptivePlayback(decoderInfo: MediaCodecInfo, mimeType: String): Boolean {
@@ -1059,7 +1061,7 @@ object MediaCodecHelper {
         return string.lowercase(Locale.ENGLISH).contains(substring.lowercase(Locale.ENGLISH))
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The true branches read fixed system paths, so no test proves a rewrite (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace", "ReturnCount")
     private fun isExynos4Device(): Boolean {
         try {

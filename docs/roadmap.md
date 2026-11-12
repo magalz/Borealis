@@ -2237,11 +2237,12 @@ Owner decisions of 2026-11-11: Sprint 18b runs as two pull requests, the test an
       test fixtures of `:borealis:logging`. `PHONE` and `TV` are declared once, in the design system's test
       fixtures (`apps/android/borealis/designsystem/src/testFixtures/kotlin/io/github/magalz/borealis/designsystem/testing/Devices.kt`),
       with three more constants for values that several modules shared: `PHONE_LANDSCAPE`, `HANDHELD` and
-      `HANDHELD_NO_TOUCH`. Values that differ keep their own names in their own files: the taller settings
+      `HANDHELD_NO_TOUCH`. Other values keep their own names in their own files: the taller settings
       screenshots, the background frame export, and a 360 dp high handheld in five design system tests. A
       list of all 1,310 qualifier uses, resolved to their strings, is identical before and after, and the
-      screenshot verify of the four Compose modules passed with no re-recording. Raw qualifier literals went
-      from 139 to 45. The App tests were not touched by BORE-118 (one App literal still equals `TV`);
+      screenshot verify of the four Compose modules passed with no re-recording. A few literals and file
+      constants equal to the shared handheld and landscape values are left as they were, and the App tests
+      were not touched by BORE-118 (one App literal still equals `TV`);
     - the smaller leftovers (`ANDROID_NS`, the `@Config(sdk = [30])` literals, the name of
       `BorealisCoverageTest`, and line 16 of `apps/android/borealis/README.md`). **Done in Sprint 18b-1
       (BORE-110).** One `ANDROID_NS`; 27 numeric levels in 12 files use the `AndroidLevels` constants, with

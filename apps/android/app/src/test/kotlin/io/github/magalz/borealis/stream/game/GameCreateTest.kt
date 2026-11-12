@@ -1,6 +1,7 @@
 package io.github.magalz.borealis.stream.game
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.wifi.WifiManager
 import android.view.InputDevice
 import android.view.View
@@ -86,6 +87,25 @@ internal class GameCreateTest : GameTestBase() {
             val shadow = Shadow.extract<Any>(rig.field<WifiManager.WifiLock>(name))
             assertThat(ReflectionHelpers.getField<Boolean>(shadow, "refCounted")).isFalse()
         }
+    }
+
+    @Test
+    fun `the two Wi-Fi locks are two locks`() {
+        rig.create()
+
+        val highPerf = rig.field<WifiManager.WifiLock>("highPerfWifiLock")
+        assertThat(rig.field<WifiManager.WifiLock>("lowLatencyWifiLock"))
+            .isNotSameInstanceAs(highPerf)
+    }
+
+    @Test
+    fun `the decoder tombstone is kept in the DecoderTombstone preferences`() {
+        rig.create()
+
+        assertThat(rig.field<SharedPreferences>("tombstonePrefs"))
+            .isSameInstanceAs(
+                rig.application.getSharedPreferences("DecoderTombstone", Context.MODE_PRIVATE)
+            )
     }
 
     @Test

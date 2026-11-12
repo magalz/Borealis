@@ -1219,136 +1219,147 @@ class MediaCodecDecoderRenderer(
         handler.post { Choreographer.getInstance().postFrameCallback(this) }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("LongMethod", "NestedBlockDepth")
     private fun startRendererThread() {
         val thread =
             object : Thread() {
-                override fun run() {
-                    val info = MediaCodec.BufferInfo()
-                    while (!stopping) {
-                        try {
-                            // Try to output a frame
-                            val outIndex =
-                                requireDecoder().dequeueOutputBuffer(info, OUTPUT_BUFFER_TIMEOUT_US)
-                            if (outIndex >= 0) {
-                                var presentationTimeUs = info.presentationTimeUs
-                                // BOREALIS: stream.perf
-                                var matchedDecodeUs = matchOutput(presentationTimeUs)
-                                var lastIndex = outIndex
-
-                                numFramesOut++
-
-                                // Render the latest frame now if frame pacing isn't in balanced
-                                // mode
-                                if (
-                                    prefs.framePacing !=
-                                        PreferenceConfiguration.FRAME_PACING_BALANCED
-                                ) {
-                                    // Get the last output buffer in the queue
-                                    while (true) {
-                                        val nextIndex =
-                                            requireDecoder().dequeueOutputBuffer(info, 0)
-                                        if (nextIndex < 0) {
-                                            break
-                                        }
-                                        requireDecoder().releaseOutputBuffer(lastIndex, false)
-
-                                        numFramesOut++
-
-                                        lastIndex = nextIndex
-                                        presentationTimeUs = info.presentationTimeUs
-                                        // BOREALIS: stream.perf
-                                        matchedDecodeUs = matchOutput(presentationTimeUs)
-                                    }
-
-                                    if (
-                                        prefs.framePacing ==
-                                            PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
-                                            prefs.framePacing ==
-                                                PreferenceConfiguration.FRAME_PACING_CAP_FPS
-                                    ) {
-                                        // In max smoothness or cap FPS mode, we want to never drop
-                                        // frames. Use a PTS that will cause this frame to never be
-                                        // dropped
-                                        requireDecoder().releaseOutputBuffer(lastIndex, 0L)
-                                    } else {
-                                        // Use a PTS that will cause this frame to be dropped if
-                                        // another comes in within the same V-sync period
-                                        requireDecoder()
-                                            .releaseOutputBuffer(lastIndex, System.nanoTime())
-                                    }
-
-                                    activeWindowVideoStats.totalFramesRendered++
-                                    // BOREALIS: first-frame signal
-                                    firstFrameSignal.frameRendered()
-                                } else {
-                                    // For balanced frame pacing case, the Choreographer callback
-                                    // will handle rendering. We just put all frames into the output
-                                    // buffer queue and let it handle things.
-
-                                    // Discard the oldest buffer if we've exceeded our limit.
-                                    //
-                                    // NB: We have to do this on the producer side because the
-                                    // consumer may not run for a while (if there is a huge mismatch
-                                    // between stream FPS and display refresh rate).
-                                    if (outputBufferQueue.size == OUTPUT_BUFFER_QUEUE_LIMIT) {
-                                        try {
-                                            requireDecoder()
-                                                .releaseOutputBuffer(
-                                                    outputBufferQueue.take(),
-                                                    false,
-                                                )
-                                        } catch (e: InterruptedException) {
-                                            // We're shutting down, so we can just drop this buffer
-                                            // on the floor and it will be reclaimed when the codec
-                                            // is released.
-                                            return
-                                        }
-                                    }
-
-                                    // Add this buffer
-                                    outputBufferQueue.add(lastIndex)
-                                }
-
-                                // Add delta time to the totals (excluding probable outliers)
-                                // BOREALIS: stream.perf: from the queue time when the output
-                                // matched an input, else from the timestamp as before
-                                val decodeUs = // BOREALIS: stream.perf
-                                    if (matchedDecodeUs != DecodeTimeTracker.NO_MATCH) {
-                                        matchedDecodeUs
-                                    } else {
-                                        (SystemClock.uptimeMillis() -
-                                            (presentationTimeUs / MICROS_PER_MILLI)) *
-                                            MICROS_PER_MILLI
-                                    }
-                                // BOREALIS: stream.perf
-                                if (decodeUs >= 0 && decodeUs < MAX_DECODE_TIME_US) {
-                                    // BOREALIS: stream.perf
-                                    val delta = (decodeUs + HALF_MILLI_US) / MICROS_PER_MILLI
-                                    // BOREALIS: stream.perf
-                                    activeWindowVideoStats.decoderTimeUs += decodeUs
-                                    activeWindowVideoStats.decoderTimeMs += delta
-                                    activeWindowVideoStats.totalTimeMs += delta
-                                }
-                            } else if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                                // INFO_TRY_AGAIN_LATER and any other negative index need nothing.
-                                LimeLog.info("Output format changed")
-                                outputFormat = requireDecoder().outputFormat
-                                LimeLog.info("New output format: $outputFormat")
-                            }
-                        } catch (e: IllegalStateException) {
-                            handleDecoderException(e)
-                        } finally {
-                            doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD)
-                        }
-                    }
-                }
+                // One BufferInfo for the life of the thread: the loop runs for every frame.
+                override fun run() = renderLoop(MediaCodec.BufferInfo())
             }
         rendererThread = thread
         thread.name = "Video - Renderer (MediaCodec)"
         thread.priority = Thread.NORM_PRIORITY + 2
         thread.start()
+    }
+
+    // The body of the renderer thread. The recovery runs after every pass, also after the one that
+    // ends the thread.
+    private fun renderLoop(info: MediaCodec.BufferInfo) {
+        while (!stopping) {
+            try {
+                if (!processOutput(info)) {
+                    return
+                }
+            } catch (e: IllegalStateException) {
+                handleDecoderException(e)
+            } finally {
+                doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD)
+            }
+        }
+    }
+
+    // One pass: try to output a frame. Answers false when the thread must end.
+    private fun processOutput(info: MediaCodec.BufferInfo): Boolean {
+        val outIndex = requireDecoder().dequeueOutputBuffer(info, OUTPUT_BUFFER_TIMEOUT_US)
+        if (outIndex >= 0) {
+            return handleOutputFrame(outIndex, info)
+        } else if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+            // INFO_TRY_AGAIN_LATER and any other negative index need nothing.
+            LimeLog.info("Output format changed")
+            outputFormat = requireDecoder().outputFormat
+            LimeLog.info("New output format: $outputFormat")
+        }
+        return true
+    }
+
+    // The frame in [outIndex] is out, and [info] describes it. Answers false when the thread must
+    // end.
+    private fun handleOutputFrame(outIndex: Int, info: MediaCodec.BufferInfo): Boolean {
+        var presentationTimeUs = info.presentationTimeUs
+        // BOREALIS: stream.perf
+        var matchedDecodeUs = matchOutput(presentationTimeUs)
+        var lastIndex = outIndex
+
+        numFramesOut++
+
+        // Render the latest frame now if frame pacing isn't in balanced mode
+        if (prefs.framePacing != PreferenceConfiguration.FRAME_PACING_BALANCED) {
+            // Get the last output buffer in the queue
+            while (true) {
+                val nextIndex = requireDecoder().dequeueOutputBuffer(info, 0)
+                if (nextIndex < 0) {
+                    break
+                }
+                requireDecoder().releaseOutputBuffer(lastIndex, false)
+
+                numFramesOut++
+
+                lastIndex = nextIndex
+                presentationTimeUs = info.presentationTimeUs
+                // BOREALIS: stream.perf
+                matchedDecodeUs = matchOutput(presentationTimeUs)
+            }
+
+            showNewestFrame(lastIndex)
+        } else if (!queueForFramePacing(lastIndex)) {
+            return false
+        }
+
+        addDecodeTime(matchedDecodeUs, presentationTimeUs)
+        return true
+    }
+
+    private fun showNewestFrame(lastIndex: Int) {
+        if (
+            prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
+                prefs.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS
+        ) {
+            // In max smoothness or cap FPS mode, we want to never drop frames. Use a PTS that will
+            // cause this frame to never be dropped
+            requireDecoder().releaseOutputBuffer(lastIndex, 0L)
+        } else {
+            // Use a PTS that will cause this frame to be dropped if another comes in within the
+            // same V-sync period
+            requireDecoder().releaseOutputBuffer(lastIndex, System.nanoTime())
+        }
+
+        activeWindowVideoStats.totalFramesRendered++
+        // BOREALIS: first-frame signal
+        firstFrameSignal.frameRendered()
+    }
+
+    // For the balanced frame pacing case, the Choreographer callback will handle rendering. We just
+    // put all frames into the output buffer queue and let it handle things. Answers false when the
+    // thread was interrupted while it took the oldest buffer, and must end.
+    private fun queueForFramePacing(lastIndex: Int): Boolean {
+        // Discard the oldest buffer if we've exceeded our limit.
+        //
+        // NB: We have to do this on the producer side because the consumer may not run for a while
+        // (if there is a huge mismatch between stream FPS and display refresh rate).
+        if (outputBufferQueue.size == OUTPUT_BUFFER_QUEUE_LIMIT) {
+            try {
+                requireDecoder().releaseOutputBuffer(outputBufferQueue.take(), false)
+            } catch (e: InterruptedException) {
+                // We're shutting down, so we can just drop this buffer on the floor and it will be
+                // reclaimed when the codec is released.
+                return false
+            }
+        }
+
+        // Add this buffer
+        outputBufferQueue.add(lastIndex)
+        return true
+    }
+
+    // Add delta time to the totals (excluding probable outliers)
+    // BOREALIS: stream.perf: from the queue time when the output matched an input, else from the
+    // timestamp as before
+    private fun addDecodeTime(matchedDecodeUs: Long, presentationTimeUs: Long) {
+        val decodeUs = // BOREALIS: stream.perf
+            if (matchedDecodeUs != DecodeTimeTracker.NO_MATCH) {
+                matchedDecodeUs
+            } else {
+                (SystemClock.uptimeMillis() - (presentationTimeUs / MICROS_PER_MILLI)) *
+                    MICROS_PER_MILLI
+            }
+        // BOREALIS: stream.perf
+        if (decodeUs >= 0 && decodeUs < MAX_DECODE_TIME_US) {
+            // BOREALIS: stream.perf
+            val delta = (decodeUs + HALF_MILLI_US) / MICROS_PER_MILLI
+            // BOREALIS: stream.perf
+            activeWindowVideoStats.decoderTimeUs += decodeUs
+            activeWindowVideoStats.decoderTimeMs += delta
+            activeWindowVideoStats.totalTimeMs += delta
+        }
     }
 
     private fun fetchNextInputBuffer(): Boolean {

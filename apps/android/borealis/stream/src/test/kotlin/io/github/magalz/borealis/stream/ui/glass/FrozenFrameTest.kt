@@ -446,6 +446,22 @@ class FrozenFrameTest {
         assertThat(line.fields).containsExactly("reason" to "no_surface")
     }
 
+    @Test
+    fun `a copy that worked but ends with the video gone keeps no frame and says so`() {
+        frozen.request()
+
+        // The surface is gone when the copy ends, as when picture-in-picture ends under it.
+        source.bounds = null
+        source.finish()
+
+        assertThat(frozen.frame).isNull()
+        assertThat(lines().map { it.message })
+            .containsExactly("Frozen frame requested", "Frozen frame failed")
+        val line = lines().single { it.message == "Frozen frame failed" }
+        assertThat(line.level).isEqualTo(LogLevel.WARN)
+        assertThat(line.fields).containsExactly("reason" to "no_surface")
+    }
+
     private companion object {
         const val NANOS_PER_MILLI = 1_000_000L
     }

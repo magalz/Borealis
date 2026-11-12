@@ -366,6 +366,17 @@ class MediaCodecHelperLogTest : MediaCodecHelperTestBase() {
             installCodecs()
             logged { helper.findFirstDecoder("video/avc") }
         }
+        rows.check(
+            "a blacklisted decoder of another type is not logged",
+            infos("First decoder choice is c2.vendor.avc"),
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("OMX.google.h265.decoder") { mime = "video/hevc" },
+                codec("c2.vendor.avc"),
+            )
+            logged { helper.findFirstDecoder("video/avc") }
+        }
 
         rows.verify()
     }
@@ -559,6 +570,43 @@ class MediaCodecHelperLogTest : MediaCodecHelperTestBase() {
                 codec("c2.vendor.low") { lowLatency = true },
             )
             logged { helper.findProbableSafeDecoder("video/avc", -1) }
+        }
+
+        rows.verify()
+    }
+
+    @Test
+    fun `the search for a decoder when every one throws logs a blacklisted decoder of the type only`() {
+        val rows = Rows()
+
+        rows.check(
+            "a blacklisted decoder of the type is logged and a decoder that throws is the answer",
+            infos(
+                "Skipping blacklisted decoder: OMX.google.h264.decoder",
+                "Skipping decoder that throws for its capabilities: c2.vendor.buggy",
+                "Every decoder for video/avc throws, the first is c2.vendor.buggy",
+            ),
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("OMX.google.h264.decoder"),
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+            )
+            logged { helper.call("findDecoderWhenAllThrow", "video/avc") }
+        }
+        rows.check(
+            "a blacklisted decoder of another type is not logged",
+            infos(
+                "Skipping decoder that throws for its capabilities: c2.vendor.buggy",
+                "Every decoder for video/avc throws, the first is c2.vendor.buggy",
+            ),
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("OMX.google.h265.decoder") { mime = "video/hevc" },
+                codec("c2.vendor.buggy") { brokenCapabilities = true },
+            )
+            logged { helper.call("findDecoderWhenAllThrow", "video/avc") }
         }
 
         rows.verify()

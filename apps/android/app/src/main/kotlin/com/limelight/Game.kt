@@ -493,6 +493,126 @@ class Game :
         }
     }
 
+    // Whether the user enabled HDR and the display lists HDR10; the user is told when it does not.
+    private fun displaySupportsHdr10(): Boolean {
+        if (!prefConfig.enableHdr) {
+            return false
+        }
+
+        // Start our HDR checklist
+        val display = windowManager.defaultDisplay
+        val hdrCaps = display.hdrCapabilities
+
+        // We must now ensure our display is compatible with HDR10
+        if (hdrCaps != null) {
+            // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android 8.0
+            for (hdrType in hdrCaps.supportedHdrTypes) {
+                if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
+                    return true
+                }
+            }
+        }
+
+        // Nope, no HDR for us :(
+        Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show()
+        return false
+    }
+
+    // The decoder is built with what the display says about HDR, before the checks that may turn
+    // HDR off for the stream.
+    private fun createDecoderRenderer(displayHdr: Boolean, glRenderer: String) {
+        decoderRenderer =
+            MediaCodecDecoderRenderer(
+                this,
+                prefConfig,
+                object : CrashListener {
+                    override fun notifyCrash(e: Exception) {
+                        // The MediaCodec instance is going down due to a crash
+                        // let's tell the user something when they open the app again
+
+                        // We must use commit because the app will crash when we return from this
+                        // function
+                        tombstonePrefs.edit(commit = true) {
+                            putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
+                        }
+                        reportedCrash = true
+                    }
+
+                    // BOREALIS: the codec refused the surface, which stopped the renderer. The
+                    // renderer calls this on the thread that recovers the codec, while the other
+                    // threads wait for it, so it only posts (stream)
+                    override fun surfaceLost() {
+                        Handler(Looper.getMainLooper()).post { endStreamForLostSurface() }
+                    }
+                },
+                tombstonePrefs.getInt("CrashCount", 0),
+                displayHdr,
+                glRenderer,
+            )
+        // BOREALIS: first rendered frame ends the watchdog
+        decoderRenderer.firstFrameSignal.listener = Runnable {
+            firstFrameShown = true // BOREALIS
+            val usbBinder = usbDriverBinder // BOREALIS
+            if (usbBinder != null) {
+                usbBinder.onStreamReady()
+            }
+            startupGuard.onFirstFrame()
+            streamSession.onFirstFrame()
+        }
+    }
+
+    // Warns about what the decoder cannot do; the answer is whether the stream may use HDR.
+    private fun checkDecoderFormats(displayHdr: Boolean): Boolean {
+        var streamHdr = displayHdr
+
+        // Don't stream HDR if the decoder can't support it
+        if (
+            streamHdr &&
+                !decoderRenderer.isHevcMain10Hdr10Supported() &&
+                !decoderRenderer.isAv1Main10Supported()
+        ) {
+            streamHdr = false
+            Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show()
+        }
+
+        // Display a message to the user if HEVC was forced on but we still didn't find a decoder
+        if (
+            prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC &&
+                !decoderRenderer.isHevcSupported()
+        ) {
+            Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show()
+        }
+
+        // Display a message to the user if AV1 was forced on but we still didn't find a decoder
+        if (
+            prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 &&
+                !decoderRenderer.isAv1Supported()
+        ) {
+            Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
+        }
+
+        return streamHdr
+    }
+
+    private fun videoFormatMask(streamHdr: Boolean): Int {
+        // H.264 is always supported
+        var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
+        if (decoderRenderer.isHevcSupported()) {
+            supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265
+            if (streamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
+                supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265_MAIN10
+            }
+        }
+        if (decoderRenderer.isAv1Supported()) {
+            supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN8
+            if (streamHdr && decoderRenderer.isAv1Main10Supported()) {
+                supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN10
+            }
+        }
+
+        return supportedVideoFormats
+    }
+
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -529,110 +649,10 @@ class Game :
         val glPrefs = GlPreferences.readPreferences(this)
         MediaCodecHelper.initialize(this, glPrefs.glRenderer)
 
-        // Check if the user has enabled HDR
-        var willStreamHdr = false
-        if (prefConfig.enableHdr) {
-            // Start our HDR checklist
-            val display = windowManager.defaultDisplay
-            val hdrCaps = display.hdrCapabilities
-
-            // We must now ensure our display is compatible with HDR10
-            if (hdrCaps != null) {
-                // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android
-                // 8.0
-                for (hdrType in hdrCaps.supportedHdrTypes) {
-                    if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
-                        willStreamHdr = true
-                        break
-                    }
-                }
-            }
-
-            if (!willStreamHdr) {
-                // Nope, no HDR for us :(
-                Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show()
-            }
-        }
-
-        decoderRenderer =
-            MediaCodecDecoderRenderer(
-                this,
-                prefConfig,
-                object : CrashListener {
-                    override fun notifyCrash(e: Exception) {
-                        // The MediaCodec instance is going down due to a crash
-                        // let's tell the user something when they open the app again
-
-                        // We must use commit because the app will crash when we return from this
-                        // function
-                        tombstonePrefs.edit(commit = true) {
-                            putInt("CrashCount", tombstonePrefs.getInt("CrashCount", 0) + 1)
-                        }
-                        reportedCrash = true
-                    }
-
-                    // BOREALIS: the codec refused the surface, which stopped the renderer. The
-                    // renderer calls this on the thread that recovers the codec, while the other
-                    // threads wait for it, so it only posts (stream)
-                    override fun surfaceLost() {
-                        Handler(Looper.getMainLooper()).post { endStreamForLostSurface() }
-                    }
-                },
-                tombstonePrefs.getInt("CrashCount", 0),
-                willStreamHdr,
-                glPrefs.glRenderer,
-            )
-        // BOREALIS: first rendered frame ends the watchdog
-        decoderRenderer.firstFrameSignal.listener = Runnable {
-            firstFrameShown = true // BOREALIS
-            val usbBinder = usbDriverBinder // BOREALIS
-            if (usbBinder != null) {
-                usbBinder.onStreamReady()
-            }
-            startupGuard.onFirstFrame()
-            streamSession.onFirstFrame()
-        }
-
-        // Don't stream HDR if the decoder can't support it
-        if (
-            willStreamHdr &&
-                !decoderRenderer.isHevcMain10Hdr10Supported() &&
-                !decoderRenderer.isAv1Main10Supported()
-        ) {
-            willStreamHdr = false
-            Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show()
-        }
-
-        // Display a message to the user if HEVC was forced on but we still didn't find a decoder
-        if (
-            prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_HEVC &&
-                !decoderRenderer.isHevcSupported()
-        ) {
-            Toast.makeText(this, "No HEVC decoder found", Toast.LENGTH_LONG).show()
-        }
-
-        // Display a message to the user if AV1 was forced on but we still didn't find a decoder
-        if (
-            prefConfig.videoFormat == PreferenceConfiguration.FormatOption.FORCE_AV1 &&
-                !decoderRenderer.isAv1Supported()
-        ) {
-            Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
-        }
-
-        // H.264 is always supported
-        var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
-        if (decoderRenderer.isHevcSupported()) {
-            supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265
-            if (willStreamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
-                supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265_MAIN10
-            }
-        }
-        if (decoderRenderer.isAv1Supported()) {
-            supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN8
-            if (willStreamHdr && decoderRenderer.isAv1Main10Supported()) {
-                supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN10
-            }
-        }
+        val displayHdr = displaySupportsHdr10()
+        createDecoderRenderer(displayHdr, glPrefs.glRenderer)
+        val streamHdr = checkDecoderFormats(displayHdr)
+        val supportedVideoFormats = videoFormatMask(streamHdr)
 
         var gamepadMask = ControllerHandler.getAttachedControllerMask(this).toInt()
         if (!prefConfig.multiController) {

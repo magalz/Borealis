@@ -7,6 +7,9 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.DpRect
 import com.google.common.truth.Expect
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -14,10 +17,7 @@ import io.github.magalz.borealis.designsystem.theme.CardDensity
 import io.github.magalz.borealis.designsystem.theme.FormFactor
 import io.github.magalz.borealis.designsystem.theme.TextSpacing
 import io.github.magalz.borealis.library.testing.AppsOf
-import io.github.magalz.borealis.library.testing.HANDHELD
 import io.github.magalz.borealis.library.testing.HostsOf
-import io.github.magalz.borealis.library.testing.PHONE
-import io.github.magalz.borealis.library.testing.TV
 import io.github.magalz.borealis.library.testing.appTiles
 import io.github.magalz.borealis.library.testing.hostCards
 import io.github.magalz.borealis.library.testing.manyApps

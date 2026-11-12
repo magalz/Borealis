@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.magalz.borealis.designsystem.testing.OnPage
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.assertNoClippedText
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
@@ -29,7 +30,7 @@ import org.robolectric.annotation.Config
  * end, so that no word is broken and nothing is cut.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi", fontScale = 1.3f)
+@Config(qualifiers = PHONE, fontScale = 1.3f)
 class SettingsRowTrailingTest {
     @get:Rule val composeRule = createComposeRule()
 

@@ -20,10 +20,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.host.StreamChromeHost
 import io.github.magalz.borealis.stream.testing.RecordingActions
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.testing.aSessionInfo
 import java.time.Duration

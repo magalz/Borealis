@@ -18,6 +18,7 @@ import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.background.FakeBackgroundPlayers
 import io.github.magalz.borealis.designsystem.background.LocalBackgroundPlayerFactory
 import io.github.magalz.borealis.designsystem.background.TestLifecycle
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.theme.BorealisLook
 import io.github.magalz.borealis.designsystem.theme.LocalBorealisLook
 import io.github.magalz.borealis.designsystem.theme.Transparency
@@ -32,7 +33,7 @@ import org.robolectric.annotation.Config
  * clip that plays: the look and the background style change in Settings while the screen is on.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class GlassHostStateTest {
     @get:Rule val composeRule = createComposeRule()
 

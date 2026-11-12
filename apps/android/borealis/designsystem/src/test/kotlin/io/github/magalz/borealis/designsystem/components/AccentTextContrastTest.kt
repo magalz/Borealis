@@ -13,6 +13,7 @@ import io.github.magalz.borealis.designsystem.glass.AA_RATIO
 import io.github.magalz.borealis.designsystem.glass.LAID
 import io.github.magalz.borealis.designsystem.glass.contrast
 import io.github.magalz.borealis.designsystem.glass.luminance
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import io.github.magalz.borealis.designsystem.testing.textColor
 import io.github.magalz.borealis.designsystem.theme.AccentChoice
 import io.github.magalz.borealis.designsystem.theme.BorealisColors
@@ -33,7 +34,7 @@ import org.robolectric.annotation.Config
  * is solid.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w360dp-h640dp-xhdpi")
+@Config(qualifiers = PHONE)
 class AccentTextContrastTest {
     @get:Rule val composeRule = createComposeRule()
 

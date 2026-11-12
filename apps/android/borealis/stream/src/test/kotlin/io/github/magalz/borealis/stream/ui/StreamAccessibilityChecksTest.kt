@@ -12,7 +12,11 @@ import com.google.android.apps.common.testing.accessibility.framework.checks.Tex
 import com.google.android.apps.common.testing.accessibility.framework.checks.TouchTargetSizeCheck
 import io.github.magalz.borealis.designsystem.background.BackgroundStyle
 import io.github.magalz.borealis.designsystem.testing.AcceptedFinding
+import io.github.magalz.borealis.designsystem.testing.HANDHELD
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.PHONE_LANDSCAPE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
 import io.github.magalz.borealis.designsystem.testing.showing
 import io.github.magalz.borealis.designsystem.testing.taggedWith
@@ -27,12 +31,8 @@ import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StartStage
 import io.github.magalz.borealis.stream.StreamPhase
 import io.github.magalz.borealis.stream.StreamVisuals
-import io.github.magalz.borealis.stream.testing.HANDHELD
-import io.github.magalz.borealis.stream.testing.PHONE
-import io.github.magalz.borealis.stream.testing.PHONE_LANDSCAPE
 import io.github.magalz.borealis.stream.testing.RecordingActions
 import io.github.magalz.borealis.stream.testing.RecordingIntents
-import io.github.magalz.borealis.stream.testing.TV
 import io.github.magalz.borealis.stream.testing.aPerf
 import io.github.magalz.borealis.stream.testing.aSession
 import io.github.magalz.borealis.stream.ui.background.OutsideGameBackground

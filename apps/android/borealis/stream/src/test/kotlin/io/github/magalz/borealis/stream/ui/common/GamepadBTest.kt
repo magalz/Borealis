@@ -18,7 +18,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.magalz.borealis.stream.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.PHONE
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

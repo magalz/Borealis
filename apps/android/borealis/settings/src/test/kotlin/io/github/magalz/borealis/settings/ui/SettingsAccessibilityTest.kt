@@ -21,6 +21,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.HANDHELD_NO_TOUCH
+import io.github.magalz.borealis.designsystem.testing.PHONE
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.settings.catalog.Settings
 import io.github.magalz.borealis.settings.options.DefaultSettingsOptions
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -689,7 +692,7 @@ class SettingsLookTvTest : SettingsLookTestBase() {
 
 /** The group list of a handheld, which may scroll. */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = HANDHELD)
+@Config(qualifiers = HANDHELD_NO_TOUCH)
 class SettingsLookHandheldTest : SettingsLookTestBase() {
     override fun open(title: String) {
         openGroup(title)

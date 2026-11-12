@@ -16,9 +16,6 @@ import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-const val PHONE = "w360dp-h640dp-xhdpi"
-const val TV = "w960dp-h540dp-land-television-xhdpi"
-
 /** 2026-10-16 20:50 UTC, the moment of every test. */
 val NOW: Instant = Instant.parse("2026-10-16T20:50:00Z")
 

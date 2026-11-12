@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.isSpecified
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.letterSpacingEm
 import io.github.magalz.borealis.designsystem.testing.lineHeightEm
 import io.github.magalz.borealis.designsystem.testing.textLayout
@@ -30,7 +31,7 @@ import org.robolectric.annotation.Config
  * were, with no letter spacing and no line height of their own.
  */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class CodesSpacingTest {
     @get:Rule val composeRule = createComposeRule()
 

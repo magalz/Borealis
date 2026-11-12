@@ -7,6 +7,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.settings.options.ResolutionChoice
 import io.github.magalz.borealis.settings.options.ResolutionKind
 import io.github.magalz.borealis.settings.testing.assertDialogWidth

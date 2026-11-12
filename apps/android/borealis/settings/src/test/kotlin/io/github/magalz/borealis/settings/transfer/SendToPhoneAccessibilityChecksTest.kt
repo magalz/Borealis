@@ -3,6 +3,7 @@ package io.github.magalz.borealis.settings.transfer
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.magalz.borealis.designsystem.testing.NoTouchOnTv
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.assertAccessible
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -15,7 +16,7 @@ import org.robolectric.annotation.Config
 
 /** Google's Accessibility Test Framework over the Send to phone dialog, on a TV. */
 @RunWith(AndroidJUnit4::class)
-@Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+@Config(qualifiers = TV)
 class SendToPhoneAccessibilityChecksTest {
     @get:Rule val composeRule = createComposeRule()
 

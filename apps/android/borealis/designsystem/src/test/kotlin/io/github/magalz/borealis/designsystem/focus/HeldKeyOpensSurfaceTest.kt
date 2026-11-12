@@ -31,6 +31,7 @@ import io.github.magalz.borealis.designsystem.components.DialogAction
 import io.github.magalz.borealis.designsystem.components.Text
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceOption
 import io.github.magalz.borealis.designsystem.components.settings.ChoiceSheet
+import io.github.magalz.borealis.designsystem.testing.TV
 import io.github.magalz.borealis.designsystem.testing.setContentInKeyboardMode
 import io.github.magalz.borealis.designsystem.theme.BorealisTheme
 import io.github.magalz.borealis.designsystem.theme.FormFactor
@@ -40,8 +41,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowSystemClock
-
-private const val TV = "w960dp-h540dp-land-television-xhdpi"
 
 /**
  * A key held down when a sheet or a dialog opens: the repeats and the release of that press reach

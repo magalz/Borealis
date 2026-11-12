@@ -880,6 +880,28 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(crashes).hasSize(1)
     }
 
+    @Test
+    fun `a new codec that cannot be configured after a crash was reported does not tell the listener again`() {
+        val renderer = running(stepped = true)
+        // The renderer thread meets the failure and waits for the input thread, which is this one.
+        threadLog.forgetWaits()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_OUTPUT, 1, stateFailure)
+        ShadowRecordingVideoCodec.stepOutput()
+        threadLog.awaitWaiting(RENDERER_THREAD or CHOREOGRAPHER)
+        // The listener was told of a crash already, as when a failure was held back too long.
+        ReflectionHelpers.setField(renderer, "reportedCrash", true)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 5) {
+            IllegalStateException("refused for good")
+        }
+
+        val thrown = assertThrows(RuntimeException::class.java) { renderer.submit(pFrame(1)) }
+
+        assertThat(thrown.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(thrown.toString().split("\n").last())
+            .isEqualTo("java.lang.IllegalStateException: refused for good")
+        assertThat(crashes).isEmpty()
+    }
+
     // Too many recoveries
 
     @Test

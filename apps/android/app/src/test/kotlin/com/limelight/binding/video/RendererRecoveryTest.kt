@@ -1318,6 +1318,18 @@ class RendererRecoveryTest : RendererTestBase() {
     }
 
     @Test
+    fun `a codec error after five seconds of waiting is a lost frame, not a hung decoder`() {
+        val renderer = running()
+        val call = starved { renderer.submit(pFrame(1)) }
+
+        advanceClock(5_000)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, transient)
+
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(crashes).isEmpty()
+    }
+
+    @Test
     fun `a hung decoder tells the listener once and crashes the renderer every time`() {
         val renderer = running()
 

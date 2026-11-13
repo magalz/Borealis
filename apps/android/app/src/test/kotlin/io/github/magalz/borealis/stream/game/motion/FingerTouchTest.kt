@@ -172,6 +172,25 @@ internal class FingerTouchTest : MotionTestBase() {
         assertThat(sent()).containsExactly(scrolled(12), scrolled(18)).inOrder()
     }
 
+    @Test
+    fun `a finger that moves on the background view is moved by the origin of the stream view, in every sample`() {
+        streaming(left = 40)
+        direct()
+        touch(backgroundView, down(100f, 250f))
+
+        // The stream view starts 40 pixels across and 145 down: the finger was at (60, 105).
+        val move =
+            fingerEvent(MotionEvent.ACTION_MOVE, listOf(160f to 300f)) {
+                eventTime = TIME + 20
+                earlier(130f to 280f)
+            }
+        assertThat(touch(backgroundView, move)).isTrue()
+
+        assertThat(sent())
+            .containsExactly(position(60, 105), press(left), position(90, 135), position(120, 155))
+            .inOrder()
+    }
+
     // ----- The trackpad mode: a touch is a move -----
 
     @Test
@@ -323,6 +342,42 @@ internal class FingerTouchTest : MotionTestBase() {
         fingerEvent(MotionEvent.ACTION_POINTER_UP, listOf(100f to 100f, 200f to 200f), index = 0) {
             eventTime = at
         }
+
+    @Test
+    fun `a second finger that jitters across and down, in the samples and in the move, still taps`() {
+        streaming()
+        val right = MouseButtonPacket.BUTTON_RIGHT
+        touch(streamView, down(100f, 100f, TIME))
+        // The second finger lands far from the first, in x and in y.
+        touch(
+            streamView,
+            fingerEvent(
+                MotionEvent.ACTION_POINTER_DOWN,
+                listOf(100f to 100f, 250f to 180f),
+                index = 1,
+            ) {
+                eventTime = TIME + 10
+            },
+        )
+        val jitter =
+            fingerEvent(MotionEvent.ACTION_MOVE, listOf(100f to 100f, 253f to 183f)) {
+                eventTime = TIME + 20
+                earlier(100f to 100f, 251f to 181f)
+            }
+        assertThat(touch(streamView, jitter)).isTrue()
+        val lift =
+            fingerEvent(
+                MotionEvent.ACTION_POINTER_UP,
+                listOf(100f to 100f, 253f to 183f),
+                index = 1,
+            ) {
+                eventTime = TIME + 30
+            }
+
+        assertThat(touch(streamView, lift)).isTrue()
+
+        assertThat(sent()).containsExactly(press(right))
+    }
 
     @Test
     fun `when the first of two fingers lifts and the second soon after, it is one right click`() {

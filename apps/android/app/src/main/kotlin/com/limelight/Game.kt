@@ -2610,6 +2610,98 @@ class Game :
             else -> sendTouchEventForPointer(view, event, eventType, event.actionIndex)
         }
 
+    // Always update the position before sending any button events. If we're dealing with a stylus
+    // without hover support, our position might be significantly different than before.
+    // True when the host took the event as a pen event: nothing else is sent for it.
+    private fun placePointer(view: View?, event: MotionEvent): Boolean {
+        when {
+            inputCaptureProvider.eventHasRelativeMouseAxes(event) -> sendRelativeMove(event)
+            (event.source and InputDevice.SOURCE_CLASS_POSITION) != 0 -> sendTouchpadPosition(event)
+            view != null && trySendPenEvent(view, event) -> {
+                // If our host supports pen events, send it directly
+                // BOREALIS: a cancel ends the mouse buttons too, or the host keeps them down
+                if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                    releaseMouseButtons()
+                }
+                return true
+            }
+            // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
+            view != null -> updateMousePosition(view, event)
+            else -> updateMousePositionInWindow(event)
+        }
+        return false
+    }
+
+    // Send the deltas straight from the motion event
+    private fun sendRelativeMove(event: MotionEvent) {
+        val deltaX = inputCaptureProvider.getRelativeAxisX(event).toInt().toShort()
+        val deltaY = inputCaptureProvider.getRelativeAxisY(event).toInt().toShort()
+
+        if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
+            if (prefConfig.absoluteMouseMode) {
+                // NB: view may be null, but we can unconditionally use streamView
+                // because we don't need to adjust relative axis deltas for the position
+                // of the streamView within the parent's coordinate system.
+                conn.sendMouseMoveAsMousePosition(
+                    deltaX,
+                    deltaY,
+                    streamView.width.toShort(),
+                    streamView.height.toShort(),
+                )
+            } else {
+                conn.sendMouseMove(deltaX, deltaY)
+            }
+        }
+    }
+
+    // If this input device is not associated with the view itself (like a trackpad), we'll convert
+    // the device-specific coordinates to use to send the cursor position. This really isn't ideal
+    // but it's probably better than nothing.
+    //
+    // Trackpad on newer versions of Android (Oreo and later) should be caught by the relative axes
+    // case of the caller. If we get here, we're on an older version that doesn't support pointer
+    // capture.
+    private fun sendTouchpadPosition(event: MotionEvent) {
+        val device = event.device
+        if (device == null) {
+            return
+        }
+        val xRange = device.getMotionRange(MotionEvent.AXIS_X, event.source)
+        val yRange = device.getMotionRange(MotionEvent.AXIS_Y, event.source)
+        if (xRange == null || yRange == null) {
+            return
+        }
+
+        // All touchpads coordinate planes should start at (0, 0)
+        if (xRange.min != 0f || yRange.min != 0f) {
+            return
+        }
+
+        val xMax = xRange.max.toInt()
+        val yMax = yRange.max.toInt()
+
+        // Touchpads must be smaller than (65535, 65535)
+        if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
+            conn.sendMousePosition(
+                event.x.toInt().toShort(),
+                event.y.toInt().toShort(),
+                xMax.toShort(),
+                yMax.toShort(),
+            )
+        }
+    }
+
+    // BOREALIS: an event that reaches the activity itself has window coordinates; place it on the
+    // stream view
+    private fun updateMousePositionInWindow(event: MotionEvent) {
+        val origin = IntArray(2)
+        streamView.getLocationInWindow(origin)
+        val onStreamView = MotionEvent.obtain(event)
+        onStreamView.offsetLocation(-origin[0].toFloat(), -origin[1].toFloat())
+        updateMousePosition(streamView, onStreamView)
+        onStreamView.recycle()
+    }
+
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -2686,80 +2778,8 @@ class Game :
                     return true
                 }
 
-                // Always update the position before sending any button events. If we're
-                // dealing with a stylus without hover support, our position might be
-                // significantly different than before.
-                if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
-                    // Send the deltas straight from the motion event
-                    val deltaX = inputCaptureProvider.getRelativeAxisX(event).toInt().toShort()
-                    val deltaY = inputCaptureProvider.getRelativeAxisY(event).toInt().toShort()
-
-                    if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
-                        if (prefConfig.absoluteMouseMode) {
-                            // NB: view may be null, but we can unconditionally use streamView
-                            // because we don't need to adjust relative axis deltas for the position
-                            // of the streamView within the parent's coordinate system.
-                            conn.sendMouseMoveAsMousePosition(
-                                deltaX,
-                                deltaY,
-                                streamView.width.toShort(),
-                                streamView.height.toShort(),
-                            )
-                        } else {
-                            conn.sendMouseMove(deltaX, deltaY)
-                        }
-                    }
-                } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
-                    // If this input device is not associated with the view itself (like a
-                    // trackpad), we'll convert the device-specific coordinates to use to send the
-                    // cursor position. This really isn't ideal but it's probably better than
-                    // nothing.
-                    //
-                    // Trackpad on newer versions of Android (Oreo and later) should be caught by
-                    // the relative axes case above. If we get here, we're on an older version that
-                    // doesn't support pointer capture.
-                    val device = event.device
-                    if (device != null) {
-                        val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
-                        val yRange = device.getMotionRange(MotionEvent.AXIS_Y, eventSource)
-
-                        // All touchpads coordinate planes should start at (0, 0)
-                        if (
-                            xRange != null && yRange != null && xRange.min == 0f && yRange.min == 0f
-                        ) {
-                            val xMax = xRange.max.toInt()
-                            val yMax = yRange.max.toInt()
-
-                            // Touchpads must be smaller than (65535, 65535)
-                            if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
-                                conn.sendMousePosition(
-                                    event.x.toInt().toShort(),
-                                    event.y.toInt().toShort(),
-                                    xMax.toShort(),
-                                    yMax.toShort(),
-                                )
-                            }
-                        }
-                    }
-                } else if (view != null && trySendPenEvent(view, event)) {
-                    // If our host supports pen events, send it directly
-                    // BOREALIS: a cancel ends the mouse buttons too, or the host keeps them down
-                    if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-                        releaseMouseButtons()
-                    }
+                if (placePointer(view, event)) {
                     return true
-                } else if (view != null) {
-                    // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
-                    updateMousePosition(view, event)
-                } else {
-                    // BOREALIS: an event that reaches the activity itself has window
-                    // coordinates; place it on the stream view
-                    val origin = IntArray(2)
-                    streamView.getLocationInWindow(origin)
-                    val onStreamView = MotionEvent.obtain(event)
-                    onStreamView.offsetLocation(-origin[0].toFloat(), -origin[1].toFloat())
-                    updateMousePosition(streamView, onStreamView)
-                    onStreamView.recycle()
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {

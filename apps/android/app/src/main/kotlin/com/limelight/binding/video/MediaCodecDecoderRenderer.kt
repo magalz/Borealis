@@ -1648,46 +1648,7 @@ class MediaCodecDecoderRenderer(
             return MoonBridge.DR_OK
         }
 
-        if (!gotFrameNumber) {
-            // The first frame, whatever its number (it may be 0), starts the first window
-            activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
-            gotFrameNumber = true
-        } else if (frameNumber != lastFrameNumber && frameNumber != lastFrameNumber + 1) {
-            // We can receive the same "frame" multiple times if it's an IDR frame.
-            // In that case, each frame start NALU is submitted independently.
-            activeWindowVideoStats.framesLost += frameNumber - lastFrameNumber - 1
-            activeWindowVideoStats.totalFrames += frameNumber - lastFrameNumber - 1
-            activeWindowVideoStats.frameLossEvents++
-        }
-
-        // Reset CSD data for each IDR frame
-        if (lastFrameNumber != frameNumber && frameType == MoonBridge.FRAME_TYPE_IDR) {
-            vpsBuffers.clear()
-            spsBuffers.clear()
-            ppsBuffers.clear()
-        }
-
-        lastFrameNumber = frameNumber
-        // BOREALIS: stream.perf
-        activeWindowVideoStats.totalBytes += decodeUnitLength
-
-        // Flip stats windows roughly every second
-        if (
-            SystemClock.uptimeMillis() >=
-                activeWindowVideoStats.measurementStartTimestamp + STATS_WINDOW_MS
-        ) {
-            if (perfEnabled) {
-                // BOREALIS: stream.perf
-                pushPerfSnapshot()
-            }
-            // BOREALIS: stream.perf
-            DecodeTimeLog.window(getDecoderName(), drainDecodeWindow())
-
-            globalVideoStats.add(activeWindowVideoStats)
-            lastWindowVideoStats.copy(activeWindowVideoStats)
-            activeWindowVideoStats.clear()
-            activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
-        }
+        countUnit(frameNumber, frameType, decodeUnitLength)
 
         var csdSubmittedForThisFrame = false
 
@@ -1888,34 +1849,7 @@ class MediaCodecDecoderRenderer(
             }
         }
 
-        if (frameHostProcessingLatency.code != 0) {
-            if (activeWindowVideoStats.minHostProcessingLatency.code != 0) {
-                activeWindowVideoStats.minHostProcessingLatency =
-                    minOf(
-                            activeWindowVideoStats.minHostProcessingLatency.code,
-                            frameHostProcessingLatency.code,
-                        )
-                        .toChar()
-            } else {
-                activeWindowVideoStats.minHostProcessingLatency = frameHostProcessingLatency
-            }
-            activeWindowVideoStats.framesWithHostProcessingLatency += 1
-        }
-        activeWindowVideoStats.maxHostProcessingLatency =
-            maxOf(
-                    activeWindowVideoStats.maxHostProcessingLatency.code,
-                    frameHostProcessingLatency.code,
-                )
-                .toChar()
-        activeWindowVideoStats.totalHostProcessingLatency += frameHostProcessingLatency.code
-
-        activeWindowVideoStats.totalFramesReceived++
-        activeWindowVideoStats.totalFrames++
-
-        // Count time from first packet received to enqueue time as receive time
-        // We will count DU queue time as part of decoding, because it is directly
-        // caused by a slow decoder.
-        activeWindowVideoStats.totalTimeMs += (enqueueTimeUs - receiveTimeUs) / MICROS_PER_MILLI
+        countHostLatency(frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs)
 
         if (!fetchNextInputBuffer()) {
             return MoonBridge.DR_NEED_IDR
@@ -1977,6 +1911,85 @@ class MediaCodecDecoderRenderer(
         }
 
         return MoonBridge.DR_OK
+    }
+
+    /**
+     * Counts one decode unit into the open window of statistics, and closes the window when its
+     * second has passed. Runs for every unit of every frame.
+     */
+    private fun countUnit(frameNumber: Int, frameType: Int, length: Int) {
+        if (!gotFrameNumber) {
+            // The first frame, whatever its number (it may be 0), starts the first window
+            activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
+            gotFrameNumber = true
+        } else if (frameNumber != lastFrameNumber && frameNumber != lastFrameNumber + 1) {
+            // We can receive the same "frame" multiple times if it's an IDR frame.
+            // In that case, each frame start NALU is submitted independently.
+            activeWindowVideoStats.framesLost += frameNumber - lastFrameNumber - 1
+            activeWindowVideoStats.totalFrames += frameNumber - lastFrameNumber - 1
+            activeWindowVideoStats.frameLossEvents++
+        }
+
+        // Reset CSD data for each IDR frame
+        if (lastFrameNumber != frameNumber && frameType == MoonBridge.FRAME_TYPE_IDR) {
+            vpsBuffers.clear()
+            spsBuffers.clear()
+            ppsBuffers.clear()
+        }
+
+        lastFrameNumber = frameNumber
+        // BOREALIS: stream.perf
+        activeWindowVideoStats.totalBytes += length
+
+        // Flip stats windows roughly every second
+        if (
+            SystemClock.uptimeMillis() >=
+                activeWindowVideoStats.measurementStartTimestamp + STATS_WINDOW_MS
+        ) {
+            if (perfEnabled) {
+                // BOREALIS: stream.perf
+                pushPerfSnapshot()
+            }
+            // BOREALIS: stream.perf
+            DecodeTimeLog.window(getDecoderName(), drainDecodeWindow())
+
+            globalVideoStats.add(activeWindowVideoStats)
+            lastWindowVideoStats.copy(activeWindowVideoStats)
+            activeWindowVideoStats.clear()
+            activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
+        }
+    }
+
+    /** Counts the host latency, the received frame and the receive time of one decode unit. */
+    private fun countHostLatency(latency: Char, receiveTimeUs: Long, enqueueTimeUs: Long) {
+        if (latency.code != 0) {
+            if (activeWindowVideoStats.minHostProcessingLatency.code != 0) {
+                activeWindowVideoStats.minHostProcessingLatency =
+                    minOf(
+                            activeWindowVideoStats.minHostProcessingLatency.code,
+                            latency.code,
+                        )
+                        .toChar()
+            } else {
+                activeWindowVideoStats.minHostProcessingLatency = latency
+            }
+            activeWindowVideoStats.framesWithHostProcessingLatency += 1
+        }
+        activeWindowVideoStats.maxHostProcessingLatency =
+            maxOf(
+                    activeWindowVideoStats.maxHostProcessingLatency.code,
+                    latency.code,
+                )
+                .toChar()
+        activeWindowVideoStats.totalHostProcessingLatency += latency.code
+
+        activeWindowVideoStats.totalFramesReceived++
+        activeWindowVideoStats.totalFrames++
+
+        // Count time from first packet received to enqueue time as receive time
+        // We will count DU queue time as part of decoding, because it is directly
+        // caused by a slow decoder.
+        activeWindowVideoStats.totalTimeMs += (enqueueTimeUs - receiveTimeUs) / MICROS_PER_MILLI
     }
 
     private fun replaySps(): Boolean {

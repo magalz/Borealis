@@ -214,6 +214,24 @@ class RendererSubmitH264Test : RendererTestBase() {
     }
 
     @Test
+    fun `a fused decoder whose first config buffer was not queued gets it alone again`() {
+        val renderer = h264(change = { adaptivePlayback = true })
+        renderer.begin()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT) {
+            codecException(errorCode = -3, actionCode = ACTION_TRANSIENT)
+        }
+        assertThat(renderer.sendIdr(original.nal(), number = 1).last())
+            .isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(queued()).isEmpty()
+
+        renderer.sendIdr(original.nal(), number = 2)
+
+        // Nothing went to the codec yet, so the next IDR frame is not fused: the config goes alone.
+        assertThat(queued().map { it.flags }).containsExactly(CODEC_CONFIG, SYNC_FRAME).inOrder()
+        assertThat(queued()[1].hex).isEqualTo(hex(slice))
+    }
+
+    @Test
     fun `the parameter sets of one IDR frame accumulate even when a kind comes twice`() {
         val renderer = h264()
         renderer.submit(sps(original.nal(), number = 1))

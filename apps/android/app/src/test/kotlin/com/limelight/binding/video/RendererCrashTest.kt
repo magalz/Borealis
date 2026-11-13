@@ -112,6 +112,66 @@ class RendererCrashTest : RendererTestBase() {
     }
 
     @Test
+    fun `a unit that crashes the renderer was stamped before the size was checked`() {
+        val renderer = small()
+        crash(
+            renderer,
+            DecodeUnit(
+                ByteArray(100) { 1 },
+                frameNumber = 1,
+                times = DecodeUnit.Times(enqueueUs = 5_000),
+            ),
+        )
+        advanceClock(400)
+
+        renderer.submit(
+            DecodeUnit(
+                ByteArray(8) { 1 },
+                frameNumber = 2,
+                times = DecodeUnit.Times(enqueueUs = 5_000),
+            )
+        )
+
+        // The unit that crashed set the offset (95,000) and took 100,000: this one is bumped.
+        assertThat(events<CodecEvent.Queued>().single().ptsUs).isEqualTo(100_001)
+    }
+
+    @Test
+    fun `the size check counts the parameter sets that a fused IDR frame carries`() {
+        val avc =
+            codec("vendor.test.avc.decoder") {
+                mime = "video/avc"
+                adaptivePlayback = true
+            }
+        install(avc)
+        ShadowRecordingVideoCodec.register(avc.name, inputBufferSize)
+        val renderer = renderer()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+        fun MediaCodecDecoderRenderer.idr(number: Int, size: Int): Int {
+            submit(parameterSet(MoonBridge.BUFFER_TYPE_SPS, hex(H264Sps().nal()), number))
+            submit(h264Pps(number))
+            return submit(
+                DecodeUnit(
+                    ByteArray(size) { 1 },
+                    frameNumber = number,
+                    frameType = MoonBridge.FRAME_TYPE_IDR,
+                )
+            )
+        }
+        // The first IDR frame sends its parameter sets alone, in a config buffer.
+        assertThat(renderer.idr(1, 8)).isEqualTo(MoonBridge.DR_OK)
+        val csdSize = events<CodecEvent.Queued>().first().hex.length / 2
+
+        // The next ones carry them in front: the unit has what is left of the buffer.
+        assertThat(renderer.idr(2, inputBufferSize - csdSize)).isEqualTo(MoonBridge.DR_OK)
+        assertThat(crashes).isEmpty()
+        assertThrows(RuntimeException::class.java) {
+            renderer.idr(3, inputBufferSize - csdSize + 1)
+        }
+        assertThat(crashes).hasSize(1)
+    }
+
+    @Test
     fun `the message of the exception is its text`() {
         val renderer = small()
 

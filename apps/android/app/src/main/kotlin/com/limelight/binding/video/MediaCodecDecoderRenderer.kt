@@ -1771,16 +1771,6 @@ class MediaCodecDecoderRenderer(
         return naluBuffer
     }
 
-    // MediaCodec.BUFFER_FLAG_SYNC_FRAME is deprecated since API 21 in favour of
-    // BUFFER_FLAG_KEY_FRAME, which has the same value; the Java used the old name.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress(
-        "CyclomaticComplexMethod",
-        "DEPRECATION",
-        "LongMethod",
-        "NestedBlockDepth",
-        "ReturnCount",
-    )
     override fun submitDecodeUnit(
         decodeUnitData: ByteArray?,
         decodeUnitLength: Int,
@@ -1798,44 +1788,87 @@ class MediaCodecDecoderRenderer(
 
         countUnit(frameNumber, frameType, decodeUnitLength)
 
-        var csdAlone = false
+        val idrFrame = frameType == MoonBridge.FRAME_TYPE_IDR
 
         // IDR frames require special handling for CSD buffer submission
-        if (frameType == MoonBridge.FRAME_TYPE_IDR) {
-            if (holdParameterSet(decodeUnitData, decodeUnitLength, decodeUnitType)) {
-                return MoonBridge.DR_OK
-            }
-
-            // If this is the first CSD blob or we aren't supporting fused IDR frames, we will
-            // submit the CSD blob in a separate input buffer for each IDR frame. This is read
-            // before the fetch, which may clear submittedCsd by recovering the codec; it also tells
-            // the fused IDR case below that the CSD went already.
-            csdAlone =
-                (videoFormat and
-                    (MoonBridge.VIDEO_FORMAT_MASK_H264 or MoonBridge.VIDEO_FORMAT_MASK_H265)) !=
-                    0 && (!submittedCsd || !fusedIdrFrame)
-            if (csdAlone && !submitCsdAlone()) {
-                return MoonBridge.DR_NEED_IDR
-            }
+        if (idrFrame && holdParameterSet(decodeUnitData, decodeUnitLength, decodeUnitType)) {
+            return MoonBridge.DR_OK
         }
 
-        countHostLatency(frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs)
+        // The CSD goes alone before the host statistics and before the fetch of the frame's buffer,
+        // which may clear submittedCsd by recovering the codec. This also tells the fused IDR case
+        // that the CSD went already.
+        val csdAlone = idrFrame && submitsCsdAlone()
+        val sent =
+            (!csdAlone || submitCsdAlone()) &&
+                fetchFrameBuffer(frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs) &&
+                queueFrame(decodeUnitData, decodeUnitLength, idrFrame, csdAlone, enqueueTimeUs)
 
-        if (!fetchNextInputBuffer()) {
-            return MoonBridge.DR_NEED_IDR
+        return if (sent) MoonBridge.DR_OK else MoonBridge.DR_NEED_IDR
+    }
+
+    /**
+     * Whether the CSD of an IDR frame goes in an input buffer of its own: for H.264 and HEVC, the
+     * first time and every time for a decoder that does not take fused IDR frames.
+     */
+    private fun submitsCsdAlone(): Boolean =
+        (videoFormat and
+            (MoonBridge.VIDEO_FORMAT_MASK_H264 or MoonBridge.VIDEO_FORMAT_MASK_H265)) != 0 &&
+            (!submittedCsd || !fusedIdrFrame)
+
+    /**
+     * Counts the host latency of a unit and fetches the input buffer of its frame. Answers false
+     * when the caller must answer DR_NEED_IDR.
+     */
+    private fun fetchFrameBuffer(
+        latency: Char,
+        receiveTimeUs: Long,
+        enqueueTimeUs: Long,
+    ): Boolean {
+        countHostLatency(latency, receiveTimeUs, enqueueTimeUs)
+
+        return fetchNextInputBuffer()
+    }
+
+    /**
+     * Stamps a unit, copies it into the input buffer that [fetchFrameBuffer] fetched and queues it.
+     * Answers false when the caller must answer DR_NEED_IDR. Throws when the unit does not fit.
+     */
+    private fun queueFrame(
+        data: ByteArray?,
+        length: Int,
+        idrFrame: Boolean,
+        csdAlone: Boolean,
+        enqueueTimeUs: Long,
+    ): Boolean {
+        val codecFlags = if (idrFrame) idrCodecFlags(csdAlone) else 0
+        val timestampUs = nextTimestampUs(enqueueTimeUs)
+        crashIfTooLarge(length)
+
+        // Only a frame that fits is counted: the crash text must not count the one that crashed
+        numFramesIn++
+
+        // Copy data from our buffer list into the input buffer
+        requireInputBuffer().put(data.orNpe("The decode unit data"), 0, length)
+
+        return queueNextInputBuffer(timestampUs, codecFlags)
+    }
+
+    // MediaCodec.BUFFER_FLAG_SYNC_FRAME is deprecated since API 21 in favour of
+    // BUFFER_FLAG_KEY_FRAME, which has the same value; the Java used the old name.
+    // The flag keeps its inherited name until Sprint 18c changes it (Sprint 18c backlog).
+    @Suppress("DEPRECATION")
+    private fun idrCodecFlags(csdAlone: Boolean): Int {
+        // If we are using fused IDR frames, submit the CSD with each IDR frame
+        if (fusedIdrFrame && !csdAlone) {
+            putCsd()
         }
 
-        var codecFlags = 0
+        return MediaCodec.BUFFER_FLAG_SYNC_FRAME
+    }
 
-        if (frameType == MoonBridge.FRAME_TYPE_IDR) {
-            codecFlags = codecFlags or MediaCodec.BUFFER_FLAG_SYNC_FRAME
-
-            // If we are using fused IDR frames, submit the CSD with each IDR frame
-            if (fusedIdrFrame && !csdAlone) {
-                putCsd()
-            }
-        }
-
+    /** The timestamp of a unit: its enqueue time in uptime microseconds, above the last one. */
+    private fun nextTimestampUs(enqueueTimeUs: Long): Long {
         // The frame timestamps use an undefined epoch, so normalize them to uptime microseconds.
         if (baseTimestampUs == 0L) {
             baseTimestampUs = (SystemClock.uptimeMillis() * MICROS_PER_MILLI) - enqueueTimeUs
@@ -1849,10 +1882,15 @@ class MediaCodecDecoderRenderer(
         }
         lastTimestampUs = timestampUs
 
-        if (decodeUnitLength > requireInputBuffer().limit() - requireInputBuffer().position()) {
+        return timestampUs
+    }
+
+    /** Tells the listener once and throws when a unit of [length] does not fit in the buffer. */
+    private fun crashIfTooLarge(length: Int) {
+        if (length > requireInputBuffer().limit() - requireInputBuffer().position()) {
             val exception =
                 IllegalArgumentException(
-                    "Decode unit length $decodeUnitLength too large for input buffer " +
+                    "Decode unit length $length too large for input buffer " +
                         requireInputBuffer().limit()
                 )
             if (!reportedCrash) {
@@ -1861,18 +1899,6 @@ class MediaCodecDecoderRenderer(
             }
             throw RendererException(this, exception)
         }
-
-        // Only a frame that fits is counted: the crash text must not count the one that crashed
-        numFramesIn++
-
-        // Copy data from our buffer list into the input buffer
-        requireInputBuffer().put(decodeUnitData.orNpe("The decode unit data"), 0, decodeUnitLength)
-
-        if (!queueNextInputBuffer(timestampUs, codecFlags)) {
-            return MoonBridge.DR_NEED_IDR
-        }
-
-        return MoonBridge.DR_OK
     }
 
     /**

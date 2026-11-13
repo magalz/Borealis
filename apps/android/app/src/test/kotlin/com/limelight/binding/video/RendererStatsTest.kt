@@ -83,6 +83,59 @@ class RendererStatsTest : RendererTestBase() {
         assertThat(queued().map { it.ptsUs }).containsExactly(0L, 100_000L).inOrder()
     }
 
+    @Test
+    fun `a frame that cannot get an input buffer is received but neither counted in nor stamped`() {
+        val renderer = counting()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT) {
+            codecException(errorCode = -3, actionCode = ACTION_TRANSIENT)
+        }
+
+        val result =
+            renderer.submit(pFrame(1, times(latency = 20, receive = 1_000, enqueue = 5_000)))
+
+        // The host statistics come before the fetch; the frame count, the timestamp base and the
+        // last timestamp come after it.
+        assertThat(result).isEqualTo(MoonBridge.DR_NEED_IDR)
+        val open = renderer.open()
+        assertThat(open.int("totalFramesReceived")).isEqualTo(1)
+        assertThat(open.int("totalHostProcessingLatency")).isEqualTo(20)
+        assertThat(open.long("totalTimeMs")).isEqualTo(4L)
+        assertThat(ReflectionHelpers.getField<Int>(renderer, "numFramesIn")).isEqualTo(0)
+        assertThat(ReflectionHelpers.getField<Long>(renderer, "baseTimestampUs")).isEqualTo(0L)
+        assertThat(ReflectionHelpers.getField<Long>(renderer, "lastTimestampUs")).isEqualTo(0L)
+    }
+
+    @Test
+    fun `the offset of the timestamps is taken from the first frame that gets an input buffer`() {
+        val renderer = counting()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT) {
+            codecException(errorCode = -3, actionCode = ACTION_TRANSIENT)
+        }
+        renderer.submit(pFrame(1, times(enqueue = 5_000)))
+        advanceClock(400)
+
+        renderer.feed(pFrame(2, times(enqueue = 22_000)))
+
+        // The frame that failed set no offset: this one is stamped with the uptime, 500,000.
+        assertThat(queued().single().ptsUs).isEqualTo(500_000)
+    }
+
+    @Test
+    fun `a frame that fails to queue was counted in and stamped`() {
+        val renderer = counting()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT) {
+            codecException(errorCode = -3, actionCode = ACTION_TRANSIENT)
+        }
+
+        val result = renderer.submit(pFrame(1, times(enqueue = 5_000)))
+        renderer.feed(pFrame(2, times(enqueue = 5_000)))
+
+        // The second frame is not newer than the first, which took 100,000 though it failed.
+        assertThat(result).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(queued().single().ptsUs).isEqualTo(100_001)
+        assertThat(ReflectionHelpers.getField<Int>(renderer, "numFramesIn")).isEqualTo(2)
+    }
+
     // The overlay feed
 
     @Test

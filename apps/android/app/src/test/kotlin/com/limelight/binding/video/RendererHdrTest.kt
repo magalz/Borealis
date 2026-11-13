@@ -228,8 +228,8 @@ class RendererHdrTest : RendererTestBase() {
         val renderer = ready()
         renderer.begin()
         renderer.setHdrMode(true, metadata())
-        // The first fetch gets a buffer and meets the restart; the second, after the parameter sets
-        // are restored, gets none.
+        // Both fetches get no buffer: the first one also meets the restart, and the second comes
+        // after the parameter sets are restored.
         ShadowRecordingVideoCodec.nullInputBuffers.set(2)
 
         val result = renderer.sendIdr()

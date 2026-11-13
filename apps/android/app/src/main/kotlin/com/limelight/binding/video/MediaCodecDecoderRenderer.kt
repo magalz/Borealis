@@ -1898,12 +1898,10 @@ class MediaCodecDecoderRenderer(
         return finishBaselineHack()
     }
 
-    /**
-     * Fetches the input buffer for the CSD. BOREALIS: an HDR restart clears the CSD in
-     * configureAndStartDecoder; the held CSD is restored and the buffer fetched once more to keep
-     * this IDR.
-     */
+    /** Fetches the input buffer for the CSD, with one more fetch after a restore of the CSD. */
     private fun fetchForCsd(): Boolean {
+        // BOREALIS: an HDR restart clears the CSD in configureAndStartDecoder; restore
+        // it and fetch once more to keep this IDR
         hdrRestartReuse.snapshot(vpsBuffers, spsBuffers, ppsBuffers)
         return fetchNextInputBuffer() ||
             (hdrRestartReuse.restoreForRetry(vpsBuffers, spsBuffers, ppsBuffers) &&

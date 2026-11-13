@@ -234,6 +234,94 @@ class RendererStatsTest : RendererTestBase() {
         assertThat(ReflectionHelpers.getField<Int>(open, "totalFramesReceived")).isEqualTo(1)
     }
 
+    /** The stats of the open window, by field name as the other tests of the renderer read them. */
+    private fun MediaCodecDecoderRenderer.open(): Any =
+        ReflectionHelpers.getField(this, "activeWindowVideoStats")
+
+    private fun Any.long(field: String) = ReflectionHelpers.getField<Long>(this, field)
+
+    private fun Any.int(field: String) = ReflectionHelpers.getField<Int>(this, field)
+
+    /** The SPS and the PPS of an IDR frame, each unit with a host latency and a receive time. */
+    private fun MediaCodecDecoderRenderer.sendParameterSetsWithTimes() {
+        val withTimes = times(latency = 30, receive = 1_000, enqueue = 5_000)
+        for ((type, data) in
+            listOf(
+                MoonBridge.BUFFER_TYPE_SPS to H264Sps().nal(),
+                MoonBridge.BUFFER_TYPE_PPS to bytes("00000001 68ce3c80"),
+            )) {
+            submit(DecodeUnit(data, type, 1, MoonBridge.FRAME_TYPE_IDR, withTimes))
+        }
+    }
+
+    @Test
+    fun `a parameter set is not a received frame, but its bytes are counted`() {
+        val renderer = counting()
+
+        renderer.sendParameterSetsWithTimes()
+
+        val open = renderer.open()
+        assertThat(open.long("totalBytes")).isEqualTo(H264Sps().nal().size + 8L)
+        assertThat(open.int("totalFramesReceived")).isEqualTo(0)
+        assertThat(open.int("totalFrames")).isEqualTo(0)
+        assertThat(open.int("framesWithHostProcessingLatency")).isEqualTo(0)
+        assertThat(open.int("totalHostProcessingLatency")).isEqualTo(0)
+        assertThat(open.long("totalTimeMs")).isEqualTo(0L)
+    }
+
+    @Test
+    fun `the picture data of an IDR frame is the unit that is received`() {
+        val renderer = counting()
+        renderer.sendParameterSetsWithTimes()
+
+        renderer.submit(idrSlice(1, times(latency = 20, receive = 1_000, enqueue = 4_000)))
+
+        val open = renderer.open()
+        assertThat(open.int("totalFramesReceived")).isEqualTo(1)
+        assertThat(open.int("totalFrames")).isEqualTo(1)
+        assertThat(open.int("framesWithHostProcessingLatency")).isEqualTo(1)
+        assertThat(open.int("totalHostProcessingLatency")).isEqualTo(20)
+        assertThat(open.long("totalTimeMs")).isEqualTo(3L)
+    }
+
+    @Test
+    fun `an IDR frame that cannot get an input buffer for its config is not received`() {
+        val renderer = counting()
+        renderer.sendParameterSetsWithTimes()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT) {
+            codecException(errorCode = -3, actionCode = ACTION_TRANSIENT)
+        }
+
+        val result =
+            renderer.submit(idrSlice(1, times(latency = 20, receive = 1_000, enqueue = 4_000)))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_NEED_IDR)
+        val open = renderer.open()
+        assertThat(open.int("totalFramesReceived")).isEqualTo(0)
+        assertThat(open.int("totalHostProcessingLatency")).isEqualTo(0)
+        assertThat(open.long("totalTimeMs")).isEqualTo(0L)
+        // The unit itself was counted by the bytes, as it reached the renderer.
+        assertThat(open.long("totalBytes")).isEqualTo(H264Sps().nal().size + 8L + 10L)
+    }
+
+    @Test
+    fun `an IDR frame whose config cannot be queued is not received`() {
+        val renderer = counting()
+        renderer.sendParameterSetsWithTimes()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT) {
+            codecException(errorCode = -3, actionCode = ACTION_TRANSIENT)
+        }
+
+        val result =
+            renderer.submit(idrSlice(1, times(latency = 20, receive = 1_000, enqueue = 4_000)))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_NEED_IDR)
+        val open = renderer.open()
+        assertThat(open.int("totalFramesReceived")).isEqualTo(0)
+        assertThat(open.int("totalHostProcessingLatency")).isEqualTo(0)
+        assertThat(open.long("totalTimeMs")).isEqualTo(0L)
+    }
+
     @Test
     fun `a unit of a new frame that is not an IDR frame leaves the parameter sets alone`() {
         val renderer = counting()

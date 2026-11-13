@@ -352,6 +352,20 @@ class RendererSubmitH264Test : RendererTestBase() {
     }
 
     @Test
+    fun `an SPS in a frame that is not an IDR frame is not held but queued as a frame`() {
+        val renderer = h264()
+
+        val result = renderer.submit(DecodeUnit(original.nal(), type = MoonBridge.BUFFER_TYPE_SPS))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        assertThat(renderer.field<Int>("numSpsIn")).isEqualTo(0)
+        assertThat(renderer.field<List<ByteArray>>("spsBuffers")).isEmpty()
+        assertThat(queued().map { it.hex }).containsExactly(hex(original.nal()))
+        assertThat(queued().single().flags).isEqualTo(0)
+        assertThat(log.lines()).doesNotContain("INFO: Patching num_ref_frames in SPS")
+    }
+
+    @Test
     fun `the data of a decode unit longer than the unit is copied only up to the length`() {
         val renderer = h264()
         val padded = bytes("00000001 419a 0011 22 ffffffff")

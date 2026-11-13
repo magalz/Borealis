@@ -2,7 +2,9 @@ package com.limelight.binding.video
 
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes the bytes that `submitDecodeUnit` queues to the codec for H.264: the SPS that the
@@ -41,6 +43,10 @@ class RendererSubmitH264Test : RendererTestBase() {
         listOf(submit(sps(nal, number)), submit(h264Pps(number)), submit(idrSlice(number)))
 
     private fun queued() = events<CodecEvent.Queued>()
+
+    /** A counter or a list of held parameter sets of [this], by the name of its private field. */
+    private fun <T> MediaCodecDecoderRenderer.field(name: String): T =
+        ReflectionHelpers.getField(this, name)
 
     private val original = H264Sps()
 
@@ -305,6 +311,31 @@ class RendererSubmitH264Test : RendererTestBase() {
         assertThat(queued()[1].hex).isEqualTo(hex(bytes("00000001 67") + replayed.nal().drop(5)))
     }
 
+    // A unit the native layer sent without its data
+
+    @Test
+    fun `an SPS of an IDR frame with no data is counted and then fails with a null pointer`() {
+        val renderer = h264()
+
+        val thrown =
+            assertThrows(NullPointerException::class.java) {
+                renderer.submitDecodeUnit(
+                    null,
+                    original.nal().size,
+                    MoonBridge.BUFFER_TYPE_SPS,
+                    1,
+                    MoonBridge.FRAME_TYPE_IDR,
+                    0.toChar(),
+                    0,
+                    0,
+                )
+            }
+
+        assertThat(thrown).hasMessageThat().isEqualTo("The decode unit data is not available")
+        assertThat(renderer.field<Int>("numSpsIn")).isEqualTo(1)
+        assertThat(renderer.field<List<ByteArray>>("spsBuffers")).isEmpty()
+    }
+
     // Frames that are not IDR frames
 
     @Test
@@ -318,6 +349,20 @@ class RendererSubmitH264Test : RendererTestBase() {
         assertThat(frame.hex).isEqualTo(hex(bytes("00000001 419a 0011 22")))
         assertThat(frame.flags).isEqualTo(0)
         assertThat(frame.ptsUs).isEqualTo(100_000)
+    }
+
+    @Test
+    fun `an SPS in a frame that is not an IDR frame is not held but queued as a frame`() {
+        val renderer = h264()
+
+        val result = renderer.submit(DecodeUnit(original.nal(), type = MoonBridge.BUFFER_TYPE_SPS))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        assertThat(renderer.field<Int>("numSpsIn")).isEqualTo(0)
+        assertThat(renderer.field<List<ByteArray>>("spsBuffers")).isEmpty()
+        assertThat(queued().map { it.hex }).containsExactly(hex(original.nal()))
+        assertThat(queued().single().flags).isEqualTo(0)
+        assertThat(log.lines()).doesNotContain("INFO: Patching num_ref_frames in SPS")
     }
 
     @Test

@@ -1623,6 +1623,154 @@ class MediaCodecDecoderRenderer(
         }
     }
 
+    /**
+     * Holds a parameter set of an IDR frame, to go to the codec together with the others, and says
+     * whether [type] was one. The H.264 SPS is patched for low latency on the way. Runs for every
+     * unit of an IDR frame.
+     */
+    private fun holdParameterSet(data: ByteArray?, length: Int, type: Int): Boolean {
+        if (
+            type == MoonBridge.BUFFER_TYPE_SPS &&
+                (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0
+        ) {
+            // H264 SPS
+            numSpsIn++
+
+            // Batch this to submit together with other CSD per AOSP docs
+            spsBuffers.add(patchH264Sps(data.orNpe("The decode unit data"), length))
+        } else if (type == MoonBridge.BUFFER_TYPE_VPS) {
+            numVpsIn++
+
+            // Batch this to submit together with other CSD per AOSP docs
+            vpsBuffers.add(copyUnit(data, length))
+        } else if (type == MoonBridge.BUFFER_TYPE_SPS) {
+            // Only the HEVC SPS hits this path (H.264 is handled above)
+            numSpsIn++
+
+            // Batch this to submit together with other CSD per AOSP docs
+            val naluBuffer = copyUnit(data, length)
+            // BOREALIS: HEVC SPS diagnostics
+            hevcSpsMonitor.onSps(naluBuffer, 0, naluBuffer.size)
+            spsBuffers.add(naluBuffer)
+        } else if (type == MoonBridge.BUFFER_TYPE_PPS) {
+            numPpsIn++
+
+            // Batch this to submit together with other CSD per AOSP docs
+            ppsBuffers.add(copyUnit(data, length))
+        } else {
+            return false
+        }
+        return true
+    }
+
+    /** A copy of the first [length] bytes of the data of a decode unit. */
+    private fun copyUnit(data: ByteArray?, length: Int): ByteArray {
+        val naluBuffer = ByteArray(length)
+        System.arraycopy(data.orNpe("The decode unit data"), 0, naluBuffer, 0, length)
+        return naluBuffer
+    }
+
+    /** The H.264 SPS [data] of a decode unit, patched for low latency and written again. */
+    private fun patchH264Sps(data: ByteArray, length: Int): ByteArray {
+        val spsBuf = ByteBuffer.wrap(data)
+        val startSeqLen =
+            if (data[2].toInt() == 0x01) {
+                SHORT_START_SEQUENCE_LENGTH
+            } else {
+                LONG_START_SEQUENCE_LENGTH
+            }
+
+        // Skip to the start of the NALU data
+        spsBuf.position(startSeqLen + 1)
+
+        // The H264Utils.readSPS function safely handles
+        // Annex B NALUs (including NALUs with escape sequences)
+        val sps = H264Utils.readSPS(spsBuf)
+
+        patchSpsForLowLatency(sps)
+        applyBaselineHack(sps)
+
+        // Patch the SPS constraint flags
+        doProfileSpecificSpsPatching(sps)
+
+        return writePatchedSps(data, startSeqLen, sps, length)
+    }
+
+    private fun patchSpsForLowLatency(sps: SeqParameterSet) {
+        // TI OMAP4 requires a reference frame count of 1 to decode successfully. Exynos 4
+        // also requires this fixup.
+        //
+        // I'm doing this fixup for all devices because I haven't seen any devices that
+        // this causes issues for. At worst, it seems to do nothing and at best it fixes
+        // issues with video lag, hangs, and crashes.
+        //
+        // It does break reference frame invalidation, so we will not do that for decoders
+        // where we've enabled reference frame invalidation.
+        if (!refFrameInvalidationActive) {
+            LimeLog.info("Patching num_ref_frames in SPS")
+            sps.numRefFrames = 1
+        }
+
+        // The SPS that comes in the current H264 bytestream doesn't set
+        // bitstream_restriction_flag or max_dec_frame_buffering which increases decoding
+        // latency on Tegra.
+
+        // If the encoder didn't include VUI parameters in the SPS, add them now
+        if (sps.vuiParams == null) {
+            LimeLog.info("Adding VUI parameters")
+            sps.vuiParams = VUIParameters()
+        }
+
+        // GFE 2.5.11 started sending bitstream restrictions
+        if (sps.vuiParams.bitstreamRestriction == null) {
+            LimeLog.info("Adding bitstream restrictions")
+            val restriction = VUIParameters.BitstreamRestriction()
+            sps.vuiParams.bitstreamRestriction = restriction
+            restriction.motionVectorsOverPicBoundariesFlag = true
+            restriction.maxBytesPerPicDenom = 2
+            restriction.maxBitsPerMbDenom = 1
+            restriction.log2MaxMvLengthHorizontal = LOG2_MAX_MV_LENGTH
+            restriction.log2MaxMvLengthVertical = LOG2_MAX_MV_LENGTH
+            restriction.numReorderFrames = 0
+        } else {
+            LimeLog.info("Patching bitstream restrictions")
+        }
+
+        // Some devices throw errors if maxDecFrameBuffering < numRefFrames
+        sps.vuiParams.bitstreamRestriction.maxDecFrameBuffering = sps.numRefFrames
+
+        // log2_max_mv_length_horizontal and log2_max_mv_length_vertical are set to more
+        // conservative values by GFE 2.5.11. We'll let those values stand.
+    }
+
+    private fun applyBaselineHack(sps: SeqParameterSet) {
+        // If we need to hack this SPS to say we're baseline, do so now
+        if (needsBaselineSpsHack) {
+            LimeLog.info("Hacking SPS to baseline")
+            savedSpsProfileIdc = sps.profileIdc
+            sps.profileIdc = PROFILE_BASELINE
+            savedSps = sps
+        }
+    }
+
+    /** The bytes of [sps] behind the start sequence and NAL header that [data] begins with. */
+    private fun writePatchedSps(
+        data: ByteArray,
+        startSeqLen: Int,
+        sps: SeqParameterSet,
+        length: Int,
+    ): ByteArray {
+        // The H264Utils.writeSPS function safely handles
+        // Annex B NALUs (including NALUs with escape sequences)
+        val escapedNalu = H264Utils.writeSPS(sps, length)
+
+        // Construct the patched SPS
+        val naluBuffer = ByteArray(startSeqLen + 1 + escapedNalu.limit())
+        System.arraycopy(data, 0, naluBuffer, 0, startSeqLen + 1)
+        escapedNalu.get(naluBuffer, startSeqLen + 1, escapedNalu.limit())
+        return naluBuffer
+    }
+
     // MediaCodec.BUFFER_FLAG_SYNC_FRAME is deprecated since API 21 in favour of
     // BUFFER_FLAG_KEY_FRAME, which has the same value; the Java used the old name.
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -1654,141 +1802,7 @@ class MediaCodecDecoderRenderer(
 
         // IDR frames require special handling for CSD buffer submission
         if (frameType == MoonBridge.FRAME_TYPE_IDR) {
-            // H264 SPS
-            if (
-                decodeUnitType == MoonBridge.BUFFER_TYPE_SPS &&
-                    (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0
-            ) {
-                numSpsIn++
-
-                val data = decodeUnitData.orNpe("The decode unit data")
-                val spsBuf = ByteBuffer.wrap(data)
-                val startSeqLen =
-                    if (data[2].toInt() == 0x01) {
-                        SHORT_START_SEQUENCE_LENGTH
-                    } else {
-                        LONG_START_SEQUENCE_LENGTH
-                    }
-
-                // Skip to the start of the NALU data
-                spsBuf.position(startSeqLen + 1)
-
-                // The H264Utils.readSPS function safely handles
-                // Annex B NALUs (including NALUs with escape sequences)
-                val sps = H264Utils.readSPS(spsBuf)
-
-                // TI OMAP4 requires a reference frame count of 1 to decode successfully. Exynos 4
-                // also requires this fixup.
-                //
-                // I'm doing this fixup for all devices because I haven't seen any devices that
-                // this causes issues for. At worst, it seems to do nothing and at best it fixes
-                // issues with video lag, hangs, and crashes.
-                //
-                // It does break reference frame invalidation, so we will not do that for decoders
-                // where we've enabled reference frame invalidation.
-                if (!refFrameInvalidationActive) {
-                    LimeLog.info("Patching num_ref_frames in SPS")
-                    sps.numRefFrames = 1
-                }
-
-                // The SPS that comes in the current H264 bytestream doesn't set
-                // bitstream_restriction_flag or max_dec_frame_buffering which increases decoding
-                // latency on Tegra.
-
-                // If the encoder didn't include VUI parameters in the SPS, add them now
-                if (sps.vuiParams == null) {
-                    LimeLog.info("Adding VUI parameters")
-                    sps.vuiParams = VUIParameters()
-                }
-
-                // GFE 2.5.11 started sending bitstream restrictions
-                if (sps.vuiParams.bitstreamRestriction == null) {
-                    LimeLog.info("Adding bitstream restrictions")
-                    val restriction = VUIParameters.BitstreamRestriction()
-                    sps.vuiParams.bitstreamRestriction = restriction
-                    restriction.motionVectorsOverPicBoundariesFlag = true
-                    restriction.maxBytesPerPicDenom = 2
-                    restriction.maxBitsPerMbDenom = 1
-                    restriction.log2MaxMvLengthHorizontal = LOG2_MAX_MV_LENGTH
-                    restriction.log2MaxMvLengthVertical = LOG2_MAX_MV_LENGTH
-                    restriction.numReorderFrames = 0
-                } else {
-                    LimeLog.info("Patching bitstream restrictions")
-                }
-
-                // Some devices throw errors if maxDecFrameBuffering < numRefFrames
-                sps.vuiParams.bitstreamRestriction.maxDecFrameBuffering = sps.numRefFrames
-
-                // log2_max_mv_length_horizontal and log2_max_mv_length_vertical are set to more
-                // conservative values by GFE 2.5.11. We'll let those values stand.
-
-                // If we need to hack this SPS to say we're baseline, do so now
-                if (needsBaselineSpsHack) {
-                    LimeLog.info("Hacking SPS to baseline")
-                    savedSpsProfileIdc = sps.profileIdc
-                    sps.profileIdc = PROFILE_BASELINE
-                    savedSps = sps
-                }
-
-                // Patch the SPS constraint flags
-                doProfileSpecificSpsPatching(sps)
-
-                // The H264Utils.writeSPS function safely handles
-                // Annex B NALUs (including NALUs with escape sequences)
-                val escapedNalu = H264Utils.writeSPS(sps, decodeUnitLength)
-
-                // Construct the patched SPS
-                val naluBuffer = ByteArray(startSeqLen + 1 + escapedNalu.limit())
-                System.arraycopy(data, 0, naluBuffer, 0, startSeqLen + 1)
-                escapedNalu.get(naluBuffer, startSeqLen + 1, escapedNalu.limit())
-
-                // Batch this to submit together with other CSD per AOSP docs
-                spsBuffers.add(naluBuffer)
-                return MoonBridge.DR_OK
-            } else if (decodeUnitType == MoonBridge.BUFFER_TYPE_VPS) {
-                numVpsIn++
-
-                // Batch this to submit together with other CSD per AOSP docs
-                val naluBuffer = ByteArray(decodeUnitLength)
-                System.arraycopy(
-                    decodeUnitData.orNpe("The decode unit data"),
-                    0,
-                    naluBuffer,
-                    0,
-                    decodeUnitLength,
-                )
-                vpsBuffers.add(naluBuffer)
-                return MoonBridge.DR_OK
-            } else if (decodeUnitType == MoonBridge.BUFFER_TYPE_SPS) {
-                // Only the HEVC SPS hits this path (H.264 is handled above)
-                numSpsIn++
-
-                // Batch this to submit together with other CSD per AOSP docs
-                val naluBuffer = ByteArray(decodeUnitLength)
-                System.arraycopy(
-                    decodeUnitData.orNpe("The decode unit data"),
-                    0,
-                    naluBuffer,
-                    0,
-                    decodeUnitLength,
-                )
-                // BOREALIS: HEVC SPS diagnostics
-                hevcSpsMonitor.onSps(naluBuffer, 0, naluBuffer.size)
-                spsBuffers.add(naluBuffer)
-                return MoonBridge.DR_OK
-            } else if (decodeUnitType == MoonBridge.BUFFER_TYPE_PPS) {
-                numPpsIn++
-
-                // Batch this to submit together with other CSD per AOSP docs
-                val naluBuffer = ByteArray(decodeUnitLength)
-                System.arraycopy(
-                    decodeUnitData.orNpe("The decode unit data"),
-                    0,
-                    naluBuffer,
-                    0,
-                    decodeUnitLength,
-                )
-                ppsBuffers.add(naluBuffer)
+            if (holdParameterSet(decodeUnitData, decodeUnitLength, decodeUnitType)) {
                 return MoonBridge.DR_OK
             } else if (
                 (videoFormat and

@@ -112,6 +112,23 @@ internal class FingerTouchTest : MotionTestBase() {
     }
 
     @Test
+    fun `a second tap soon after the first on the background view does not place the pointer again`() {
+        streaming()
+        direct()
+        touch(backgroundView, down(100f, 250f, TIME))
+        touch(backgroundView, up(100f, 250f, TIME + 50))
+        idle(100)
+        forgetSent()
+
+        // The lift of the first tap is moved by the origin of the stream view like its down: the
+        // second tap lands where the first lifted.
+        touch(backgroundView, down(100f, 250f, TIME + 100))
+        touch(backgroundView, up(100f, 250f, TIME + 150))
+
+        assertThat(sent()).containsExactly(press(left))
+    }
+
+    @Test
     fun `a touch that ends cancelled is no tap`() {
         streaming()
         direct()

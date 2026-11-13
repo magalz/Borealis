@@ -2927,9 +2927,7 @@ class Game :
                 // the third one too, and the code below takes what the host refuses. A tap of
                 // three fingers that opens the keyboard is theirs: a finger that went to the host
                 // does not reach it (stream)
-                if (
-                    touchMode == TouchMode.NATIVE && view != null && trySendTouchEvent(view, event)
-                ) {
+                if (hostTookTouch(touchMode, view, event)) {
                     return true
                 }
 
@@ -2938,14 +2936,7 @@ class Game :
                     event.actionMasked == MotionEvent.ACTION_POINTER_DOWN &&
                         event.pointerCount == THREE_FINGER_COUNT
                 ) {
-                    // Three fingers down
-                    threeFingerDownTime = event.eventTime
-
-                    // Cancel the first and second touches to avoid
-                    // erroneous events
-                    for (aTouchContext in touchContextMap) {
-                        touchContextEntry(aTouchContext).cancelTouch()
-                    }
+                    startThreeFingerGesture(event)
 
                     return true
                 }
@@ -3054,6 +3045,20 @@ class Game :
 
         // Unknown class
         return false
+    }
+
+    // BOREALIS: whether the Native touch mode sends this finger to the host as a touch event and
+    // the host takes it; a host that refuses puts the session in Direct (stream)
+    private fun hostTookTouch(touchMode: TouchMode, view: View?, event: MotionEvent): Boolean =
+        touchMode == TouchMode.NATIVE && view != null && trySendTouchEvent(view, event)
+
+    // Three fingers are down: notes when, and cancels the first and second touches to avoid
+    // erroneous events
+    private fun startThreeFingerGesture(event: MotionEvent) {
+        threeFingerDownTime = event.eventTime
+        for (aTouchContext in touchContextMap) {
+            touchContextEntry(aTouchContext).cancelTouch()
+        }
     }
 
     // The Java dereferenced the entries of the touch context array without a check: an entry that

@@ -678,6 +678,34 @@ internal class PenEventsTest : MotionTestBase() {
         }
     }
 
+    @Test
+    fun `a side button that comes up with the touch of a stylus goes to the host before the touch`() {
+        rig.preference("checkbox_mouse_nav_buttons", true)
+        hostWithoutPens()
+        streaming()
+        // Back waits to see whether it is held; the stylus hovers with it down.
+        send(
+            motionEventOf(source, MotionEvent.ACTION_HOVER_MOVE) {
+                pointer(100f, 100f, MotionEvent.TOOL_TYPE_STYLUS)
+                buttonState = MotionEvent.BUTTON_BACK
+                eventTime = TIME
+            }
+        )
+        forgetSent()
+
+        // The stylus touches down as Back comes up after 100 ms: a short press, sent at once.
+        send(tool(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.ACTION_DOWN, 100f, 100f, TIME + 100))
+
+        assertThat(sentBesidesPens())
+            .containsExactly(
+                position(100, 100),
+                press(MouseButtonPacket.BUTTON_X1),
+                release(MouseButtonPacket.BUTTON_X1),
+                press(MouseButtonPacket.BUTTON_LEFT),
+            )
+            .inOrder()
+    }
+
     private companion object {
         const val PEN_ID = 10
         const val EPSILON = 1e-6f

@@ -2948,92 +2948,23 @@ class Game :
 
                 when (event.actionMasked) {
                     MotionEvent.ACTION_POINTER_DOWN,
-                    MotionEvent.ACTION_DOWN -> {
-                        for (touchContext in touchContextMap) {
-                            touchContextEntry(touchContext).setPointerCount(event.pointerCount)
-                        }
-                        context.touchDownEvent(eventX, eventY, event.eventTime, true)
-                    }
+                    MotionEvent.ACTION_DOWN -> fingerDown(context, event, eventX, eventY)
 
                     MotionEvent.ACTION_POINTER_UP,
                     MotionEvent.ACTION_UP -> {
-                        if (
-                            event.pointerCount == 1 &&
-                                (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                                    (event.flags and MotionEvent.FLAG_CANCELED) == 0)
-                        ) {
-                            // All fingers up
-                            if (
-                                event.eventTime - threeFingerDownTime < THREE_FINGER_TAP_THRESHOLD
-                            ) {
-                                // This is a 3 finger tap to bring up the keyboard
-                                toggleKeyboard()
-                                return true
-                            }
+                        if (endsThreeFingerTap(event)) {
+                            // This is a 3 finger tap to bring up the keyboard
+                            toggleKeyboard()
+                            return true
                         }
 
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                (event.flags and MotionEvent.FLAG_CANCELED) != 0
-                        ) {
-                            context.cancelTouch()
-                        } else {
-                            context.touchUpEvent(eventX, eventY, event.eventTime)
-                        }
-
-                        for (touchContext in touchContextMap) {
-                            touchContextEntry(touchContext).setPointerCount(event.pointerCount - 1)
-                        }
-                        if (actionIndex == 0 && event.pointerCount > 1 && !context.isCancelled) {
-                            // The original secondary touch now becomes primary
-                            context.touchDownEvent(
-                                (event.getX(1) + xOffset).toInt(),
-                                (event.getY(1) + yOffset).toInt(),
-                                event.eventTime,
-                                false,
-                            )
-                        }
+                        liftFinger(context, event, eventX, eventY)
+                        promoteSecondFinger(context, event, xOffset, yOffset)
                     }
 
-                    MotionEvent.ACTION_MOVE -> {
-                        // ACTION_MOVE is special because it always has actionIndex == 0
-                        // We'll call the move handlers for all indexes manually
+                    MotionEvent.ACTION_MOVE -> moveFingers(event, xOffset, yOffset)
 
-                        // First process the historical events
-                        for (i in 0 until event.historySize) {
-                            for (aTouchContextMap in touchContextMap) {
-                                val touch = touchContextEntry(aTouchContextMap)
-                                if (touch.actionIndex < event.pointerCount) {
-                                    touch.touchMoveEvent(
-                                        (event.getHistoricalX(touch.actionIndex, i) + xOffset)
-                                            .toInt(),
-                                        (event.getHistoricalY(touch.actionIndex, i) + yOffset)
-                                            .toInt(),
-                                        event.getHistoricalEventTime(i),
-                                    )
-                                }
-                            }
-                        }
-
-                        // Now process the current values
-                        for (aTouchContextMap in touchContextMap) {
-                            val touch = touchContextEntry(aTouchContextMap)
-                            if (touch.actionIndex < event.pointerCount) {
-                                touch.touchMoveEvent(
-                                    (event.getX(touch.actionIndex) + xOffset).toInt(),
-                                    (event.getY(touch.actionIndex) + yOffset).toInt(),
-                                    event.eventTime,
-                                )
-                            }
-                        }
-                    }
-
-                    MotionEvent.ACTION_CANCEL -> {
-                        for (aTouchContext in touchContextMap) {
-                            touchContextEntry(aTouchContext).cancelTouch()
-                            touchContextEntry(aTouchContext).setPointerCount(0)
-                        }
-                    }
+                    MotionEvent.ACTION_CANCEL -> cancelFingers()
 
                     else -> return false
                 }
@@ -3058,6 +2989,94 @@ class Game :
         threeFingerDownTime = event.eventTime
         for (aTouchContext in touchContextMap) {
             touchContextEntry(aTouchContext).cancelTouch()
+        }
+    }
+
+    // A finger went down: every touch context learns how many fingers are down, then the context of
+    // this finger starts its touch.
+    private fun fingerDown(context: TouchContext, event: MotionEvent, eventX: Int, eventY: Int) {
+        for (touchContext in touchContextMap) {
+            touchContextEntry(touchContext).setPointerCount(event.pointerCount)
+        }
+        context.touchDownEvent(eventX, eventY, event.eventTime, true)
+    }
+
+    // The last finger lifts soon after the third went down: a tap of three fingers. Android 13
+    // marks a lift that it cancelled; before that a lift is a lift.
+    private fun endsThreeFingerTap(event: MotionEvent): Boolean =
+        event.pointerCount == 1 &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                (event.flags and MotionEvent.FLAG_CANCELED) == 0) &&
+            event.eventTime - threeFingerDownTime < THREE_FINGER_TAP_THRESHOLD
+
+    // A finger lifted: its touch ends (cancelled when Android cancelled it), then every touch
+    // context learns how many fingers are left.
+    private fun liftFinger(context: TouchContext, event: MotionEvent, eventX: Int, eventY: Int) {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                (event.flags and MotionEvent.FLAG_CANCELED) != 0
+        ) {
+            context.cancelTouch()
+        } else {
+            context.touchUpEvent(eventX, eventY, event.eventTime)
+        }
+
+        for (touchContext in touchContextMap) {
+            touchContextEntry(touchContext).setPointerCount(event.pointerCount - 1)
+        }
+    }
+
+    // The first finger lifted and a second one is left: the original secondary touch now becomes
+    // primary.
+    private fun promoteSecondFinger(
+        context: TouchContext,
+        event: MotionEvent,
+        xOffset: Float,
+        yOffset: Float,
+    ) {
+        if (event.actionIndex == 0 && event.pointerCount > 1 && !context.isCancelled) {
+            context.touchDownEvent(
+                (event.getX(1) + xOffset).toInt(),
+                (event.getY(1) + yOffset).toInt(),
+                event.eventTime,
+                false,
+            )
+        }
+    }
+
+    // ACTION_MOVE is special because it always has actionIndex == 0, so the move handlers of all
+    // indexes are called here: the historical samples first, oldest first, then the current values.
+    private fun moveFingers(event: MotionEvent, xOffset: Float, yOffset: Float) {
+        for (i in 0 until event.historySize) {
+            for (aTouchContextMap in touchContextMap) {
+                val touch = touchContextEntry(aTouchContextMap)
+                if (touch.actionIndex < event.pointerCount) {
+                    touch.touchMoveEvent(
+                        (event.getHistoricalX(touch.actionIndex, i) + xOffset).toInt(),
+                        (event.getHistoricalY(touch.actionIndex, i) + yOffset).toInt(),
+                        event.getHistoricalEventTime(i),
+                    )
+                }
+            }
+        }
+
+        for (aTouchContextMap in touchContextMap) {
+            val touch = touchContextEntry(aTouchContextMap)
+            if (touch.actionIndex < event.pointerCount) {
+                touch.touchMoveEvent(
+                    (event.getX(touch.actionIndex) + xOffset).toInt(),
+                    (event.getY(touch.actionIndex) + yOffset).toInt(),
+                    event.eventTime,
+                )
+            }
+        }
+    }
+
+    // The gesture was cancelled: every touch ends, and no finger is down.
+    private fun cancelFingers() {
+        for (aTouchContext in touchContextMap) {
+            touchContextEntry(aTouchContext).cancelTouch()
+            touchContextEntry(aTouchContext).setPointerCount(0)
         }
     }
 

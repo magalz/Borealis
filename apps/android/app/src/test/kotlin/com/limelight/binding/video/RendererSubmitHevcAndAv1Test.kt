@@ -197,6 +197,17 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
         assertThat(renderer.field<List<ByteArray>>("spsBuffers")).isEmpty()
     }
 
+    @Test
+    fun `a PPS of an IDR frame with no data is counted and then fails with a null pointer`() {
+        val renderer = hevc()
+
+        val thrown = renderer.submitNoData(MoonBridge.BUFFER_TYPE_PPS)
+
+        assertThat(thrown).hasMessageThat().isEqualTo("The decode unit data is not available")
+        assertThat(renderer.field<Int>("numPpsIn")).isEqualTo(1)
+        assertThat(renderer.field<List<ByteArray>>("ppsBuffers")).isEmpty()
+    }
+
     // AV1
 
     @Test

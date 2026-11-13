@@ -380,7 +380,7 @@ still holds garbage that the old generation had not given back yet.
 | --- | --- | --- | --- |
 | `:borealis:library` | 582 MB | 449 MB | 1 GB |
 | `:borealis:settings` | 788 MB | 753 MB | 1.5 GB |
-| `:app` | 2479 MB | 2313 MB | 2 GB |
+| `:app` | 2479 MB | 2313 MB | 3 GB |
 | `:borealis:stream` | 981 MB | 907 MB | default |
 | `:borealis:designsystem` | 877 MB | 852 MB | default |
 
@@ -388,9 +388,10 @@ A library module whose tests ran out of memory gets about twice its "after GC"
 figure, rounded up to the next of 768 MB, 1 GB, 1.5 GB and 2 GB; the others keep
 the default until they do (BORE-155 tracks Stream and Design system). On the default, `:borealis:library`
 (430 MB in use, 383 MB after GC) and `:borealis:settings` (473 MB and 406 MB)
-passed with the heap close to its limit. `:app` has its own 2 GB: on that limit
-its run needed a full collection, which left 1735 MB. Measure again when a
-module's run runs out of memory or its tests grow.
+passed with the heap close to its limit. `:app` had 2 GB: on that limit its run
+needed a full collection, which left 1735 MB, and in Sprint 18b-2 its test JVM ran
+out of heap twice under load, so it has 3 GB since (BORE-161). Measure again when
+a module's run runs out of memory or its tests grow.
 
 Robolectric keeps one sandbox for each key in a cache of 42 (three times the 14
 SDK levels of Robolectric 4.17) and evicts the least recently used one, which a

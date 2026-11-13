@@ -2817,16 +2817,74 @@ class Game :
         sendMouseButton(button, down)
     }
 
+    // The mouse, the stylus and the DeX desktop mouse; the other pointers are fingers
+    private fun isMouseOrStylusEvent(event: MotionEvent): Boolean {
+        val eventSource = event.source
+        return eventSource == InputDevice.SOURCE_MOUSE ||
+            (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 || // SOURCE_TOUCHPAD
+            eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
+            (event.pointerCount >= 1 &&
+                (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
+                    event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
+                    event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
+            eventSource == SAMSUNG_DEX_MOUSE_SOURCE // Samsung DeX mode desktop mouse
+    }
+
+    // This case is for mice and non-finger touch devices. The result is true: the event is taken
+    // even when it is ignored, because otherwise Android may synthesize d-pad events from it.
+    private fun handleMouseEvent(view: View?, event: MotionEvent): Boolean {
+        val buttonState = mouseButtonState(event)
+        val changedButtons = buttonState xor lastButtonState
+
+        // Ignore mouse input if we're not capturing from our input source
+        if (!inputCaptureProvider.isCapturingActive()) {
+            return true
+        }
+
+        if (placePointer(view, event)) {
+            return true
+        }
+
+        if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
+            sendMouseScroll(event)
+        }
+
+        sendMouseButtons(buttonState, changedButtons)
+        val sideChord = sideButtonsChanged(buttonState, changedButtons, event.eventTime)
+        noteStylusPress(event)
+
+        lastButtonState = buttonState
+        // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the
+        // input clears them (stream)
+        if (sideChord) streamSession.openMenu()
+        return true
+    }
+
+    // The event goes by its source: the controller handler for a joystick, then for the touchpad of
+    // a joystick device, then the mouse or the finger handler for a pointer. A joystick event that
+    // the handler does not take is not consumed; neither is a source of another class.
+    private fun routeMotionEvent(view: View?, event: MotionEvent): Boolean {
+        val eventSource = event.source
+        val deviceSources = if (event.device != null) event.device.sources else 0
+        return when {
+            (eventSource and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 ->
+                controllerHandler.handleMotionEvent(event)
+            (deviceSources and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 &&
+                controllerHandler.tryHandleTouchpadEvent(event) -> true
+            (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0 ||
+                (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 ||
+                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ->
+                if (isMouseOrStylusEvent(event)) {
+                    handleMouseEvent(view, event)
+                } else {
+                    handleFingerEvent(view, event)
+                }
+            else -> false
+        }
+    }
+
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "NestedBlockDepth",
-        "ReturnCount",
-    )
     private fun handleMotionEvent(view: View?, event: MotionEvent): Boolean {
         // BOREALIS: the chrome takes the input while it is modal
         if (chromeInput.toChrome(event)) return false
@@ -2834,73 +2892,7 @@ class Game :
         if (!grabbedInput) {
             return false
         }
-
-        val eventSource = event.source
-        val deviceSources = if (event.device != null) event.device.sources else 0
-        if ((eventSource and InputDevice.SOURCE_CLASS_JOYSTICK) != 0) {
-            if (controllerHandler.handleMotionEvent(event)) {
-                return true
-            }
-        } else if (
-            (deviceSources and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 &&
-                controllerHandler.tryHandleTouchpadEvent(event)
-        ) {
-            return true
-        } else if (
-            (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0 ||
-                (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE
-        ) {
-            // This case is for mice and non-finger touch devices
-            if (
-                eventSource == InputDevice.SOURCE_MOUSE ||
-                    (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 || // SOURCE_TOUCHPAD
-                    eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
-                    (event.pointerCount >= 1 &&
-                        (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
-                            event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
-                            event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
-                    eventSource == SAMSUNG_DEX_MOUSE_SOURCE // Samsung DeX mode desktop mouse
-            ) {
-                val buttonState = mouseButtonState(event)
-                val changedButtons = buttonState xor lastButtonState
-
-                // Ignore mouse input if we're not capturing from our input source
-                if (!inputCaptureProvider.isCapturingActive()) {
-                    // We return true here because otherwise the events may end up causing
-                    // Android to synthesize d-pad events.
-                    return true
-                }
-
-                if (placePointer(view, event)) {
-                    return true
-                }
-
-                if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
-                    sendMouseScroll(event)
-                }
-
-                sendMouseButtons(buttonState, changedButtons)
-
-                val sideChord = sideButtonsChanged(buttonState, changedButtons, event.eventTime)
-                noteStylusPress(event)
-
-                lastButtonState = buttonState
-                // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the
-                // input clears them (stream)
-                if (sideChord) streamSession.openMenu()
-            }
-            // This case is for fingers
-            else {
-                return handleFingerEvent(view, event)
-            }
-
-            // Handled a known source
-            return true
-        }
-
-        // Unknown class
-        return false
+        return routeMotionEvent(view, event)
     }
 
     // BOREALIS: whether the Native touch mode sends this finger to the host as a touch event and

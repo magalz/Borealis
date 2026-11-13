@@ -232,6 +232,24 @@ class RendererSubmitH264Test : RendererTestBase() {
     }
 
     @Test
+    fun `a fused IDR frame puts the parameter sets in the buffer that it fetches itself`() {
+        val renderer = h264(change = { adaptivePlayback = true })
+        // The buffers of the config, of the frame and of the next frame are fetched ahead: the
+        // third fetch fails, so the next IDR frame has no buffer when it comes.
+        ShadowRecordingVideoCodec.failAfter(CodecPoint.DEQUEUE_INPUT, 2) {
+            codecException(errorCode = -3, actionCode = ACTION_TRANSIENT)
+        }
+        assertThat(renderer.sendIdr(original.nal(), number = 1).last())
+            .isEqualTo(MoonBridge.DR_NEED_IDR)
+
+        val results = renderer.sendIdr(original.nal(), number = 2)
+
+        assertThat(results.last()).isEqualTo(MoonBridge.DR_OK)
+        assertThat(queued().map { it.flags }).containsExactly(CODEC_CONFIG, SYNC_FRAME, SYNC_FRAME)
+        assertThat(queued()[2].hex).isEqualTo(hex(patched.nal() + pps + slice))
+    }
+
+    @Test
     fun `the parameter sets of one IDR frame accumulate even when a kind comes twice`() {
         val renderer = h264()
         renderer.submit(sps(original.nal(), number = 1))
@@ -352,6 +370,29 @@ class RendererSubmitH264Test : RendererTestBase() {
         assertThat(thrown).hasMessageThat().isEqualTo("The decode unit data is not available")
         assertThat(renderer.field<Int>("numSpsIn")).isEqualTo(1)
         assertThat(renderer.field<List<ByteArray>>("spsBuffers")).isEmpty()
+    }
+
+    @Test
+    fun `a frame with no data is counted in and then fails with a null pointer`() {
+        val renderer = h264()
+
+        val thrown =
+            assertThrows(NullPointerException::class.java) {
+                renderer.submitDecodeUnit(
+                    null,
+                    8,
+                    BUFFER_TYPE_PICDATA,
+                    1,
+                    FRAME_TYPE_P,
+                    0.toChar(),
+                    0,
+                    0,
+                )
+            }
+
+        assertThat(thrown).hasMessageThat().isEqualTo("The decode unit data is not available")
+        assertThat(renderer.field<Int>("numFramesIn")).isEqualTo(1)
+        assertThat(queued()).isEmpty()
     }
 
     // Frames that are not IDR frames

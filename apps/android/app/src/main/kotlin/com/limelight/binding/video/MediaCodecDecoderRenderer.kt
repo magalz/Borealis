@@ -1798,68 +1798,24 @@ class MediaCodecDecoderRenderer(
 
         countUnit(frameNumber, frameType, decodeUnitLength)
 
-        var csdSubmittedForThisFrame = false
+        var csdAlone = false
 
         // IDR frames require special handling for CSD buffer submission
         if (frameType == MoonBridge.FRAME_TYPE_IDR) {
             if (holdParameterSet(decodeUnitData, decodeUnitLength, decodeUnitType)) {
                 return MoonBridge.DR_OK
-            } else if (
+            }
+
+            // If this is the first CSD blob or we aren't supporting fused IDR frames, we will
+            // submit the CSD blob in a separate input buffer for each IDR frame. This is read
+            // before the fetch, which may clear submittedCsd by recovering the codec; it also tells
+            // the fused IDR case below that the CSD went already.
+            csdAlone =
                 (videoFormat and
-                    (MoonBridge.VIDEO_FORMAT_MASK_H264 or MoonBridge.VIDEO_FORMAT_MASK_H265)) != 0
-            ) {
-                // If this is the first CSD blob or we aren't supporting fused IDR frames, we will
-                // submit the CSD blob in a separate input buffer for each IDR frame.
-                if (!submittedCsd || !fusedIdrFrame) {
-                    // BOREALIS: an HDR restart clears the CSD in configureAndStartDecoder; restore
-                    // it and fetch once more to keep this IDR
-                    hdrRestartReuse.snapshot(vpsBuffers, spsBuffers, ppsBuffers)
-                    if (
-                        !fetchNextInputBuffer() &&
-                            !(hdrRestartReuse.restoreForRetry(
-                                vpsBuffers,
-                                spsBuffers,
-                                ppsBuffers,
-                            ) && fetchNextInputBuffer())
-                    ) {
-                        return MoonBridge.DR_NEED_IDR
-                    }
-
-                    // Submit all CSD when we receive the first non-CSD blob in an IDR frame
-                    for (vpsBuffer in vpsBuffers) {
-                        requireInputBuffer().put(vpsBuffer)
-                    }
-                    for (spsBuffer in spsBuffers) {
-                        requireInputBuffer().put(spsBuffer)
-                    }
-                    for (ppsBuffer in ppsBuffers) {
-                        requireInputBuffer().put(ppsBuffer)
-                    }
-
-                    if (!queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)) {
-                        return MoonBridge.DR_NEED_IDR
-                    }
-
-                    // Remember that we already submitted CSD for this frame, so we don't do it
-                    // again in the fused IDR case below.
-                    csdSubmittedForThisFrame = true
-
-                    // Remember that we submitted CSD globally for this MediaCodec instance
-                    submittedCsd = true
-
-                    if (needsBaselineSpsHack) {
-                        if (!replaySps()) {
-                            // The decoder still has the baseline SPS. Forget the CSD that went, so
-                            // the next IDR frame gets here again, fused decoders too: it says
-                            // baseline again and replays
-                            submittedCsd = false
-                            return MoonBridge.DR_NEED_IDR
-                        }
-
-                        needsBaselineSpsHack = false
-                        LimeLog.info("SPS replay complete")
-                    }
-                }
+                    (MoonBridge.VIDEO_FORMAT_MASK_H264 or MoonBridge.VIDEO_FORMAT_MASK_H265)) !=
+                    0 && (!submittedCsd || !fusedIdrFrame)
+            if (csdAlone && !submitCsdAlone()) {
+                return MoonBridge.DR_NEED_IDR
             }
         }
 
@@ -1875,16 +1831,8 @@ class MediaCodecDecoderRenderer(
             codecFlags = codecFlags or MediaCodec.BUFFER_FLAG_SYNC_FRAME
 
             // If we are using fused IDR frames, submit the CSD with each IDR frame
-            if (fusedIdrFrame && !csdSubmittedForThisFrame) {
-                for (vpsBuffer in vpsBuffers) {
-                    requireInputBuffer().put(vpsBuffer)
-                }
-                for (spsBuffer in spsBuffers) {
-                    requireInputBuffer().put(spsBuffer)
-                }
-                for (ppsBuffer in ppsBuffers) {
-                    requireInputBuffer().put(ppsBuffer)
-                }
+            if (fusedIdrFrame && !csdAlone) {
+                putCsd()
             }
         }
 
@@ -1925,6 +1873,70 @@ class MediaCodecDecoderRenderer(
         }
 
         return MoonBridge.DR_OK
+    }
+
+    /**
+     * Sends the held parameter sets to the codec in an input buffer of their own, and the real SPS
+     * after the baseline one for a decoder that needs the hack. Answers false when the caller must
+     * answer DR_NEED_IDR. Runs for the first unit of an IDR frame that is not a parameter set.
+     */
+    private fun submitCsdAlone(): Boolean {
+        if (!fetchForCsd()) {
+            return false
+        }
+
+        // Submit all CSD when we receive the first non-CSD blob in an IDR frame
+        putCsd()
+
+        if (!queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)) {
+            return false
+        }
+
+        // Remember that we submitted CSD globally for this MediaCodec instance
+        submittedCsd = true
+
+        return finishBaselineHack()
+    }
+
+    /** Fetches the input buffer for the CSD, with one more fetch after a restore of the CSD. */
+    private fun fetchForCsd(): Boolean {
+        // BOREALIS: an HDR restart clears the CSD in configureAndStartDecoder; restore
+        // it and fetch once more to keep this IDR
+        hdrRestartReuse.snapshot(vpsBuffers, spsBuffers, ppsBuffers)
+        return fetchNextInputBuffer() ||
+            (hdrRestartReuse.restoreForRetry(vpsBuffers, spsBuffers, ppsBuffers) &&
+                fetchNextInputBuffer())
+    }
+
+    /** Puts the held VPS, SPS and PPS, in that order, into the input buffer. */
+    private fun putCsd() {
+        for (vpsBuffer in vpsBuffers) {
+            requireInputBuffer().put(vpsBuffer)
+        }
+        for (spsBuffer in spsBuffers) {
+            requireInputBuffer().put(spsBuffer)
+        }
+        for (ppsBuffer in ppsBuffers) {
+            requireInputBuffer().put(ppsBuffer)
+        }
+    }
+
+    /** Replays the real SPS if the decoder got the baseline one; false when the replay failed. */
+    private fun finishBaselineHack(): Boolean {
+        if (!needsBaselineSpsHack) {
+            return true
+        }
+
+        if (!replaySps()) {
+            // The decoder still has the baseline SPS. Forget the CSD that went, so the next IDR
+            // frame gets here again, fused decoders too: it says baseline again and replays
+            submittedCsd = false
+            return false
+        }
+
+        needsBaselineSpsHack = false
+        LimeLog.info("SPS replay complete")
+        return true
     }
 
     /**

@@ -23,8 +23,8 @@ class BorealisUnitTestHeapTest {
     }
 
     @org.junit.Test
-    fun `the app unit tests run with a heap that holds the robolectric sandboxes`() {
-        assertThat(heapOf("app")).isEqualTo("2g")
+    fun `the app unit tests run with a heap above their measured peak`() {
+        assertThat(heapOf("app")).isEqualTo("3g")
     }
 
     @org.junit.Test

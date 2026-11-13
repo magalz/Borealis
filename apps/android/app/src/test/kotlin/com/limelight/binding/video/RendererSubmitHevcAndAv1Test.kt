@@ -8,7 +8,9 @@ import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
 import java.util.concurrent.CopyOnWriteArrayList
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes the bytes that `submitDecodeUnit` queues for HEVC and AV1. HEVC parameter sets go
@@ -66,6 +68,16 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
     }
 
     private fun queued() = events<CodecEvent.Queued>()
+
+    /** A counter or a list of held parameter sets of [this], by the name of its private field. */
+    private fun <T> MediaCodecDecoderRenderer.field(name: String): T =
+        ReflectionHelpers.getField(this, name)
+
+    /** Sends a unit of an IDR frame of [type] with no data; returns what it threw. */
+    private fun MediaCodecDecoderRenderer.submitNoData(type: Int): NullPointerException =
+        assertThrows(NullPointerException::class.java) {
+            submitDecodeUnit(null, 4, type, 1, MoonBridge.FRAME_TYPE_IDR, 0.toChar(), 0, 0)
+        }
 
     // HEVC
 
@@ -156,6 +168,99 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
 
             assertThat(sink.messages)
                 .contains("first HEVC SPS hex=00 00 00 01 42 01 01 01 60 00 00 03 00 90")
+        } finally {
+            BorealisLog.shutdown()
+        }
+    }
+
+    // A unit the native layer sent without its data
+
+    @Test
+    fun `a VPS of an IDR frame with no data is counted and then fails with a null pointer`() {
+        val renderer = hevc()
+
+        val thrown = renderer.submitNoData(MoonBridge.BUFFER_TYPE_VPS)
+
+        assertThat(thrown).hasMessageThat().isEqualTo("The decode unit data is not available")
+        assertThat(renderer.field<Int>("numVpsIn")).isEqualTo(1)
+        assertThat(renderer.field<List<ByteArray>>("vpsBuffers")).isEmpty()
+    }
+
+    @Test
+    fun `an HEVC SPS of an IDR frame with no data is counted and then fails with a null pointer`() {
+        val renderer = hevc()
+
+        val thrown = renderer.submitNoData(MoonBridge.BUFFER_TYPE_SPS)
+
+        assertThat(thrown).hasMessageThat().isEqualTo("The decode unit data is not available")
+        assertThat(renderer.field<Int>("numSpsIn")).isEqualTo(1)
+        assertThat(renderer.field<List<ByteArray>>("spsBuffers")).isEmpty()
+    }
+
+    @Test
+    fun `a PPS of an IDR frame with no data is counted and then fails with a null pointer`() {
+        val renderer = hevc()
+
+        val thrown = renderer.submitNoData(MoonBridge.BUFFER_TYPE_PPS)
+
+        assertThat(thrown).hasMessageThat().isEqualTo("The decode unit data is not available")
+        assertThat(renderer.field<Int>("numPpsIn")).isEqualTo(1)
+        assertThat(renderer.field<List<ByteArray>>("ppsBuffers")).isEmpty()
+    }
+
+    @Test
+    fun `HEVC parameter sets in a frame that is not an IDR frame are queued as frames, not held`() {
+        val renderer = hevc()
+        val units =
+            listOf(
+                MoonBridge.BUFFER_TYPE_VPS to vps,
+                MoonBridge.BUFFER_TYPE_SPS to sps,
+                MoonBridge.BUFFER_TYPE_PPS to pps,
+            )
+
+        val results = units.map { (type, data) -> renderer.submit(DecodeUnit(bytes(data), type)) }
+
+        assertThat(results).containsExactly(MoonBridge.DR_OK, MoonBridge.DR_OK, MoonBridge.DR_OK)
+        assertThat(listOf("numVpsIn", "numSpsIn", "numPpsIn").map { renderer.field<Int>(it) })
+            .containsExactly(0, 0, 0)
+        assertThat(queued().map { it.hex })
+            .containsExactly(hex(bytes(vps)), hex(bytes(sps)), hex(bytes(pps)))
+            .inOrder()
+        assertThat(queued().map { it.flags }).containsExactly(0, 0, 0)
+    }
+
+    @Test
+    fun `the HEVC SPS reaches the diagnostics before it is held`() {
+        val timeline = CopyOnWriteArrayList<String>()
+        BorealisLog.initialize(
+            listOf(
+                object : LogSink {
+                    override fun write(record: LogRecord) {
+                        timeline += record.message
+                    }
+                }
+            ),
+            LogLevel.DEBUG,
+        )
+        try {
+            val renderer = hevc()
+            val held =
+                object : ArrayList<ByteArray>() {
+                    override fun add(element: ByteArray): Boolean {
+                        timeline += "held"
+                        return super.add(element)
+                    }
+                }
+            ReflectionHelpers.setField(renderer, "spsBuffers", held)
+
+            renderer.submit(parameterSet(MoonBridge.BUFFER_TYPE_SPS, sps))
+
+            assertThat(timeline.filter { it.startsWith("first HEVC SPS") || it == "held" })
+                .containsExactly(
+                    "first HEVC SPS hex=00 00 00 01 42 01 01 01 60 00 00 03 00 90",
+                    "held",
+                )
+                .inOrder()
         } finally {
             BorealisLog.shutdown()
         }

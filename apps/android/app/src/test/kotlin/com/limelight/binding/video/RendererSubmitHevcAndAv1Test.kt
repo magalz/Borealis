@@ -8,7 +8,9 @@ import io.github.magalz.borealis.logging.LogLevel
 import io.github.magalz.borealis.logging.LogRecord
 import io.github.magalz.borealis.logging.LogSink
 import java.util.concurrent.CopyOnWriteArrayList
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes the bytes that `submitDecodeUnit` queues for HEVC and AV1. HEVC parameter sets go
@@ -66,6 +68,16 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
     }
 
     private fun queued() = events<CodecEvent.Queued>()
+
+    /** A counter or a list of held parameter sets of [this], by the name of its private field. */
+    private fun <T> MediaCodecDecoderRenderer.field(name: String): T =
+        ReflectionHelpers.getField(this, name)
+
+    /** Sends a unit of an IDR frame of [type] with no data; returns what it threw. */
+    private fun MediaCodecDecoderRenderer.submitNoData(type: Int): NullPointerException =
+        assertThrows(NullPointerException::class.java) {
+            submitDecodeUnit(null, 4, type, 1, MoonBridge.FRAME_TYPE_IDR, 0.toChar(), 0, 0)
+        }
 
     // HEVC
 
@@ -159,6 +171,19 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
         } finally {
             BorealisLog.shutdown()
         }
+    }
+
+    // A unit the native layer sent without its data
+
+    @Test
+    fun `a VPS of an IDR frame with no data is counted and then fails with a null pointer`() {
+        val renderer = hevc()
+
+        val thrown = renderer.submitNoData(MoonBridge.BUFFER_TYPE_VPS)
+
+        assertThat(thrown).hasMessageThat().isEqualTo("The decode unit data is not available")
+        assertThat(renderer.field<Int>("numVpsIn")).isEqualTo(1)
+        assertThat(renderer.field<List<ByteArray>>("vpsBuffers")).isEmpty()
     }
 
     // AV1

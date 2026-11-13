@@ -2762,6 +2762,61 @@ class Game :
         }
     }
 
+    // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see whether the
+    // other joins them. True when the chord of the two was completed: the caller opens the menu
+    // once it has noted the buttons (stream)
+    private fun sideButtonsChanged(
+        buttonState: Int,
+        changedButtons: Int,
+        eventTime: Long,
+    ): Boolean {
+        if (!prefConfig.mouseNavButtons) return false
+        var sideChord = false
+        if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
+            sideChord =
+                sideButtonMoved(
+                    sideBack,
+                    (buttonState and MotionEvent.BUTTON_BACK) != 0,
+                    eventTime,
+                )
+        }
+
+        if ((changedButtons and MotionEvent.BUTTON_FORWARD) != 0) {
+            sideChord =
+                sideButtonMoved(
+                    sideForward,
+                    (buttonState and MotionEvent.BUTTON_FORWARD) != 0,
+                    eventTime,
+                ) || sideChord
+        }
+        return sideChord
+    }
+
+    // Handle stylus presses: a stylus is left click and an eraser is right click, and the place and
+    // time of the press and of the release keep the pointer out of the dead zones around them
+    private fun noteStylusPress(event: MotionEvent) {
+        if (event.pointerCount != 1 || event.actionIndex != 0) return
+        val action = event.actionMasked
+        val down = action == MotionEvent.ACTION_DOWN
+        if (!down && action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) return
+        val button =
+            when (event.getToolType(0)) {
+                MotionEvent.TOOL_TYPE_STYLUS -> MouseButtonPacket.BUTTON_LEFT
+                MotionEvent.TOOL_TYPE_ERASER -> MouseButtonPacket.BUTTON_RIGHT
+                else -> return
+            }
+        if (down) {
+            lastAbsTouchDownTime = event.eventTime
+            lastAbsTouchDownX = event.getX(0)
+            lastAbsTouchDownY = event.getY(0)
+        } else {
+            lastAbsTouchUpTime = event.eventTime
+            lastAbsTouchUpX = event.getX(0)
+            lastAbsTouchUpY = event.getY(0)
+        }
+        sendMouseButton(button, down)
+    }
+
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -2827,68 +2882,8 @@ class Game :
 
                 sendMouseButtons(buttonState, changedButtons)
 
-                // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see
-                // whether the other joins them (stream)
-                var sideChord = false
-                if (prefConfig.mouseNavButtons) {
-                    if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
-                        sideChord =
-                            sideButtonMoved(
-                                sideBack,
-                                (buttonState and MotionEvent.BUTTON_BACK) != 0,
-                                event.eventTime,
-                            )
-                    }
-
-                    if ((changedButtons and MotionEvent.BUTTON_FORWARD) != 0) {
-                        sideChord =
-                            sideButtonMoved(
-                                sideForward,
-                                (buttonState and MotionEvent.BUTTON_FORWARD) != 0,
-                                event.eventTime,
-                            ) || sideChord
-                    }
-                }
-
-                // Handle stylus presses
-                if (event.pointerCount == 1 && event.actionIndex == 0) {
-                    if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-                            lastAbsTouchDownTime = event.eventTime
-                            lastAbsTouchDownX = event.getX(0)
-                            lastAbsTouchDownY = event.getY(0)
-
-                            // Stylus is left click
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                        } else if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
-                            lastAbsTouchDownTime = event.eventTime
-                            lastAbsTouchDownX = event.getX(0)
-                            lastAbsTouchDownY = event.getY(0)
-
-                            // Eraser is right click
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                        }
-                    } else if (
-                        event.actionMasked == MotionEvent.ACTION_UP ||
-                            event.actionMasked == MotionEvent.ACTION_CANCEL
-                    ) {
-                        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-                            lastAbsTouchUpTime = event.eventTime
-                            lastAbsTouchUpX = event.getX(0)
-                            lastAbsTouchUpY = event.getY(0)
-
-                            // Stylus is left click
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                        } else if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
-                            lastAbsTouchUpTime = event.eventTime
-                            lastAbsTouchUpX = event.getX(0)
-                            lastAbsTouchUpY = event.getY(0)
-
-                            // Eraser is right click
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                        }
-                    }
-                }
+                val sideChord = sideButtonsChanged(buttonState, changedButtons, event.eventTime)
+                noteStylusPress(event)
 
                 lastButtonState = buttonState
                 // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the

@@ -2891,83 +2891,7 @@ class Game :
             }
             // This case is for fingers
             else {
-                val controllerMode = virtualController?.controllerMode
-                if (
-                    controllerMode == VirtualController.ControllerMode.MoveButtons ||
-                        controllerMode == VirtualController.ControllerMode.ResizeButtons
-                ) {
-                    // Ignore presses when the virtual controller is being configured
-                    return true
-                }
-
-                // BOREALIS: the touch mode of the stream session; Off ignores the touch screen
-                val touchMode = TouchContexts.mode(streamSession, prefConfig)
-                if (touchMode == TouchMode.OFF) {
-                    return true
-                }
-
-                // If this is the parent view, we'll offset our coordinates to appear as if they
-                // are relative to the StreamView like our StreamView touch events are.
-                val xOffset: Float
-                val yOffset: Float
-                if (view != streamView && touchMode != TouchMode.TRACKPAD) {
-                    xOffset = -streamView.x
-                    yOffset = -streamView.y
-                } else {
-                    xOffset = 0f
-                    yOffset = 0f
-                }
-
-                val actionIndex = event.actionIndex
-
-                val eventX = (event.getX(actionIndex) + xOffset).toInt()
-                val eventY = (event.getY(actionIndex) + yOffset).toInt()
-
-                // BOREALIS: the Native touch mode sends every finger to the host as a touch event,
-                // the third one too, and the code below takes what the host refuses. A tap of
-                // three fingers that opens the keyboard is theirs: a finger that went to the host
-                // does not reach it (stream)
-                if (hostTookTouch(touchMode, view, event)) {
-                    return true
-                }
-
-                // Special handling for 3 finger gesture
-                if (
-                    event.actionMasked == MotionEvent.ACTION_POINTER_DOWN &&
-                        event.pointerCount == THREE_FINGER_COUNT
-                ) {
-                    startThreeFingerGesture(event)
-
-                    return true
-                }
-
-                val context = getTouchContext(actionIndex)
-                if (context == null) {
-                    return false
-                }
-
-                when (event.actionMasked) {
-                    MotionEvent.ACTION_POINTER_DOWN,
-                    MotionEvent.ACTION_DOWN -> fingerDown(context, event, eventX, eventY)
-
-                    MotionEvent.ACTION_POINTER_UP,
-                    MotionEvent.ACTION_UP -> {
-                        if (endsThreeFingerTap(event)) {
-                            // This is a 3 finger tap to bring up the keyboard
-                            toggleKeyboard()
-                            return true
-                        }
-
-                        liftFinger(context, event, eventX, eventY)
-                        promoteSecondFinger(context, event, xOffset, yOffset)
-                    }
-
-                    MotionEvent.ACTION_MOVE -> moveFingers(event, xOffset, yOffset)
-
-                    MotionEvent.ACTION_CANCEL -> cancelFingers()
-
-                    else -> return false
-                }
+                return handleFingerEvent(view, event)
             }
 
             // Handled a known source
@@ -3078,6 +3002,90 @@ class Game :
             touchContextEntry(aTouchContext).cancelTouch()
             touchContextEntry(aTouchContext).setPointerCount(0)
         }
+    }
+
+    // BOREALIS: a finger of the touch screen (the other sources of the pointer class are the mouse
+    // and its kin). True when the event was consumed.
+    private fun handleFingerEvent(view: View?, event: MotionEvent): Boolean {
+        val controllerMode = virtualController?.controllerMode
+        if (
+            controllerMode == VirtualController.ControllerMode.MoveButtons ||
+                controllerMode == VirtualController.ControllerMode.ResizeButtons
+        ) {
+            // Ignore presses when the virtual controller is being configured
+            return true
+        }
+
+        // BOREALIS: the touch mode of the stream session; Off ignores the touch screen
+        val touchMode = TouchContexts.mode(streamSession, prefConfig)
+
+        // BOREALIS: the Native touch mode sends every finger to the host as a touch event, the
+        // third one too, and the code below takes what the host refuses. A tap of three fingers
+        // that opens the keyboard is theirs: a finger that went to the host does not reach it
+        // (stream)
+        return when {
+            touchMode == TouchMode.OFF || hostTookTouch(touchMode, view, event) -> true
+
+            // Special handling for 3 finger gesture
+            event.actionMasked == MotionEvent.ACTION_POINTER_DOWN &&
+                event.pointerCount == THREE_FINGER_COUNT -> {
+                startThreeFingerGesture(event)
+                true
+            }
+
+            else -> sendToTouchContexts(view, event, touchMode)
+        }
+    }
+
+    // Sends the finger to the touch contexts, which are fetched now: the attempt to send it to
+    // the host can have rebuilt them. False when there is no context for the pointer, or the
+    // action is no touch.
+    private fun sendToTouchContexts(
+        view: View?,
+        event: MotionEvent,
+        touchMode: TouchMode,
+    ): Boolean {
+        // If this is the parent view, we'll offset our coordinates to appear as if they
+        // are relative to the StreamView like our StreamView touch events are.
+        val xOffset: Float
+        val yOffset: Float
+        if (view != streamView && touchMode != TouchMode.TRACKPAD) {
+            xOffset = -streamView.x
+            yOffset = -streamView.y
+        } else {
+            xOffset = 0f
+            yOffset = 0f
+        }
+
+        val actionIndex = event.actionIndex
+
+        val eventX = (event.getX(actionIndex) + xOffset).toInt()
+        val eventY = (event.getY(actionIndex) + yOffset).toInt()
+
+        val context = getTouchContext(actionIndex) ?: return false
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_POINTER_DOWN,
+            MotionEvent.ACTION_DOWN -> fingerDown(context, event, eventX, eventY)
+
+            MotionEvent.ACTION_POINTER_UP,
+            MotionEvent.ACTION_UP -> {
+                if (endsThreeFingerTap(event)) {
+                    // This is a 3 finger tap to bring up the keyboard
+                    toggleKeyboard()
+                } else {
+                    liftFinger(context, event, eventX, eventY)
+                    promoteSecondFinger(context, event, xOffset, yOffset)
+                }
+            }
+
+            MotionEvent.ACTION_MOVE -> moveFingers(event, xOffset, yOffset)
+
+            MotionEvent.ACTION_CANCEL -> cancelFingers()
+
+            else -> return false
+        }
+        return true
     }
 
     // The Java dereferenced the entries of the touch context array without a check: an entry that

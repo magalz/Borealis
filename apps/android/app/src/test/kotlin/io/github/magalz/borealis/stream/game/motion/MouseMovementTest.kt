@@ -243,6 +243,39 @@ internal class MouseMovementTest : MotionTestBase() {
         assertThat(sent()).containsExactly(position(100, 50, 1000, 500))
     }
 
+    /** The event of a touchpad of 1000 by 500 with a finger at (100.7, 50.2). */
+    private fun touchpadAction(action: Int, buttons: Int = 0): MotionEvent {
+        val device = inputDeviceOf(TOUCHPAD_ID, InputDevice.SOURCE_TOUCHPAD, x(1000f), y(500f))
+        return motionEventOf(InputDevice.SOURCE_TOUCHPAD, action) {
+            this.device = device
+            pointer(100.7f, 50.2f, MotionEvent.TOOL_TYPE_FINGER)
+            buttonState = buttons
+        }
+    }
+
+    @Test
+    fun `a touchpad sends its position before the buttons of the same event`() {
+        streaming()
+        val down = touchpadAction(MotionEvent.ACTION_DOWN, MotionEvent.BUTTON_PRIMARY)
+
+        rig.game.onGenericMotion(streamView, down)
+
+        assertThat(sent())
+            .containsExactly(position(100, 50, 1000, 500), press(MouseButtonPacket.BUTTON_LEFT))
+            .inOrder()
+    }
+
+    @Test
+    fun `a cancel of a touchpad is no pen cancel, it sends the position like any other event`() {
+        streaming()
+
+        val handled =
+            rig.game.onGenericMotion(streamView, touchpadAction(MotionEvent.ACTION_CANCEL))
+
+        assertThat(handled).isTrue()
+        assertThat(sent()).containsExactly(position(100, 50, 1000, 500))
+    }
+
     // ----- The pointer on the stream view -----
 
     private fun hover(x: Float, y: Float) = mouseEvent(MotionEvent.ACTION_HOVER_MOVE, x, y)
@@ -335,6 +368,17 @@ internal class MouseMovementTest : MotionTestBase() {
         val handled = rig.game.onGenericMotionEvent(hover(origin[0] + 10f, origin[1] + 20f))
 
         assertThat(handled).isTrue()
+        assertThat(sent()).containsExactly(position(10, 20))
+    }
+
+    @Test
+    fun `an event that reaches the activity itself is moved by the origin of the stream view in x`() {
+        streaming(left = 40)
+        val origin = IntArray(2).also { streamView.getLocationInWindow(it) }
+        assertThat(origin[0]).isEqualTo(40)
+
+        rig.game.onGenericMotionEvent(hover(origin[0] + 10f, origin[1] + 20f))
+
         assertThat(sent()).containsExactly(position(10, 20))
     }
 

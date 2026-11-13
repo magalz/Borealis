@@ -592,6 +592,35 @@ internal class PenEventsTest : MotionTestBase() {
         assertThat(sent()).containsExactly(position(32, 18))
     }
 
+    @Test
+    fun `a pen event that the host takes leaves the buttons that are down alone`() {
+        streaming()
+        mouse(MotionEvent.ACTION_DOWN, MotionEvent.BUTTON_PRIMARY)
+        forgetSent()
+
+        send(stylus(MotionEvent.ACTION_HOVER_MOVE))
+
+        assertThat(sentBesidesPens()).isEmpty()
+        // The host still has the left button down, and the mouse lets it go.
+        mouse(MotionEvent.ACTION_UP, 0)
+        assertThat(sentBesidesPens()).contains(release(MouseButtonPacket.BUTTON_LEFT))
+    }
+
+    @Test
+    fun `a stylus that reaches the activity itself is placed as a mouse, it is no pen event`() {
+        streaming()
+        val origin = IntArray(2).also { streamView.getLocationInWindow(it) }
+
+        val handled =
+            rig.game.onGenericMotionEvent(
+                stylus(MotionEvent.ACTION_HOVER_MOVE, x = origin[0] + 10f, y = origin[1] + 20f)
+            )
+
+        assertThat(handled).isTrue()
+        assertThat(pens()).isEmpty()
+        assertThat(sent()).containsExactly(position(10, 20))
+    }
+
     private companion object {
         const val PEN_ID = 10
         const val EPSILON = 1e-6f

@@ -245,6 +245,26 @@ class RendererHdrTest : RendererTestBase() {
     }
 
     @Test
+    fun `a restart that the IDR frame met after its fetch is still there for the next failed fetch`() {
+        val renderer = ready()
+        renderer.begin()
+        // The buffer for this frame is held already, so the IDR frame meets the restart when it is
+        // queued, not when it is fetched.
+        renderer.submit(pFrame(1))
+        renderer.setHdrMode(true, metadata())
+        assertThat(renderer.sendIdr(number = 2)).isEqualTo(MoonBridge.DR_NEED_IDR)
+        ShadowRecordingVideoCodec.nullInputBuffers.set(1)
+
+        val result = renderer.sendIdr(number = 3)
+
+        // The request is not used up yet, so the failed fetch is retried with the parameter sets.
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        assertThat(events<CodecEvent.Queued>().takeLast(2).map { it.flags })
+            .containsExactly(CODEC_CONFIG, SYNC_FRAME)
+            .inOrder()
+    }
+
+    @Test
     fun `the restart for HDR does not count against the recovery attempts`() {
         val renderer = ready()
         renderer.begin()

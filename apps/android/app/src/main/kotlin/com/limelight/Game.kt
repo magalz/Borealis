@@ -2610,6 +2610,28 @@ class Game :
             else -> sendTouchEventForPointer(view, event, eventType, event.actionIndex)
         }
 
+    // Always update the position before sending any button events. If we're dealing with a stylus
+    // without hover support, our position might be significantly different than before.
+    // True when the host took the event as a pen event: nothing else is sent for it.
+    private fun placePointer(view: View?, event: MotionEvent): Boolean {
+        when {
+            inputCaptureProvider.eventHasRelativeMouseAxes(event) -> sendRelativeMove(event)
+            (event.source and InputDevice.SOURCE_CLASS_POSITION) != 0 -> sendTouchpadPosition(event)
+            view != null && trySendPenEvent(view, event) -> {
+                // If our host supports pen events, send it directly
+                // BOREALIS: a cancel ends the mouse buttons too, or the host keeps them down
+                if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                    releaseMouseButtons()
+                }
+                return true
+            }
+            // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
+            view != null -> updateMousePosition(view, event)
+            else -> updateMousePositionInWindow(event)
+        }
+        return false
+    }
+
     // Send the deltas straight from the motion event
     private fun sendRelativeMove(event: MotionEvent) {
         val deltaX = inputCaptureProvider.getRelativeAxisX(event).toInt().toShort()
@@ -2756,25 +2778,8 @@ class Game :
                     return true
                 }
 
-                // Always update the position before sending any button events. If we're
-                // dealing with a stylus without hover support, our position might be
-                // significantly different than before.
-                if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
-                    sendRelativeMove(event)
-                } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
-                    sendTouchpadPosition(event)
-                } else if (view != null && trySendPenEvent(view, event)) {
-                    // If our host supports pen events, send it directly
-                    // BOREALIS: a cancel ends the mouse buttons too, or the host keeps them down
-                    if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-                        releaseMouseButtons()
-                    }
+                if (placePointer(view, event)) {
                     return true
-                } else if (view != null) {
-                    // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
-                    updateMousePosition(view, event)
-                } else {
-                    updateMousePositionInWindow(event)
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {

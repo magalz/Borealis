@@ -2437,55 +2437,58 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
+    // Sends each stylus pointer of a move to the host, in index order, and stops at the first
+    // that the host refuses (false). True when the event had a stylus pointer, false when it had
+    // none.
+    private fun sendPenMove(view: View, event: MotionEvent, eventType: Byte): Boolean {
+        var handledStylusEvent = false
+        for (i in 0 until event.pointerCount) {
+            val toolType = convertToolTypeToStylusToolType(event, i)
+            if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
+                // Not a stylus pointer, so skip it
+                continue
+            }
+            // This pointer is a stylus, so we'll report that we handled this event
+            handledStylusEvent = true
+
+            if (!sendPenEventForPointer(view, event, eventType, toolType, i)) {
+                // Pen events aren't supported by the host
+                return false
+            }
+        }
+        return handledStylusEvent
+    }
+
     private fun trySendPenEvent(view: View, event: MotionEvent): Boolean {
         val eventType = getLiTouchTypeFromEvent(event)
         if (eventType < 0) {
             return false
         }
 
-        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
+        return when (event.actionMasked) {
             // Move events may impact all active pointers
-            var handledStylusEvent = false
-            for (i in 0 until event.pointerCount) {
-                val toolType = convertToolTypeToStylusToolType(event, i)
-                if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
-                    // Not a stylus pointer, so skip it
-                    continue
-                } else {
-                    // This pointer is a stylus, so we'll report that we handled this event
-                    handledStylusEvent = true
-                }
-
-                if (!sendPenEventForPointer(view, event, eventType, toolType, i)) {
-                    // Pen events aren't supported by the host
-                    return false
-                }
-            }
-            return handledStylusEvent
-        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            MotionEvent.ACTION_MOVE -> sendPenMove(view, event, eventType)
             // Cancel impacts all active pointers
-            return conn.sendPenEvent(
-                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
-                MoonBridge.LI_TOOL_TYPE_UNKNOWN,
-                0,
-                0f,
-                0f,
-                0f,
-                0f,
-                0f,
-                MoonBridge.LI_ROT_UNKNOWN,
-                MoonBridge.LI_TILT_UNKNOWN,
-            ) != MoonBridge.LI_ERR_UNSUPPORTED
-        } else {
+            MotionEvent.ACTION_CANCEL ->
+                conn.sendPenEvent(
+                    MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+                    MoonBridge.LI_TOOL_TYPE_UNKNOWN,
+                    0,
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    MoonBridge.LI_ROT_UNKNOWN,
+                    MoonBridge.LI_TILT_UNKNOWN,
+                ) != MoonBridge.LI_ERR_UNSUPPORTED
             // Up, Down, and Hover events are specific to the action index
-            val toolType = convertToolTypeToStylusToolType(event, event.actionIndex)
-            if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
-                // Not a stylus event
-                return false
+            else -> {
+                val toolType = convertToolTypeToStylusToolType(event, event.actionIndex)
+                // A pointer that is no stylus is no pen event
+                toolType != MoonBridge.LI_TOOL_TYPE_UNKNOWN &&
+                    sendPenEventForPointer(view, event, eventType, toolType, event.actionIndex)
             }
-            return sendPenEventForPointer(view, event, eventType, toolType, event.actionIndex)
         }
     }
 
@@ -2585,26 +2588,27 @@ class Game :
             MoonBridge.LI_ROT_UNKNOWN,
         )
 
-    // True when the host took the event, false when it answered that touch is not supported.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
-    private fun sendTouchEvents(view: View, event: MotionEvent, eventType: Byte): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
-            // Move events may impact all active pointers
-            for (i in 0 until event.pointerCount) {
-                if (!sendTouchEventForPointer(view, event, eventType, i)) {
-                    return false
-                }
+    // Sends each pointer of a move to the host, in index order, and stops at the first that the
+    // host refuses (false).
+    private fun sendTouchMove(view: View, event: MotionEvent, eventType: Byte): Boolean {
+        for (i in 0 until event.pointerCount) {
+            if (!sendTouchEventForPointer(view, event, eventType, i)) {
+                return false
             }
-            return true
-        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-            // Cancel impacts all active pointers
-            return sendCancelAllTouches() != MoonBridge.LI_ERR_UNSUPPORTED
-        } else {
-            // Up, Down, and Hover events are specific to the action index
-            return sendTouchEventForPointer(view, event, eventType, event.actionIndex)
         }
+        return true
     }
+
+    // True when the host took the event, false when it answered that touch is not supported.
+    private fun sendTouchEvents(view: View, event: MotionEvent, eventType: Byte): Boolean =
+        when (event.actionMasked) {
+            // Move events may impact all active pointers
+            MotionEvent.ACTION_MOVE -> sendTouchMove(view, event, eventType)
+            // Cancel impacts all active pointers
+            MotionEvent.ACTION_CANCEL -> sendCancelAllTouches() != MoonBridge.LI_ERR_UNSUPPORTED
+            // Up, Down, and Hover events are specific to the action index
+            else -> sendTouchEventForPointer(view, event, eventType, event.actionIndex)
+        }
 
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
@@ -3093,8 +3097,13 @@ class Game :
         return handleMotionEvent(null, event) || super.onGenericMotionEvent(event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ComplexCondition")
+    // Only one stylus or eraser on its own has the dead zones of updateMousePosition
+    private fun isLoneStylus(event: MotionEvent): Boolean =
+        event.pointerCount == 1 &&
+            event.actionIndex == 0 &&
+            (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
+                event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
+
     private fun updateMousePosition(touchedView: View, event: MotionEvent) {
         // X and Y are already relative to the provided view object
         var eventX: Float
@@ -3111,12 +3120,7 @@ class Game :
             eventY = event.getY(0) - streamView.y
         }
 
-        if (
-            event.pointerCount == 1 &&
-                event.actionIndex == 0 &&
-                (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
-                    event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
-        ) {
+        if (isLoneStylus(event)) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN,
                 MotionEvent.ACTION_HOVER_ENTER,

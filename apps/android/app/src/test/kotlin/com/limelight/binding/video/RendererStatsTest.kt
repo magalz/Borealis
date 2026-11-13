@@ -217,6 +217,24 @@ class RendererStatsTest : RendererTestBase() {
     }
 
     @Test
+    fun `the unit that closes a window is counted in the window it closes`() {
+        val renderer = counting()
+        renderer.feed(pFrame(1))
+        advanceClock(1_000)
+
+        renderer.feed(pFrame(2))
+
+        // Two units of 9 bytes: the second closed the window and its bytes are in it, but it is
+        // not a received frame of it yet.
+        val closed = ReflectionHelpers.getField<Any>(renderer, "lastWindowVideoStats")
+        val open = ReflectionHelpers.getField<Any>(renderer, "activeWindowVideoStats")
+        assertThat(ReflectionHelpers.getField<Long>(closed, "totalBytes")).isEqualTo(18L)
+        assertThat(ReflectionHelpers.getField<Int>(closed, "totalFramesReceived")).isEqualTo(1)
+        assertThat(ReflectionHelpers.getField<Long>(open, "totalBytes")).isEqualTo(0L)
+        assertThat(ReflectionHelpers.getField<Int>(open, "totalFramesReceived")).isEqualTo(1)
+    }
+
+    @Test
     fun `a unit of a new frame that is not an IDR frame leaves the parameter sets alone`() {
         val renderer = counting()
         val sps = H264Sps()

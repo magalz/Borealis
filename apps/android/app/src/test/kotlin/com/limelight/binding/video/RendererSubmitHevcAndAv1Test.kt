@@ -229,6 +229,43 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
         assertThat(queued().map { it.flags }).containsExactly(0, 0, 0)
     }
 
+    @Test
+    fun `the HEVC SPS reaches the diagnostics before it is held`() {
+        val timeline = CopyOnWriteArrayList<String>()
+        BorealisLog.initialize(
+            listOf(
+                object : LogSink {
+                    override fun write(record: LogRecord) {
+                        timeline += record.message
+                    }
+                }
+            ),
+            LogLevel.DEBUG,
+        )
+        try {
+            val renderer = hevc()
+            val held =
+                object : ArrayList<ByteArray>() {
+                    override fun add(element: ByteArray): Boolean {
+                        timeline += "held"
+                        return super.add(element)
+                    }
+                }
+            ReflectionHelpers.setField(renderer, "spsBuffers", held)
+
+            renderer.submit(parameterSet(MoonBridge.BUFFER_TYPE_SPS, sps))
+
+            assertThat(timeline.filter { it.startsWith("first HEVC SPS") || it == "held" })
+                .containsExactly(
+                    "first HEVC SPS hex=00 00 00 01 42 01 01 01 60 00 00 03 00 90",
+                    "held",
+                )
+                .inOrder()
+        } finally {
+            BorealisLog.shutdown()
+        }
+    }
+
     // AV1
 
     @Test

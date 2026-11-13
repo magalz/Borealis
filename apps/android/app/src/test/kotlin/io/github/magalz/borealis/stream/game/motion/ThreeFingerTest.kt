@@ -133,6 +133,34 @@ internal class ThreeFingerTest : MotionTestBase() {
         assertThat(panel()).isEqualTo(Panel.NONE)
     }
 
+    @Test
+    fun `a third finger on a touch screen that is off does not start the gesture, whatever the mode after`() {
+        streaming()
+        rig.session.setTouchMode(TouchMode.OFF)
+        assertThat(touch(thirdFingerDown(TIME))).isTrue()
+        rig.session.setTouchMode(TouchMode.DIRECT)
+
+        // Within 300 milliseconds of the third finger, but that finger was not the gesture: a tap.
+        touch(fingerEvent(MotionEvent.ACTION_DOWN, listOf(30f to 30f)) { eventTime = TIME + 50 })
+        assertThat(touch(lastFingerUp(TIME + 100))).isTrue()
+
+        assertThat(panel()).isEqualTo(Panel.NONE)
+        assertThat(sent()).contains(press(MouseButtonPacket.BUTTON_LEFT))
+    }
+
+    @Test
+    fun `a finger that taps soon after the third went down opens the keyboard and is no click`() {
+        streaming()
+        rig.session.setTouchMode(TouchMode.DIRECT)
+        touch(thirdFingerDown(TIME))
+        touch(fingerEvent(MotionEvent.ACTION_DOWN, listOf(30f to 30f)) { eventTime = TIME + 50 })
+
+        assertThat(touch(lastFingerUp(TIME + 100))).isTrue()
+
+        assertThat(panel()).isEqualTo(Panel.KEYBOARD)
+        assertThat(sent()).isEmpty()
+    }
+
     // ----- The first two touches are cancelled -----
 
     @Test

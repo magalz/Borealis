@@ -2702,6 +2702,66 @@ class Game :
         onStreamView.recycle()
     }
 
+    // BOREALIS: the buttons of a mouse event as the host knows them. The DeX touchpad on the Fold 4
+    // sends proper right click events using BUTTON_SECONDARY, but doesn't send BUTTON_PRIMARY for
+    // a regular click. Instead it sends ACTION_DOWN/UP, so we need to fix that up to look like a
+    // sane input event to process it correctly.
+    private fun mouseButtonState(event: MotionEvent): Int {
+        val buttonState = event.buttonState
+        if (event.source != SAMSUNG_DEX_MOUSE_SOURCE) return buttonState
+        return when {
+            // BOREALIS: only a plain touch down is the missing left click; a right click comes down
+            // with its own button
+            event.actionMasked == MotionEvent.ACTION_DOWN && buttonState == 0 ->
+                buttonState or MotionEvent.BUTTON_PRIMARY
+            event.action == MotionEvent.ACTION_UP ->
+                buttonState and MotionEvent.BUTTON_PRIMARY.inv()
+            // We may be faking the primary button down from a previous event, so be sure to add
+            // that bit back into the button state.
+            else -> buttonState or (lastButtonState and MotionEvent.BUTTON_PRIMARY)
+        }
+    }
+
+    // The vertical scroll packet, then the horizontal one
+    private fun sendMouseScroll(event: MotionEvent) {
+        conn.sendMouseHighResScroll(
+            (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * HIGH_RES_SCROLL_UNIT).toInt().toShort()
+        )
+        conn.sendMouseHighResHScroll(
+            (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * HIGH_RES_SCROLL_UNIT).toInt().toShort()
+        )
+    }
+
+    private fun sendMouseButton(button: Byte, down: Boolean) {
+        if (down) {
+            conn.sendMouseButtonDown(button)
+        } else {
+            conn.sendMouseButtonUp(button)
+        }
+    }
+
+    // The host buttons that changed, left, right, then middle. Mouse secondary or stylus primary is
+    // right click (stylus down is left click); mouse tertiary or stylus secondary is middle click.
+    // BOREALIS: the two of a group share one host button, which changes only when the group does
+    private fun sendMouseButtons(buttonState: Int, changedButtons: Int) {
+        if ((changedButtons and MotionEvent.BUTTON_PRIMARY) != 0) {
+            sendMouseButton(
+                MouseButtonPacket.BUTTON_LEFT,
+                (buttonState and MotionEvent.BUTTON_PRIMARY) != 0,
+            )
+        }
+
+        val rightGroup = MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY
+        if (groupChanged(buttonState, rightGroup)) {
+            sendMouseButton(MouseButtonPacket.BUTTON_RIGHT, (buttonState and rightGroup) != 0)
+        }
+
+        val middleGroup = MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY
+        if (groupChanged(buttonState, middleGroup)) {
+            sendMouseButton(MouseButtonPacket.BUTTON_MIDDLE, (buttonState and middleGroup) != 0)
+        }
+    }
+
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
     // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
@@ -2747,29 +2807,8 @@ class Game :
                             event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
                     eventSource == SAMSUNG_DEX_MOUSE_SOURCE // Samsung DeX mode desktop mouse
             ) {
-                var buttonState = event.buttonState
-                var changedButtons = buttonState xor lastButtonState
-
-                // The DeX touchpad on the Fold 4 sends proper right click events using
-                // BUTTON_SECONDARY, but doesn't send BUTTON_PRIMARY for a regular click. Instead it
-                // sends ACTION_DOWN/UP, so we need to fix that up to look like a sane input event
-                // to process it correctly.
-                if (eventSource == SAMSUNG_DEX_MOUSE_SOURCE) {
-                    // BOREALIS: only a plain touch down is the missing left click; a right click
-                    // comes down with its own button
-                    if (event.actionMasked == MotionEvent.ACTION_DOWN && buttonState == 0) {
-                        buttonState = buttonState or MotionEvent.BUTTON_PRIMARY
-                    } else if (event.action == MotionEvent.ACTION_UP) {
-                        buttonState = buttonState and MotionEvent.BUTTON_PRIMARY.inv()
-                    } else {
-                        // We may be faking the primary button down from a previous event,
-                        // so be sure to add that bit back into the button state.
-                        buttonState =
-                            buttonState or (lastButtonState and MotionEvent.BUTTON_PRIMARY)
-                    }
-
-                    changedButtons = buttonState xor lastButtonState
-                }
+                val buttonState = mouseButtonState(event)
+                val changedButtons = buttonState xor lastButtonState
 
                 // Ignore mouse input if we're not capturing from our input source
                 if (!inputCaptureProvider.isCapturingActive()) {
@@ -2783,63 +2822,10 @@ class Game :
                 }
 
                 if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
-                    // Send the vertical scroll packet
-                    conn.sendMouseHighResScroll(
-                        (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * HIGH_RES_SCROLL_UNIT)
-                            .toInt()
-                            .toShort()
-                    )
-                    conn.sendMouseHighResHScroll(
-                        (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * HIGH_RES_SCROLL_UNIT)
-                            .toInt()
-                            .toShort()
-                    )
+                    sendMouseScroll(event)
                 }
 
-                if ((changedButtons and MotionEvent.BUTTON_PRIMARY) != 0) {
-                    if ((buttonState and MotionEvent.BUTTON_PRIMARY) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                    }
-                }
-
-                // Mouse secondary or stylus primary is right click (stylus down is left click)
-                // BOREALIS: the two share one host button, which changes only when the group does
-                if (
-                    groupChanged(
-                        buttonState,
-                        MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY,
-                    )
-                ) {
-                    if (
-                        (buttonState and
-                            (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) !=
-                            0
-                    ) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                    }
-                }
-
-                // Mouse tertiary or stylus secondary is middle click
-                if (
-                    groupChanged(
-                        buttonState,
-                        MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY,
-                    )
-                ) {
-                    if (
-                        (buttonState and
-                            (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY)) !=
-                            0
-                    ) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
-                    }
-                }
+                sendMouseButtons(buttonState, changedButtons)
 
                 // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see
                 // whether the other joins them (stream)

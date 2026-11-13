@@ -208,6 +208,27 @@ class RendererSubmitHevcAndAv1Test : RendererTestBase() {
         assertThat(renderer.field<List<ByteArray>>("ppsBuffers")).isEmpty()
     }
 
+    @Test
+    fun `HEVC parameter sets in a frame that is not an IDR frame are queued as frames, not held`() {
+        val renderer = hevc()
+        val units =
+            listOf(
+                MoonBridge.BUFFER_TYPE_VPS to vps,
+                MoonBridge.BUFFER_TYPE_SPS to sps,
+                MoonBridge.BUFFER_TYPE_PPS to pps,
+            )
+
+        val results = units.map { (type, data) -> renderer.submit(DecodeUnit(bytes(data), type)) }
+
+        assertThat(results).containsExactly(MoonBridge.DR_OK, MoonBridge.DR_OK, MoonBridge.DR_OK)
+        assertThat(listOf("numVpsIn", "numSpsIn", "numPpsIn").map { renderer.field<Int>(it) })
+            .containsExactly(0, 0, 0)
+        assertThat(queued().map { it.hex })
+            .containsExactly(hex(bytes(vps)), hex(bytes(sps)), hex(bytes(pps)))
+            .inOrder()
+        assertThat(queued().map { it.flags }).containsExactly(0, 0, 0)
+    }
+
     // AV1
 
     @Test

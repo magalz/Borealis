@@ -132,6 +132,22 @@ internal class PenFallbackTest : MotionTestBase() {
     }
 
     @Test
+    fun `a stylus that the host refuses as a pen keeps its button down while it moves`() {
+        hostWithoutPens()
+        streaming()
+        fun held(action: Int, at: Long) =
+            tool(MotionEvent.TOOL_TYPE_STYLUS, action, 100f, 100f) {
+                buttonState = MotionEvent.BUTTON_STYLUS_PRIMARY
+                eventTime = at
+            }
+        mouseCallsOf(held(MotionEvent.ACTION_HOVER_MOVE, TIME))
+
+        // Only a pen event that the host takes and cancels lets the buttons go.
+        assertThat(mouseCallsOf(held(MotionEvent.ACTION_HOVER_MOVE, TIME + 500)))
+            .containsExactly(position(100, 100))
+    }
+
+    @Test
     fun `the buttons of the stylus come before the touch of the stylus`() {
         hostWithoutPens()
         streaming()

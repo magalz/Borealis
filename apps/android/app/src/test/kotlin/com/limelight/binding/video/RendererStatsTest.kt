@@ -7,6 +7,7 @@ import io.github.magalz.borealis.stream.LatencyRange
 import io.github.magalz.borealis.stream.PerfSnapshot
 import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 /**
  * Characterizes what `submitDecodeUnit` counts: the timestamps it gives the codec, the window of
@@ -199,6 +200,43 @@ class RendererStatsTest : RendererTestBase() {
         // 6 received and 4 lost.
         assertThat(snapshots.single().lossPercent).isWithin(EPSILON).of(4f / 10f * 100f)
         assertThat(snapshots.single().totalFps).isWithin(EPSILON).of(10f)
+    }
+
+    @Test
+    fun `a gap in the frame numbers is one loss event at the end of the stream, a step is none`() {
+        val renderer = counting()
+        // Steps and repeats, a gap of one (3 to 5), a repeat, a gap of three (6 to 10)
+        for (number in listOf(1, 2, 2, 3, 5, 5, 6, 10)) renderer.feed(pFrame(number))
+        advanceClock(1_000)
+
+        renderer.feed(pFrame(11))
+
+        val global = ReflectionHelpers.getField<Any>(renderer, "globalVideoStats")
+        assertThat(ReflectionHelpers.getField<Int>(global, "frameLossEvents")).isEqualTo(2)
+        assertThat(ReflectionHelpers.getField<Int>(global, "framesLost")).isEqualTo(4)
+    }
+
+    @Test
+    fun `a unit of a new frame that is not an IDR frame leaves the parameter sets alone`() {
+        val renderer = counting()
+        val sps = H264Sps()
+        renderer.submit(parameterSet(MoonBridge.BUFFER_TYPE_SPS, hex(sps.nal()), 1))
+        renderer.submit(h264Pps(1))
+
+        // Only a new IDR frame forgets them: this P frame is not one, so the first picture data
+        // of the IDR frame under its number still sends them as config.
+        renderer.submit(pFrame(2))
+        renderer.submit(idrSlice(2))
+
+        val patched =
+            sps.copy(
+                numRefFrames = 1,
+                vui =
+                    sps.vui?.copy(restriction = H264Sps.restrictionAdded(maxDecFrameBuffering = 1)),
+            )
+        val pps = bytes("00000001 68ce3c80")
+        val config = queued().single { it.flags == CODEC_CONFIG }
+        assertThat(config.hex).isEqualTo(hex(patched.nal() + pps))
     }
 
     @Test

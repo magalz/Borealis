@@ -91,7 +91,12 @@ private const val ERROR_DECODER_UNAVAILABLE = -2
 private const val ERROR_UNKNOWN_FORMAT = -3
 private const val ERROR_CONFIGURATION_FAILED = -5
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+private const val MIME_AVC = "video/avc"
+private const val MIME_HEVC = "video/hevc"
+private const val MIME_AV1 = "video/av01"
+
+// Converted as is from the inherited Java; LargeClass and TooManyFunctions stay because the class
+// waits for its split (Sprint 18d backlog).
 @Suppress("LargeClass", "TooManyFunctions")
 class MediaCodecDecoderRenderer(
     private val activity: Activity,
@@ -295,55 +300,51 @@ class MediaCodecDecoderRenderer(
             MediaCodecInfo.CodecProfileLevel.AVCProfileHigh,
         ) ?: MediaCodecHelper.findFirstDecoder("video/avc")
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
     private fun decoderCanMeetPerformancePoint(
         caps: MediaCodecInfo.VideoCapabilities,
         prefs: PreferenceConfiguration,
-    ): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val targetPerfPoint =
-                MediaCodecInfo.VideoCapabilities.PerformancePoint(
-                    prefs.width,
-                    prefs.height,
-                    prefs.fps,
-                )
-            val perfPoints = caps.supportedPerformancePoints
-            if (perfPoints != null) {
-                for (perfPoint in perfPoints) {
-                    // If we find a performance point that covers our target, we're good to go
-                    if (perfPoint.covers(targetPerfPoint)) {
-                        return true
-                    }
-                }
+    ): Boolean =
+        meetsPerformancePoints(caps, prefs)
+            ?: meetsAchievableFrameRates(caps, prefs)
+            // As a last resort, we will use areSizeAndRateSupported() which is explicitly NOT a
+            // performance metric, but it can work at least for the purpose of determining if
+            // the codec is going to die when given a stream with the specified settings.
+            ?: caps.areSizeAndRateSupported(prefs.width, prefs.height, prefs.fps.toDouble())
 
-                // We had performance point data but none met the specified streaming settings
-                return false
-            }
-
-            // Fall-through to try the Android M API if there's no performance point data
+    // The answer of the performance points (Android 10 and later), or null when there is no
+    // performance point data to go by.
+    private fun meetsPerformancePoints(
+        caps: MediaCodecInfo.VideoCapabilities,
+        prefs: PreferenceConfiguration,
+    ): Boolean? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return null
         }
+        val targetPerfPoint =
+            MediaCodecInfo.VideoCapabilities.PerformancePoint(prefs.width, prefs.height, prefs.fps)
+        val perfPoints = caps.supportedPerformancePoints ?: return null
 
+        // If we find a performance point that covers our target, we're good to go. With
+        // performance point data and none that covers it, the specified streaming settings are
+        // not met.
+        return perfPoints.any { it.covers(targetPerfPoint) }
+    }
+
+    // The answer of the achievable frame rates, or null when the decoder has none for this size.
+    private fun meetsAchievableFrameRates(
+        caps: MediaCodecInfo.VideoCapabilities,
+        prefs: PreferenceConfiguration,
+    ): Boolean? =
         try {
             // We'll ask the decoder what it can do for us at this resolution and see if our
             // requested frame rate falls below or inside the range of achievable frame rates.
             val fpsRange: Range<Double>? =
                 caps.getAchievableFrameRatesFor(prefs.width, prefs.height)
-            if (fpsRange != null) {
-                return prefs.fps <= fpsRange.upper
-            }
-
-            // Fall-through to try the Android L API if there's no performance point data
+            fpsRange?.let { prefs.fps <= it.upper }
         } catch (ignored: IllegalArgumentException) {
             // Video size not supported at any frame rate
-            return false
+            false
         }
-
-        // As a last resort, we will use areSizeAndRateSupported() which is explicitly NOT a
-        // performance metric, but it can work at least for the purpose of determining if
-        // the codec is going to die when given a stream with the specified settings.
-        return caps.areSizeAndRateSupported(prefs.width, prefs.height, prefs.fps.toDouble())
-    }
 
     // BOREALIS: HEVC and AV1 may use a decoder that throws for its capabilities, as AVC may, and
     // that decoder has no capabilities to ask about (what the Main10 answers and the crash text
@@ -464,12 +465,11 @@ class MediaCodecDecoderRenderer(
 
     fun isAvcSupported(): Boolean = avcDecoder != null
 
-    @Suppress("ReturnCount")
     fun isHevcMain10Hdr10Supported(): Boolean {
         val decoder = hevcDecoder ?: return false
-        val capabilities = capabilitiesOrNull(decoder, "video/hevc") ?: return false
+        val capabilities = capabilitiesOrNull(decoder, "video/hevc")
 
-        for (profileLevel in capabilities.profileLevels) {
+        for (profileLevel in capabilities?.profileLevels.orEmpty()) {
             if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10) {
                 LimeLog.info("HEVC decoder " + decoder.name + " supports HEVC Main10 HDR10")
                 return true
@@ -481,12 +481,11 @@ class MediaCodecDecoderRenderer(
 
     fun isAv1Supported(): Boolean = av1Decoder != null
 
-    @Suppress("ReturnCount")
     fun isAv1Main10Supported(): Boolean {
         val decoder = av1Decoder ?: return false
-        val capabilities = capabilitiesOrNull(decoder, "video/av01") ?: return false
+        val capabilities = capabilitiesOrNull(decoder, "video/av01")
 
-        for (profileLevel in capabilities.profileLevels) {
+        for (profileLevel in capabilities?.profileLevels.orEmpty()) {
             if (profileLevel.profile == MediaCodecInfo.CodecProfileLevel.AV1ProfileMain10HDR10) {
                 LimeLog.info("AV1 decoder " + decoder.name + " supports AV1 Main 10 HDR10")
                 return true
@@ -675,8 +674,8 @@ class MediaCodecDecoderRenderer(
         requireDecoder().start()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("PrintStackTrace", "ThrowsCount", "TooGenericExceptionThrown")
+    // The printed stack trace and the generic throw stay as they were (Sprint 18c backlog).
+    @Suppress("PrintStackTrace", "TooGenericExceptionThrown")
     private fun tryConfigureDecoder(
         selectedDecoderInfo: MediaCodecInfo,
         format: MediaFormat,
@@ -695,14 +694,10 @@ class MediaCodecDecoderRenderer(
             configured = true
         } catch (e: IllegalArgumentException) {
             e.printStackTrace()
-            if (throwOnCodecError) {
-                throw e
-            }
+            rethrowIf(throwOnCodecError, e)
         } catch (e: IllegalStateException) {
             e.printStackTrace()
-            if (throwOnCodecError) {
-                throw e
-            }
+            rethrowIf(throwOnCodecError, e)
         } catch (e: IOException) {
             e.printStackTrace()
             if (throwOnCodecError) {
@@ -718,74 +713,101 @@ class MediaCodecDecoderRenderer(
         return configured
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
+    private fun rethrowIf(wanted: Boolean, e: Exception) {
+        if (wanted) {
+            throw e
+        }
+    }
+
     fun initializeDecoder(throwOnCodecError: Boolean): Int {
-        val mimeType: String
-        val selectedDecoderInfo: MediaCodecInfo
+        val mimeType = activeMimeType()
+        val selectedDecoderInfo = mimeType?.let { decoderForStream(it) }
 
-        if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
-            mimeType = "video/avc"
-            val avc = avcDecoder
-
-            if (avc == null) {
-                LimeLog.severe("No available AVC decoder!")
-                return ERROR_AVC_UNAVAILABLE
+        return when {
+            mimeType == null -> {
+                LimeLog.severe("Unknown format")
+                ERROR_UNKNOWN_FORMAT
             }
-            selectedDecoderInfo = avc
-
-            if (initialWidth > MAX_AVC_DIMENSION || initialHeight > MAX_AVC_DIMENSION) {
+            selectedDecoderInfo == null -> unavailableError(mimeType)
+            mimeType == MIME_AVC &&
+                (initialWidth > MAX_AVC_DIMENSION || initialHeight > MAX_AVC_DIMENSION) -> {
                 LimeLog.severe("> 4K streaming only supported on HEVC")
-                return ERROR_AVC_UNAVAILABLE
+                ERROR_AVC_UNAVAILABLE
             }
+            else -> {
+                applyDecoderQuirks(mimeType, selectedDecoderInfo)
 
-            // These fixups only apply to H264 decoders
-            needsBaselineSpsHack =
-                MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.name)
-            constrainedHighProfile =
-                MediaCodecHelper.decoderNeedsConstrainedHighProfile(selectedDecoderInfo.name)
-            if (needsBaselineSpsHack) {
-                LimeLog.info("Decoder " + selectedDecoderInfo.name + " needs baseline SPS hack")
+                adaptivePlayback =
+                    MediaCodecHelper.decoderSupportsAdaptivePlayback(selectedDecoderInfo, mimeType)
+                fusedIdrFrame =
+                    MediaCodecHelper.decoderSupportsFusedIdrFrame(selectedDecoderInfo, mimeType)
+
+                configureWithFallbacks(mimeType, selectedDecoderInfo, throwOnCodecError)
             }
-            if (constrainedHighProfile) {
-                LimeLog.info(
-                    "Decoder " + selectedDecoderInfo.name + " needs constrained high profile"
-                )
-            }
+        }
+    }
 
-            refFrameInvalidationActive = refFrameInvalidationAvc
-        } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
-            mimeType = "video/hevc"
-            val hevc = hevcDecoder
-
-            if (hevc == null) {
-                LimeLog.severe("No available HEVC decoder!")
-                return ERROR_DECODER_UNAVAILABLE
-            }
-            selectedDecoderInfo = hevc
-
-            refFrameInvalidationActive = refFrameInvalidationHevc
-        } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
-            mimeType = "video/av01"
-            val av1 = av1Decoder
-
-            if (av1 == null) {
-                LimeLog.severe("No available AV1 decoder!")
-                return ERROR_DECODER_UNAVAILABLE
-            }
-            selectedDecoderInfo = av1
-
-            refFrameInvalidationActive = refFrameInvalidationAv1
-        } else {
-            // Unknown format
-            LimeLog.severe("Unknown format")
-            return ERROR_UNKNOWN_FORMAT
+    // The type of the stream's video format, or null for a format that no decoder is known for.
+    private fun activeMimeType(): String? =
+        when {
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0 -> MIME_AVC
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0 -> MIME_HEVC
+            (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0 -> MIME_AV1
+            else -> null
         }
 
-        adaptivePlayback =
-            MediaCodecHelper.decoderSupportsAdaptivePlayback(selectedDecoderInfo, mimeType)
-        fusedIdrFrame = MediaCodecHelper.decoderSupportsFusedIdrFrame(selectedDecoderInfo, mimeType)
+    private fun decoderForStream(mimeType: String): MediaCodecInfo? =
+        when (mimeType) {
+            MIME_AVC -> avcDecoder
+            MIME_HEVC -> hevcDecoder
+            else -> av1Decoder
+        }
 
+    private fun unavailableError(mimeType: String): Int =
+        when (mimeType) {
+            MIME_AVC -> {
+                LimeLog.severe("No available AVC decoder!")
+                ERROR_AVC_UNAVAILABLE
+            }
+            MIME_HEVC -> {
+                LimeLog.severe("No available HEVC decoder!")
+                ERROR_DECODER_UNAVAILABLE
+            }
+            else -> {
+                LimeLog.severe("No available AV1 decoder!")
+                ERROR_DECODER_UNAVAILABLE
+            }
+        }
+
+    private fun applyDecoderQuirks(mimeType: String, selectedDecoderInfo: MediaCodecInfo) {
+        when (mimeType) {
+            MIME_AVC -> {
+                // These fixups only apply to H264 decoders
+                needsBaselineSpsHack =
+                    MediaCodecHelper.decoderNeedsBaselineSpsHack(selectedDecoderInfo.name)
+                constrainedHighProfile =
+                    MediaCodecHelper.decoderNeedsConstrainedHighProfile(selectedDecoderInfo.name)
+                if (needsBaselineSpsHack) {
+                    LimeLog.info("Decoder " + selectedDecoderInfo.name + " needs baseline SPS hack")
+                }
+                if (constrainedHighProfile) {
+                    LimeLog.info(
+                        "Decoder " + selectedDecoderInfo.name + " needs constrained high profile"
+                    )
+                }
+
+                refFrameInvalidationActive = refFrameInvalidationAvc
+            }
+            MIME_HEVC -> refFrameInvalidationActive = refFrameInvalidationHevc
+            else -> refFrameInvalidationActive = refFrameInvalidationAv1
+        }
+    }
+
+    private fun configureWithFallbacks(
+        mimeType: String,
+        selectedDecoderInfo: MediaCodecInfo,
+        throwOnCodecError: Boolean,
+    ): Int {
         var tryNumber = 0
         while (true) {
             LimeLog.info("Decoder configuration try: $tryNumber")
@@ -809,7 +831,7 @@ class MediaCodecDecoderRenderer(
                 )
             ) {
                 // Success!
-                break
+                return 0
             }
 
             if (!newFormat) {
@@ -818,8 +840,6 @@ class MediaCodecDecoderRenderer(
             }
             tryNumber++
         }
-
-        return 0
     }
 
     override fun setup(format: Int, width: Int, height: Int, redrawRate: Int): Int {
@@ -834,13 +854,8 @@ class MediaCodecDecoderRenderer(
     // All threads that interact with the MediaCodec instance must call this function regularly!
     // Object.wait and Object.notifyAll are not members of Kotlin's Any, so the monitor is cast to
     // java.lang.Object, as the Java used it.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress(
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "PLATFORM_CLASS_MAPPED_TO_KOTLIN",
-        "PrintStackTrace",
-    )
+    // The interrupted wait prints its stack trace, as the Java did (Sprint 18c backlog).
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN", "PrintStackTrace")
     private fun doCodecRecoveryIfRequired(quiescenceFlag: Int): Boolean {
         // NB: We cannot check 'stopping' here because we could end up bailing in a partially
         // quiesced state that will cause the quiesced threads to never wake up.
@@ -865,89 +880,7 @@ class MediaCodecDecoderRenderer(
                 // throws must not leave the quiesced threads waiting for it for ever.
                 var settled = false
                 try {
-                    // Input and output buffers are invalidated by stop() and reset().
-                    nextInputBuffer = null
-                    nextInputBufferIndex = -1
-                    outputBufferQueue.clear()
-                    // BOREALIS: stream.perf
-                    synchronized(decodeTimeTracker) { decodeTimeTracker.clear() }
-
-                    // Count the attempt, unless prepareForStop() cancelled the recovery meanwhile
-                    if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
-                        codecRecoveryAttempts++
-                        LimeLog.info("Codec recovery attempt: $codecRecoveryAttempts")
-                    }
-
-                    // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
-                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
-                        LimeLog.warning("Trying to restart decoder after CodecException")
-                        try {
-                            requireDecoder().stop()
-                            configureAndStartDecoder(
-                                configuredFormat.orNpe("The configured format")
-                            )
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                        } catch (e: IllegalArgumentException) {
-                            e.printStackTrace()
-
-                            // Our Surface is probably invalid, so just stop
-                            stopForInvalidSurface()
-                        } catch (e: IllegalStateException) {
-                            e.printStackTrace()
-
-                            // Something went wrong during the restart, let's use a bigger hammer
-                            // and try a reset instead.
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_RESET)
-                        }
-                    }
-
-                    // For "non-recoverable" exceptions on L+, we can call reset() to recover
-                    // without having to recreate the entire decoder again.
-                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                        LimeLog.warning("Trying to reset decoder after CodecException")
-                        try {
-                            requireDecoder().reset()
-                            configureAndStartDecoder(
-                                configuredFormat.orNpe("The configured format")
-                            )
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                        } catch (e: IllegalArgumentException) {
-                            e.printStackTrace()
-
-                            // Our Surface is probably invalid, so just stop
-                            stopForInvalidSurface()
-                        } catch (e: IllegalStateException) {
-                            e.printStackTrace()
-
-                            // Something went wrong during the reset, we'll have to resort to
-                            // releasing and recreating the decoder now.
-                        }
-                    }
-
-                    // If we _still_ haven't managed to recover, go for the nuclear option and just
-                    // throw away the old decoder and reinitialize a new one from scratch.
-                    if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
-                        LimeLog.warning("Trying to recreate decoder after CodecException")
-                        requireDecoder().release()
-
-                        try {
-                            initializeDecoder(true)
-                            codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
-                        } catch (e: IllegalArgumentException) {
-                            e.printStackTrace()
-
-                            // Our Surface is probably invalid, so just stop
-                            stopForInvalidSurface()
-                        } catch (e: IllegalStateException) {
-                            // If we failed to recover after all of these attempts, just crash
-                            if (!reportedCrash) {
-                                reportedCrash = true
-                                crashListener.notifyCrash(e)
-                            }
-                            throw RendererException(this, e)
-                        }
-                    }
-
+                    recoverCodec()
                     settled = true
                 } finally {
                     if (!settled) {
@@ -966,6 +899,13 @@ class MediaCodecDecoderRenderer(
                 // If we haven't quiesced all threads yet, wait to be signalled after recovery.
                 // The final thread to be quiesced will handle the codec recovery.
                 while (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
+                    // A recovery that ended while we waited cleared our mark, so a recovery asked
+                    // for since then has not counted us: arrive again for it, as the last thread if
+                    // we are (the monitor is held, so the type cannot become NONE in between).
+                    if ((codecRecoveryThreadQuiescedFlags and quiescenceFlag) == 0) {
+                        return doCodecRecoveryIfRequired(quiescenceFlag)
+                    }
+
                     try {
                         LimeLog.info(
                             "Waiting to quiesce decoder threads: $codecRecoveryThreadQuiescedFlags"
@@ -988,6 +928,110 @@ class MediaCodecDecoderRenderer(
         return true
     }
 
+    // The recovery of the codec, done by the last thread to quiesce while it holds the monitor.
+    // Each stage looks at the recovery type again when it starts, because the stage before it can
+    // fail and leave the work to the next one.
+    private fun recoverCodec() {
+        dropBuffersForRecovery()
+
+        // Count the attempt, unless prepareForStop() cancelled the recovery meanwhile
+        if (codecRecoveryType.get() != CR_RECOVERY_TYPE_NONE) {
+            codecRecoveryAttempts++
+            LimeLog.info("Codec recovery attempt: $codecRecoveryAttempts")
+        }
+
+        restartCodec()
+        resetCodec()
+        recreateCodec()
+    }
+
+    private fun dropBuffersForRecovery() {
+        // Input and output buffers are invalidated by stop() and reset().
+        nextInputBuffer = null
+        nextInputBufferIndex = -1
+        outputBufferQueue.clear()
+        // BOREALIS: stream.perf
+        synchronized(decodeTimeTracker) { decodeTimeTracker.clear() }
+    }
+
+    // The printed stack traces stay as they were (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun restartCodec() {
+        // For "recoverable" exceptions, we can just stop, reconfigure, and restart.
+        if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESTART) {
+            LimeLog.warning("Trying to restart decoder after CodecException")
+            try {
+                requireDecoder().stop()
+                configureAndStartDecoder(configuredFormat.orNpe("The configured format"))
+                codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+            } catch (e: IllegalArgumentException) {
+                e.printStackTrace()
+
+                // Our Surface is probably invalid, so just stop
+                stopForInvalidSurface()
+            } catch (e: IllegalStateException) {
+                e.printStackTrace()
+
+                // Something went wrong during the restart, let's use a bigger hammer
+                // and try a reset instead.
+                codecRecoveryType.set(CR_RECOVERY_TYPE_RESET)
+            }
+        }
+    }
+
+    // The printed stack traces stay as they were (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun resetCodec() {
+        // For "non-recoverable" exceptions on L+, we can call reset() to recover
+        // without having to recreate the entire decoder again.
+        if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+            LimeLog.warning("Trying to reset decoder after CodecException")
+            try {
+                requireDecoder().reset()
+                configureAndStartDecoder(configuredFormat.orNpe("The configured format"))
+                codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+            } catch (e: IllegalArgumentException) {
+                e.printStackTrace()
+
+                // Our Surface is probably invalid, so just stop
+                stopForInvalidSurface()
+            } catch (e: IllegalStateException) {
+                e.printStackTrace()
+
+                // Something went wrong during the reset, we'll have to resort to
+                // releasing and recreating the decoder now.
+            }
+        }
+    }
+
+    // The printed stack trace stays as it was (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun recreateCodec() {
+        // If we _still_ haven't managed to recover, go for the nuclear option and just
+        // throw away the old decoder and reinitialize a new one from scratch.
+        if (codecRecoveryType.get() == CR_RECOVERY_TYPE_RESET) {
+            LimeLog.warning("Trying to recreate decoder after CodecException")
+            requireDecoder().release()
+
+            try {
+                initializeDecoder(true)
+                codecRecoveryType.set(CR_RECOVERY_TYPE_NONE)
+            } catch (e: IllegalArgumentException) {
+                e.printStackTrace()
+
+                // Our Surface is probably invalid, so just stop
+                stopForInvalidSurface()
+            } catch (e: IllegalStateException) {
+                // If we failed to recover after all of these attempts, just crash
+                if (!reportedCrash) {
+                    reportedCrash = true
+                    crashListener.notifyCrash(e)
+                }
+                throw RendererException(this, e)
+            }
+        }
+    }
+
     // BOREALIS: the codec refused our Surface, so the renderer stops. A stop that nothing else
     // began is the stream's problem, so the listener hears of it (it was a silent frozen video
     // before); while a stop is on its way the Surface goes with the rest and a warning is enough.
@@ -1004,8 +1048,6 @@ class MediaCodecDecoderRenderer(
     }
 
     // Returns true if the exception is transient
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     private fun handleDecoderException(e: IllegalStateException): Boolean {
         // Eat decoder exceptions if we're in the process of stopping
         if (stopping) {
@@ -1020,81 +1062,59 @@ class MediaCodecDecoderRenderer(
             }
 
             LimeLog.severe(e.diagnosticInfo)
+        }
 
-            // We can attempt a recovery or reset at this stage to try to start decoding again
-            if (codecRecoveryAttempts < CR_MAX_TRIES) {
-                // If the exception is non-recoverable or we already require a reset, perform a
-                // reset. If we have no prior unrecoverable failure, we will try a restart instead.
-                if (e.isRecoverable) {
-                    if (
-                        codecRecoveryType.compareAndSet(
-                            CR_RECOVERY_TYPE_NONE,
-                            CR_RECOVERY_TYPE_RESTART,
-                        )
-                    ) {
-                        LimeLog.info("Decoder requires restart for recoverable CodecException")
-                        e.printStackTrace()
-                    } else if (
-                        codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET &&
-                            codecRecoveryType.get() != CR_RECOVERY_TYPE_RESTART
-                    ) {
-                        error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
-                    }
-                } else {
-                    if (
-                        codecRecoveryType.compareAndSet(
-                            CR_RECOVERY_TYPE_NONE,
-                            CR_RECOVERY_TYPE_RESET,
-                        )
-                    ) {
-                        LimeLog.info("Decoder requires reset for non-recoverable CodecException")
-                        e.printStackTrace()
-                    } else if (
-                        codecRecoveryType.compareAndSet(
-                            CR_RECOVERY_TYPE_RESTART,
-                            CR_RECOVERY_TYPE_RESET,
-                        )
-                    ) {
-                        LimeLog.info(
-                            "Decoder restart promoted to reset for non-recoverable CodecException"
-                        )
-                        e.printStackTrace()
-                    } else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET) {
-                        error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
-                    }
-                }
-
-                // The recovery will take place when all threads reach doCodecRecoveryIfRequired().
-                return false
-            }
-        } else {
+        // We can attempt a recovery or reset at this stage to try to start decoding again. The
+        // recovery will take place when all threads reach doCodecRecoveryIfRequired().
+        if (codecRecoveryAttempts >= CR_MAX_TRIES) {
+            reportIfStillFailing(e)
+        } else if (e !is MediaCodec.CodecException) {
             // IllegalStateException was primarily used prior to the introduction of CodecException.
             // Recovery from this requires a full decoder reset.
             //
             // NB: CodecException is an IllegalStateException, so we must check for it first.
-            if (codecRecoveryAttempts < CR_MAX_TRIES) {
-                if (
-                    codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)
-                ) {
-                    LimeLog.info("Decoder requires reset for IllegalStateException")
-                    e.printStackTrace()
-                } else if (
-                    codecRecoveryType.compareAndSet(
-                        CR_RECOVERY_TYPE_RESTART,
-                        CR_RECOVERY_TYPE_RESET,
-                    )
-                ) {
-                    LimeLog.info("Decoder restart promoted to reset for IllegalStateException")
-                    e.printStackTrace()
-                } else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET) {
-                    error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
-                }
-
-                return false
-            }
+            requestReset(e, "IllegalStateException")
+        } else if (e.isRecoverable) {
+            requestRestart(e)
+        } else {
+            requestReset(e, "non-recoverable CodecException")
         }
 
-        // Only throw if we're not in the middle of codec recovery
+        // Not transient
+        return false
+    }
+
+    // A recoverable exception asks for a restart, unless a restart or a reset is already pending.
+    private fun requestRestart(e: IllegalStateException) {
+        if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESTART)) {
+            LimeLog.info("Decoder requires restart for recoverable CodecException")
+            e.printStackTrace()
+        } else if (
+            codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET &&
+                codecRecoveryType.get() != CR_RECOVERY_TYPE_RESTART
+        ) {
+            error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
+        }
+    }
+
+    // If the exception is non-recoverable or we already require a reset, perform a reset. A
+    // pending restart is promoted to a reset. [cause] names the exception in the log.
+    private fun requestReset(e: IllegalStateException, cause: String) {
+        if (codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_NONE, CR_RECOVERY_TYPE_RESET)) {
+            LimeLog.info("Decoder requires reset for $cause")
+            e.printStackTrace()
+        } else if (
+            codecRecoveryType.compareAndSet(CR_RECOVERY_TYPE_RESTART, CR_RECOVERY_TYPE_RESET)
+        ) {
+            LimeLog.info("Decoder restart promoted to reset for $cause")
+            e.printStackTrace()
+        } else if (codecRecoveryType.get() != CR_RECOVERY_TYPE_RESET) {
+            error("Unexpected codec recovery type: ${codecRecoveryType.get()}")
+        }
+    }
+
+    // No recovery is left. Only throw if we're not in the middle of codec recovery.
+    private fun reportIfStillFailing(e: IllegalStateException) {
         if (codecRecoveryType.get() == CR_RECOVERY_TYPE_NONE) {
             //
             // There seems to be a race condition with decoder/surface teardown causing some
@@ -1124,13 +1144,10 @@ class MediaCodecDecoderRenderer(
                 initialExceptionTimestamp = SystemClock.uptimeMillis()
             }
         }
-
-        // Not transient
-        return false
     }
 
     // WindowManager.getDefaultDisplay is deprecated since API 30; the Java used it.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The stack trace that the Java printed to stderr also stays as it was (Sprint 18c backlog).
     @Suppress("DEPRECATION", "PrintStackTrace")
     override fun doFrame(frameTimeNanos: Long) {
         // Do nothing if we're stopping
@@ -1202,131 +1219,11 @@ class MediaCodecDecoderRenderer(
         handler.post { Choreographer.getInstance().postFrameCallback(this) }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("LongMethod", "NestedBlockDepth")
     private fun startRendererThread() {
         val thread =
             object : Thread() {
-                override fun run() {
-                    val info = MediaCodec.BufferInfo()
-                    while (!stopping) {
-                        try {
-                            // Try to output a frame
-                            val outIndex =
-                                requireDecoder().dequeueOutputBuffer(info, OUTPUT_BUFFER_TIMEOUT_US)
-                            if (outIndex >= 0) {
-                                var presentationTimeUs = info.presentationTimeUs
-                                // BOREALIS: stream.perf
-                                var matchedDecodeUs = matchOutput(presentationTimeUs)
-                                var lastIndex = outIndex
-
-                                numFramesOut++
-
-                                // Render the latest frame now if frame pacing isn't in balanced
-                                // mode
-                                if (
-                                    prefs.framePacing !=
-                                        PreferenceConfiguration.FRAME_PACING_BALANCED
-                                ) {
-                                    // Get the last output buffer in the queue
-                                    while (true) {
-                                        val nextIndex =
-                                            requireDecoder().dequeueOutputBuffer(info, 0)
-                                        if (nextIndex < 0) {
-                                            break
-                                        }
-                                        requireDecoder().releaseOutputBuffer(lastIndex, false)
-
-                                        numFramesOut++
-
-                                        lastIndex = nextIndex
-                                        presentationTimeUs = info.presentationTimeUs
-                                        // BOREALIS: stream.perf
-                                        matchedDecodeUs = matchOutput(presentationTimeUs)
-                                    }
-
-                                    if (
-                                        prefs.framePacing ==
-                                            PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
-                                            prefs.framePacing ==
-                                                PreferenceConfiguration.FRAME_PACING_CAP_FPS
-                                    ) {
-                                        // In max smoothness or cap FPS mode, we want to never drop
-                                        // frames. Use a PTS that will cause this frame to never be
-                                        // dropped
-                                        requireDecoder().releaseOutputBuffer(lastIndex, 0L)
-                                    } else {
-                                        // Use a PTS that will cause this frame to be dropped if
-                                        // another comes in within the same V-sync period
-                                        requireDecoder()
-                                            .releaseOutputBuffer(lastIndex, System.nanoTime())
-                                    }
-
-                                    activeWindowVideoStats.totalFramesRendered++
-                                    // BOREALIS: first-frame signal
-                                    firstFrameSignal.frameRendered()
-                                } else {
-                                    // For balanced frame pacing case, the Choreographer callback
-                                    // will handle rendering. We just put all frames into the output
-                                    // buffer queue and let it handle things.
-
-                                    // Discard the oldest buffer if we've exceeded our limit.
-                                    //
-                                    // NB: We have to do this on the producer side because the
-                                    // consumer may not run for a while (if there is a huge mismatch
-                                    // between stream FPS and display refresh rate).
-                                    if (outputBufferQueue.size == OUTPUT_BUFFER_QUEUE_LIMIT) {
-                                        try {
-                                            requireDecoder()
-                                                .releaseOutputBuffer(
-                                                    outputBufferQueue.take(),
-                                                    false,
-                                                )
-                                        } catch (e: InterruptedException) {
-                                            // We're shutting down, so we can just drop this buffer
-                                            // on the floor and it will be reclaimed when the codec
-                                            // is released.
-                                            return
-                                        }
-                                    }
-
-                                    // Add this buffer
-                                    outputBufferQueue.add(lastIndex)
-                                }
-
-                                // Add delta time to the totals (excluding probable outliers)
-                                // BOREALIS: stream.perf: from the queue time when the output
-                                // matched an input, else from the timestamp as before
-                                val decodeUs = // BOREALIS: stream.perf
-                                    if (matchedDecodeUs != DecodeTimeTracker.NO_MATCH) {
-                                        matchedDecodeUs
-                                    } else {
-                                        (SystemClock.uptimeMillis() -
-                                            (presentationTimeUs / MICROS_PER_MILLI)) *
-                                            MICROS_PER_MILLI
-                                    }
-                                // BOREALIS: stream.perf
-                                if (decodeUs >= 0 && decodeUs < MAX_DECODE_TIME_US) {
-                                    // BOREALIS: stream.perf
-                                    val delta = (decodeUs + HALF_MILLI_US) / MICROS_PER_MILLI
-                                    // BOREALIS: stream.perf
-                                    activeWindowVideoStats.decoderTimeUs += decodeUs
-                                    activeWindowVideoStats.decoderTimeMs += delta
-                                    activeWindowVideoStats.totalTimeMs += delta
-                                }
-                            } else if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                                // INFO_TRY_AGAIN_LATER and any other negative index need nothing.
-                                LimeLog.info("Output format changed")
-                                outputFormat = requireDecoder().outputFormat
-                                LimeLog.info("New output format: $outputFormat")
-                            }
-                        } catch (e: IllegalStateException) {
-                            handleDecoderException(e)
-                        } finally {
-                            doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD)
-                        }
-                    }
-                }
+                // One BufferInfo for the life of the thread: the loop runs for every frame.
+                override fun run() = renderLoop(MediaCodec.BufferInfo())
             }
         rendererThread = thread
         thread.name = "Video - Renderer (MediaCodec)"
@@ -1334,8 +1231,137 @@ class MediaCodecDecoderRenderer(
         thread.start()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
+    // The body of the renderer thread. The recovery runs after every pass, also after the one that
+    // ends the thread.
+    private fun renderLoop(info: MediaCodec.BufferInfo) {
+        while (!stopping) {
+            try {
+                if (!processOutput(info)) {
+                    return
+                }
+            } catch (e: IllegalStateException) {
+                handleDecoderException(e)
+            } finally {
+                doCodecRecoveryIfRequired(CR_FLAG_RENDER_THREAD)
+            }
+        }
+    }
+
+    // One pass: try to output a frame. Answers false when the thread must end.
+    private fun processOutput(info: MediaCodec.BufferInfo): Boolean {
+        val outIndex = requireDecoder().dequeueOutputBuffer(info, OUTPUT_BUFFER_TIMEOUT_US)
+        if (outIndex >= 0) {
+            return handleOutputFrame(outIndex, info)
+        } else if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+            // INFO_TRY_AGAIN_LATER and any other negative index need nothing.
+            LimeLog.info("Output format changed")
+            outputFormat = requireDecoder().outputFormat
+            LimeLog.info("New output format: $outputFormat")
+        }
+        return true
+    }
+
+    // The frame in [outIndex] is out, and [info] describes it. Answers false when the thread must
+    // end.
+    private fun handleOutputFrame(outIndex: Int, info: MediaCodec.BufferInfo): Boolean {
+        var presentationTimeUs = info.presentationTimeUs
+        // BOREALIS: stream.perf
+        var matchedDecodeUs = matchOutput(presentationTimeUs)
+        var lastIndex = outIndex
+
+        numFramesOut++
+
+        // Render the latest frame now if frame pacing isn't in balanced mode
+        if (prefs.framePacing != PreferenceConfiguration.FRAME_PACING_BALANCED) {
+            // Get the last output buffer in the queue
+            while (true) {
+                val nextIndex = requireDecoder().dequeueOutputBuffer(info, 0)
+                if (nextIndex < 0) {
+                    break
+                }
+                requireDecoder().releaseOutputBuffer(lastIndex, false)
+
+                numFramesOut++
+
+                lastIndex = nextIndex
+                presentationTimeUs = info.presentationTimeUs
+                // BOREALIS: stream.perf
+                matchedDecodeUs = matchOutput(presentationTimeUs)
+            }
+
+            showNewestFrame(lastIndex)
+        } else if (!queueForFramePacing(lastIndex)) {
+            return false
+        }
+
+        addDecodeTime(matchedDecodeUs, presentationTimeUs)
+        return true
+    }
+
+    private fun showNewestFrame(lastIndex: Int) {
+        if (
+            prefs.framePacing == PreferenceConfiguration.FRAME_PACING_MAX_SMOOTHNESS ||
+                prefs.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS
+        ) {
+            // In max smoothness or cap FPS mode, we want to never drop frames. Use a PTS that will
+            // cause this frame to never be dropped
+            requireDecoder().releaseOutputBuffer(lastIndex, 0L)
+        } else {
+            // Use a PTS that will cause this frame to be dropped if another comes in within the
+            // same V-sync period
+            requireDecoder().releaseOutputBuffer(lastIndex, System.nanoTime())
+        }
+
+        activeWindowVideoStats.totalFramesRendered++
+        // BOREALIS: first-frame signal
+        firstFrameSignal.frameRendered()
+    }
+
+    // For the balanced frame pacing case, the Choreographer callback will handle rendering. We just
+    // put all frames into the output buffer queue and let it handle things. Answers false when the
+    // thread was interrupted while it took the oldest buffer, and must end.
+    private fun queueForFramePacing(lastIndex: Int): Boolean {
+        // Discard the oldest buffer if we've exceeded our limit.
+        //
+        // NB: We have to do this on the producer side because the consumer may not run for a while
+        // (if there is a huge mismatch between stream FPS and display refresh rate).
+        if (outputBufferQueue.size == OUTPUT_BUFFER_QUEUE_LIMIT) {
+            try {
+                requireDecoder().releaseOutputBuffer(outputBufferQueue.take(), false)
+            } catch (e: InterruptedException) {
+                // We're shutting down, so we can just drop this buffer on the floor and it will be
+                // reclaimed when the codec is released.
+                return false
+            }
+        }
+
+        // Add this buffer
+        outputBufferQueue.add(lastIndex)
+        return true
+    }
+
+    // Add delta time to the totals (excluding probable outliers)
+    // BOREALIS: stream.perf: from the queue time when the output matched an input, else from the
+    // timestamp as before
+    private fun addDecodeTime(matchedDecodeUs: Long, presentationTimeUs: Long) {
+        val decodeUs = // BOREALIS: stream.perf
+            if (matchedDecodeUs != DecodeTimeTracker.NO_MATCH) {
+                matchedDecodeUs
+            } else {
+                (SystemClock.uptimeMillis() - (presentationTimeUs / MICROS_PER_MILLI)) *
+                    MICROS_PER_MILLI
+            }
+        // BOREALIS: stream.perf
+        if (decodeUs >= 0 && decodeUs < MAX_DECODE_TIME_US) {
+            // BOREALIS: stream.perf
+            val delta = (decodeUs + HALF_MILLI_US) / MICROS_PER_MILLI
+            // BOREALIS: stream.perf
+            activeWindowVideoStats.decoderTimeUs += decodeUs
+            activeWindowVideoStats.decoderTimeMs += delta
+            activeWindowVideoStats.totalTimeMs += delta
+        }
+    }
+
     private fun fetchNextInputBuffer(): Boolean {
         if (nextInputBuffer != null) {
             // We already have an input buffer
@@ -1345,6 +1371,35 @@ class MediaCodecDecoderRenderer(
         val startTime = SystemClock.uptimeMillis()
 
         val codecRecovered: Boolean
+        val dequeued =
+            try {
+                tryDequeueInput()
+            } finally {
+                codecRecovered = doCodecRecoveryIfRequired(CR_FLAG_INPUT_THREAD)
+            }
+
+        // If codec recovery is required, always return false to ensure the caller will request
+        // an IDR frame to complete the codec recovery.
+        if (!dequeued || codecRecovered) {
+            return false
+        }
+
+        val deltaMs = (SystemClock.uptimeMillis() - startTime).toInt()
+
+        if (deltaMs >= LONG_DEQUEUE_MS) {
+            LimeLog.warning("Dequeue input buffer ran long: $deltaMs ms")
+        }
+
+        if (nextInputBuffer == null) {
+            reportIfHung(deltaMs)
+        }
+
+        return nextInputBuffer != null
+    }
+
+    // Waits for an input buffer index and takes the buffer of that index. Answers false when the
+    // codec threw, after handleDecoderException.
+    private fun tryDequeueInput(): Boolean {
         try {
             // If we don't have an input buffer index yet, fetch one now
             while (nextInputBufferIndex < 0 && !stopping) {
@@ -1366,38 +1421,21 @@ class MediaCodecDecoderRenderer(
         } catch (e: IllegalStateException) {
             handleDecoderException(e)
             return false
-        } finally {
-            codecRecovered = doCodecRecoveryIfRequired(CR_FLAG_INPUT_THREAD)
         }
-
-        // If codec recovery is required, always return false to ensure the caller will request
-        // an IDR frame to complete the codec recovery.
-        if (codecRecovered) {
-            return false
-        }
-
-        val deltaMs = (SystemClock.uptimeMillis() - startTime).toInt()
-
-        if (deltaMs >= LONG_DEQUEUE_MS) {
-            LimeLog.warning("Dequeue input buffer ran long: $deltaMs ms")
-        }
-
-        if (nextInputBuffer == null) {
-            // We've been hung for 5 seconds and no other exception was reported,
-            // so generate a decoder hung exception
-            if (deltaMs >= DECODER_HUNG_MS && initialException == null) {
-                val decoderHungException = DecoderHungException(deltaMs)
-                if (!reportedCrash) {
-                    reportedCrash = true
-                    crashListener.notifyCrash(decoderHungException)
-                }
-                throw RendererException(this, decoderHungException)
-            }
-
-            return false
-        }
-
         return true
+    }
+
+    // We've been hung for 5 seconds and no other exception was reported, so generate a decoder
+    // hung exception.
+    private fun reportIfHung(deltaMs: Int) {
+        if (deltaMs >= DECODER_HUNG_MS && initialException == null) {
+            val decoderHungException = DecoderHungException(deltaMs)
+            if (!reportedCrash) {
+                reportedCrash = true
+                crashListener.notifyCrash(decoderHungException)
+            }
+            throw RendererException(this, decoderHungException)
+        }
     }
 
     override fun start() {
@@ -1408,7 +1446,7 @@ class MediaCodecDecoderRenderer(
     // !!! May be called even if setup()/start() fails !!!
     // Object.notifyAll is not a member of Kotlin's Any, so the monitor is cast to java.lang.Object,
     // as the Java used it.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The cast stays: its monitor is the lock of the codec recovery (Sprint 18c backlog).
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     fun prepareForStop() {
         // Let the decoding code know to ignore codec exceptions now
@@ -1433,7 +1471,7 @@ class MediaCodecDecoderRenderer(
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The stack trace that the Java printed to stderr stays as it was (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
     override fun stop() {
         // May be called already, but we'll call it now to be safe
@@ -1585,16 +1623,154 @@ class MediaCodecDecoderRenderer(
         }
     }
 
-    // MediaCodec.BUFFER_FLAG_SYNC_FRAME is deprecated since API 21 in favour of
-    // BUFFER_FLAG_KEY_FRAME, which has the same value; the Java used the old name.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress(
-        "CyclomaticComplexMethod",
-        "DEPRECATION",
-        "LongMethod",
-        "NestedBlockDepth",
-        "ReturnCount",
-    )
+    /**
+     * Holds a parameter set of an IDR frame, to go to the codec together with the others, and says
+     * whether [type] was one. The H.264 SPS is patched for low latency on the way. Runs for every
+     * unit of an IDR frame.
+     */
+    private fun holdParameterSet(data: ByteArray?, length: Int, type: Int): Boolean {
+        if (
+            type == MoonBridge.BUFFER_TYPE_SPS &&
+                (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0
+        ) {
+            // H264 SPS
+            numSpsIn++
+
+            // Batch this to submit together with other CSD per AOSP docs
+            spsBuffers.add(patchH264Sps(data.orNpe("The decode unit data"), length))
+        } else if (type == MoonBridge.BUFFER_TYPE_VPS) {
+            numVpsIn++
+
+            // Batch this to submit together with other CSD per AOSP docs
+            vpsBuffers.add(copyUnit(data, length))
+        } else if (type == MoonBridge.BUFFER_TYPE_SPS) {
+            // Only the HEVC SPS hits this path (H.264 is handled above)
+            numSpsIn++
+
+            // Batch this to submit together with other CSD per AOSP docs
+            val naluBuffer = copyUnit(data, length)
+            // BOREALIS: HEVC SPS diagnostics
+            hevcSpsMonitor.onSps(naluBuffer, 0, naluBuffer.size)
+            spsBuffers.add(naluBuffer)
+        } else if (type == MoonBridge.BUFFER_TYPE_PPS) {
+            numPpsIn++
+
+            // Batch this to submit together with other CSD per AOSP docs
+            ppsBuffers.add(copyUnit(data, length))
+        } else {
+            return false
+        }
+        return true
+    }
+
+    /** A copy of the first [length] bytes of the data of a decode unit. */
+    private fun copyUnit(data: ByteArray?, length: Int): ByteArray {
+        val naluBuffer = ByteArray(length)
+        System.arraycopy(data.orNpe("The decode unit data"), 0, naluBuffer, 0, length)
+        return naluBuffer
+    }
+
+    /** The H.264 SPS [data] of a decode unit, patched for low latency and written again. */
+    private fun patchH264Sps(data: ByteArray, length: Int): ByteArray {
+        val spsBuf = ByteBuffer.wrap(data)
+        val startSeqLen =
+            if (data[2].toInt() == 0x01) {
+                SHORT_START_SEQUENCE_LENGTH
+            } else {
+                LONG_START_SEQUENCE_LENGTH
+            }
+
+        // Skip to the start of the NALU data
+        spsBuf.position(startSeqLen + 1)
+
+        // The H264Utils.readSPS function safely handles
+        // Annex B NALUs (including NALUs with escape sequences)
+        val sps = H264Utils.readSPS(spsBuf)
+
+        patchSpsForLowLatency(sps)
+        applyBaselineHack(sps)
+
+        // Patch the SPS constraint flags
+        doProfileSpecificSpsPatching(sps)
+
+        return writePatchedSps(data, startSeqLen, sps, length)
+    }
+
+    private fun patchSpsForLowLatency(sps: SeqParameterSet) {
+        // TI OMAP4 requires a reference frame count of 1 to decode successfully. Exynos 4
+        // also requires this fixup.
+        //
+        // I'm doing this fixup for all devices because I haven't seen any devices that
+        // this causes issues for. At worst, it seems to do nothing and at best it fixes
+        // issues with video lag, hangs, and crashes.
+        //
+        // It does break reference frame invalidation, so we will not do that for decoders
+        // where we've enabled reference frame invalidation.
+        if (!refFrameInvalidationActive) {
+            LimeLog.info("Patching num_ref_frames in SPS")
+            sps.numRefFrames = 1
+        }
+
+        // The SPS that comes in the current H264 bytestream doesn't set
+        // bitstream_restriction_flag or max_dec_frame_buffering which increases decoding
+        // latency on Tegra.
+
+        // If the encoder didn't include VUI parameters in the SPS, add them now
+        if (sps.vuiParams == null) {
+            LimeLog.info("Adding VUI parameters")
+            sps.vuiParams = VUIParameters()
+        }
+
+        // GFE 2.5.11 started sending bitstream restrictions
+        if (sps.vuiParams.bitstreamRestriction == null) {
+            LimeLog.info("Adding bitstream restrictions")
+            val restriction = VUIParameters.BitstreamRestriction()
+            sps.vuiParams.bitstreamRestriction = restriction
+            restriction.motionVectorsOverPicBoundariesFlag = true
+            restriction.maxBytesPerPicDenom = 2
+            restriction.maxBitsPerMbDenom = 1
+            restriction.log2MaxMvLengthHorizontal = LOG2_MAX_MV_LENGTH
+            restriction.log2MaxMvLengthVertical = LOG2_MAX_MV_LENGTH
+            restriction.numReorderFrames = 0
+        } else {
+            LimeLog.info("Patching bitstream restrictions")
+        }
+
+        // Some devices throw errors if maxDecFrameBuffering < numRefFrames
+        sps.vuiParams.bitstreamRestriction.maxDecFrameBuffering = sps.numRefFrames
+
+        // log2_max_mv_length_horizontal and log2_max_mv_length_vertical are set to more
+        // conservative values by GFE 2.5.11. We'll let those values stand.
+    }
+
+    private fun applyBaselineHack(sps: SeqParameterSet) {
+        // If we need to hack this SPS to say we're baseline, do so now
+        if (needsBaselineSpsHack) {
+            LimeLog.info("Hacking SPS to baseline")
+            savedSpsProfileIdc = sps.profileIdc
+            sps.profileIdc = PROFILE_BASELINE
+            savedSps = sps
+        }
+    }
+
+    /** The bytes of [sps] behind the start sequence and NAL header that [data] begins with. */
+    private fun writePatchedSps(
+        data: ByteArray,
+        startSeqLen: Int,
+        sps: SeqParameterSet,
+        length: Int,
+    ): ByteArray {
+        // The H264Utils.writeSPS function safely handles
+        // Annex B NALUs (including NALUs with escape sequences)
+        val escapedNalu = H264Utils.writeSPS(sps, length)
+
+        // Construct the patched SPS
+        val naluBuffer = ByteArray(startSeqLen + 1 + escapedNalu.limit())
+        System.arraycopy(data, 0, naluBuffer, 0, startSeqLen + 1)
+        escapedNalu.get(naluBuffer, startSeqLen + 1, escapedNalu.limit())
+        return naluBuffer
+    }
+
     override fun submitDecodeUnit(
         decodeUnitData: ByteArray?,
         decodeUnitLength: Int,
@@ -1610,6 +1786,190 @@ class MediaCodecDecoderRenderer(
             return MoonBridge.DR_OK
         }
 
+        countUnit(frameNumber, frameType, decodeUnitLength)
+
+        val idrFrame = frameType == MoonBridge.FRAME_TYPE_IDR
+
+        // IDR frames require special handling for CSD buffer submission
+        if (idrFrame && holdParameterSet(decodeUnitData, decodeUnitLength, decodeUnitType)) {
+            return MoonBridge.DR_OK
+        }
+
+        // The CSD goes alone before the host statistics and before the fetch of the frame's buffer,
+        // which may clear submittedCsd by recovering the codec. This also tells the fused IDR case
+        // that the CSD went already.
+        val csdAlone = idrFrame && submitsCsdAlone()
+        val sent =
+            (!csdAlone || submitCsdAlone()) &&
+                fetchFrameBuffer(frameHostProcessingLatency, receiveTimeUs, enqueueTimeUs) &&
+                queueFrame(decodeUnitData, decodeUnitLength, idrFrame, csdAlone, enqueueTimeUs)
+
+        return if (sent) MoonBridge.DR_OK else MoonBridge.DR_NEED_IDR
+    }
+
+    /**
+     * Whether the CSD of an IDR frame goes in an input buffer of its own: for H.264 and HEVC, the
+     * first time and every time for a decoder that does not take fused IDR frames.
+     */
+    private fun submitsCsdAlone(): Boolean =
+        (videoFormat and
+            (MoonBridge.VIDEO_FORMAT_MASK_H264 or MoonBridge.VIDEO_FORMAT_MASK_H265)) != 0 &&
+            (!submittedCsd || !fusedIdrFrame)
+
+    /**
+     * Counts the host latency of a unit and fetches the input buffer of its frame. Answers false
+     * when the caller must answer DR_NEED_IDR.
+     */
+    private fun fetchFrameBuffer(
+        latency: Char,
+        receiveTimeUs: Long,
+        enqueueTimeUs: Long,
+    ): Boolean {
+        countHostLatency(latency, receiveTimeUs, enqueueTimeUs)
+
+        return fetchNextInputBuffer()
+    }
+
+    /**
+     * Stamps a unit, copies it into the input buffer that [fetchFrameBuffer] fetched and queues it.
+     * Answers false when the caller must answer DR_NEED_IDR. Throws when the unit does not fit.
+     */
+    private fun queueFrame(
+        data: ByteArray?,
+        length: Int,
+        idrFrame: Boolean,
+        csdAlone: Boolean,
+        enqueueTimeUs: Long,
+    ): Boolean {
+        val codecFlags = if (idrFrame) idrCodecFlags(csdAlone) else 0
+        val timestampUs = nextTimestampUs(enqueueTimeUs)
+        crashIfTooLarge(length)
+
+        // Only a frame that fits is counted: the crash text must not count the one that crashed
+        numFramesIn++
+
+        // Copy data from our buffer list into the input buffer
+        requireInputBuffer().put(data.orNpe("The decode unit data"), 0, length)
+
+        return queueNextInputBuffer(timestampUs, codecFlags)
+    }
+
+    // MediaCodec.BUFFER_FLAG_SYNC_FRAME is deprecated since API 21 in favour of
+    // BUFFER_FLAG_KEY_FRAME, which has the same value; the Java used the old name.
+    // The flag keeps its inherited name until Sprint 18c changes it (Sprint 18c backlog).
+    @Suppress("DEPRECATION")
+    private fun idrCodecFlags(csdAlone: Boolean): Int {
+        // If we are using fused IDR frames, submit the CSD with each IDR frame
+        if (fusedIdrFrame && !csdAlone) {
+            putCsd()
+        }
+
+        return MediaCodec.BUFFER_FLAG_SYNC_FRAME
+    }
+
+    /** The timestamp of a unit: its enqueue time in uptime microseconds, above the last one. */
+    private fun nextTimestampUs(enqueueTimeUs: Long): Long {
+        // The frame timestamps use an undefined epoch, so normalize them to uptime microseconds.
+        if (baseTimestampUs == 0L) {
+            baseTimestampUs = (SystemClock.uptimeMillis() * MICROS_PER_MILLI) - enqueueTimeUs
+        }
+
+        var timestampUs = baseTimestampUs + enqueueTimeUs
+        if (timestampUs <= lastTimestampUs) {
+            // We can't submit multiple buffers with the same timestamp
+            // so bump it up by one before queuing
+            timestampUs = lastTimestampUs + 1
+        }
+        lastTimestampUs = timestampUs
+
+        return timestampUs
+    }
+
+    /** Tells the listener once and throws when a unit of [length] does not fit in the buffer. */
+    private fun crashIfTooLarge(length: Int) {
+        if (length > requireInputBuffer().limit() - requireInputBuffer().position()) {
+            val exception =
+                IllegalArgumentException(
+                    "Decode unit length $length too large for input buffer " +
+                        requireInputBuffer().limit()
+                )
+            if (!reportedCrash) {
+                reportedCrash = true
+                crashListener.notifyCrash(exception)
+            }
+            throw RendererException(this, exception)
+        }
+    }
+
+    /**
+     * Sends the held parameter sets to the codec in an input buffer of their own, and the real SPS
+     * after the baseline one for a decoder that needs the hack. Answers false when the caller must
+     * answer DR_NEED_IDR. Runs for the first unit of an IDR frame that is not a parameter set.
+     */
+    private fun submitCsdAlone(): Boolean {
+        if (!fetchForCsd()) {
+            return false
+        }
+
+        // Submit all CSD when we receive the first non-CSD blob in an IDR frame
+        putCsd()
+
+        if (!queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)) {
+            return false
+        }
+
+        // Remember that we submitted CSD globally for this MediaCodec instance
+        submittedCsd = true
+
+        return finishBaselineHack()
+    }
+
+    /** Fetches the input buffer for the CSD, with one more fetch after a restore of the CSD. */
+    private fun fetchForCsd(): Boolean {
+        // BOREALIS: an HDR restart clears the CSD in configureAndStartDecoder; restore
+        // it and fetch once more to keep this IDR
+        hdrRestartReuse.snapshot(vpsBuffers, spsBuffers, ppsBuffers)
+        return fetchNextInputBuffer() ||
+            (hdrRestartReuse.restoreForRetry(vpsBuffers, spsBuffers, ppsBuffers) &&
+                fetchNextInputBuffer())
+    }
+
+    /** Puts the held VPS, SPS and PPS, in that order, into the input buffer. */
+    private fun putCsd() {
+        for (vpsBuffer in vpsBuffers) {
+            requireInputBuffer().put(vpsBuffer)
+        }
+        for (spsBuffer in spsBuffers) {
+            requireInputBuffer().put(spsBuffer)
+        }
+        for (ppsBuffer in ppsBuffers) {
+            requireInputBuffer().put(ppsBuffer)
+        }
+    }
+
+    /** Replays the real SPS if the decoder got the baseline one; false when the replay failed. */
+    private fun finishBaselineHack(): Boolean {
+        if (!needsBaselineSpsHack) {
+            return true
+        }
+
+        if (!replaySps()) {
+            // The decoder still has the baseline SPS. Forget the CSD that went, so the next IDR
+            // frame gets here again, fused decoders too: it says baseline again and replays
+            submittedCsd = false
+            return false
+        }
+
+        needsBaselineSpsHack = false
+        LimeLog.info("SPS replay complete")
+        return true
+    }
+
+    /**
+     * Counts one decode unit into the open window of statistics, and closes the window when its
+     * second has passed. Runs for every unit of every frame.
+     */
+    private fun countUnit(frameNumber: Int, frameType: Int, length: Int) {
         if (!gotFrameNumber) {
             // The first frame, whatever its number (it may be 0), starts the first window
             activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
@@ -1631,7 +1991,7 @@ class MediaCodecDecoderRenderer(
 
         lastFrameNumber = frameNumber
         // BOREALIS: stream.perf
-        activeWindowVideoStats.totalBytes += decodeUnitLength
+        activeWindowVideoStats.totalBytes += length
 
         // Flip stats windows roughly every second
         if (
@@ -1650,226 +2010,30 @@ class MediaCodecDecoderRenderer(
             activeWindowVideoStats.clear()
             activeWindowVideoStats.measurementStartTimestamp = SystemClock.uptimeMillis()
         }
+    }
 
-        var csdSubmittedForThisFrame = false
-
-        // IDR frames require special handling for CSD buffer submission
-        if (frameType == MoonBridge.FRAME_TYPE_IDR) {
-            // H264 SPS
-            if (
-                decodeUnitType == MoonBridge.BUFFER_TYPE_SPS &&
-                    (videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0
-            ) {
-                numSpsIn++
-
-                val data = decodeUnitData.orNpe("The decode unit data")
-                val spsBuf = ByteBuffer.wrap(data)
-                val startSeqLen =
-                    if (data[2].toInt() == 0x01) {
-                        SHORT_START_SEQUENCE_LENGTH
-                    } else {
-                        LONG_START_SEQUENCE_LENGTH
-                    }
-
-                // Skip to the start of the NALU data
-                spsBuf.position(startSeqLen + 1)
-
-                // The H264Utils.readSPS function safely handles
-                // Annex B NALUs (including NALUs with escape sequences)
-                val sps = H264Utils.readSPS(spsBuf)
-
-                // TI OMAP4 requires a reference frame count of 1 to decode successfully. Exynos 4
-                // also requires this fixup.
-                //
-                // I'm doing this fixup for all devices because I haven't seen any devices that
-                // this causes issues for. At worst, it seems to do nothing and at best it fixes
-                // issues with video lag, hangs, and crashes.
-                //
-                // It does break reference frame invalidation, so we will not do that for decoders
-                // where we've enabled reference frame invalidation.
-                if (!refFrameInvalidationActive) {
-                    LimeLog.info("Patching num_ref_frames in SPS")
-                    sps.numRefFrames = 1
-                }
-
-                // The SPS that comes in the current H264 bytestream doesn't set
-                // bitstream_restriction_flag or max_dec_frame_buffering which increases decoding
-                // latency on Tegra.
-
-                // If the encoder didn't include VUI parameters in the SPS, add them now
-                if (sps.vuiParams == null) {
-                    LimeLog.info("Adding VUI parameters")
-                    sps.vuiParams = VUIParameters()
-                }
-
-                // GFE 2.5.11 started sending bitstream restrictions
-                if (sps.vuiParams.bitstreamRestriction == null) {
-                    LimeLog.info("Adding bitstream restrictions")
-                    val restriction = VUIParameters.BitstreamRestriction()
-                    sps.vuiParams.bitstreamRestriction = restriction
-                    restriction.motionVectorsOverPicBoundariesFlag = true
-                    restriction.maxBytesPerPicDenom = 2
-                    restriction.maxBitsPerMbDenom = 1
-                    restriction.log2MaxMvLengthHorizontal = LOG2_MAX_MV_LENGTH
-                    restriction.log2MaxMvLengthVertical = LOG2_MAX_MV_LENGTH
-                    restriction.numReorderFrames = 0
-                } else {
-                    LimeLog.info("Patching bitstream restrictions")
-                }
-
-                // Some devices throw errors if maxDecFrameBuffering < numRefFrames
-                sps.vuiParams.bitstreamRestriction.maxDecFrameBuffering = sps.numRefFrames
-
-                // log2_max_mv_length_horizontal and log2_max_mv_length_vertical are set to more
-                // conservative values by GFE 2.5.11. We'll let those values stand.
-
-                // If we need to hack this SPS to say we're baseline, do so now
-                if (needsBaselineSpsHack) {
-                    LimeLog.info("Hacking SPS to baseline")
-                    savedSpsProfileIdc = sps.profileIdc
-                    sps.profileIdc = PROFILE_BASELINE
-                    savedSps = sps
-                }
-
-                // Patch the SPS constraint flags
-                doProfileSpecificSpsPatching(sps)
-
-                // The H264Utils.writeSPS function safely handles
-                // Annex B NALUs (including NALUs with escape sequences)
-                val escapedNalu = H264Utils.writeSPS(sps, decodeUnitLength)
-
-                // Construct the patched SPS
-                val naluBuffer = ByteArray(startSeqLen + 1 + escapedNalu.limit())
-                System.arraycopy(data, 0, naluBuffer, 0, startSeqLen + 1)
-                escapedNalu.get(naluBuffer, startSeqLen + 1, escapedNalu.limit())
-
-                // Batch this to submit together with other CSD per AOSP docs
-                spsBuffers.add(naluBuffer)
-                return MoonBridge.DR_OK
-            } else if (decodeUnitType == MoonBridge.BUFFER_TYPE_VPS) {
-                numVpsIn++
-
-                // Batch this to submit together with other CSD per AOSP docs
-                val naluBuffer = ByteArray(decodeUnitLength)
-                System.arraycopy(
-                    decodeUnitData.orNpe("The decode unit data"),
-                    0,
-                    naluBuffer,
-                    0,
-                    decodeUnitLength,
-                )
-                vpsBuffers.add(naluBuffer)
-                return MoonBridge.DR_OK
-            } else if (decodeUnitType == MoonBridge.BUFFER_TYPE_SPS) {
-                // Only the HEVC SPS hits this path (H.264 is handled above)
-                numSpsIn++
-
-                // Batch this to submit together with other CSD per AOSP docs
-                val naluBuffer = ByteArray(decodeUnitLength)
-                System.arraycopy(
-                    decodeUnitData.orNpe("The decode unit data"),
-                    0,
-                    naluBuffer,
-                    0,
-                    decodeUnitLength,
-                )
-                // BOREALIS: HEVC SPS diagnostics
-                hevcSpsMonitor.onSps(naluBuffer, 0, naluBuffer.size)
-                spsBuffers.add(naluBuffer)
-                return MoonBridge.DR_OK
-            } else if (decodeUnitType == MoonBridge.BUFFER_TYPE_PPS) {
-                numPpsIn++
-
-                // Batch this to submit together with other CSD per AOSP docs
-                val naluBuffer = ByteArray(decodeUnitLength)
-                System.arraycopy(
-                    decodeUnitData.orNpe("The decode unit data"),
-                    0,
-                    naluBuffer,
-                    0,
-                    decodeUnitLength,
-                )
-                ppsBuffers.add(naluBuffer)
-                return MoonBridge.DR_OK
-            } else if (
-                (videoFormat and
-                    (MoonBridge.VIDEO_FORMAT_MASK_H264 or MoonBridge.VIDEO_FORMAT_MASK_H265)) != 0
-            ) {
-                // If this is the first CSD blob or we aren't supporting fused IDR frames, we will
-                // submit the CSD blob in a separate input buffer for each IDR frame.
-                if (!submittedCsd || !fusedIdrFrame) {
-                    // BOREALIS: an HDR restart clears the CSD in configureAndStartDecoder; restore
-                    // it and fetch once more to keep this IDR
-                    hdrRestartReuse.snapshot(vpsBuffers, spsBuffers, ppsBuffers)
-                    if (
-                        !fetchNextInputBuffer() &&
-                            !(hdrRestartReuse.restoreForRetry(
-                                vpsBuffers,
-                                spsBuffers,
-                                ppsBuffers,
-                            ) && fetchNextInputBuffer())
-                    ) {
-                        return MoonBridge.DR_NEED_IDR
-                    }
-
-                    // Submit all CSD when we receive the first non-CSD blob in an IDR frame
-                    for (vpsBuffer in vpsBuffers) {
-                        requireInputBuffer().put(vpsBuffer)
-                    }
-                    for (spsBuffer in spsBuffers) {
-                        requireInputBuffer().put(spsBuffer)
-                    }
-                    for (ppsBuffer in ppsBuffers) {
-                        requireInputBuffer().put(ppsBuffer)
-                    }
-
-                    if (!queueNextInputBuffer(0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG)) {
-                        return MoonBridge.DR_NEED_IDR
-                    }
-
-                    // Remember that we already submitted CSD for this frame, so we don't do it
-                    // again in the fused IDR case below.
-                    csdSubmittedForThisFrame = true
-
-                    // Remember that we submitted CSD globally for this MediaCodec instance
-                    submittedCsd = true
-
-                    if (needsBaselineSpsHack) {
-                        if (!replaySps()) {
-                            // The decoder still has the baseline SPS. Forget the CSD that went, so
-                            // the next IDR frame gets here again, fused decoders too: it says
-                            // baseline again and replays
-                            submittedCsd = false
-                            return MoonBridge.DR_NEED_IDR
-                        }
-
-                        needsBaselineSpsHack = false
-                        LimeLog.info("SPS replay complete")
-                    }
-                }
-            }
-        }
-
-        if (frameHostProcessingLatency.code != 0) {
+    /** Counts the host latency, the received frame and the receive time of one decode unit. */
+    private fun countHostLatency(latency: Char, receiveTimeUs: Long, enqueueTimeUs: Long) {
+        if (latency.code != 0) {
             if (activeWindowVideoStats.minHostProcessingLatency.code != 0) {
                 activeWindowVideoStats.minHostProcessingLatency =
                     minOf(
                             activeWindowVideoStats.minHostProcessingLatency.code,
-                            frameHostProcessingLatency.code,
+                            latency.code,
                         )
                         .toChar()
             } else {
-                activeWindowVideoStats.minHostProcessingLatency = frameHostProcessingLatency
+                activeWindowVideoStats.minHostProcessingLatency = latency
             }
             activeWindowVideoStats.framesWithHostProcessingLatency += 1
         }
         activeWindowVideoStats.maxHostProcessingLatency =
             maxOf(
                     activeWindowVideoStats.maxHostProcessingLatency.code,
-                    frameHostProcessingLatency.code,
+                    latency.code,
                 )
                 .toChar()
-        activeWindowVideoStats.totalHostProcessingLatency += frameHostProcessingLatency.code
+        activeWindowVideoStats.totalHostProcessingLatency += latency.code
 
         activeWindowVideoStats.totalFramesReceived++
         activeWindowVideoStats.totalFrames++
@@ -1878,67 +2042,6 @@ class MediaCodecDecoderRenderer(
         // We will count DU queue time as part of decoding, because it is directly
         // caused by a slow decoder.
         activeWindowVideoStats.totalTimeMs += (enqueueTimeUs - receiveTimeUs) / MICROS_PER_MILLI
-
-        if (!fetchNextInputBuffer()) {
-            return MoonBridge.DR_NEED_IDR
-        }
-
-        var codecFlags = 0
-
-        if (frameType == MoonBridge.FRAME_TYPE_IDR) {
-            codecFlags = codecFlags or MediaCodec.BUFFER_FLAG_SYNC_FRAME
-
-            // If we are using fused IDR frames, submit the CSD with each IDR frame
-            if (fusedIdrFrame && !csdSubmittedForThisFrame) {
-                for (vpsBuffer in vpsBuffers) {
-                    requireInputBuffer().put(vpsBuffer)
-                }
-                for (spsBuffer in spsBuffers) {
-                    requireInputBuffer().put(spsBuffer)
-                }
-                for (ppsBuffer in ppsBuffers) {
-                    requireInputBuffer().put(ppsBuffer)
-                }
-            }
-        }
-
-        // The frame timestamps use an undefined epoch, so normalize them to uptime microseconds.
-        if (baseTimestampUs == 0L) {
-            baseTimestampUs = (SystemClock.uptimeMillis() * MICROS_PER_MILLI) - enqueueTimeUs
-        }
-
-        var timestampUs = baseTimestampUs + enqueueTimeUs
-        if (timestampUs <= lastTimestampUs) {
-            // We can't submit multiple buffers with the same timestamp
-            // so bump it up by one before queuing
-            timestampUs = lastTimestampUs + 1
-        }
-        lastTimestampUs = timestampUs
-
-        if (decodeUnitLength > requireInputBuffer().limit() - requireInputBuffer().position()) {
-            val exception =
-                IllegalArgumentException(
-                    "Decode unit length $decodeUnitLength too large for input buffer " +
-                        requireInputBuffer().limit()
-                )
-            if (!reportedCrash) {
-                reportedCrash = true
-                crashListener.notifyCrash(exception)
-            }
-            throw RendererException(this, exception)
-        }
-
-        // Only a frame that fits is counted: the crash text must not count the one that crashed
-        numFramesIn++
-
-        // Copy data from our buffer list into the input buffer
-        requireInputBuffer().put(decodeUnitData.orNpe("The decode unit data"), 0, decodeUnitLength)
-
-        if (!queueNextInputBuffer(timestampUs, codecFlags)) {
-            return MoonBridge.DR_NEED_IDR
-        }
-
-        return MoonBridge.DR_OK
     }
 
     private fun replaySps(): Boolean {
@@ -2034,28 +2137,11 @@ class MediaCodecDecoderRenderer(
             return text
         }
 
-        // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-        @Suppress("CyclomaticComplexMethod", "LongMethod")
         private fun generateText(
             renderer: MediaCodecDecoderRenderer,
             originalException: Exception,
         ): String {
-            var str =
-                if (renderer.numVpsIn == 0 && renderer.numSpsIn == 0 && renderer.numPpsIn == 0) {
-                    "PreSPSError"
-                } else if (renderer.numSpsIn > 0 && renderer.numPpsIn == 0) {
-                    "PrePPSError"
-                } else if (renderer.numPpsIn > 0 && renderer.numFramesIn == 0) {
-                    "PreIFrameError"
-                } else if (renderer.numFramesIn > 0 && renderer.outputFormat == null) {
-                    "PreOutputConfigError"
-                } else if (renderer.outputFormat != null && renderer.numFramesOut == 0) {
-                    "PreOutputError"
-                } else if (renderer.numFramesOut <= renderer.refreshRate * EARLY_OUTPUT_SECONDS) {
-                    "EarlyOutputError"
-                } else {
-                    "ErrorWhileStreaming"
-                }
+            var str = errorStage(renderer)
 
             val avcDecoder = renderer.avcDecoder
             val hevcDecoder = renderer.hevcDecoder
@@ -2071,60 +2157,77 @@ class MediaCodecDecoderRenderer(
                         .getCapabilitiesForType("video/avc")
                         .videoCapabilities
                         .orNpe("The AVC video capabilities")
-                val avcWidthRange: Range<Int> = avcCaps.supportedWidths
-                str += "AVC supported width range: $avcWidthRange$DELIMITER"
-                try {
-                    val avcFpsRange: Range<Double>? =
-                        avcCaps.getAchievableFrameRatesFor(
-                            renderer.initialWidth,
-                            renderer.initialHeight,
-                        )
-                    str += "AVC achievable FPS range: $avcFpsRange$DELIMITER"
-                } catch (ignored: IllegalArgumentException) {
-                    str += "AVC achievable FPS range: UNSUPPORTED!$DELIMITER"
-                }
+                str += rangeLines("AVC", avcCaps, renderer)
             }
-            // BOREALIS: an HEVC or AV1 decoder may be one that throws for its capabilities, which
-            // has none to report
-            val hevcCapabilities = hevcDecoder?.let {
-                renderer.capabilitiesOrNull(it, "video/hevc")
+            str += optionalDecoderLines("HEVC", hevcDecoder, "video/hevc", renderer)
+            str += optionalDecoderLines("AV1", av1Decoder, "video/av01", renderer)
+            str += settingsLines(renderer)
+
+            if (originalException is MediaCodec.CodecException) {
+                str += codecExceptionLines(originalException)
             }
-            if (hevcDecoder != null && hevcCapabilities == null) {
-                str += "HEVC capabilities: UNREADABLE!$DELIMITER"
-            } else if (hevcCapabilities != null) {
-                val hevcCaps =
-                    hevcCapabilities.videoCapabilities.orNpe("The HEVC video capabilities")
-                val hevcWidthRange: Range<Int> = hevcCaps.supportedWidths
-                str += "HEVC supported width range: $hevcWidthRange$DELIMITER"
-                try {
-                    val hevcFpsRange: Range<Double>? =
-                        hevcCaps.getAchievableFrameRatesFor(
-                            renderer.initialWidth,
-                            renderer.initialHeight,
-                        )
-                    str += "HEVC achievable FPS range: $hevcFpsRange$DELIMITER"
-                } catch (ignored: IllegalArgumentException) {
-                    str += "HEVC achievable FPS range: UNSUPPORTED!$DELIMITER"
-                }
+
+            str += originalException.toString()
+
+            return str
+        }
+
+        /** How far the stream had got, as the first word of the text. */
+        private fun errorStage(renderer: MediaCodecDecoderRenderer): String =
+            if (renderer.numVpsIn == 0 && renderer.numSpsIn == 0 && renderer.numPpsIn == 0) {
+                "PreSPSError"
+            } else if (renderer.numSpsIn > 0 && renderer.numPpsIn == 0) {
+                "PrePPSError"
+            } else if (renderer.numPpsIn > 0 && renderer.numFramesIn == 0) {
+                "PreIFrameError"
+            } else if (renderer.numFramesIn > 0 && renderer.outputFormat == null) {
+                "PreOutputConfigError"
+            } else if (renderer.outputFormat != null && renderer.numFramesOut == 0) {
+                "PreOutputError"
+            } else if (renderer.numFramesOut <= renderer.refreshRate * EARLY_OUTPUT_SECONDS) {
+                "EarlyOutputError"
+            } else {
+                "ErrorWhileStreaming"
             }
-            val av1Capabilities = av1Decoder?.let { renderer.capabilitiesOrNull(it, "video/av01") }
-            if (av1Decoder != null && av1Capabilities == null) {
-                str += "AV1 capabilities: UNREADABLE!$DELIMITER"
-            } else if (av1Capabilities != null) {
-                val av1Caps = av1Capabilities.videoCapabilities.orNpe("The AV1 video capabilities")
-                val av1WidthRange: Range<Int> = av1Caps.supportedWidths
-                str += "AV1 supported width range: $av1WidthRange$DELIMITER"
-                try {
-                    val av1FpsRange: Range<Double>? =
-                        av1Caps.getAchievableFrameRatesFor(
-                            renderer.initialWidth,
-                            renderer.initialHeight,
-                        )
-                    str += "AV1 achievable FPS range: $av1FpsRange$DELIMITER"
-                } catch (ignored: IllegalArgumentException) {
-                    str += "AV1 achievable FPS range: UNSUPPORTED!$DELIMITER"
-                }
+
+        /** The width range and the frame rate range of a decoder, for the size of the stream. */
+        private fun rangeLines(
+            label: String,
+            caps: MediaCodecInfo.VideoCapabilities,
+            renderer: MediaCodecDecoderRenderer,
+        ): String {
+            val widthRange: Range<Int> = caps.supportedWidths
+            var str = "$label supported width range: $widthRange$DELIMITER"
+            try {
+                val fpsRange: Range<Double>? =
+                    caps.getAchievableFrameRatesFor(renderer.initialWidth, renderer.initialHeight)
+                str += "$label achievable FPS range: $fpsRange$DELIMITER"
+            } catch (ignored: IllegalArgumentException) {
+                str += "$label achievable FPS range: UNSUPPORTED!$DELIMITER"
             }
+            return str
+        }
+
+        // BOREALIS: an HEVC or AV1 decoder may be one that throws for its capabilities, which has
+        // none to report
+        private fun optionalDecoderLines(
+            label: String,
+            decoder: MediaCodecInfo?,
+            mimeType: String,
+            renderer: MediaCodecDecoderRenderer,
+        ): String {
+            if (decoder == null) {
+                return ""
+            }
+            val capabilities =
+                renderer.capabilitiesOrNull(decoder, mimeType)
+                    ?: return "$label capabilities: UNREADABLE!$DELIMITER"
+            val caps = capabilities.videoCapabilities.orNpe("The $label video capabilities")
+            return rangeLines(label, caps, renderer)
+        }
+
+        private fun settingsLines(renderer: MediaCodecDecoderRenderer): String {
+            var str = ""
             str += "Configured format: ${renderer.configuredFormat}$DELIMITER"
             str += "Input format: ${renderer.inputFormat}$DELIMITER"
             str += "Output format: ${renderer.outputFormat}$DELIMITER"
@@ -2160,17 +2263,16 @@ class MediaCodecDecoderRenderer(
                 "Average hardware decoder latency: ${renderer.getAverageDecoderLatency()}ms" +
                     DELIMITER
             str += "Frame pacing mode: ${renderer.prefs.framePacing}$DELIMITER"
+            return str
+        }
 
-            if (originalException is MediaCodec.CodecException) {
-                str += "Diagnostic Info: ${originalException.diagnosticInfo}$DELIMITER"
-                str += "Recoverable: ${originalException.isRecoverable}$DELIMITER"
-                str += "Transient: ${originalException.isTransient}$DELIMITER"
+        private fun codecExceptionLines(originalException: MediaCodec.CodecException): String {
+            var str = ""
+            str += "Diagnostic Info: ${originalException.diagnosticInfo}$DELIMITER"
+            str += "Recoverable: ${originalException.isRecoverable}$DELIMITER"
+            str += "Transient: ${originalException.isTransient}$DELIMITER"
 
-                str += "Codec Error Code: ${originalException.errorCode}$DELIMITER"
-            }
-
-            str += originalException.toString()
-
+            str += "Codec Error Code: ${originalException.errorCode}$DELIMITER"
             return str
         }
 

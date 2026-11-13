@@ -368,4 +368,43 @@ class AudioRendererSetupCharacterizationTest : AudioRendererTestBase() {
         assertThat(AudioPlatform.calls).isEmpty()
         assertThat(log.entries).contains(Level.SEVERE to "Decoder returned no samples per frame")
     }
+
+    @Test
+    fun `a stream with an unhandled channel count and no samples fails on the channel count`() {
+        val result = renderer().setup(config(3), SAMPLE_RATE, 0)
+
+        assertThat(result).isEqualTo(-1)
+        assertThat(AudioPlatform.calls).isEmpty()
+        assertThat(log.entries)
+            .containsExactly(Level.SEVERE to "Decoder returned unhandled channel count")
+    }
+
+    @Test
+    fun `a setup that keeps a track makes the next cleanup release it again`() {
+        val renderer = renderer()
+        renderer.setUpStereo()
+        renderer.cleanup()
+
+        renderer.setUpStereo()
+        renderer.cleanup()
+
+        assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>())
+            .containsExactly(AudioCall.Release(1), AudioCall.Release(2))
+            .inOrder()
+    }
+
+    @Test
+    fun `a setup that keeps no track leaves a cleanup that already ran doing nothing`() {
+        val renderer = renderer()
+        renderer.setUpStereo()
+        renderer.cleanup()
+        AudioPlatform.failSetupOf(AudioPlatform.everyTrack)
+
+        val result = renderer.setUpStereo()
+        renderer.cleanup()
+
+        assertThat(result).isEqualTo(-2)
+        assertThat(AudioPlatform.calls.filterIsInstance<AudioCall.Release>())
+            .containsExactly(AudioCall.Release(1))
+    }
 }

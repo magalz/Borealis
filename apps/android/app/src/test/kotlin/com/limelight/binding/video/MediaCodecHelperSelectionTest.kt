@@ -494,6 +494,118 @@ class MediaCodecHelperSelectionTest : MediaCodecHelperTestBase() {
         rows.verify()
     }
 
+    // A decoder lists a type once per spelling, so a decoder that lists the type twice lists it in
+    // two cases; the framework sorts the types, so the upper case one comes first.
+    private val twice = listOf("video/avc", "VIDEO/AVC")
+
+    @Test
+    fun `a decoder that lists the type twice is examined once per listing`() {
+        val high = CodecProfileLevel.AVCProfileHigh
+        val baseline = CodecProfileLevel.AVCProfileBaseline
+        val rows = Rows()
+
+        rows.check("a required profile that fails reads each listing in each round", 4) {
+            val helper = helper()
+            val reads = AtomicInteger()
+            installCodecs(
+                codec("c2.vendor.twice") {
+                    mimes = twice
+                    lowLatency = true
+                    profiles = listOf(baseline)
+                    capabilityReads = reads
+                }
+            )
+            probable(helper, profile = high)
+            reads.get()
+        }
+        rows.check("a required profile that fails leaves no answer", null) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.twice") {
+                    mimes = twice
+                    profiles = listOf(baseline)
+                }
+            )
+            probable(helper, profile = high)
+        }
+        rows.check("the first listing that qualifies ends the search", 1) {
+            val helper = helper()
+            val reads = AtomicInteger()
+            installCodecs(
+                codec("c2.vendor.twice") {
+                    mimes = twice
+                    lowLatency = true
+                    capabilityReads = reads
+                }
+            )
+            probable(helper)
+            reads.get()
+        }
+        rows.check("a decoder without the feature is read twice in round 1", 3) {
+            val helper = helper()
+            val reads = AtomicInteger()
+            installCodecs(
+                codec("c2.vendor.twice") {
+                    mimes = twice
+                    capabilityReads = reads
+                }
+            )
+            probable(helper)
+            reads.get()
+        }
+
+        rows.verify()
+    }
+
+    @Test
+    fun `a decoder that lists the type in another case is found and read with its own spelling`() {
+        val upper = "VIDEO/AVC"
+        val high = CodecProfileLevel.AVCProfileHigh
+        val rows = Rows()
+
+        rows.check("the first decoder", "c2.vendor.upper") {
+            val helper = helper()
+            installCodecs(codec("c2.vendor.upper") { mime = upper })
+            first(helper)
+        }
+        rows.check("the probable safe decoder", "c2.vendor.upper") {
+            val helper = helper()
+            installCodecs(codec("c2.vendor.upper") { mime = upper })
+            probable(helper)
+        }
+        rows.check(
+            "the probable safe decoder takes its feature and its profile",
+            "c2.vendor.upper",
+        ) {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.upper") {
+                    mime = upper
+                    lowLatency = true
+                    profiles = listOf(high)
+                }
+            )
+            probable(helper, profile = high)
+        }
+        rows.check("a decoder that reads leaves no answer when all throw", null) {
+            val helper = helper()
+            installCodecs(codec("c2.vendor.upper") { mime = upper })
+            allThrow(helper)
+        }
+        rows.check("a decoder that throws is the answer when all throw", "c2.vendor.upper") {
+            val helper = helper()
+            installCodecs(
+                codec("c2.vendor.upper") {
+                    mime = upper
+                    brokenCapabilities = true
+                }
+            )
+            allThrow(helper)
+        }
+
+        rows.verify()
+    }
+
     @Test
     fun `a decoder that throws for its capabilities is skipped and the search goes on`() {
         val rows = Rows()

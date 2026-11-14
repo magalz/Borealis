@@ -5,10 +5,13 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import io.github.magalz.borealis.library.RecordingLog
 import io.github.magalz.borealis.logging.LogLevel
+import io.github.magalz.borealis.stream.PerfSnapshot
+import io.github.magalz.borealis.stream.PerfSnapshotSink
 import io.github.magalz.borealis.stream.audioOutput
 import io.github.magalz.borealis.stream.routeStreamAudioTo
 import org.junit.Rule
 import org.junit.Test
+import org.robolectric.util.ReflectionHelpers
 
 private const val FALLBACK_LINE = "audio output has two channels, stereo asked of the host"
 
@@ -136,5 +139,35 @@ internal class GameAudioOutputTest : GameTestBase() {
         assertThat(rig.game.startedOnBluetooth).isTrue()
         assertThat(rig.game.stereoFallback)
             .isSameInstanceAs(MoonBridge.AUDIO_CONFIGURATION_51_SURROUND)
+    }
+
+    @Test
+    fun `the snapshots of a stream that started on Bluetooth say so before the audio is announced`() {
+        output(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, 2)
+        rig.create()
+
+        ReflectionHelpers.getField<PerfSnapshotSink>(rig.renderer, "perfSink")
+            .onPerf(PerfSnapshot(59.9f, 60f, 59.8f, 0.5f, 3, 1, null, 4.5f, 20f))
+
+        assertThat(rig.session.perf.value?.audioBluetooth).isTrue()
+    }
+
+    private fun audioEffectsOfRenderer(): Boolean =
+        ReflectionHelpers.getField(rig.field<Any>("audioRenderer"), "enableAudioFx")
+
+    @Test
+    fun `the audio renderer gets the audio effects setting`() {
+        rig.preference("checkbox_enable_audiofx", true)
+
+        rig.create()
+
+        assertThat(audioEffectsOfRenderer()).isTrue()
+    }
+
+    @Test
+    fun `the audio effects are off in the audio renderer by default`() {
+        rig.create()
+
+        assertThat(audioEffectsOfRenderer()).isFalse()
     }
 }

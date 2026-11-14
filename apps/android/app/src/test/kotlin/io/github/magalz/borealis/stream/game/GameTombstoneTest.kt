@@ -58,6 +58,17 @@ internal class GameTombstoneTest : GameTestBase() {
     }
 
     @Test
+    fun `a crash raises the crash count, not the count the user was last told of`() {
+        leftBehind(crashCount = 3, lastNotified = 1)
+        rig.create()
+
+        crashListener().notifyCrash(IllegalStateException("decoder"))
+
+        assertThat(tombstone.getInt("CrashCount", -1)).isEqualTo(4)
+        assertThat(tombstone.getInt("LastNotifiedCrashCount", -1)).isEqualTo(1)
+    }
+
+    @Test
     fun `the first crash writes a crash count of one`() {
         rig.create()
 

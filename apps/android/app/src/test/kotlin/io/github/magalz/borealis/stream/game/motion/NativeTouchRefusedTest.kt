@@ -132,6 +132,28 @@ internal class NativeTouchRefusedTest : MotionTestBase() {
     }
 
     @Test
+    fun `a move of two fingers that the host refuses asks the host once, not once for each finger`() {
+        streaming()
+        native()
+        val both = listOf(80f to 45f, 240f to 135f)
+        touch(streamView, finger(MotionEvent.ACTION_DOWN, 80f, 45f))
+        touch(
+            streamView,
+            fingerEvent(MotionEvent.ACTION_POINTER_DOWN, both, index = 1) { eventTime = TIME },
+        )
+        assertThat(asked()).isEqualTo(2)
+
+        hostWithoutTouch()
+        val move = fingerEvent(MotionEvent.ACTION_MOVE, both) { eventTime = TIME + 10 }
+        assertThat(touch(streamView, move)).isTrue()
+
+        // The first finger of the move was refused, so the second one was not sent.
+        assertThat(asked()).isEqualTo(3)
+        assertThat(touchMode()).isEqualTo(TouchMode.DIRECT)
+        assertThat(notices()).containsExactly(StreamNotice.NativeTouchRefused)
+    }
+
+    @Test
     fun `a host that refuses the cancel of the gesture puts the session in Direct`() {
         streaming()
         native()

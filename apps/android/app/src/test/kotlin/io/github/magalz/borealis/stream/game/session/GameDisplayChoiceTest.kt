@@ -6,6 +6,7 @@ import com.limelight.preferences.PreferenceConfiguration
 import io.github.magalz.borealis.stream.game.DisplayMode
 import io.github.magalz.borealis.stream.game.GameTestBase
 import io.github.magalz.borealis.stream.game.streamConfiguration
+import io.github.magalz.borealis.testing.LimeLogCapture
 import org.junit.Test
 
 /**
@@ -173,6 +174,39 @@ internal class GameDisplayChoiceTest : GameTestBase() {
         assertThat(picked).isEqualTo(Picked(0, 120f, 6350))
     }
 
+    @Test
+    fun `a higher match is not taken over a match when the rate may be reduced`() {
+        // 120 hertz matches 60 frames without being within the margin of them, and 180 matches too.
+        val picked = pick(Wanted(pacing = "smoothness"), hd(0, 120f), hd(2, 180f))
+
+        assertThat(picked).isEqualTo(Picked(0, 120f, 12000))
+    }
+
+    @Test
+    fun `a match is judged by the best mode so far, not by the mode that the display shows`() {
+        // The display shows 50 hertz, no match; the 120 hertz mode that follows is one, and the
+        // 60 hertz mode after it is a match that is lower than the best one so far.
+        val picked = pick(Wanted(), hd(0, 50f), hd(2, 120f), hd(3, 60f))
+
+        assertThat(picked).isEqualTo(Picked(0, 120f, 5000))
+    }
+
+    @Test
+    fun `a match is taken over a refresh rate that is no match, whatever the equal margin`() {
+        // 144 hertz is no match for 60 frames; 120 hertz is one, though not within three hertz.
+        val picked = pick(Wanted(), hd(0, 144f), hd(2, 120f))
+
+        assertThat(picked).isEqualTo(Picked(0, 120f, 12000))
+    }
+
+    @Test
+    fun `a match is not kept for being within the equal margin when the rate may be reduced`() {
+        // 180 hertz is a match for 60 frames but no equal one: only an equal match is held on to.
+        val picked = pick(Wanted(pacing = "smoothness"), hd(0, 180f), hd(2, 120f))
+
+        assertThat(picked).isEqualTo(Picked(0, 120f, 12000))
+    }
+
     // The resolution
 
     @Test
@@ -188,6 +222,18 @@ internal class GameDisplayChoiceTest : GameTestBase() {
 
         // The display shows 60 hertz for now.
         assertThat(picked).isEqualTo(Picked(2, 61f, 6000))
+    }
+
+    @Test
+    fun `a stream at 4K at 60 frames takes no smaller resolution that fits it`() {
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160", fps = 60),
+                DisplayMode(0, 4096, 2160, 60f),
+                DisplayMode(2, 3840, 2160, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
     }
 
     @Test
@@ -207,6 +253,45 @@ internal class GameDisplayChoiceTest : GameTestBase() {
         val picked =
             pick(
                 Wanted(resolution = "3840x2160"),
+                DisplayMode(0, 3840, 2160, 60f),
+                DisplayMode(2, 4096, 2160, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(2, 60f, 6000))
+    }
+
+    @Test
+    fun `a resolution is a reduction of the best mode so far, not of the mode that the display shows`() {
+        // The 3840 mode is narrower than the 4096 one taken before it, though wider than the 2560
+        // one that the display shows, and a stream at 60 frames takes no reduction.
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160"),
+                DisplayMode(0, 2560, 1440, 60f),
+                DisplayMode(2, 4096, 2160, 60f),
+                DisplayMode(3, 3840, 2160, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(2, 60f, 6000))
+    }
+
+    @Test
+    fun `a mode of the same refresh rate that is no match is taken for its resolution`() {
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160"),
+                DisplayMode(0, 3840, 2160, 50f),
+                DisplayMode(2, 4096, 2160, 50f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(2, 50f, 5000))
+    }
+
+    @Test
+    fun `a mode of the same refresh rate is taken when the rate may be reduced`() {
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160", pacing = "smoothness"),
                 DisplayMode(0, 3840, 2160, 60f),
                 DisplayMode(2, 4096, 2160, 60f),
             )
@@ -258,6 +343,147 @@ internal class GameDisplayChoiceTest : GameTestBase() {
             )
 
         assertThat(picked).isEqualTo(Picked(2, 60f, 6000))
+    }
+
+    @Test
+    fun `a mode wider than 4K is left alone by a stream at 4K`() {
+        val picked =
+            pick(
+                Wanted(resolution = "3840x2160"),
+                DisplayMode(0, 3840, 2160, 60f),
+                DisplayMode(2, 5120, 2880, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
+    }
+
+    @Test
+    fun `a mode wider than 4K is left alone by a stream that is 4096 wide`() {
+        val picked =
+            pick(
+                Wanted(resolution = "4096x2160"),
+                DisplayMode(0, 4096, 2160, 60f),
+                DisplayMode(2, 5120, 2880, 60f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
+    }
+
+    // The modes that differ from the current one, or from the stream, in a single side
+
+    @Test
+    fun `a stream above 60 frames takes no mode that is as wide but too short for it`() {
+        val picked = pick(Wanted(fps = 120), hd(0, 60f), DisplayMode(2, 1920, 720, 120f))
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
+    }
+
+    @Test
+    fun `a stream above 60 frames takes no mode that is as high but too narrow for it`() {
+        val picked = pick(Wanted(fps = 120), hd(0, 60f), DisplayMode(2, 1280, 1080, 120f))
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
+    }
+
+    @Test
+    fun `a stream above 60 frames takes no mode that is wide enough but too short for it`() {
+        val picked =
+            pick(
+                Wanted(fps = 120),
+                DisplayMode(0, 3840, 2160, 60f),
+                DisplayMode(2, 2560, 1000, 120f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
+    }
+
+    @Test
+    fun `a stream above 60 frames takes no mode that is high enough but too narrow for it`() {
+        val picked =
+            pick(
+                Wanted(fps = 120),
+                DisplayMode(0, 3840, 2160, 60f),
+                DisplayMode(2, 1600, 1440, 120f),
+            )
+
+        assertThat(picked).isEqualTo(Picked(0, 60f, 6000))
+    }
+
+    @Test
+    fun `a stream at 60 frames takes no mode that is as wide but taller`() {
+        val picked = pick(Wanted(), hd(0, 90f), DisplayMode(2, 1920, 1200, 60f))
+
+        assertThat(picked).isEqualTo(Picked(0, 90f, 9000))
+    }
+
+    @Test
+    fun `a mode of the same width and another height is asked for through the window`() {
+        val picked =
+            pick(
+                Wanted(fps = 120),
+                DisplayMode(0, 1920, 1200, 60f),
+                DisplayMode(2, 1920, 1080, 120f),
+            )
+
+        // The display shows 60 hertz for now.
+        assertThat(picked).isEqualTo(Picked(2, 120f, 6000))
+    }
+
+    // What the pick writes to the log
+
+    private val displayLines =
+        listOf(
+            "Current display mode",
+            "Examining display mode",
+            "Best display mode",
+            "Using setFrameRate()",
+        )
+
+    /** The lines of the pick, in the order written. */
+    private fun displayLog(wanted: Wanted, current: DisplayMode, vararg others: DisplayMode) =
+        LimeLogCapture().start().use { limeLog ->
+            pick(wanted, current, *others)
+            limeLog.messages.filter { line -> displayLines.any { line.startsWith(it) } }
+        }
+
+    @Test
+    fun `every mode is examined and written before it is skipped, then the best one`() {
+        val log =
+            displayLog(
+                Wanted(),
+                hd(0, 60f),
+                DisplayMode(2, 5120, 2880, 60f),
+                DisplayMode(3, 1920, 1200, 60f),
+                DisplayMode(4, 1280, 720, 60f),
+                hd(5, 120f),
+            )
+
+        assertThat(log)
+            .containsExactly(
+                "Current display mode: 1920x1080x60.0",
+                "Examining display mode: 1920x1080x60.0",
+                "Examining display mode: 5120x2880x60.0",
+                "Examining display mode: 1920x1200x60.0",
+                "Examining display mode: 1280x720x60.0",
+                "Examining display mode: 1920x1080x120.0",
+                "Best display mode: 1920x1080x120.0",
+                "Using setFrameRate() instead of preferredDisplayModeId due to matching resolution",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a display that already is in the best mode says so`() {
+        val log = displayLog(Wanted(), hd(0, 60f))
+
+        assertThat(log)
+            .containsExactly(
+                "Current display mode: 1920x1080x60.0",
+                "Examining display mode: 1920x1080x60.0",
+                "Best display mode: 1920x1080x60.0",
+                "Current display mode is already the best display mode",
+            )
+            .inOrder()
     }
 
     // What the pick does to the stream

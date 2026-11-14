@@ -24,6 +24,7 @@ import org.junit.Test
  * here, which `idle` moves.
  */
 internal class MouseBackHoldTest : MotionTestBase() {
+    private val left = MouseButtonPacket.BUTTON_LEFT
     private val back = MouseButtonPacket.BUTTON_X1
     private val forward = MouseButtonPacket.BUTTON_X2
     private val middle = MouseButtonPacket.BUTTON_MIDDLE
@@ -708,6 +709,81 @@ internal class MouseBackHoldTest : MotionTestBase() {
 
         assertThat(panel()).isEqualTo(Panel.NONE)
         assertThat(buttonsSent()).isEmpty()
+    }
+
+    // ----- The event that completes the chord -----
+
+    @Test
+    fun `a button pressed in the event that completes the chord is let go when the menu opens`() {
+        streamingWithNavigationButtons()
+        forgetSent()
+
+        mouse(
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.BUTTON_PRIMARY or MotionEvent.BUTTON_SECONDARY or backState or forwardState,
+        )
+
+        assertThat(panel()).isEqualTo(Panel.MENU)
+        // The chrome that takes the input lets go of the buttons that the mouse holds, so the event
+        // has noted them before the menu opens.
+        assertThat(buttonsSent().take(2)).containsExactly(press(left), press(right)).inOrder()
+        assertThat(buttonsSent().drop(2)).containsExactly(release(left), release(right))
+    }
+
+    @Test
+    fun `Forward pulsed, then Back and Forward together within the window, open the menu`() {
+        streamingWithNavigationButtons()
+        forgetSent()
+
+        pulse(forwardState)
+        idle(100)
+        mouse(MotionEvent.ACTION_DOWN, backState or forwardState)
+
+        assertThat(panel()).isEqualTo(Panel.MENU)
+        idle(1_000)
+        assertThat(buttonsSent()).isEmpty()
+        assertThat(panel()).isEqualTo(Panel.MENU)
+    }
+
+    // ----- How long a side button was held -----
+
+    /**
+     * A mouse event with [samples] earlier samples batched on it: its down time is that much older.
+     */
+    private fun withHistory(action: Int, buttons: Int, eventTime: Long, samples: Int) =
+        motionEventOf(InputDevice.SOURCE_MOUSE, action) {
+            pointer(10f, 20f)
+            buttonState = buttons
+            this.eventTime = eventTime
+            repeat(samples) { earlier(10f to 20f) }
+        }
+
+    private fun heldFor30MsByTheEventTimes(state: Int) {
+        streamingWithNavigationButtons()
+        forgetSent()
+        val at = SystemClock.uptimeMillis()
+        rig.game.onGenericMotion(
+            streamView,
+            mouseEvent(MotionEvent.ACTION_DOWN, 10f, 20f, state, at),
+        )
+
+        // The release batches 10 samples: its down time is 20 ms after the press, which is not how
+        // long the button was held.
+        rig.game.onGenericMotion(streamView, withHistory(MotionEvent.ACTION_UP, 0, at + 30, 10))
+    }
+
+    @Test
+    fun `how long Back was held is read from the event times, not from the down time of the events`() {
+        heldFor30MsByTheEventTimes(backState)
+
+        assertThat(buttonsSent()).containsExactly(press(back), release(back)).inOrder()
+    }
+
+    @Test
+    fun `how long Forward was held is read from the event times, not from the down time of the events`() {
+        heldFor30MsByTheEventTimes(forwardState)
+
+        assertThat(buttonsSent()).containsExactly(press(forward), release(forward)).inOrder()
     }
 
     private companion object {

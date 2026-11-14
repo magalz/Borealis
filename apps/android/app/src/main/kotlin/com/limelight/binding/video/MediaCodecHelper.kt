@@ -17,10 +17,8 @@ import java.util.LinkedList
 import java.util.Locale
 import java.util.regex.Pattern
 
-// Converted as is from the inherited Java; the rest is for later sprints:
-// - TooManyFunctions and LargeClass: the class waits for its split (Sprint 18d backlog).
-// - ForbiddenComment: the inherited TODO notes go in the relabel sweep of this sprint.
-@Suppress("TooManyFunctions", "LargeClass", "ForbiddenComment")
+// TooManyFunctions and LargeClass stay: the class waits for its split (Sprint 18d backlog).
+@Suppress("TooManyFunctions", "LargeClass")
 object MediaCodecHelper {
     private const val NOT_INITIALIZED = "MediaCodecHelper must be initialized before use"
 
@@ -164,7 +162,7 @@ object MediaCodecHelper {
         // With the Android 12 update, Sabrina now uses HEVC (with RFI) based upon
         // FEATURE_LowLatency support, which provides equivalent latency to H.264 now.
         //
-        // FIXME: Should we do this for all Amlogic S905X SoCs?
+        // Inherited open question: should we do this for all Amlogic S905X SoCs?
         if (!Build.DEVICE.equals("sabrina", ignoreCase = true)) {
             whitelistedHevcDecoders.add("omx.amlogic")
         }
@@ -841,7 +839,7 @@ object MediaCodecHelper {
             return false
         }
 
-        // TODO: Test some AV1 decoders
+        // Inherited note: test some AV1 decoders.
         return false
     }
 

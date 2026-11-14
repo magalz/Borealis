@@ -1376,8 +1376,6 @@ class Game :
         }
     }
 
-    // The inherited TODO below keeps ForbiddenComment (Sprint 18c backlog).
-    @Suppress("ForbiddenComment")
     private fun reportedRefreshRate(displayRefreshRate: Float): Float {
         return if (
             packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
@@ -1385,7 +1383,7 @@ class Game :
         ) {
             // TVs may take a few moments to switch refresh rates, and we can probably assume
             // it will be eventually activated.
-            // TODO: Improve this
+            // Inherited note: improve this.
             displayRefreshRate
         } else {
             // Use the lower of the current refresh rate and the selected refresh rate.
@@ -1394,11 +1392,8 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; ForbiddenComment stays for the inherited TODO below
-    // (Sprint 18c backlog).
-    @Suppress("ForbiddenComment")
     private val hideSystemUi = Runnable {
-        // TODO: Do we want to use WindowInsetsController here on R+ instead of
+        // Inherited open question: do we want to use WindowInsetsController here on R+ instead of
         // SYSTEM_UI_FLAG_IMMERSIVE_STICKY? They seem to do the same thing as of S...
 
         // In multi-window mode on N+, we need to drop our layout flags or we'll

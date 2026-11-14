@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 
 /** [HostRepository] over [ComputerManagerConnection]. */
 @Singleton
-@Suppress("LongParameterList") // Hilt injects one collaborator per parameter.
+@Suppress("LongParameterList") // Kept (BORE-92): Hilt injects one collaborator per parameter.
 internal class ComputerHostRepository
 @Inject
 constructor(

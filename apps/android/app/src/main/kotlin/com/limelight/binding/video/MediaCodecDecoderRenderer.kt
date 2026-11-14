@@ -2079,7 +2079,7 @@ class MediaCodecDecoderRenderer(
         var capabilities = 0
 
         // Request the optimal number of slices per frame for this decoder
-        capabilities = capabilities or MoonBridge.CAPABILITY_SLICES_PER_FRAME(optimalSlicesPerFrame)
+        capabilities = capabilities or MoonBridge.capabilitySlicesPerFrame(optimalSlicesPerFrame)
 
         // Enable reference frame invalidation on supported hardware
         if (refFrameInvalidationAvc) {

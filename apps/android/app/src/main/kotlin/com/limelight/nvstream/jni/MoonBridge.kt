@@ -17,7 +17,8 @@ import io.github.magalz.borealis.logging.NativeLogForwarder
  * the `INSTANCE` that the initializer never set. The private state needs no annotation: it is a
  * static field that only this class reads.
  */
-// TooManyFunctions stays: the native code binds every member of this class by name (Sprint 18d backlog).
+// TooManyFunctions stays: the JNI natives and callbacks that the C code binds by name all live in
+// this object until it is split (Sprint 18d backlog).
 @Suppress("TooManyFunctions")
 object MoonBridge {
     /* See documentation in Limelight.h for information about these functions and constants */
@@ -217,7 +218,7 @@ object MoonBridge {
         videoRenderer?.cleanup()
     }
 
-    // LongParameterList stays: bound to the JNI, the native code binds this name and descriptor (Sprint 18c backlog).
+    // LongParameterList stays: the native code binds this name and descriptor (Sprint 18c backlog).
     @Suppress("LongParameterList")
     @JvmStatic
     fun bridgeDrSubmitDecodeUnit(
@@ -352,7 +353,7 @@ object MoonBridge {
         MoonBridge.connectionListener = null
     }
 
-    // LongParameterList stays: bound to the JNI, the native code binds this name and descriptor (Sprint 18c backlog).
+    // LongParameterList stays: the native code binds this name and descriptor (Sprint 18c backlog).
     @Suppress("LongParameterList")
     @JvmStatic
     external fun startConnection(
@@ -401,7 +402,7 @@ object MoonBridge {
 
     @JvmStatic external fun sendMouseButton(buttonEvent: Byte, mouseButton: Byte)
 
-    // LongParameterList stays: bound to the JNI, the native code binds this name and descriptor (Sprint 18c backlog).
+    // LongParameterList stays: the native code binds this name and descriptor (Sprint 18c backlog).
     @Suppress("LongParameterList")
     @JvmStatic
     external fun sendMultiControllerInput(
@@ -416,7 +417,7 @@ object MoonBridge {
         rightStickY: Short,
     )
 
-    // LongParameterList stays: bound to the JNI, the native code binds this name and descriptor (Sprint 18c backlog).
+    // LongParameterList stays: the native code binds this name and descriptor (Sprint 18c backlog).
     @Suppress("LongParameterList")
     @JvmStatic
     external fun sendTouchEvent(
@@ -430,7 +431,7 @@ object MoonBridge {
         rotation: Short,
     ): Int
 
-    // LongParameterList stays: bound to the JNI, the native code binds this name and descriptor (Sprint 18c backlog).
+    // LongParameterList stays: the native code binds this name and descriptor (Sprint 18c backlog).
     @Suppress("LongParameterList")
     @JvmStatic
     external fun sendPenEvent(
@@ -455,7 +456,7 @@ object MoonBridge {
         capabilities: Short,
     ): Int
 
-    // LongParameterList stays: bound to the JNI, the native code binds this name and descriptor (Sprint 18c backlog).
+    // LongParameterList stays: the native code binds this name and descriptor (Sprint 18c backlog).
     @Suppress("LongParameterList")
     @JvmStatic
     external fun sendControllerTouchEvent(

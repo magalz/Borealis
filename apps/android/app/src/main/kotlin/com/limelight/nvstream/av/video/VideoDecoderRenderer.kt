@@ -1,6 +1,7 @@
 package com.limelight.nvstream.av.video
 
-// AbstractClassCanBeInterface stays: MediaCodecDecoderRenderer extends it and a test pins it (Sprint 18c backlog).
+// AbstractClassCanBeInterface stays: MediaCodecDecoderRenderer extends it, and a test pins it
+// (Sprint 18c backlog).
 @Suppress("AbstractClassCanBeInterface")
 abstract class VideoDecoderRenderer {
     abstract fun setup(format: Int, width: Int, height: Int, redrawRate: Int): Int

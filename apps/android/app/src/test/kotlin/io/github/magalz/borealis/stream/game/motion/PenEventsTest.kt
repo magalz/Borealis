@@ -6,6 +6,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import com.limelight.nvstream.input.MouseButtonPacket
 import com.limelight.nvstream.jni.MoonBridge
+import io.github.magalz.borealis.connection.ShadowRecordingBridge
 import org.junit.Test
 
 /**
@@ -619,6 +620,90 @@ internal class PenEventsTest : MotionTestBase() {
         assertThat(handled).isTrue()
         assertThat(pens()).isEmpty()
         assertThat(sent()).containsExactly(position(10, 20))
+    }
+
+    // ----- The press of a stylus for a host that does not take pens -----
+
+    private fun hostWithoutPens() {
+        ShadowRecordingBridge.intResult = MoonBridge.LI_ERR_UNSUPPORTED
+    }
+
+    private fun tool(toolType: Int, action: Int, x: Float, y: Float, at: Long = TIME) =
+        motionEventOf(source, action) {
+            pointer(x, y, toolType)
+            eventTime = at
+        }
+
+    @Test
+    fun `the dead zone of a touch is round the place of the touch, off it in x or in y`() {
+        hostWithoutPens()
+        streaming()
+
+        for ((round, toolType) in
+            listOf(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_ERASER).withIndex()) {
+            val start = TIME + round * 10_000L
+            send(tool(toolType, MotionEvent.ACTION_DOWN, 100f, 40f, start))
+            forgetSent()
+
+            // 5 pixels below the touch, 50 ms later: held still. Read as (40, 100) or as (40, 40)
+            // the touch is more than 20 pixels away.
+            send(tool(toolType, MotionEvent.ACTION_MOVE, 100f, 45f, start + 50))
+            assertThat(sentBesidesPens()).isEmpty()
+            // The lift that ends the round.
+            send(tool(toolType, MotionEvent.ACTION_UP, 100f, 40f, start + 5_000))
+            forgetSent()
+        }
+    }
+
+    @Test
+    fun `the dead zone of a lift is round the place of the lift, off it in x or in y`() {
+        hostWithoutPens()
+        streaming()
+
+        for ((round, toolType) in
+            listOf(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_ERASER).withIndex()) {
+            val start = TIME + round * 10_000L
+            send(tool(toolType, MotionEvent.ACTION_DOWN, 100f, 40f, start))
+            send(tool(toolType, MotionEvent.ACTION_UP, 100f, 40f, start + 500))
+            forgetSent()
+
+            // 5 pixels from the lift, 50 ms after it: held still. Read as (100, 100) or as (40, 40)
+            // the lift is more than 50 pixels away.
+            send(tool(toolType, MotionEvent.ACTION_HOVER_MOVE, 100f, 45f, start + 550))
+            assertThat(sentBesidesPens()).isEmpty()
+            // Far from the lift and in time: the pointer goes there.
+            send(tool(toolType, MotionEvent.ACTION_HOVER_MOVE, 100f, 120f, start + 560))
+            assertThat(sentBesidesPens()).containsExactly(position(100, 120))
+            forgetSent()
+        }
+    }
+
+    @Test
+    fun `a side button that comes up with the touch of a stylus goes to the host before the touch`() {
+        rig.preference("checkbox_mouse_nav_buttons", true)
+        hostWithoutPens()
+        streaming()
+        // Back waits to see whether it is held; the stylus hovers with it down.
+        send(
+            motionEventOf(source, MotionEvent.ACTION_HOVER_MOVE) {
+                pointer(100f, 100f, MotionEvent.TOOL_TYPE_STYLUS)
+                buttonState = MotionEvent.BUTTON_BACK
+                eventTime = TIME
+            }
+        )
+        forgetSent()
+
+        // The stylus touches down as Back comes up after 100 ms: a short press, sent at once.
+        send(tool(MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.ACTION_DOWN, 100f, 100f, TIME + 100))
+
+        assertThat(sentBesidesPens())
+            .containsExactly(
+                position(100, 100),
+                press(MouseButtonPacket.BUTTON_X1),
+                release(MouseButtonPacket.BUTTON_X1),
+                press(MouseButtonPacket.BUTTON_LEFT),
+            )
+            .inOrder()
     }
 
     private companion object {

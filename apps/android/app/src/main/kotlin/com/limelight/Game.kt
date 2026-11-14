@@ -2702,16 +2702,189 @@ class Game :
         onStreamView.recycle()
     }
 
+    // BOREALIS: the buttons of a mouse event as the host knows them. The DeX touchpad on the Fold 4
+    // sends proper right click events using BUTTON_SECONDARY, but doesn't send BUTTON_PRIMARY for
+    // a regular click. Instead it sends ACTION_DOWN/UP, so we need to fix that up to look like a
+    // sane input event to process it correctly.
+    private fun mouseButtonState(event: MotionEvent): Int {
+        val buttonState = event.buttonState
+        if (event.source != SAMSUNG_DEX_MOUSE_SOURCE) return buttonState
+        return when {
+            // BOREALIS: only a plain touch down is the missing left click; a right click comes down
+            // with its own button
+            event.actionMasked == MotionEvent.ACTION_DOWN && buttonState == 0 ->
+                buttonState or MotionEvent.BUTTON_PRIMARY
+            event.action == MotionEvent.ACTION_UP ->
+                buttonState and MotionEvent.BUTTON_PRIMARY.inv()
+            // We may be faking the primary button down from a previous event, so be sure to add
+            // that bit back into the button state.
+            else -> buttonState or (lastButtonState and MotionEvent.BUTTON_PRIMARY)
+        }
+    }
+
+    // The vertical scroll packet, then the horizontal one
+    private fun sendMouseScroll(event: MotionEvent) {
+        conn.sendMouseHighResScroll(
+            (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * HIGH_RES_SCROLL_UNIT).toInt().toShort()
+        )
+        conn.sendMouseHighResHScroll(
+            (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * HIGH_RES_SCROLL_UNIT).toInt().toShort()
+        )
+    }
+
+    private fun sendMouseButton(button: Byte, down: Boolean) {
+        if (down) {
+            conn.sendMouseButtonDown(button)
+        } else {
+            conn.sendMouseButtonUp(button)
+        }
+    }
+
+    // The host buttons that changed, left, right, then middle. Mouse secondary or stylus primary is
+    // right click (stylus down is left click); mouse tertiary or stylus secondary is middle click.
+    // BOREALIS: the two of a group share one host button, which changes only when the group does
+    private fun sendMouseButtons(buttonState: Int, changedButtons: Int) {
+        if ((changedButtons and MotionEvent.BUTTON_PRIMARY) != 0) {
+            sendMouseButton(
+                MouseButtonPacket.BUTTON_LEFT,
+                (buttonState and MotionEvent.BUTTON_PRIMARY) != 0,
+            )
+        }
+
+        val rightGroup = MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY
+        if (groupChanged(buttonState, rightGroup)) {
+            sendMouseButton(MouseButtonPacket.BUTTON_RIGHT, (buttonState and rightGroup) != 0)
+        }
+
+        val middleGroup = MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY
+        if (groupChanged(buttonState, middleGroup)) {
+            sendMouseButton(MouseButtonPacket.BUTTON_MIDDLE, (buttonState and middleGroup) != 0)
+        }
+    }
+
+    // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see whether the
+    // other joins them. True when the chord of the two was completed: the caller opens the menu
+    // once it has noted the buttons (stream)
+    private fun sideButtonsChanged(
+        buttonState: Int,
+        changedButtons: Int,
+        eventTime: Long,
+    ): Boolean {
+        if (!prefConfig.mouseNavButtons) return false
+        var sideChord = false
+        if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
+            sideChord =
+                sideButtonMoved(
+                    sideBack,
+                    (buttonState and MotionEvent.BUTTON_BACK) != 0,
+                    eventTime,
+                )
+        }
+
+        if ((changedButtons and MotionEvent.BUTTON_FORWARD) != 0) {
+            sideChord =
+                sideButtonMoved(
+                    sideForward,
+                    (buttonState and MotionEvent.BUTTON_FORWARD) != 0,
+                    eventTime,
+                ) || sideChord
+        }
+        return sideChord
+    }
+
+    // Handle stylus presses: a stylus is left click and an eraser is right click, and the place and
+    // time of the press and of the release keep the pointer out of the dead zones around them
+    private fun noteStylusPress(event: MotionEvent) {
+        if (event.pointerCount != 1 || event.actionIndex != 0) return
+        val action = event.actionMasked
+        val down = action == MotionEvent.ACTION_DOWN
+        if (!down && action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) return
+        val button =
+            when (event.getToolType(0)) {
+                MotionEvent.TOOL_TYPE_STYLUS -> MouseButtonPacket.BUTTON_LEFT
+                MotionEvent.TOOL_TYPE_ERASER -> MouseButtonPacket.BUTTON_RIGHT
+                else -> return
+            }
+        if (down) {
+            lastAbsTouchDownTime = event.eventTime
+            lastAbsTouchDownX = event.getX(0)
+            lastAbsTouchDownY = event.getY(0)
+        } else {
+            lastAbsTouchUpTime = event.eventTime
+            lastAbsTouchUpX = event.getX(0)
+            lastAbsTouchUpY = event.getY(0)
+        }
+        sendMouseButton(button, down)
+    }
+
+    // The mouse, the stylus and the DeX desktop mouse; the other pointers are fingers
+    private fun isMouseOrStylusEvent(event: MotionEvent): Boolean {
+        val eventSource = event.source
+        return eventSource == InputDevice.SOURCE_MOUSE ||
+            (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 || // SOURCE_TOUCHPAD
+            eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
+            (event.pointerCount >= 1 &&
+                (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
+                    event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
+                    event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
+            eventSource == SAMSUNG_DEX_MOUSE_SOURCE // Samsung DeX mode desktop mouse
+    }
+
+    // This case is for mice and non-finger touch devices. The result is true: the event is taken
+    // even when it is ignored, because otherwise Android may synthesize d-pad events from it.
+    private fun handleMouseEvent(view: View?, event: MotionEvent): Boolean {
+        val buttonState = mouseButtonState(event)
+        val changedButtons = buttonState xor lastButtonState
+
+        // Ignore mouse input if we're not capturing from our input source
+        if (!inputCaptureProvider.isCapturingActive()) {
+            return true
+        }
+
+        if (placePointer(view, event)) {
+            return true
+        }
+
+        if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
+            sendMouseScroll(event)
+        }
+
+        sendMouseButtons(buttonState, changedButtons)
+        val sideChord = sideButtonsChanged(buttonState, changedButtons, event.eventTime)
+        noteStylusPress(event)
+
+        lastButtonState = buttonState
+        // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the
+        // input clears them (stream)
+        if (sideChord) streamSession.openMenu()
+        return true
+    }
+
+    // The event goes by its source: the controller handler for a joystick, then for the touchpad of
+    // a joystick device, then the mouse or the finger handler for a pointer. A joystick event that
+    // the handler does not take is not consumed; neither is a source of another class.
+    private fun routeMotionEvent(view: View?, event: MotionEvent): Boolean {
+        val eventSource = event.source
+        val deviceSources = if (event.device != null) event.device.sources else 0
+        return when {
+            (eventSource and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 ->
+                controllerHandler.handleMotionEvent(event)
+            (deviceSources and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 &&
+                controllerHandler.tryHandleTouchpadEvent(event) -> true
+            (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0 ||
+                (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 ||
+                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ->
+                if (isMouseOrStylusEvent(event)) {
+                    handleMouseEvent(view, event)
+                } else {
+                    handleFingerEvent(view, event)
+                }
+            else -> false
+        }
+    }
+
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "NestedBlockDepth",
-        "ReturnCount",
-    )
     private fun handleMotionEvent(view: View?, event: MotionEvent): Boolean {
         // BOREALIS: the chrome takes the input while it is modal
         if (chromeInput.toChrome(event)) return false
@@ -2719,207 +2892,7 @@ class Game :
         if (!grabbedInput) {
             return false
         }
-
-        val eventSource = event.source
-        val deviceSources = if (event.device != null) event.device.sources else 0
-        if ((eventSource and InputDevice.SOURCE_CLASS_JOYSTICK) != 0) {
-            if (controllerHandler.handleMotionEvent(event)) {
-                return true
-            }
-        } else if (
-            (deviceSources and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 &&
-                controllerHandler.tryHandleTouchpadEvent(event)
-        ) {
-            return true
-        } else if (
-            (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0 ||
-                (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE
-        ) {
-            // This case is for mice and non-finger touch devices
-            if (
-                eventSource == InputDevice.SOURCE_MOUSE ||
-                    (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 || // SOURCE_TOUCHPAD
-                    eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
-                    (event.pointerCount >= 1 &&
-                        (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
-                            event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
-                            event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
-                    eventSource == SAMSUNG_DEX_MOUSE_SOURCE // Samsung DeX mode desktop mouse
-            ) {
-                var buttonState = event.buttonState
-                var changedButtons = buttonState xor lastButtonState
-
-                // The DeX touchpad on the Fold 4 sends proper right click events using
-                // BUTTON_SECONDARY, but doesn't send BUTTON_PRIMARY for a regular click. Instead it
-                // sends ACTION_DOWN/UP, so we need to fix that up to look like a sane input event
-                // to process it correctly.
-                if (eventSource == SAMSUNG_DEX_MOUSE_SOURCE) {
-                    // BOREALIS: only a plain touch down is the missing left click; a right click
-                    // comes down with its own button
-                    if (event.actionMasked == MotionEvent.ACTION_DOWN && buttonState == 0) {
-                        buttonState = buttonState or MotionEvent.BUTTON_PRIMARY
-                    } else if (event.action == MotionEvent.ACTION_UP) {
-                        buttonState = buttonState and MotionEvent.BUTTON_PRIMARY.inv()
-                    } else {
-                        // We may be faking the primary button down from a previous event,
-                        // so be sure to add that bit back into the button state.
-                        buttonState =
-                            buttonState or (lastButtonState and MotionEvent.BUTTON_PRIMARY)
-                    }
-
-                    changedButtons = buttonState xor lastButtonState
-                }
-
-                // Ignore mouse input if we're not capturing from our input source
-                if (!inputCaptureProvider.isCapturingActive()) {
-                    // We return true here because otherwise the events may end up causing
-                    // Android to synthesize d-pad events.
-                    return true
-                }
-
-                if (placePointer(view, event)) {
-                    return true
-                }
-
-                if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
-                    // Send the vertical scroll packet
-                    conn.sendMouseHighResScroll(
-                        (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * HIGH_RES_SCROLL_UNIT)
-                            .toInt()
-                            .toShort()
-                    )
-                    conn.sendMouseHighResHScroll(
-                        (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * HIGH_RES_SCROLL_UNIT)
-                            .toInt()
-                            .toShort()
-                    )
-                }
-
-                if ((changedButtons and MotionEvent.BUTTON_PRIMARY) != 0) {
-                    if ((buttonState and MotionEvent.BUTTON_PRIMARY) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                    }
-                }
-
-                // Mouse secondary or stylus primary is right click (stylus down is left click)
-                // BOREALIS: the two share one host button, which changes only when the group does
-                if (
-                    groupChanged(
-                        buttonState,
-                        MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY,
-                    )
-                ) {
-                    if (
-                        (buttonState and
-                            (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) !=
-                            0
-                    ) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                    }
-                }
-
-                // Mouse tertiary or stylus secondary is middle click
-                if (
-                    groupChanged(
-                        buttonState,
-                        MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY,
-                    )
-                ) {
-                    if (
-                        (buttonState and
-                            (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY)) !=
-                            0
-                    ) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
-                    }
-                }
-
-                // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see
-                // whether the other joins them (stream)
-                var sideChord = false
-                if (prefConfig.mouseNavButtons) {
-                    if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
-                        sideChord =
-                            sideButtonMoved(
-                                sideBack,
-                                (buttonState and MotionEvent.BUTTON_BACK) != 0,
-                                event.eventTime,
-                            )
-                    }
-
-                    if ((changedButtons and MotionEvent.BUTTON_FORWARD) != 0) {
-                        sideChord =
-                            sideButtonMoved(
-                                sideForward,
-                                (buttonState and MotionEvent.BUTTON_FORWARD) != 0,
-                                event.eventTime,
-                            ) || sideChord
-                    }
-                }
-
-                // Handle stylus presses
-                if (event.pointerCount == 1 && event.actionIndex == 0) {
-                    if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-                            lastAbsTouchDownTime = event.eventTime
-                            lastAbsTouchDownX = event.getX(0)
-                            lastAbsTouchDownY = event.getY(0)
-
-                            // Stylus is left click
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                        } else if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
-                            lastAbsTouchDownTime = event.eventTime
-                            lastAbsTouchDownX = event.getX(0)
-                            lastAbsTouchDownY = event.getY(0)
-
-                            // Eraser is right click
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                        }
-                    } else if (
-                        event.actionMasked == MotionEvent.ACTION_UP ||
-                            event.actionMasked == MotionEvent.ACTION_CANCEL
-                    ) {
-                        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-                            lastAbsTouchUpTime = event.eventTime
-                            lastAbsTouchUpX = event.getX(0)
-                            lastAbsTouchUpY = event.getY(0)
-
-                            // Stylus is left click
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                        } else if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
-                            lastAbsTouchUpTime = event.eventTime
-                            lastAbsTouchUpX = event.getX(0)
-                            lastAbsTouchUpY = event.getY(0)
-
-                            // Eraser is right click
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                        }
-                    }
-                }
-
-                lastButtonState = buttonState
-                // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the
-                // input clears them (stream)
-                if (sideChord) streamSession.openMenu()
-            }
-            // This case is for fingers
-            else {
-                return handleFingerEvent(view, event)
-            }
-
-            // Handled a known source
-            return true
-        }
-
-        // Unknown class
-        return false
+        return routeMotionEvent(view, event)
     }
 
     // BOREALIS: whether the Native touch mode sends this finger to the host as a touch event and

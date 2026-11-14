@@ -200,6 +200,17 @@ internal class MouseButtonsTest : MotionTestBase() {
         assertSent(thePointer())
     }
 
+    @Test
+    fun `the DeX touchpad up lets go of the left button even when its state still holds it`() {
+        streaming()
+        rig.game.onGenericMotion(streamView, dex(MotionEvent.ACTION_DOWN))
+        assertSent(thePointer(), press(left))
+
+        rig.game.onGenericMotion(streamView, dex(MotionEvent.ACTION_UP, MotionEvent.BUTTON_PRIMARY))
+
+        assertSent(thePointer(), release(left))
+    }
+
     // ----- A pointer that is not captured -----
 
     @Test

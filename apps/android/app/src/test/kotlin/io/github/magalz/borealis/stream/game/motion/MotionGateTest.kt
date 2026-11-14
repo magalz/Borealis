@@ -198,6 +198,29 @@ internal class MotionGateTest : MotionTestBase() {
         assertThat(ShadowRecordingBridge.named("sendMultiControllerInput")).hasSize(1)
     }
 
+    // ----- The sources of a mouse, whatever the tool of the pointer -----
+
+    @Test
+    fun `a mouse source is a mouse even when its pointer reports no mouse tool`() {
+        streaming()
+
+        val mouse =
+            motionEventOf(InputDevice.SOURCE_MOUSE, MotionEvent.ACTION_HOVER_MOVE) {
+                pointer(10f, 20f, MotionEvent.TOOL_TYPE_UNKNOWN)
+            }
+        assertThat(rig.game.onGenericMotion(streamView, mouse)).isTrue()
+        assertThat(sent()).containsExactly(position(10, 20))
+        forgetSent()
+
+        val relative =
+            motionEventOf(InputDevice.SOURCE_MOUSE_RELATIVE, MotionEvent.ACTION_MOVE) {
+                pointer(5f, 6f, MotionEvent.TOOL_TYPE_UNKNOWN)
+            }
+        assertThat(rig.game.onGenericMotion(streamView, relative)).isTrue()
+        // Not a relative move: the axes of a relative mouse are those of a mouse tool.
+        assertThat(sent()).containsExactly(position(5, 6))
+    }
+
     // ----- A source that is none of the classes -----
 
     @Test

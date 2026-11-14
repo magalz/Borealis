@@ -70,6 +70,21 @@ internal class MotionEntryPointsTest : MotionTestBase() {
         assertThat(sent()).containsExactly(moveBy(5, -6))
     }
 
+    @Test
+    fun `a captured pointer is placed on the stream view, wherever the view sits in its window`() {
+        streaming(left = 40)
+        val event =
+            motionEventOf(InputDevice.SOURCE_MOUSE, MotionEvent.ACTION_HOVER_MOVE) {
+                pointer(10f, 20f)
+            }
+
+        dispatchCapturedPointer(event)
+
+        // The event has the coordinates of the stream view, which is not at the origin of its
+        // window: they reach the host unchanged.
+        assertThat(sent()).containsExactly(position(10, 20))
+    }
+
     // ----- The unbuffered dispatch -----
 
     @Test

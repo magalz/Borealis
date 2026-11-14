@@ -4,8 +4,12 @@ import com.google.common.truth.Truth.assertThat
 import com.limelight.LimeLog
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration
+import io.github.magalz.borealis.stream.DecodeTimeTracker
 import java.io.OutputStream
 import java.io.PrintStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import org.junit.Assert.assertThrows
@@ -35,8 +39,9 @@ class RendererRecoveryTest : RendererTestBase() {
     private fun running(
         pacing: Int = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY,
         stepped: Boolean = false,
+        decoder: String = "vendor.test.avc.decoder",
     ): MediaCodecDecoderRenderer {
-        install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
+        install(codec(decoder) { mime = "video/avc" })
         val renderer = renderer(prefs { framePacing = pacing })
         assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
         if (stepped) renderer.beginStepped() else renderer.begin()
@@ -638,6 +643,51 @@ class RendererRecoveryTest : RendererTestBase() {
     }
 
     @Test
+    fun `a recreated Intel decoder says baseline again`() {
+        val renderer = running(stepped = true, decoder = "omx.intel.avc.decoder")
+        renderer.sendParameterSets()
+        assertThat(renderer.submit(idrSlice())).isEqualTo(MoonBridge.DR_OK)
+        // The replay is done: the decoder does not need the hack any more.
+        assertThat(log.lines().filter { it == "INFO: SPS replay complete" }).hasSize(1)
+        // The reset is refused as well, so the codec is thrown away and a new one is made.
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, stateFailure)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 1) {
+            IllegalStateException("reset refused")
+        }
+        assertThat(recoveredByRendererThread { renderer.submit(pFrame(2)) })
+            .isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(events<CodecEvent.Created>()).hasSize(2)
+
+        renderer.sendParameterSets(3)
+        val result = renderer.submit(idrSlice(3))
+
+        assertThat(result).isEqualTo(MoonBridge.DR_OK)
+        // The new codec is sent the baseline SPS first and the real profile after it, as the
+        // first one was.
+        assertThat(events<CodecEvent.Queued>().map { it.flags })
+            .containsExactly(
+                CODEC_CONFIG,
+                CODEC_CONFIG,
+                SYNC_FRAME,
+                CODEC_CONFIG,
+                CODEC_CONFIG,
+                SYNC_FRAME,
+            )
+            .inOrder()
+        val queued = events<CodecEvent.Queued>()
+        assertThat(queued[3].hex).isEqualTo(queued[0].hex)
+        assertThat(queued[4].hex).isEqualTo(queued[1].hex)
+        assertThat(log.lines().filter { it == "INFO: Hacking SPS to baseline" }).hasSize(2)
+        assertThat(log.lines().filter { it == "INFO: SPS replay complete" }).hasSize(2)
+        assertThat(
+                log.lines().filter {
+                    it == "INFO: Decoder omx.intel.avc.decoder needs baseline SPS hack"
+                }
+            )
+            .hasSize(2)
+    }
+
+    @Test
     fun `a restart that fails on an illegal argument stops the renderer`() {
         val renderer = running()
         renderer.metByRendererThread(recoverable)
@@ -834,6 +884,137 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(crashes).hasSize(1)
     }
 
+    @Test
+    fun `a new codec that cannot be configured after a crash was reported does not tell the listener again`() {
+        val renderer = running(stepped = true)
+        // The renderer thread meets the failure and waits for the input thread, which is this one.
+        threadLog.forgetWaits()
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_OUTPUT, 1, stateFailure)
+        ShadowRecordingVideoCodec.stepOutput()
+        threadLog.awaitWaiting(RENDERER_THREAD or CHOREOGRAPHER)
+        // The listener was told of a crash already, as when a failure was held back too long.
+        ReflectionHelpers.setField(renderer, "reportedCrash", true)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.CONFIGURE, 5) {
+            IllegalStateException("refused for good")
+        }
+
+        val thrown = assertThrows(RuntimeException::class.java) { renderer.submit(pFrame(1)) }
+
+        assertThat(thrown.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(thrown.toString().split("\n").last())
+            .isEqualTo("java.lang.IllegalStateException: refused for good")
+        assertThat(crashes).isEmpty()
+    }
+
+    // What the last thread to quiesce does, called directly: the test thread is that thread, the
+    // other two have arrived (their marks are set), and no thread is started, so that the steps
+    // that no failure of the codec can reach one at a time are seen one at a time
+
+    /** Runs the recovery of [type] as the input thread, the last of the three to arrive. */
+    private fun MediaCodecDecoderRenderer.recoverAsLastThread(type: Int) {
+        ReflectionHelpers.setField(
+            this,
+            "codecRecoveryThreadQuiescedFlags",
+            RENDERER_THREAD or CHOREOGRAPHER,
+        )
+        recoveryType().set(type)
+        ReflectionHelpers.callInstanceMethod<Boolean>(
+            this,
+            "doCodecRecoveryIfRequired",
+            ReflectionHelpers.ClassParameter.from(Int::class.javaPrimitiveType, INPUT_THREAD),
+        )
+    }
+
+    /** An output queue that does what [onClear] says when the recovery empties it. */
+    private class QueueThatMeetsAStop(private val onClear: () -> Unit) :
+        LinkedBlockingQueue<Int>() {
+        override fun clear() {
+            super.clear()
+            onClear()
+        }
+    }
+
+    @Test
+    fun `a recovery forgets the output buffers that were waiting for the codec it replaces`() {
+        val renderer = prepared()
+        val queue =
+            ReflectionHelpers.getField<LinkedBlockingQueue<Int>>(renderer, "outputBufferQueue")
+        queue += listOf(3, 4)
+
+        renderer.recoverAsLastThread(RECOVERY_RESTART)
+
+        assertThat(events<CodecEvent.Stopped>()).hasSize(1)
+        assertThat(queue).isEmpty()
+    }
+
+    @Test
+    fun `a recovery forgets the frames that were queued to the codec it replaces`() {
+        val renderer = prepared()
+        val tracker = ReflectionHelpers.getField<DecodeTimeTracker>(renderer, "decodeTimeTracker")
+        synchronized(tracker) { tracker.onInput(FRAME_US, 0) }
+
+        renderer.recoverAsLastThread(RECOVERY_RESTART)
+
+        assertThat(events<CodecEvent.Stopped>()).hasSize(1)
+        // The output of the new codec with the timestamp of that frame is not paired with it.
+        assertThat(synchronized(tracker) { tracker.onOutput(FRAME_US, 1_000_000) })
+            .isEqualTo(DecodeTimeTracker.NO_MATCH)
+    }
+
+    @Test
+    fun `a recovery that was cancelled before it began is not counted and does nothing`() {
+        val renderer = prepared()
+        // The stop comes after this thread passed the check for a recovery, as the renderer
+        // thread of a stop does while the last thread is on its way to the monitor. The case
+        // relies on the buffers being dropped before the attempt is counted, the order of the
+        // recovery: the stop arrives while the output queue is cleared.
+        ReflectionHelpers.setField(
+            renderer,
+            "outputBufferQueue",
+            QueueThatMeetsAStop { renderer.recoveryType().set(RECOVERY_NONE) },
+        )
+        val before = log.lines()
+
+        renderer.recoverAsLastThread(RECOVERY_RESTART)
+
+        assertThat(ReflectionHelpers.getField<Int>(renderer, "codecRecoveryAttempts")).isEqualTo(0)
+        assertThat(log.lines()).isEqualTo(before)
+        assertThat(events<CodecEvent.Stopped>()).isEmpty()
+        assertThat(events<CodecEvent.Reset>()).isEmpty()
+    }
+
+    @Test
+    fun `a recovery that ends wakes the thread that waits for it at once`() {
+        val renderer = prepared()
+        val monitor = ReflectionHelpers.getField<Any>(renderer, "codecRecoveryMonitor")
+        val waiting = CountDownLatch(1)
+        // The waiter has no timeout of its own, so only a notification ends its wait; it holds the
+        // monitor until it waits, so the monitor is free again only when it does.
+        val waiter =
+            thread(name = "waiter", isDaemon = true) {
+                synchronized(monitor) {
+                    waiting.countDown()
+                    waitFor(monitor)
+                }
+            }
+        try {
+            check(waiting.await(JOIN_MS, TimeUnit.MILLISECONDS)) { "The waiter did not start" }
+            synchronized(monitor) {}
+
+            renderer.recoverAsLastThread(RECOVERY_RESTART)
+
+            waiter.join(JOIN_MS)
+            check(!waiter.isAlive) { "The waiter was never woken" }
+        } finally {
+            // A run that failed leaves no thread waiting.
+            waiter.interrupt()
+        }
+    }
+
+    // Only a waiter on the recovery monitor sees whether notifyAll ran; Object.wait needs the cast.
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+    private fun waitFor(monitor: Any) = (monitor as Object).wait()
+
     // Too many recoveries
 
     @Test
@@ -923,26 +1104,352 @@ class RendererRecoveryTest : RendererTestBase() {
         assertThat(log.lines()).contains("INFO: Codec recovery attempt: 1")
     }
 
+    // What the renderer decides for each failure, asked directly: the states that these cases need
+    // (ten recoveries done, a recovery pending at the same time, a recovery type that no failure
+    // leaves behind) cannot be brought about by the threads of a test, and no thread is started
+
+    /** A renderer that is set up and has no thread, so that nothing meets the failures but us. */
+    private fun prepared(): MediaCodecDecoderRenderer {
+        install(codec("vendor.test.avc.decoder") { mime = "video/avc" })
+        val renderer = renderer()
+        assertThat(renderer.prepare(MoonBridge.VIDEO_FORMAT_H264)).isEqualTo(0)
+        return renderer
+    }
+
+    /** What `handleDecoderException` answers for [failure]; a crash comes out as an exception. */
+    private fun MediaCodecDecoderRenderer.decide(failure: IllegalStateException): Boolean =
+        ReflectionHelpers.callInstanceMethod(
+            this,
+            "handleDecoderException",
+            ReflectionHelpers.ClassParameter.from(IllegalStateException::class.java, failure),
+        )
+
+    private fun MediaCodecDecoderRenderer.recoveryType() =
+        ReflectionHelpers.getField<AtomicInteger>(this, "codecRecoveryType")
+
+    private fun MediaCodecDecoderRenderer.initialException(): Any? =
+        ReflectionHelpers.getField(this, "initialException")
+
+    private fun MediaCodecDecoderRenderer.heldInputBuffer(): Any? =
+        ReflectionHelpers.getField(this, "nextInputBuffer")
+
+    private fun MediaCodecDecoderRenderer.fetchNextInputBuffer(): Boolean =
+        ReflectionHelpers.callInstanceMethod(this, "fetchNextInputBuffer")
+
+    /** The recovery that [failure] asks for when [attempts] recoveries were already made. */
+    private fun MediaCodecDecoderRenderer.askedFor(
+        attempts: Int,
+        failure: IllegalStateException,
+    ): Int {
+        recoveryType().set(RECOVERY_NONE)
+        ReflectionHelpers.setField(this, "codecRecoveryAttempts", attempts)
+        assertThat(decide(failure)).isFalse()
+        return recoveryType().get()
+    }
+
+    @Test
+    fun `a renderer that is stopping lets every failure go before it logs anything`() {
+        val renderer = prepared()
+        ReflectionHelpers.setField(renderer, "stopping", true)
+        val before = log.lines()
+
+        for (failure in listOf(transient(), recoverable(), unrecoverable(), stateFailure())) {
+            assertThat(renderer.decide(failure)).isFalse()
+        }
+
+        assertThat(log.lines()).isEqualTo(before)
+        assertThat(renderer.recoveryType().get()).isEqualTo(RECOVERY_NONE)
+        assertThat(renderer.initialException()).isNull()
+    }
+
+    @Test
+    fun `a transient codec error is let go as a warning, whatever the recoveries made`() {
+        val renderer = prepared()
+        ReflectionHelpers.setField(renderer, "codecRecoveryAttempts", 10)
+        val failure = transient()
+
+        assertThat(renderer.decide(failure)).isTrue()
+
+        assertThat(log.lines().filter { it.contains(failure.diagnosticInfo) })
+            .containsExactly("WARNING: ${failure.diagnosticInfo}")
+        assertThat(renderer.recoveryType().get()).isEqualTo(RECOVERY_NONE)
+        assertThat(renderer.initialException()).isNull()
+    }
+
+    @Test
+    fun `a codec error is logged as severe before the recovery that it asks for`() {
+        val renderer = prepared()
+        val restarted = recoverable()
+        val reset = unrecoverable()
+
+        renderer.askedFor(0, restarted)
+        renderer.askedFor(0, reset)
+
+        assertThat(log.lines())
+            .containsAtLeast(
+                "SEVERE: ${restarted.diagnosticInfo}",
+                "INFO: Decoder requires restart for recoverable CodecException",
+                "SEVERE: ${reset.diagnosticInfo}",
+                "INFO: Decoder requires reset for non-recoverable CodecException",
+            )
+            .inOrder()
+    }
+
+    @Test
+    fun `a failure asks for a recovery up to the tenth attempt and no more`() {
+        val renderer = prepared()
+
+        assertThat(renderer.askedFor(9, recoverable())).isEqualTo(RECOVERY_RESTART)
+        assertThat(renderer.askedFor(9, unrecoverable())).isEqualTo(RECOVERY_RESET)
+        assertThat(renderer.askedFor(9, stateFailure())).isEqualTo(RECOVERY_RESET)
+        assertThat(renderer.initialException()).isNull()
+        val seen = log.lines().size
+
+        assertThat(renderer.askedFor(10, recoverable())).isEqualTo(RECOVERY_NONE)
+        assertThat(renderer.initialException()).isNotNull()
+        assertThat(renderer.askedFor(10, unrecoverable())).isEqualTo(RECOVERY_NONE)
+        assertThat(renderer.askedFor(10, stateFailure())).isEqualTo(RECOVERY_NONE)
+        assertThat(log.lines().drop(seen).filter { it.startsWith("INFO: Decoder") }).isEmpty()
+    }
+
+    @Test
+    fun `a failure that meets a pending recovery is not held back`() {
+        val renderer = prepared()
+        ReflectionHelpers.setField(renderer, "codecRecoveryAttempts", 10)
+        renderer.recoveryType().set(RECOVERY_RESET)
+
+        assertThat(renderer.decide(stateFailure())).isFalse()
+
+        assertThat(renderer.initialException()).isNull()
+        assertThat(renderer.recoveryType().get()).isEqualTo(RECOVERY_RESET)
+
+        // Three seconds after a failure that was held back, a pending recovery still goes first.
+        renderer.recoveryType().set(RECOVERY_NONE)
+        assertThat(renderer.decide(stateFailure())).isFalse()
+        advanceClock(3_000)
+        renderer.recoveryType().set(RECOVERY_RESTART)
+
+        assertThat(renderer.decide(stateFailure())).isFalse()
+
+        assertThat(crashes).isEmpty()
+        assertThat(renderer.recoveryType().get()).isEqualTo(RECOVERY_RESTART)
+    }
+
+    @Test
+    fun `the first failure that was held back is thrown exactly three seconds after it`() {
+        val renderer = prepared()
+        ReflectionHelpers.setField(renderer, "codecRecoveryAttempts", 10)
+        val first = codecException(errorCode = -38, actionCode = ACTION_NONE, message = "dead")
+        assertThat(renderer.decide(first)).isFalse()
+        // A later failure does not move the time that the three seconds are counted from.
+        advanceClock(2_000)
+        assertThat(renderer.decide(stateFailure())).isFalse()
+        advanceClock(999)
+        assertThat(renderer.decide(stateFailure())).isFalse()
+        assertThat(crashes).isEmpty()
+        advanceClock(1)
+
+        val thrown = assertThrows(RuntimeException::class.java) { renderer.decide(stateFailure()) }
+
+        assertThat(thrown.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(thrown.toString().split("\n").last())
+            .isEqualTo("android.media.MediaCodec\$CodecException: dead")
+        assertThat(crashes).containsExactly(thrown)
+        assertThat(renderer.initialException()).isSameInstanceAs(thrown)
+    }
+
+    // The input buffer of the next frame
+
+    /**
+     * Starts [block] on the input thread while the codec gives no input buffer, and waits until
+     * that thread asks for one. The caller moves the clock and then lets the codec give one, or
+     * stops the renderer.
+     */
+    private fun starved(block: () -> Int): InputCall<Int> {
+        ShadowRecordingVideoCodec.starveInput = true
+        val polls = ShadowRecordingVideoCodec.dequeueInputCalls.get()
+        val call = InputCall(block)
+        await("the input thread to wait for an input buffer") {
+            ShadowRecordingVideoCodec.dequeueInputCalls.get() > polls
+        }
+        return call
+    }
+
+    /**
+     * A frame whose input buffer takes five seconds and then is no buffer at all: a hung decoder.
+     * Returns what the input thread threw.
+     */
+    private fun MediaCodecDecoderRenderer.hangs(number: Int): Throwable {
+        ShadowRecordingVideoCodec.nullInputBuffers.set(1)
+        val call = starved { submit(pFrame(number)) }
+        advanceClock(5_000)
+        ShadowRecordingVideoCodec.starveInput = false
+        return call.failure()
+    }
+
+    @Test
+    fun `a five second starvation after a first failure that was held back is not a hung decoder`() {
+        val renderer = running()
+        ReflectionHelpers.setField(renderer, "codecRecoveryAttempts", 10)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, stateFailure)
+        assertThat(renderer.submit(pFrame(1))).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(renderer.initialException()).isNotNull()
+        val call = starved { renderer.submit(pFrame(2)) }
+
+        advanceClock(5_000)
+        renderer.prepareForStop()
+
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).contains("WARNING: Dequeue input buffer ran long: 5000 ms")
+    }
+
+    @Test
+    fun `an input buffer that comes after five seconds is a slow frame, not a hung decoder`() {
+        val renderer = running()
+        val call = starved { renderer.submit(pFrame(1)) }
+
+        advanceClock(5_000)
+        ShadowRecordingVideoCodec.starveInput = false
+
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_OK)
+        assertThat(crashes).isEmpty()
+        assertThat(log.lines()).contains("WARNING: Dequeue input buffer ran long: 5000 ms")
+    }
+
+    @Test
+    fun `a codec error after five seconds of waiting is a lost frame, not a hung decoder`() {
+        val renderer = running()
+        val call = starved { renderer.submit(pFrame(1)) }
+
+        advanceClock(5_000)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, transient)
+
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(crashes).isEmpty()
+    }
+
+    @Test
+    fun `a hung decoder tells the listener once and crashes the renderer every time`() {
+        val renderer = running()
+
+        val first = renderer.hangs(1)
+        val second = renderer.hangs(2)
+
+        assertThat(first.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(second.javaClass.simpleName).isEqualTo("RendererException")
+        assertThat(second).isNotSameInstanceAs(first)
+        assertThat(crashes).hasSize(1)
+        assertThat(crashes.single().javaClass.simpleName).isEqualTo("DecoderHungException")
+    }
+
+    @Test
+    fun `a held input buffer is handed out without asking the codec for it again`() {
+        val renderer = running()
+        renderer.submit(pFrame(1))
+        ShadowRecordingVideoCodec.failNext(CodecPoint.QUEUE_INPUT, 1, transient)
+        assertThat(renderer.submit(pFrame(2))).isEqualTo(MoonBridge.DR_NEED_IDR)
+        // The codec would answer null for the buffer that the renderer already holds.
+        ShadowRecordingVideoCodec.nullInputBuffers.set(1)
+
+        renderer.submit(pFrame(3))
+
+        assertThat(events<CodecEvent.Queued>().map { it.index }).containsExactly(0, 1).inOrder()
+    }
+
+    @Test
+    fun `a recovery that was given up still answers false for the buffer that it left`() {
+        val renderer = prepared()
+        renderer.recoveryType().set(RECOVERY_RESET)
+        val call = InputCall { renderer.fetchNextInputBuffer() }
+        awaitQuiesced(INPUT_THREAD)
+
+        call.interrupt()
+
+        val outcome = call.outcome()
+        assertThat(outcome.result.getOrThrow()).isFalse()
+        assertThat(outcome.interrupted).isTrue()
+        // Nobody recovered: the buffer that the call fetched is still held.
+        assertThat(renderer.heldInputBuffer()).isNotNull()
+    }
+
+    @Test
+    fun `a recovery that took five seconds answers false and is not a hung decoder`() {
+        val renderer = running(PreferenceConfiguration.FRAME_PACING_BALANCED)
+        renderer.metByRendererThread(stateFailure)
+        val call = InputCall { renderer.submit(pFrame(1)) }
+        awaitQuiesced(INPUT_THREAD or RENDERER_THREAD)
+
+        advanceClock(5_000)
+        // The choreographer comes last and does the recovery that the input thread waited for.
+        renderer.doFrame(FRAME_TIME_NS)
+
+        assertThat(call.result()).isEqualTo(MoonBridge.DR_NEED_IDR)
+        assertThat(events<CodecEvent.Reset>()).hasSize(1)
+        assertThat(crashes).isEmpty()
+    }
+
+    @Test
+    fun `an input thread that meets an error still meets the recovery that is pending`() {
+        val renderer = prepared()
+        renderer.recoveryType().set(UNKNOWN_RECOVERY)
+        ShadowRecordingVideoCodec.failNext(CodecPoint.DEQUEUE_INPUT, 1, stateFailure)
+        val call = InputCall { renderer.fetchNextInputBuffer() }
+        // The error of the failure does not keep the thread from waiting for the others.
+        awaitQuiesced(INPUT_THREAD)
+
+        renderer.prepareForStop()
+
+        assertThat(call.failure())
+            .hasMessageThat()
+            .isEqualTo("Unexpected codec recovery type: $UNKNOWN_RECOVERY")
+    }
+
+    @Test
+    fun `a recovery type that no failure leaves behind is an error with its number`() {
+        val renderer = prepared()
+
+        for (failure in listOf(recoverable(), unrecoverable(), stateFailure())) {
+            renderer.recoveryType().set(UNKNOWN_RECOVERY)
+
+            val thrown =
+                assertThrows(IllegalStateException::class.java) { renderer.decide(failure) }
+
+            assertThat(thrown)
+                .hasMessageThat()
+                .isEqualTo("Unexpected codec recovery type: $UNKNOWN_RECOVERY")
+        }
+    }
+
     // The rig of the stepped renderer thread
 
     @Test
     fun `a failure of the call that a recovery waits for comes out with its own message`() {
         running(stepped = true)
+        val before = threadLog.lines
+        // A wait without the bit of this thread, which the rig reads as the race of BORE-121, and
+        // then the wait that it expects of the input thread.
+        val madeUpWaits =
+            listOf(
+                "Waiting to quiesce decoder threads: $CHOREOGRAPHER",
+                "Waiting to quiesce decoder threads: ${INPUT_THREAD or CHOREOGRAPHER}",
+            )
 
         val thrown =
             assertThrows(IllegalStateException::class.java) {
                 recoveredByRendererThread<Unit> {
-                    // A wait without the bit of this thread, which the rig reads as the race of
-                    // BORE-121, and then the wait that it expects of the input thread.
-                    LimeLog.info("Waiting to quiesce decoder threads: $CHOREOGRAPHER")
-                    LimeLog.info(
-                        "Waiting to quiesce decoder threads: ${INPUT_THREAD or CHOREOGRAPHER}"
-                    )
+                    madeUpWaits.forEach { LimeLog.info(it) }
                     throw stateFailure()
                 }
             }
 
         assertThat(thrown).hasMessageThat().isEqualTo("codec state")
+        // The waits were made up for this case: they are not a race to fail the test with.
+        threadLog.forget(
+            (threadLog.lines - before.toSet()).filter {
+                it.thread == INPUT_CALL_THREAD && it.message in madeUpWaits
+            }
+        )
     }
 
     // The load entry
@@ -994,6 +1501,7 @@ class RendererRecoveryTest : RendererTestBase() {
                 for ((name, case) in cases) {
                     try {
                         case()
+                        failOnLostArrival()
                     } catch (e: Throwable) {
                         System.setErr(stderr)
                         dumpFailure(pass, name, e)
@@ -1048,7 +1556,14 @@ class RendererRecoveryTest : RendererTestBase() {
 
     private companion object {
         const val LOAD_VARIABLE = "BOREALIS_RENDERER_LOAD"
+        const val RECOVERY_NONE = 0
+        const val RECOVERY_RESTART = 2
+        const val RECOVERY_RESET = 3
+        const val UNKNOWN_RECOVERY = 7
+        const val FRAME_TIME_NS = 1_000_000_000L
         const val MAX_PASSES_FOR_A_FRAME = 4
+        const val FRAME_US = 777L
+        const val JOIN_MS = 30_000L
         const val PASS_WATCHDOG_SECONDS = 60L
         const val DUMPED_LINES = 30
         const val LIVE_CHUNKS = 64

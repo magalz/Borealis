@@ -10,10 +10,11 @@ import org.gradle.api.tasks.testing.Test
  * tests of `:borealis:library` and `:borealis:settings` ran out under load (Sprint 15). For those
  * two modules the value is about twice the largest heap after a collection that a full run of their
  * tests measured, rounded up to the next step; `docs/development/building.md` records the
- * measurements. A module that is not listed keeps the default.
+ * measurements. The app's tests peaked at 2.5 GB on a 4 GB heap and ran out of 2 GB under load
+ * (Sprint 18b), so they get 3 GB. A module that is not listed keeps the default.
  */
 internal val UNIT_TEST_HEAPS =
-    mapOf(":app" to "2g", ":borealis:library" to "1g", ":borealis:settings" to "1536m")
+    mapOf(":app" to "3g", ":borealis:library" to "1g", ":borealis:settings" to "1536m")
 
 /** Sizes the heap of the unit-test workers of this module, when [UNIT_TEST_HEAPS] lists it. */
 internal fun Project.configureUnitTestHeap() {

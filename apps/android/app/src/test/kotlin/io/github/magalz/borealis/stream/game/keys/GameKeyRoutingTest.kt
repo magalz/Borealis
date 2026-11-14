@@ -9,6 +9,8 @@ import com.limelight.R
 import com.limelight.nvstream.input.ControllerPacket
 import com.limelight.nvstream.input.KeyboardPacket
 import com.limelight.nvstream.input.MouseButtonPacket
+import io.github.magalz.borealis.designsystem.testing.connect
+import io.github.magalz.borealis.designsystem.testing.inputDevice
 import io.github.magalz.borealis.stream.ChromeMode
 import io.github.magalz.borealis.stream.Panel
 import io.github.magalz.borealis.stream.StreamPhase
@@ -16,6 +18,8 @@ import io.github.magalz.borealis.stream.game.GameTestBase
 import io.github.magalz.borealis.stream.game.phase
 import io.github.magalz.borealis.stream.game.session
 import org.junit.Test
+import org.robolectric.shadow.api.Shadow
+import org.robolectric.shadows.ShadowInputEvent
 
 /**
  * Where a key goes before it can reach the host: to the stream chrome while it is modal, to the
@@ -427,6 +431,34 @@ internal class GameKeyRoutingTest : GameTestBase() {
         assertThat(sentCalls()).isEmpty()
     }
 
+    @Test
+    fun `the Back of a pad that has a mouse source is a right click, and the pad does not take it`() {
+        rig.streaming()
+        // A pad with a touchpad: its context passes Back on as a pad button, so only the order of
+        // the checks keeps the right click out of the pad.
+        val pad =
+            inputDevice(
+                PAD_ID,
+                InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_MOUSE,
+                joystickXy = true,
+            )
+        connect(rig.application, pad)
+        forgetCalls()
+
+        val pressed = rig.game.handleKeyDown(mouseBackOf(pad, KeyEvent.ACTION_DOWN))
+        val released = rig.game.handleKeyUp(mouseBackOf(pad, KeyEvent.ACTION_UP))
+
+        assertThat(pressed).isTrue()
+        assertThat(released).isTrue()
+        assertThat(sentMouseButtons())
+            .containsExactly(
+                MouseButtonPacket.PRESS_EVENT to MouseButtonPacket.BUTTON_RIGHT,
+                MouseButtonPacket.RELEASE_EVENT to MouseButtonPacket.BUTTON_RIGHT,
+            )
+            .inOrder()
+        assertThat(sentPadButtons()).isEmpty()
+    }
+
     // The key that arms a chord
 
     /**
@@ -522,6 +554,61 @@ internal class GameKeyRoutingTest : GameTestBase() {
         assertThat(sentKeys().map { it.code }).containsExactlyElementsIn(MODIFIERS_ONLY).inOrder()
     }
 
+    @Test
+    fun `a key of a gamepad goes to the pad while a chord waits for the modifiers, down and up`() {
+        rig.streaming()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_Z)
+        // The Up of the keyboard goes down while the chord waits: it is eaten, and so is its key
+        // up.
+        assertThat(rig.down(KeyEvent.KEYCODE_DPAD_UP)).isTrue()
+        forgetCalls()
+
+        val handled =
+            listOf(
+                rig.game.dispatchKeyEvent(padKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_A)),
+                rig.game.dispatchKeyEvent(padKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_A)),
+                // The Up of the pad is the pad's, though the keyboard's Up is waiting to be eaten.
+                rig.game.dispatchKeyEvent(padKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP)),
+                rig.game.dispatchKeyEvent(padKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_UP)),
+            )
+
+        assertThat(handled).containsExactly(true, true, true, true)
+        assertThat(sentPadButtons())
+            .containsExactly(
+                ControllerPacket.A_FLAG,
+                NO_BUTTONS,
+                ControllerPacket.UP_FLAG,
+                NO_BUTTONS,
+            )
+            .inOrder()
+        assertThat(sentKeys()).isEmpty()
+    }
+
+    @Test
+    fun `a key that the pad took never reaches the special keys, down or up`() {
+        rig.streaming()
+        rig.holdCtrlAltShift()
+        rig.down(KeyEvent.KEYCODE_Z)
+        // The keyboard's Up goes down while the chord waits, and its key up is to be eaten.
+        rig.down(KeyEvent.KEYCODE_DPAD_UP)
+        // The pad's Up comes and goes, and the pad's Down goes down: none of them is the chord's.
+        rig.game.dispatchKeyEvent(padKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP))
+        rig.game.dispatchKeyEvent(padKey(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_UP))
+        rig.game.dispatchKeyEvent(padKey(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))
+        rig.releaseCtrlAltShift()
+        forgetCalls()
+
+        // The chord ate the key down of the keyboard's Up, so its key up is eaten.
+        val eaten = rig.up(KeyEvent.KEYCODE_DPAD_UP)
+        // The chord never ate a Down: the key up of the keyboard's Down is the host's.
+        val sent = rig.up(KeyEvent.KEYCODE_DPAD_DOWN)
+
+        assertThat(eaten).isTrue()
+        assertThat(sent).isTrue()
+        assertThat(sentKeys()).containsExactly(SentKey(0x8028, up, 0, NON_NORMALIZED))
+    }
+
     // The entry points
 
     @Test
@@ -596,9 +683,21 @@ internal class GameKeyRoutingTest : GameTestBase() {
         assertThat(handled).isTrue()
     }
 
+    private fun mouseBackOf(device: InputDevice, action: Int): KeyEvent =
+        keyEvent(
+                KeySpec(
+                    action,
+                    KeyEvent.KEYCODE_BACK,
+                    source = InputDevice.SOURCE_MOUSE,
+                    deviceId = device.id,
+                )
+            )
+            .also { Shadow.extract<ShadowInputEvent>(it).setDevice(device) }
+
     private companion object {
         const val ACTION_NONE = 99
         const val NO_BUTTONS = 0
+        const val PAD_ID = 31
 
         /**
          * The keys of the host that Ctrl, Alt and Shift make: they go down, then come up, in pairs.

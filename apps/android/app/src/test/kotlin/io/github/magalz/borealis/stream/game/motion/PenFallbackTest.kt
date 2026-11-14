@@ -132,6 +132,22 @@ internal class PenFallbackTest : MotionTestBase() {
     }
 
     @Test
+    fun `a stylus that the host refuses as a pen keeps its button down while it moves`() {
+        hostWithoutPens()
+        streaming()
+        fun held(action: Int, at: Long) =
+            tool(MotionEvent.TOOL_TYPE_STYLUS, action, 100f, 100f) {
+                buttonState = MotionEvent.BUTTON_STYLUS_PRIMARY
+                eventTime = at
+            }
+        mouseCallsOf(held(MotionEvent.ACTION_HOVER_MOVE, TIME))
+
+        // Only a pen event that the host takes and cancels lets the buttons go.
+        assertThat(mouseCallsOf(held(MotionEvent.ACTION_HOVER_MOVE, TIME + 500)))
+            .containsExactly(position(100, 100))
+    }
+
+    @Test
     fun `the buttons of the stylus come before the touch of the stylus`() {
         hostWithoutPens()
         streaming()
@@ -167,6 +183,51 @@ internal class PenFallbackTest : MotionTestBase() {
     }
 
     // ----- The dead zone after a touch down -----
+
+    @Test
+    fun `the dead zone is the one of a stylus alone, a stylus with a mate places the pointer`() {
+        hostWithoutPens()
+        streaming()
+        mouseCallsOf(stylus(MotionEvent.ACTION_DOWN))
+        fun twoStyluses(action: Int, x: Float, at: Long) =
+            motionEventOf(InputDevice.SOURCE_STYLUS, action) {
+                pointer(x, 100f, MotionEvent.TOOL_TYPE_STYLUS)
+                pointer(200f, 100f, MotionEvent.TOOL_TYPE_STYLUS)
+                eventTime = at
+            }
+
+        // The lone stylus is held still 10 pixels from its touch, 50 milliseconds after it.
+        assertThat(mouseCallsOf(stylus(MotionEvent.ACTION_MOVE, 110f, 100f, TIME + 50))).isEmpty()
+        // With a second pointer on the screen the same place and time are no dead zone.
+        assertThat(mouseCallsOf(twoStyluses(MotionEvent.ACTION_MOVE, 110f, TIME + 50)))
+            .containsExactly(position(110, 100))
+    }
+
+    @Test
+    fun `an event whose action index is not the first is no lone stylus, whatever its pointer count`() {
+        hostWithoutPens()
+        streaming()
+        mouseCallsOf(stylus(MotionEvent.ACTION_DOWN))
+        val offIndex =
+            motionEventOf(InputDevice.SOURCE_STYLUS, MotionEvent.ACTION_MOVE) {
+                pointer(110f, 100f, MotionEvent.TOOL_TYPE_STYLUS)
+                actionIndex = 1
+                eventTime = TIME + 50
+            }
+
+        assertThat(mouseCallsOf(offIndex)).containsExactly(position(110, 100))
+    }
+
+    @Test
+    fun `the dead zone is cut around the place on the screen, not the place held to the view`() {
+        hostWithoutPens()
+        streaming()
+        mouseCallsOf(stylus(MotionEvent.ACTION_DOWN, -5f, 100f))
+
+        // 25 pixels from the touch, though only 0 from it once held to the border of the view.
+        assertThat(mouseCallsOf(stylus(MotionEvent.ACTION_MOVE, -30f, 100f, TIME + 50)))
+            .containsExactly(position(0, 100))
+    }
 
     @Test
     fun `a stylus that has just touched down does not move the pointer for a hundred milliseconds within 20 pixels`() {
@@ -235,6 +296,18 @@ internal class PenFallbackTest : MotionTestBase() {
             .containsExactly(position(150, 100))
         assertThat(mouseCallsOf(stylus(MotionEvent.ACTION_HOVER_MOVE, 151f, 100f, lifted + 150)))
             .containsExactly(position(151, 100))
+    }
+
+    @Test
+    fun `the dead zone of a lift is around the lift, not around the earlier touch`() {
+        hostWithoutPens()
+        streaming()
+        mouseCallsOf(stylus(MotionEvent.ACTION_DOWN))
+        mouseCallsOf(stylus(MotionEvent.ACTION_UP, 130f, 130f, TIME + 500))
+
+        // 42 pixels from the lift, 85 from the touch, and 67 from the mix of the two.
+        assertThat(mouseCallsOf(stylus(MotionEvent.ACTION_HOVER_MOVE, 160f, 160f, TIME + 600)))
+            .isEmpty()
     }
 
     @Test

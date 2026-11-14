@@ -133,6 +133,35 @@ internal class ThreeFingerTest : MotionTestBase() {
         assertThat(panel()).isEqualTo(Panel.NONE)
     }
 
+    @Test
+    fun `a third finger on a touch screen that is off does not start the gesture, whatever the mode after`() {
+        streaming()
+        rig.session.setTouchMode(TouchMode.OFF)
+        assertThat(touch(thirdFingerDown(TIME))).isTrue()
+        rig.session.setTouchMode(TouchMode.DIRECT)
+
+        // Within 300 milliseconds of the third finger, but that finger was not the gesture: a tap.
+        touch(fingerEvent(MotionEvent.ACTION_DOWN, listOf(30f to 30f)) { eventTime = TIME + 50 })
+        assertThat(touch(lastFingerUp(TIME + 100))).isTrue()
+
+        assertThat(panel()).isEqualTo(Panel.NONE)
+        assertThat(sent()).contains(press(MouseButtonPacket.BUTTON_LEFT))
+    }
+
+    // The timers that the tap leaves behind are a known defect that this test does not cover.
+    @Test
+    fun `a finger that taps soon after the third went down opens the keyboard and sends nothing at that moment`() {
+        streaming()
+        rig.session.setTouchMode(TouchMode.DIRECT)
+        touch(thirdFingerDown(TIME))
+        touch(fingerEvent(MotionEvent.ACTION_DOWN, listOf(30f to 30f)) { eventTime = TIME + 50 })
+
+        assertThat(touch(lastFingerUp(TIME + 100))).isTrue()
+
+        assertThat(panel()).isEqualTo(Panel.KEYBOARD)
+        assertThat(sent()).isEmpty()
+    }
+
     // ----- The first two touches are cancelled -----
 
     @Test
@@ -150,6 +179,31 @@ internal class ThreeFingerTest : MotionTestBase() {
 
         // The click of the first finger ends; nothing starts for the third.
         assertThat(sent()).containsExactly(release(MouseButtonPacket.BUTTON_LEFT))
+    }
+
+    @Test
+    fun `the third finger cancels the touch of the second too, which scrolls no more`() {
+        streaming()
+        rig.session.setTouchMode(TouchMode.DIRECT)
+        touch(fingerEvent(MotionEvent.ACTION_DOWN, listOf(10f to 200f)) { eventTime = TIME })
+        val two = listOf(10f to 200f, 20f to 200f)
+        touch(
+            fingerEvent(MotionEvent.ACTION_POINTER_DOWN, two, index = 1) { eventTime = TIME + 10 }
+        )
+        val threeDown = listOf(10f to 200f, 20f to 200f, 30f to 200f)
+        touch(
+            fingerEvent(MotionEvent.ACTION_POINTER_DOWN, threeDown, index = 2) {
+                eventTime = TIME + 20
+            }
+        )
+        forgetSent()
+
+        // The second finger slides down 10 pixels with the others: it would scroll by 30.
+        val slide = listOf(10f to 200f, 20f to 210f, 30f to 200f)
+        assertThat(touch(fingerEvent(MotionEvent.ACTION_MOVE, slide) { eventTime = TIME + 30 }))
+            .isTrue()
+
+        assertThat(sent()).isEmpty()
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.limelight.binding.video
 
 import android.media.MediaCodecInfo.CodecProfileLevel
+import android.os.Build
 import com.google.common.truth.Truth.assertThat
 import com.limelight.nvstream.jni.MoonBridge
 import com.limelight.preferences.PreferenceConfiguration.FormatOption
@@ -391,6 +392,60 @@ class RendererDecoderChoiceTest : RendererTestBase() {
         val renderer = renderer()
 
         assertThat(renderer.isHevcSupported()).isTrue()
+    }
+
+    @Test
+    fun `performance points win over measured frame rates when a decoder lists both`() {
+        val points =
+            limitedCodec("vendor.both.avc.decoder", "video/avc") {
+                performancePoints = mapOf("1920x1080" to "60-60")
+                measuredRates = mapOf("1920x1080" to "30-45")
+            }
+        val other =
+            limitedCodec("vendor.both.hevc.decoder", "video/hevc") {
+                performancePoints = mapOf("1920x1080" to "30-30")
+                measuredRates = mapOf("1920x1080" to "60-90")
+                profiles = listOf(CodecProfileLevel.HEVCProfileMain)
+            }
+        install(points, other)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isHevcSupported()).isFalse()
+    }
+
+    @Test
+    fun `on Android 10 the performance points are already read`() {
+        device(DeviceBuild(sdk = Build.VERSION_CODES.Q))
+        val points =
+            limitedCodec("vendor.ten.avc.decoder", "video/avc") {
+                performancePoints = mapOf("1920x1080" to "60-60")
+                measuredRates = mapOf("1920x1080" to "30-45")
+            }
+        val other =
+            limitedCodec("vendor.ten.hevc.decoder", "video/hevc") {
+                performancePoints = mapOf("1920x1080" to "30-30")
+                measuredRates = mapOf("1920x1080" to "60-90")
+                profiles = listOf(CodecProfileLevel.HEVCProfileMain)
+            }
+        install(points, other)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isHevcSupported()).isFalse()
+    }
+
+    @Test
+    fun `one performance point that covers the stream is enough among several`() {
+        val several =
+            limitedCodec("vendor.several.avc.decoder", "video/avc") {
+                performancePoints = mapOf("1280x720" to "30-30", "1920x1080" to "60-120")
+            }
+        install(several, fastHevc)
+
+        val renderer = renderer()
+
+        assertThat(renderer.isHevcSupported()).isFalse()
     }
 
     // AV1

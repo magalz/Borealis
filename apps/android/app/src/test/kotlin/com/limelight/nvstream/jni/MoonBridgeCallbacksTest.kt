@@ -541,11 +541,10 @@ class MoonBridgeCallbacksTest {
 
     @Test
     fun `the number of slices goes to the top byte of the video capabilities`() {
-        assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(0)).isEqualTo(0)
-        assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(1)).isEqualTo(0x01000000)
-        assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(4)).isEqualTo(0x04000000)
-        assertThat(MoonBridge.CAPABILITY_SLICES_PER_FRAME(0xFF.toByte()))
-            .isEqualTo(0xFF000000.toInt())
+        assertThat(MoonBridge.capabilitySlicesPerFrame(0)).isEqualTo(0)
+        assertThat(MoonBridge.capabilitySlicesPerFrame(1)).isEqualTo(0x01000000)
+        assertThat(MoonBridge.capabilitySlicesPerFrame(4)).isEqualTo(0x04000000)
+        assertThat(MoonBridge.capabilitySlicesPerFrame(0xFF.toByte())).isEqualTo(0xFF000000.toInt())
     }
 
     // The log

@@ -112,7 +112,9 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+// Converted as is from the inherited Java; LargeClass and TooManyFunctions stay because the class
+// waits for its split (Sprint 18d backlog); DEPRECATION and OVERRIDE_DEPRECATION stay because the
+// deprecated platform APIs it calls and overrides carry behaviour (Sprint 18c backlog).
 @Suppress("DEPRECATION", "LargeClass", "OVERRIDE_DEPRECATION", "TooManyFunctions")
 class Game :
     ComponentActivity(),
@@ -303,6 +305,12 @@ class Game :
         // asks instead); absent, as in an older shortcut, it is false (stream)
         const val EXTRA_RESUME_CHOSEN = "ResumeChosen"
 
+        // The modifiers that start the chords of the client: Ctrl, Alt and Shift
+        private const val CHORD_MODIFIERS =
+            KeyboardPacket.MODIFIER_CTRL.toInt() or
+                KeyboardPacket.MODIFIER_ALT.toInt() or
+                KeyboardPacket.MODIFIER_SHIFT.toInt()
+
         private const val STYLUS_DOWN_DEAD_ZONE_DELAY = 100
         private const val STYLUS_DOWN_DEAD_ZONE_RADIUS = 20
 
@@ -340,11 +348,7 @@ class Game :
         private const val SIDE_CHORD_MS = 250L
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "PrintStackTrace")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
+    private fun setUpWindow() {
         // We don't want a title bar
         requestWindowFeature(Window.FEATURE_NO_TITLE)
 
@@ -368,7 +372,9 @@ class Game :
 
         // Inflate the content
         setContentView(R.layout.activity_game)
+    }
 
+    private fun readSettingsAndFitWindow() {
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this)
         tombstonePrefs = getSharedPreferences("DecoderTombstone", 0)
@@ -390,7 +396,9 @@ class Game :
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
+    }
 
+    private fun bindStreamViews() {
         // Listen for non-touch events on the game surface
         streamView = findViewById(R.id.surfaceView)
         streamView.setOnGenericMotionListener(this)
@@ -433,13 +441,21 @@ class Game :
         streamView.setOnCapturedPointerListener { view, motionEvent ->
             handleMotionEvent(view, motionEvent)
         }
+    }
 
+    private fun warnIfMetered() {
         // Warn the user if they're on a metered connection
         val connMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         if (connMgr.isActiveNetworkMetered) {
             displayTransientMessage(resources.getString(R.string.conn_metered))
         }
+    }
 
+    // Converted as is from the inherited Java; the SecurityException that some Samsung devices
+    // throw from WifiLock.acquire() is printed to the standard error stream, as the Java did
+    // (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun acquireWifiLocks() {
         // Make sure Wi-Fi is fully powered up
         val wifiMgr = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         try {
@@ -467,67 +483,50 @@ class Game :
             // WifiLock.acquire() even though we have android.permission.WAKE_LOCK in our manifest.
             e.printStackTrace()
         }
+    }
 
-        appName = intent.getStringExtra(EXTRA_APP_NAME)
-        pcName = intent.getStringExtra(EXTRA_PC_NAME)
-
-        val host = intent.getStringExtra(EXTRA_HOST)
-        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
-        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0) // 0 is treated as unknown
-        val appId = intent.getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
-        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
-        val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
-        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT)
-        // BOREALIS: absent, as in a shortcut of an older version, it is false (stream)
-        val resumeChosen = intent.getBooleanExtra(EXTRA_RESUME_CHOSEN, false)
-
-        app = NvApp(appName ?: "app", appId, appSupportsHdr)
-
-        var serverCert: X509Certificate? = null
-        try {
-            if (derCertData != null) {
-                serverCert =
-                    CertificateFactory.getInstance("X.509")
-                        .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
-            }
+    // Converted as is from the inherited Java; a server certificate that cannot be read is printed
+    // to the standard error stream, as the Java did (Sprint 18c backlog).
+    @Suppress("PrintStackTrace")
+    private fun readServerCertificate(): X509Certificate? {
+        val derCertData = intent.getByteArrayExtra(EXTRA_SERVER_CERT) ?: return null
+        return try {
+            CertificateFactory.getInstance("X.509")
+                .generateCertificate(ByteArrayInputStream(derCertData)) as X509Certificate
         } catch (e: CertificateException) {
             e.printStackTrace()
+            null
+        }
+    }
+
+    // Whether the user enabled HDR and the display lists HDR10; the user is told when it does not.
+    private fun displaySupportsHdr10(): Boolean {
+        if (!prefConfig.enableHdr) {
+            return false
         }
 
-        if (appId == StreamConfiguration.INVALID_APP_ID) {
-            finish()
-            return
-        }
+        // Start our HDR checklist
+        val display = windowManager.defaultDisplay
+        val hdrCaps = display.hdrCapabilities
 
-        // Initialize the MediaCodec helper before creating the decoder
-        val glPrefs = GlPreferences.readPreferences(this)
-        MediaCodecHelper.initialize(this, glPrefs.glRenderer)
-
-        // Check if the user has enabled HDR
-        var willStreamHdr = false
-        if (prefConfig.enableHdr) {
-            // Start our HDR checklist
-            val display = windowManager.defaultDisplay
-            val hdrCaps = display.hdrCapabilities
-
-            // We must now ensure our display is compatible with HDR10
-            if (hdrCaps != null) {
-                // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android
-                // 8.0
-                for (hdrType in hdrCaps.supportedHdrTypes) {
-                    if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
-                        willStreamHdr = true
-                        break
-                    }
+        // We must now ensure our display is compatible with HDR10
+        if (hdrCaps != null) {
+            // getHdrCapabilities() returns null on Lenovo Lenovo Mirage Solo (vega), Android 8.0
+            for (hdrType in hdrCaps.supportedHdrTypes) {
+                if (hdrType == Display.HdrCapabilities.HDR_TYPE_HDR10) {
+                    return true
                 }
             }
-
-            if (!willStreamHdr) {
-                // Nope, no HDR for us :(
-                Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show()
-            }
         }
 
+        // Nope, no HDR for us :(
+        Toast.makeText(this, "Display does not support HDR10", Toast.LENGTH_LONG).show()
+        return false
+    }
+
+    // The decoder is built with what the display says about HDR, before the checks that may turn
+    // HDR off for the stream.
+    private fun createDecoderRenderer(displayHdr: Boolean, glRenderer: String) {
         decoderRenderer =
             MediaCodecDecoderRenderer(
                 this,
@@ -553,8 +552,8 @@ class Game :
                     }
                 },
                 tombstonePrefs.getInt("CrashCount", 0),
-                willStreamHdr,
-                glPrefs.glRenderer,
+                displayHdr,
+                glRenderer,
             )
         // BOREALIS: first rendered frame ends the watchdog
         decoderRenderer.firstFrameSignal.listener = Runnable {
@@ -566,14 +565,19 @@ class Game :
             startupGuard.onFirstFrame()
             streamSession.onFirstFrame()
         }
+    }
+
+    // Warns about what the decoder cannot do; the answer is whether the stream may use HDR.
+    private fun checkDecoderFormats(displayHdr: Boolean): Boolean {
+        var streamHdr = displayHdr
 
         // Don't stream HDR if the decoder can't support it
         if (
-            willStreamHdr &&
+            streamHdr &&
                 !decoderRenderer.isHevcMain10Hdr10Supported() &&
                 !decoderRenderer.isAv1Main10Supported()
         ) {
-            willStreamHdr = false
+            streamHdr = false
             Toast.makeText(this, "Decoder does not support HDR10 profile", Toast.LENGTH_LONG).show()
         }
 
@@ -593,21 +597,29 @@ class Game :
             Toast.makeText(this, "No AV1 decoder found", Toast.LENGTH_LONG).show()
         }
 
+        return streamHdr
+    }
+
+    private fun videoFormatMask(streamHdr: Boolean): Int {
         // H.264 is always supported
         var supportedVideoFormats = MoonBridge.VIDEO_FORMAT_H264
         if (decoderRenderer.isHevcSupported()) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265
-            if (willStreamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
+            if (streamHdr && decoderRenderer.isHevcMain10Hdr10Supported()) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_H265_MAIN10
             }
         }
         if (decoderRenderer.isAv1Supported()) {
             supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN8
-            if (willStreamHdr && decoderRenderer.isAv1Main10Supported()) {
+            if (streamHdr && decoderRenderer.isAv1Main10Supported()) {
                 supportedVideoFormats = supportedVideoFormats or MoonBridge.VIDEO_FORMAT_AV1_MAIN10
             }
         }
 
+        return supportedVideoFormats
+    }
+
+    private fun attachedGamepadMask(): Int {
         var gamepadMask = ControllerHandler.getAttachedControllerMask(this).toInt()
         if (!prefConfig.multiController) {
             // Always set gamepad 1 present for when multi-controller is
@@ -620,10 +632,12 @@ class Game :
             gamepadMask = gamepadMask or 1
         }
 
-        // Set to the optimal mode for streaming
-        val displayRefreshRate = prepareDisplayForRendering()
-        LimeLog.info("Display refresh rate: $displayRefreshRate")
+        return gamepadMask
+    }
 
+    // The frame rate to ask the host for. A capped frame rate changes the pacing to balanced when
+    // the display cannot take it.
+    private fun chooseFrameRate(displayRefreshRate: Float): Int {
         // If the user requested frame pacing using a capped FPS, we will need to change our
         // desired FPS setting here in accordance with the active display refresh rate.
         val roundedRefreshRate = Math.round(displayRefreshRate)
@@ -645,35 +659,63 @@ class Game :
             }
         }
 
-        // BOREALIS: audited as negotiated, not as requested (host.launch)
-        streamFrameRate = chosenFrameRate
+        return chosenFrameRate
+    }
+
+    // What the intent says about the app. The other extras are read where they are used: the intent
+    // does not change while the stream is built.
+    private fun readStreamIntent() {
+        appName = intent.getStringExtra(EXTRA_APP_NAME)
+        pcName = intent.getStringExtra(EXTRA_PC_NAME)
+
+        val appId = intent.getIntExtra(EXTRA_APP_ID, StreamConfiguration.INVALID_APP_ID)
+        val appSupportsHdr = intent.getBooleanExtra(EXTRA_APP_HDR, false)
+
+        app = NvApp(appName ?: "app", appId, appSupportsHdr)
+    }
+
+    // The stream to ask the host for. The frame rate is the one that streamFrameRate holds.
+    private fun buildStreamConfiguration(
+        videoFormats: Int,
+        gamepadMask: Int,
+        displayRefreshRate: Float,
+    ): StreamConfiguration {
         // BOREALIS: the output that the audio goes to when the stream starts decides the audio that
         // the host is asked for (audio)
         audioOutputs = AudioOutputs(applicationContext)
         val audioOutput = audioOutputs.current()
         startedOnBluetooth = audioOutput.bluetooth
         audioOnBluetooth = startedOnBluetooth
-        val config =
-            StreamConfiguration.Builder()
-                .setResolution(prefConfig.width, prefConfig.height)
-                .setLaunchRefreshRate(prefConfig.fps)
-                .setRefreshRate(chosenFrameRate)
-                .setApp(app)
-                .setBitrate(prefConfig.bitrate)
-                .setEnableSops(prefConfig.enableSops)
-                .enableLocalAudioPlayback(prefConfig.playHostAudio)
-                .setMaxPacketSize(MAX_PACKET_SIZE)
-                // NvConnection will perform LAN and VPN detection
-                .setRemoteConfiguration(StreamConfiguration.STREAM_CFG_AUTO)
-                .setSupportedVideoFormats(supportedVideoFormats)
-                .setAttachedGamepadMask(gamepadMask)
-                .setClientRefreshRateX100((displayRefreshRate * X100).toInt())
-                .setAudioConfiguration(audioConfigurationFor(audioOutput))
-                .setColorSpace(decoderRenderer.getPreferredColorSpace())
-                .setColorRange(decoderRenderer.getPreferredColorRange())
-                .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
-                .setResumeChosen(resumeChosen) // BOREALIS: host.launch
-                .build()
+        // BOREALIS: absent, as in a shortcut of an older version, it is false (stream)
+        val resumeChosen = intent.getBooleanExtra(EXTRA_RESUME_CHOSEN, false)
+
+        return StreamConfiguration.Builder()
+            .setResolution(prefConfig.width, prefConfig.height)
+            .setLaunchRefreshRate(prefConfig.fps)
+            .setRefreshRate(streamFrameRate)
+            .setApp(app)
+            .setBitrate(prefConfig.bitrate)
+            .setEnableSops(prefConfig.enableSops)
+            .enableLocalAudioPlayback(prefConfig.playHostAudio)
+            .setMaxPacketSize(MAX_PACKET_SIZE)
+            // NvConnection will perform LAN and VPN detection
+            .setRemoteConfiguration(StreamConfiguration.STREAM_CFG_AUTO)
+            .setSupportedVideoFormats(videoFormats)
+            .setAttachedGamepadMask(gamepadMask)
+            .setClientRefreshRateX100((displayRefreshRate * X100).toInt())
+            .setAudioConfiguration(audioConfigurationFor(audioOutput))
+            .setColorSpace(decoderRenderer.getPreferredColorSpace())
+            .setColorRange(decoderRenderer.getPreferredColorRange())
+            .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
+            .setResumeChosen(resumeChosen) // BOREALIS: host.launch
+            .build()
+    }
+
+    private fun createConnection(config: StreamConfiguration, serverCert: X509Certificate?) {
+        val host = intent.getStringExtra(EXTRA_HOST)
+        val port = intent.getIntExtra(EXTRA_PORT, NvHTTP.DEFAULT_HTTP_PORT)
+        val httpsPort = intent.getIntExtra(EXTRA_HTTPS_PORT, 0) // 0 is treated as unknown
+        val uniqueId = intent.getStringExtra(EXTRA_UNIQUEID)
 
         // Initialize the connection
         conn =
@@ -686,6 +728,9 @@ class Game :
                 PlatformBinding.getCryptoProvider(this),
                 serverCert,
             )
+    }
+
+    private fun createTouchAndPads() {
         controllerHandler = ControllerHandler(this, conn, prefConfig)
         keyboardTranslator = KeyboardTranslator()
 
@@ -730,7 +775,9 @@ class Game :
                 Service.BIND_AUTO_CREATE,
             )
         }
+    }
 
+    private fun createStreamChrome() {
         // BOREALIS: the stream chrome over the stream view shows the start, the conflict and the
         // failures (stream)
         streamActions =
@@ -773,6 +820,9 @@ class Game :
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
+    }
+
+    private fun wireStreamSession() {
         // BOREALIS: the controller opens the menu and navigates the chrome; the decoder numbers and
         // the gamepad mouse follow the session (stream)
         controllerHandler.setMenuChordListener(streamSession::openMenu)
@@ -787,6 +837,50 @@ class Game :
         GamepadMouseSync.bind(lifecycleScope, streamSession) {
             controllerHandler.isMouseEmulationOnAnyPad
         }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setUpWindow()
+        readSettingsAndFitWindow()
+        bindStreamViews()
+        warnIfMetered()
+        acquireWifiLocks()
+
+        readStreamIntent()
+
+        val serverCert = readServerCertificate()
+
+        if (app.appId == StreamConfiguration.INVALID_APP_ID) {
+            finish()
+            return
+        }
+
+        // Initialize the MediaCodec helper before creating the decoder
+        val glPrefs = GlPreferences.readPreferences(this)
+        MediaCodecHelper.initialize(this, glPrefs.glRenderer)
+
+        val displayHdr = displaySupportsHdr10()
+        createDecoderRenderer(displayHdr, glPrefs.glRenderer)
+        val streamHdr = checkDecoderFormats(displayHdr)
+        val supportedVideoFormats = videoFormatMask(streamHdr)
+
+        val gamepadMask = attachedGamepadMask()
+
+        // Set to the optimal mode for streaming
+        val displayRefreshRate = prepareDisplayForRendering()
+        LimeLog.info("Display refresh rate: $displayRefreshRate")
+
+        // BOREALIS: audited as negotiated, not as requested (host.launch)
+        streamFrameRate = chooseFrameRate(displayRefreshRate)
+        val config =
+            buildStreamConfiguration(supportedVideoFormats, gamepadMask, displayRefreshRate)
+
+        createConnection(config, serverCert)
+        createTouchAndPads()
+        createStreamChrome()
+        wireStreamSession()
 
         if (!decoderRenderer.isAvcSupported()) {
             // If we can't find an AVC decoder, we can't proceed
@@ -800,7 +894,8 @@ class Game :
         streamView.holder.addCallback(this)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; SourceLockedOrientationActivity stays because
+    // locking the orientation is behaviour (Sprint 18c backlog).
     @SuppressLint("SourceLockedOrientationActivity")
     private fun setPreferredOrientationForCurrentDisplay() {
         val display = windowManager.defaultDisplay
@@ -921,9 +1016,10 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; PrintStackTrace stays because the reflected Samsung
+    // call writes its failures to the standard error stream, as the Java did (Sprint 18c backlog).
     @Suppress("PrintStackTrace")
-    fun setMetaKeyCaptureState(enabled: Boolean) {
+    private fun setMetaKeyCaptureState(enabled: Boolean) {
         // Android has native keyboard capture support starting in API 36.1
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
@@ -961,7 +1057,8 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; PrintStackTrace and TooGenericExceptionCaught stay
+    // because entering PiP eats any exception and prints it, as the Java did (Sprint 18c backlog).
     @Suppress("PrintStackTrace", "TooGenericExceptionCaught")
     public override fun onUserLeaveHint() {
         super.onUserLeaveHint()
@@ -1021,8 +1118,6 @@ class Game :
             Math.round(refreshRate) % prefConfig.fps <= REFRESH_RATE_TOLERANCE
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ComplexCondition")
     private fun shouldIgnoreInsetsForResolution(width: Int, height: Int): Boolean {
         // Never ignore insets for non-native resolutions
         if (!PreferenceConfiguration.isNativeResolution(width, height)) {
@@ -1032,16 +1127,18 @@ class Game :
         val display = windowManager.defaultDisplay
         for (candidate in display.supportedModes) {
             // Ignore insets if this is an exact match for the display resolution
-            if (
-                (width == candidate.physicalWidth && height == candidate.physicalHeight) ||
-                    (height == candidate.physicalWidth && width == candidate.physicalHeight)
-            ) {
+            if (isModeSize(width, height, candidate)) {
                 return true
             }
         }
 
         return false
     }
+
+    /** Whether [width] x [height], or the same size turned the other way round, is [mode]'s. */
+    private fun isModeSize(width: Int, height: Int, mode: Display.Mode): Boolean =
+        (width == mode.physicalWidth && height == mode.physicalHeight) ||
+            (height == mode.physicalWidth && width == mode.physicalHeight)
 
     private fun mayReduceRefreshRate(): Boolean {
         return prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS ||
@@ -1106,124 +1203,143 @@ class Game :
             SurroundLayout.SURROUND_5_1
         }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress(
-        "CyclomaticComplexMethod",
-        "ForbiddenComment",
-        "LongMethod",
-        "LoopWithTooManyJumpStatements",
-    )
     private fun prepareDisplayForRendering(): Float {
         val display = windowManager.defaultDisplay
-        val windowLayoutParams = window.attributes
 
-        // Pick the optimal display mode explicitly
+        val bestMode = pickBestDisplayMode(display)
+
+        applyDisplayMode(display, bestMode)
+
+        val displayRefreshRate = bestMode.refreshRate
+
+        sizeStreamView()
+
+        // Set the desired refresh rate that will get passed into setFrameRate() later
+        desiredRefreshRate = displayRefreshRate
+
+        return reportedRefreshRate(displayRefreshRate)
+    }
+
+    // Pick the optimal display mode explicitly
+    private fun pickBestDisplayMode(display: Display): Display.Mode {
         var bestMode = display.mode
-        val isNativeResolutionStream =
-            PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)
-        var refreshRateIsGood = isRefreshRateGoodMatch(bestMode.refreshRate)
-        var refreshRateIsEqual = isRefreshRateEqualMatch(bestMode.refreshRate)
 
         LimeLog.info(
             "Current display mode: ${bestMode.physicalWidth}x${bestMode.physicalHeight}x${bestMode.refreshRate}"
         )
 
         for (candidate in display.supportedModes) {
-            val refreshRateReduced = candidate.refreshRate < bestMode.refreshRate
-            val resolutionReduced =
-                candidate.physicalWidth < bestMode.physicalWidth ||
-                    candidate.physicalHeight < bestMode.physicalHeight
-            val resolutionFitsStream =
-                candidate.physicalWidth >= prefConfig.width &&
-                    candidate.physicalHeight >= prefConfig.height
-
             LimeLog.info(
                 "Examining display mode: ${candidate.physicalWidth}x" +
                     "${candidate.physicalHeight}x${candidate.refreshRate}"
             )
 
             if (
-                candidate.physicalWidth > MAX_SAFE_DISPLAY_WIDTH &&
-                    prefConfig.width <= MAX_SAFE_DISPLAY_WIDTH
+                rejectsResolution(display, candidate, bestMode) ||
+                    rejectsRefreshRate(candidate, bestMode)
             ) {
-                // Avoid resolutions options above 4K to be safe
                 continue
-            }
-
-            // On non-4K streams, we force the resolution to never change unless it's above
-            // 60 FPS, which may require a resolution reduction due to HDMI bandwidth limitations,
-            // or it's a native resolution stream.
-            if (
-                prefConfig.width < UHD_WIDTH &&
-                    prefConfig.fps <= HIGH_FPS &&
-                    !isNativeResolutionStream
-            ) {
-                if (
-                    display.mode.physicalWidth != candidate.physicalWidth ||
-                        display.mode.physicalHeight != candidate.physicalHeight
-                ) {
-                    continue
-                }
-            }
-
-            // Make sure the resolution doesn't regress unless if it's over 60 FPS
-            // where we may need to reduce resolution to achieve the desired refresh rate.
-            if (resolutionReduced && !(prefConfig.fps > HIGH_FPS && resolutionFitsStream)) {
-                continue
-            }
-
-            if (
-                mayReduceRefreshRate() &&
-                    refreshRateIsEqual &&
-                    !isRefreshRateEqualMatch(candidate.refreshRate)
-            ) {
-                // If we had an equal refresh rate and this one is not, skip it. In min latency
-                // mode, we want to always prefer the highest frame rate even though it may cause
-                // microstuttering.
-                continue
-            } else if (refreshRateIsGood) {
-                // We've already got a good match, so if this one isn't also good, it's not
-                // worth considering at all.
-                if (!isRefreshRateGoodMatch(candidate.refreshRate)) {
-                    continue
-                }
-
-                if (mayReduceRefreshRate()) {
-                    // User asked for the lowest possible refresh rate, so don't raise it if we
-                    // have a good match already
-                    if (candidate.refreshRate > bestMode.refreshRate) {
-                        continue
-                    }
-                } else {
-                    // User asked for the highest possible refresh rate, so don't reduce it if we
-                    // have a good match already
-                    if (refreshRateReduced) {
-                        continue
-                    }
-                }
-            } else if (!isRefreshRateGoodMatch(candidate.refreshRate)) {
-                // We didn't have a good match and this match isn't good either, so just don't
-                // reduce the refresh rate.
-                if (refreshRateReduced) {
-                    continue
-                }
-            } else {
-                // We didn't have a good match and this match is good. Prefer this refresh rate
-                // even if it reduces the refresh rate. Lowering the refresh rate can be beneficial
-                // when streaming a 60 FPS stream on a 90 Hz device. We want to select 60 Hz to
-                // match the frame rate even if the active display mode is 90 Hz.
             }
 
             bestMode = candidate
-            refreshRateIsGood = isRefreshRateGoodMatch(candidate.refreshRate)
-            refreshRateIsEqual = isRefreshRateEqualMatch(candidate.refreshRate)
         }
 
         LimeLog.info(
             "Best display mode: ${bestMode.physicalWidth}x${bestMode.physicalHeight}x${bestMode.refreshRate}"
         )
 
-        // Only apply new window layout parameters if we've actually changed the display mode
+        return bestMode
+    }
+
+    // Whether the resolution of the candidate rules it out, whatever its refresh rate
+    private fun rejectsResolution(
+        display: Display,
+        candidate: Display.Mode,
+        bestMode: Display.Mode,
+    ): Boolean {
+        if (
+            candidate.physicalWidth > MAX_SAFE_DISPLAY_WIDTH &&
+                prefConfig.width <= MAX_SAFE_DISPLAY_WIDTH
+        ) {
+            // Avoid resolutions options above 4K to be safe
+            return true
+        }
+
+        // On non-4K streams, we force the resolution to never change unless it's above
+        // 60 FPS, which may require a resolution reduction due to HDMI bandwidth limitations,
+        // or it's a native resolution stream.
+        if (
+            prefConfig.width < UHD_WIDTH &&
+                prefConfig.fps <= HIGH_FPS &&
+                !PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)
+        ) {
+            if (
+                display.mode.physicalWidth != candidate.physicalWidth ||
+                    display.mode.physicalHeight != candidate.physicalHeight
+            ) {
+                return true
+            }
+        }
+
+        val resolutionReduced =
+            candidate.physicalWidth < bestMode.physicalWidth ||
+                candidate.physicalHeight < bestMode.physicalHeight
+        val resolutionFitsStream =
+            candidate.physicalWidth >= prefConfig.width &&
+                candidate.physicalHeight >= prefConfig.height
+
+        // Make sure the resolution doesn't regress unless if it's over 60 FPS
+        // where we may need to reduce resolution to achieve the desired refresh rate.
+        return resolutionReduced && !(prefConfig.fps > HIGH_FPS && resolutionFitsStream)
+    }
+
+    // Whether the refresh rate of the candidate rules it out, given the best mode so far
+    private fun rejectsRefreshRate(candidate: Display.Mode, bestMode: Display.Mode): Boolean {
+        if (
+            mayReduceRefreshRate() &&
+                isRefreshRateEqualMatch(bestMode.refreshRate) &&
+                !isRefreshRateEqualMatch(candidate.refreshRate)
+        ) {
+            // If we had an equal refresh rate and this one is not, skip it. In min latency
+            // mode, we want to always prefer the highest frame rate even though it may cause
+            // microstuttering.
+            return true
+        }
+
+        if (isRefreshRateGoodMatch(bestMode.refreshRate)) {
+            return rejectsAgainstGoodMatch(candidate, bestMode)
+        }
+
+        // We didn't have a good match. If this one isn't good either, just don't reduce the
+        // refresh rate. If it is good, prefer it even if it reduces the refresh rate: lowering
+        // the refresh rate can be beneficial when streaming a 60 FPS stream on a 90 Hz device.
+        // We want to select 60 Hz to match the frame rate even if the active display mode is
+        // 90 Hz.
+        return !isRefreshRateGoodMatch(candidate.refreshRate) &&
+            candidate.refreshRate < bestMode.refreshRate
+    }
+
+    // Whether the candidate is ruled out when the best mode so far is already a good match
+    private fun rejectsAgainstGoodMatch(candidate: Display.Mode, bestMode: Display.Mode): Boolean {
+        // We've already got a good match, so if this one isn't also good, it's not
+        // worth considering at all.
+        if (!isRefreshRateGoodMatch(candidate.refreshRate)) {
+            return true
+        }
+
+        return if (mayReduceRefreshRate()) {
+            // User asked for the lowest possible refresh rate, so don't raise it if we
+            // have a good match already
+            candidate.refreshRate > bestMode.refreshRate
+        } else {
+            // User asked for the highest possible refresh rate, so don't reduce it if we
+            // have a good match already
+            candidate.refreshRate < bestMode.refreshRate
+        }
+    }
+
+    // Only apply new window layout parameters if we've actually changed the display mode
+    private fun applyDisplayMode(display: Display, bestMode: Display.Mode) {
         if (display.mode.modeId != bestMode.modeId) {
             // If we only changed refresh rate and we're on an OS that supports
             // Surface.setFrameRate() use that instead of using preferredDisplayModeId to avoid the
@@ -1235,6 +1351,7 @@ class Game :
                     display.mode.physicalHeight != bestMode.physicalHeight
             ) {
                 // Apply the display mode change
+                val windowLayoutParams = window.attributes
                 windowLayoutParams.preferredDisplayModeId = bestMode.modeId
                 window.attributes = windowLayoutParams
             } else {
@@ -1245,9 +1362,9 @@ class Game :
         } else {
             LimeLog.info("Current display mode is already the best display mode")
         }
+    }
 
-        val displayRefreshRate = bestMode.refreshRate
-
+    private fun sizeStreamView() {
         if (prefConfig.stretchVideo) {
             // Set the surface to the size of the video
             streamView.holder.setFixedSize(prefConfig.width, prefConfig.height)
@@ -1257,30 +1374,26 @@ class Game :
                 prefConfig.width.toDouble() / prefConfig.height.toDouble()
             )
         }
+    }
 
-        // Set the desired refresh rate that will get passed into setFrameRate() later
-        desiredRefreshRate = displayRefreshRate
-
-        if (
+    private fun reportedRefreshRate(displayRefreshRate: Float): Float {
+        return if (
             packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION) ||
                 packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
         ) {
             // TVs may take a few moments to switch refresh rates, and we can probably assume
             // it will be eventually activated.
-            // TODO: Improve this
-            return displayRefreshRate
+            // Inherited note: improve this.
+            displayRefreshRate
         } else {
             // Use the lower of the current refresh rate and the selected refresh rate.
             // The preferred refresh rate may not actually be applied (ex: Battery Saver mode).
-            return min(windowManager.defaultDisplay.refreshRate, displayRefreshRate)
+            min(windowManager.defaultDisplay.refreshRate, displayRefreshRate)
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ForbiddenComment")
-    @SuppressLint("InlinedApi")
     private val hideSystemUi = Runnable {
-        // TODO: Do we want to use WindowInsetsController here on R+ instead of
+        // Inherited open question: do we want to use WindowInsetsController here on R+ instead of
         // SYSTEM_UI_FLAG_IMMERSIVE_STICKY? They seem to do the same thing as of S...
 
         // In multi-window mode on N+, we need to drop our layout flags or we'll
@@ -1367,8 +1480,6 @@ class Game :
         super.onPause()
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun onStop() {
         super.onStop()
         startupGuard.cancel() // BOREALIS: first-frame watchdog
@@ -1388,68 +1499,76 @@ class Game :
             stopConnection()
 
             if (prefConfig.enableLatencyToast) {
-                val averageEndToEndLat = decoderRenderer.getAverageEndToEndLatency()
-                val averageDecoderLat = decoderRenderer.getAverageDecoderLatency()
-                var message: String? = null
-                if (averageEndToEndLat > 0) {
-                    message =
-                        resources.getString(R.string.conn_client_latency) +
-                            " " +
-                            averageEndToEndLat +
-                            " ms"
-                    if (averageDecoderLat > 0) {
-                        message +=
-                            " (" +
-                                resources.getString(R.string.conn_client_latency_hw) +
-                                " " +
-                                averageDecoderLat +
-                                " ms)"
-                    }
-                } else if (averageDecoderLat > 0) {
-                    message =
-                        resources.getString(R.string.conn_hardware_latency) +
-                            " " +
-                            averageDecoderLat +
-                            " ms"
-                }
-
-                // Add the video codec to the post-stream toast
-                if (message != null) {
-                    message += " ["
-
-                    if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
-                        message += "H.264"
-                    } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
-                        message += "HEVC"
-                    } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
-                        message += "AV1"
-                    } else {
-                        message += "UNKNOWN"
-                    }
-
-                    if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
-                        message += " HDR"
-                    }
-
-                    message += "]"
-                }
-
-                if (message != null) {
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                }
+                showLatencyToast(videoFormat)
             }
 
-            // Clear the tombstone count if we terminated normally
-            if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
-                tombstonePrefs.edit {
-                    putInt("CrashCount", 0)
-                    putInt("LastNotifiedCrashCount", 0)
-                }
-            }
+            clearTombstoneAfterCleanStop()
         }
 
         // BOREALIS: every exit that finished the activity already asks once (leave)
         if (!isFinishing) finish()
+    }
+
+    // The post-stream toast: the latency of the stream and the video codec it used. A stream that
+    // decoded no frame has no latency, and shows nothing.
+    private fun showLatencyToast(videoFormat: Int) {
+        val latency = latencyText() ?: return
+        Toast.makeText(this, "$latency [${codecLabel(videoFormat)}]", Toast.LENGTH_LONG).show()
+    }
+
+    // The latency of the stream from the end-to-end and the decoder averages, or null when the
+    // stream has neither.
+    private fun latencyText(): String? {
+        val averageEndToEndLat = decoderRenderer.getAverageEndToEndLatency()
+        val averageDecoderLat = decoderRenderer.getAverageDecoderLatency()
+        var message: String? = null
+        if (averageEndToEndLat > 0) {
+            message =
+                resources.getString(R.string.conn_client_latency) + " " + averageEndToEndLat + " ms"
+            if (averageDecoderLat > 0) {
+                message +=
+                    " (" +
+                        resources.getString(R.string.conn_client_latency_hw) +
+                        " " +
+                        averageDecoderLat +
+                        " ms)"
+            }
+        } else if (averageDecoderLat > 0) {
+            message =
+                resources.getString(R.string.conn_hardware_latency) +
+                    " " +
+                    averageDecoderLat +
+                    " ms"
+        }
+        return message
+    }
+
+    // The video codec of the stream for the post-stream toast, with HDR for a 10-bit stream.
+    private fun codecLabel(videoFormat: Int): String {
+        val codec =
+            if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
+                "H.264"
+            } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
+                "HEVC"
+            } else if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
+                "AV1"
+            } else {
+                "UNKNOWN"
+            }
+        if ((videoFormat and MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
+            return "$codec HDR"
+        }
+        return codec
+    }
+
+    // Clear the tombstone count if we terminated normally
+    private fun clearTombstoneAfterCleanStop() {
+        if (!reportedCrash && tombstonePrefs.getInt("CrashCount", 0) != 0) {
+            tombstonePrefs.edit {
+                putInt("CrashCount", 0)
+                putInt("LastNotifiedCrashCount", 0)
+            }
+        }
     }
 
     // BOREALIS: who gets the input, from the stream session; the stream gets it until the session
@@ -1715,35 +1834,8 @@ class Game :
     private val toggleGrab = Runnable { setInputGrabState(!grabbedInput) }
 
     // Returns true if the key stroke was consumed
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "ReturnCount")
     private fun handleSpecialKeys(androidKeyCode: Int, down: Boolean, repeat: Boolean): Boolean {
-        var modifierMask = 0
-        var nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN
-
-        if (
-            androidKeyCode == KeyEvent.KEYCODE_CTRL_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_CTRL_RIGHT
-        ) {
-            modifierMask = KeyboardPacket.MODIFIER_CTRL.toInt()
-        } else if (
-            androidKeyCode == KeyEvent.KEYCODE_SHIFT_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_SHIFT_RIGHT
-        ) {
-            modifierMask = KeyboardPacket.MODIFIER_SHIFT.toInt()
-        } else if (
-            androidKeyCode == KeyEvent.KEYCODE_ALT_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_ALT_RIGHT
-        ) {
-            modifierMask = KeyboardPacket.MODIFIER_ALT.toInt()
-        } else if (
-            androidKeyCode == KeyEvent.KEYCODE_META_LEFT ||
-                androidKeyCode == KeyEvent.KEYCODE_META_RIGHT
-        ) {
-            modifierMask = KeyboardPacket.MODIFIER_META.toInt()
-        } else {
-            nonModifierKeyCode = androidKeyCode
-        }
+        val modifierMask = modifierMaskOf(androidKeyCode)
 
         if (down) {
             this.modifierFlags = this.modifierFlags or modifierMask
@@ -1765,97 +1857,127 @@ class Game :
 
         // Handle the special combos on the key up
         if (chordWaits) {
-            if (specialKeyCode == androidKeyCode) {
-                // If this is a key up for the special key itself, eat that because the host never
-                // saw the original key down (BOREALIS: a key down of it eats its key up too, which
-                // may come after the modifiers)
-                if (down) {
-                    keysEatenByChord.add(androidKeyCode)
-                }
-                return true
-            } else if (modifierFlags != 0) {
-                // While we're waiting for modifiers to come up, eat all key downs and allow all key
-                // ups to pass (BOREALIS: except those of the keys whose key down was eaten here; a
-                // repeat is of a key whose first key down the host saw)
-                if (down && !repeat) {
-                    keysEatenByChord.add(androidKeyCode)
-                }
-                return down || eatenKeyUp
-            } else {
-                // When all modifiers are up, perform the special action
-                when (specialKeyCode) {
-                    // Toggle input grab
-                    KeyEvent.KEYCODE_Z -> {
-                        val h = window.decorView.handler
-                        if (h != null) {
-                            h.postDelayed(toggleGrab, TOGGLE_GRAB_DELAY_MS)
-                        }
-                    }
-
-                    // Disconnect (BOREALIS: the flow of the menu's Disconnect, with its screen and
-                    // its notice, not a finish)
-                    KeyEvent.KEYCODE_Q -> streamSession.disconnect()
-
-                    // BOREALIS: open the in-game menu
-                    KeyEvent.KEYCODE_M -> streamSession.openMenu()
-
-                    // Toggle cursor visibility
-                    KeyEvent.KEYCODE_C -> {
-                        if (!grabbedInput) {
-                            inputCaptureProvider.enableCapture()
-                            grabbedInput = true
-                        }
-                        cursorVisible = !cursorVisible
-                        if (cursorVisible) {
-                            inputCaptureProvider.showCursor()
-                        } else {
-                            inputCaptureProvider.hideCursor()
-                        }
-                    }
-
-                    else -> {}
-                }
-
-                // Reset special key state
-                specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
-                waitingForAllModifiersUp = false
-            }
-        }
-        // Check if Ctrl+Alt+Shift is down when a non-modifier key is pressed
-        else if (
-            (modifierFlags and
-                (KeyboardPacket.MODIFIER_CTRL.toInt() or
-                    KeyboardPacket.MODIFIER_ALT.toInt() or
-                    KeyboardPacket.MODIFIER_SHIFT.toInt())) ==
-                (KeyboardPacket.MODIFIER_CTRL.toInt() or
-                    KeyboardPacket.MODIFIER_ALT.toInt() or
-                    KeyboardPacket.MODIFIER_SHIFT.toInt()) &&
-                (down && nonModifierKeyCode != KeyEvent.KEYCODE_UNKNOWN)
-        ) {
-            when (androidKeyCode) {
-                KeyEvent.KEYCODE_Z,
-                KeyEvent.KEYCODE_Q,
-                KeyEvent.KEYCODE_C,
-                KeyEvent.KEYCODE_M -> {
-                    // Remember that a special key combo was activated, so we can consume all key
-                    // events until the modifiers come up
-                    specialKeyCode = androidKeyCode
-                    waitingForAllModifiersUp = true
-                    // BOREALIS: the host never sees this key down, so its key up is eaten even
-                    // when it comes after the modifiers, which end the chord
-                    keysEatenByChord.add(androidKeyCode)
-                    return true
-                }
-
-                else -> {
-                    // This isn't a special combo that we consume on the client side
-                    return false
-                }
-            }
+            return keyWhileChordWaits(androidKeyCode, down, repeat, eatenKeyUp)
         }
 
         // Not a special combo
+        if (!isChordStart(androidKeyCode, down, modifierMask)) {
+            return eatenKeyUp
+        }
+
+        // Ctrl+Alt+Shift is down when a non-modifier key is pressed
+        return when (androidKeyCode) {
+            KeyEvent.KEYCODE_Z,
+            KeyEvent.KEYCODE_Q,
+            KeyEvent.KEYCODE_C,
+            KeyEvent.KEYCODE_M -> {
+                armChord(androidKeyCode)
+                true
+            }
+
+            // This isn't a special combo that we consume on the client side
+            else -> false
+        }
+    }
+
+    // A key event while a chord waits for its modifiers to come up; returns what
+    // handleSpecialKeys returns
+    private fun keyWhileChordWaits(
+        androidKeyCode: Int,
+        down: Boolean,
+        repeat: Boolean,
+        eatenKeyUp: Boolean,
+    ): Boolean {
+        if (specialKeyCode == androidKeyCode) {
+            // If this is a key up for the special key itself, eat that because the host never saw
+            // the original key down (BOREALIS: a key down of it eats its key up too, which may
+            // come after the modifiers)
+            if (down) {
+                keysEatenByChord.add(androidKeyCode)
+            }
+            return true
+        }
+        if (modifierFlags != 0) {
+            // While we're waiting for modifiers to come up, eat all key downs and allow all key
+            // ups to pass (BOREALIS: except those of the keys whose key down was eaten here; a
+            // repeat is of a key whose first key down the host saw)
+            if (down && !repeat) {
+                keysEatenByChord.add(androidKeyCode)
+            }
+            return down || eatenKeyUp
+        }
+
+        // When all modifiers are up, perform the special action
+        runChord()
+
+        // Reset special key state
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN
+        waitingForAllModifiersUp = false
         return eatenKeyUp
+    }
+
+    private fun runChord() {
+        when (specialKeyCode) {
+            // Toggle input grab
+            KeyEvent.KEYCODE_Z -> {
+                val h = window.decorView.handler
+                if (h != null) {
+                    h.postDelayed(toggleGrab, TOGGLE_GRAB_DELAY_MS)
+                }
+            }
+
+            // Disconnect (BOREALIS: the flow of the menu's Disconnect, with its screen and its
+            // notice, not a finish)
+            KeyEvent.KEYCODE_Q -> streamSession.disconnect()
+
+            // BOREALIS: open the in-game menu
+            KeyEvent.KEYCODE_M -> streamSession.openMenu()
+
+            // Toggle cursor visibility
+            KeyEvent.KEYCODE_C -> {
+                if (!grabbedInput) {
+                    inputCaptureProvider.enableCapture()
+                    grabbedInput = true
+                }
+                cursorVisible = !cursorVisible
+                if (cursorVisible) {
+                    inputCaptureProvider.showCursor()
+                } else {
+                    inputCaptureProvider.hideCursor()
+                }
+            }
+
+            else -> {}
+        }
+    }
+
+    // The bit of the modifier that a key code is a key of, or 0 for any other key
+    private fun modifierMaskOf(keyCode: Int): Int =
+        when (keyCode) {
+            KeyEvent.KEYCODE_CTRL_LEFT,
+            KeyEvent.KEYCODE_CTRL_RIGHT -> KeyboardPacket.MODIFIER_CTRL.toInt()
+            KeyEvent.KEYCODE_SHIFT_LEFT,
+            KeyEvent.KEYCODE_SHIFT_RIGHT -> KeyboardPacket.MODIFIER_SHIFT.toInt()
+            KeyEvent.KEYCODE_ALT_LEFT,
+            KeyEvent.KEYCODE_ALT_RIGHT -> KeyboardPacket.MODIFIER_ALT.toInt()
+            KeyEvent.KEYCODE_META_LEFT,
+            KeyEvent.KEYCODE_META_RIGHT -> KeyboardPacket.MODIFIER_META.toInt()
+            else -> 0
+        }
+
+    // A key down of a non-modifier key while Ctrl, Alt and Shift are held starts a chord
+    private fun isChordStart(androidKeyCode: Int, down: Boolean, modifierMask: Int): Boolean =
+        (modifierFlags and CHORD_MODIFIERS) == CHORD_MODIFIERS &&
+            (down && modifierMask == 0 && androidKeyCode != KeyEvent.KEYCODE_UNKNOWN)
+
+    private fun armChord(code: Int) {
+        // Remember that a special key combo was activated, so we can consume all key events until
+        // the modifiers come up
+        specialKeyCode = code
+        waitingForAllModifiersUp = true
+        // BOREALIS: the host never sees this key down, so its key up is eaten even when it comes
+        // after the modifiers, which end the chord
+        keysEatenByChord.add(code)
     }
 
     // We cannot simply use modifierFlags for all key event processing, because
@@ -1895,89 +2017,92 @@ class Game :
         return modifierFlags.toByte()
     }
 
+    // Whether the key is left to the chrome, the Android keyboard or the system, not the stream.
+    private fun keyIsNotForStream(event: KeyEvent): Boolean =
+        // BOREALIS: the chrome takes the keys while it is modal
+        chromeInput.toChrome(event) ||
+            // BOREALIS: the Android keyboard keeps a gamepad's D-pad, Enter and Back
+            imeKeys.toIme(event) ||
+            // Pass-through virtual navigation keys
+            (event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0
+
+    // Always try the controller handler first, unless it's an alphanumeric keyboard device.
+    // Otherwise, controller handler will eat keyboard d-pad events.
+    private fun padTookKey(event: KeyEvent, down: Boolean): Boolean =
+        ControllerHandler.isGameControllerDevice(event.device) &&
+            if (down) controllerHandler.handleButtonDown(event)
+            else controllerHandler.handleButtonUp(event)
+
+    // Make sure it has a valid Unicode representation and it's not a dead character (which we
+    // don't support): then it can be sent as UTF-8 text.
+    private fun isTextChar(unicodeChar: Int): Boolean =
+        (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
+            (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
+            Character.isValidCodePoint(unicodeChar)
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         // BOREALIS: the hardware Escape key acts as Back while the chrome is modal
         if (chromeInput.actsAsBack(event)) return true
         return handleKeyDown(event) || super.onKeyDown(keyCode, event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "ReturnCount")
     override fun handleKeyDown(event: KeyEvent): Boolean {
-        // BOREALIS: the chrome takes the keys while it is modal
-        if (chromeInput.toChrome(event)) return false
-        // BOREALIS: the Android keyboard keeps a gamepad's D-pad, Enter and Back
-        if (imeKeys.toIme(event)) return false
-        // Pass-through virtual navigation keys
-        if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
-            return false
-        }
+        if (keyIsNotForStream(event)) return false
 
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click. This event WILL repeat if
         // the right mouse button is held down, so we ignore those.
-        if (handleMouseSideKey(event, down = true)) return true
+        if (handleMouseSideKey(event, down = true) || padTookKey(event, down = true)) return true
+        return keyDownForHost(event)
+    }
 
-        var handled = false
-
-        if (ControllerHandler.isGameControllerDevice(event.device)) {
-            // Always try the controller handler first, unless it's an alphanumeric keyboard device.
-            // Otherwise, controller handler will eat keyboard d-pad events.
-            handled = controllerHandler.handleButtonDown(event)
+    // A key down that no pad took: the special keys, then the host as a key or as text. Returns
+    // whether the key was handled.
+    private fun keyDownForHost(event: KeyEvent): Boolean {
+        // Let this method take duplicate key down events
+        if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
+            return true
         }
 
-        // Try the keyboard handler if it wasn't handled as a game controller
-        if (!handled) {
-            // Let this method take duplicate key down events
-            if (handleSpecialKeys(event.keyCode, true, event.repeatCount > 0)) {
-                return true
-            }
-
-            // Pass through keyboard input if we're not grabbing
-            if (!grabbedInput) {
-                return false
-            }
-
-            // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
-            // as UTF-8 text (if it's a printable character).
-            val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
-            if (translated.toInt() == 0) {
-                // Make sure it has a valid Unicode representation and it's not a dead character
-                // (which we don't support). If those are true, we can send it as UTF-8 text.
-                //
-                // NB: We need to be sure this happens before the getRepeatCount() check because
-                // UTF-8 events don't auto-repeat on the host side.
-                val unicodeChar = event.unicodeChar
-                if (
-                    (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
-                        (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
-                        Character.isValidCodePoint(unicodeChar)
-                ) {
-                    // BOREALIS: the whole code point, as a surrogate pair outside the basic plane
-                    conn.sendUtf8Text(String(Character.toChars(unicodeChar)))
-                    return true
-                }
-
-                return false
-            }
-
-            // Eat repeat down events
-            if (event.repeatCount > 0) {
-                return true
-            }
-
-            conn.sendKeyboardInput(
-                translated,
-                KeyboardPacket.KEY_DOWN,
-                getModifierState(event),
-                if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
-                else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED,
-            )
-            // BOREALIS: keys held down are released when the chrome takes the input
-            heldKeys.down(translated.toInt() and VIRTUAL_KEY_MASK)
+        // Pass through keyboard input if we're not grabbing
+        if (!grabbedInput) {
+            return false
         }
 
+        // We'll send it as a raw key event if we have a key mapping, otherwise we'll send it
+        // as UTF-8 text (if it's a printable character).
+        val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
+        return if (translated.toInt() == 0) {
+            keyDownAsText(event)
+        } else {
+            sendKeyDown(event, translated)
+            true
+        }
+    }
+
+    // NB: We need to be sure this happens before the getRepeatCount() check because UTF-8 events
+    // don't auto-repeat on the host side.
+    private fun keyDownAsText(event: KeyEvent): Boolean {
+        val unicodeChar = event.unicodeChar
+        if (!isTextChar(unicodeChar)) return false
+        // BOREALIS: the whole code point, as a surrogate pair outside the basic plane
+        conn.sendUtf8Text(String(Character.toChars(unicodeChar)))
         return true
+    }
+
+    private fun sendKeyDown(event: KeyEvent, translated: Short) {
+        // Eat repeat down events
+        if (event.repeatCount > 0) return
+
+        conn.sendKeyboardInput(
+            translated,
+            KeyboardPacket.KEY_DOWN,
+            getModifierState(event),
+            if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
+            else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED,
+        )
+        // BOREALIS: keys held down are released when the chrome takes the input
+        heldKeys.down(translated.toInt() and VIRTUAL_KEY_MASK)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
@@ -1989,62 +2114,48 @@ class Game :
         return handleKeyUp(event) || super.onKeyUp(keyCode, event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("CyclomaticComplexMethod", "ReturnCount")
     override fun handleKeyUp(event: KeyEvent): Boolean {
-        // BOREALIS: the chrome takes the keys while it is modal
-        if (chromeInput.toChrome(event)) return false
-        // BOREALIS: the Android keyboard keeps a gamepad's D-pad, Enter and Back
-        if (imeKeys.toIme(event)) return false
-        // Pass-through virtual navigation keys
-        if ((event.flags and KeyEvent.FLAG_VIRTUAL_HARD_KEY) != 0) {
-            return false
-        }
+        if (keyIsNotForStream(event)) return false
 
         // Handle a synthetic back button event that some Android OS versions
         // create as a result of a right-click.
-        if (handleMouseSideKey(event, down = false)) return true
+        if (handleMouseSideKey(event, down = false) || padTookKey(event, down = false)) return true
+        return keyUpForHost(event)
+    }
 
-        var handled = false
-        if (ControllerHandler.isGameControllerDevice(event.device)) {
-            // Always try the controller handler first, unless it's an alphanumeric keyboard device.
-            // Otherwise, controller handler will eat keyboard d-pad events.
-            handled = controllerHandler.handleButtonUp(event)
+    // A key up that no pad took: the special keys, then the host as a key. Returns whether the key
+    // was handled.
+    private fun keyUpForHost(event: KeyEvent): Boolean {
+        if (handleSpecialKeys(event.keyCode, false, false)) {
+            return true
         }
 
-        // Try the keyboard handler if it wasn't handled as a game controller
-        if (!handled) {
-            if (handleSpecialKeys(event.keyCode, false, false)) {
-                return true
-            }
-
-            // Pass through keyboard input if we're not grabbing
-            if (!grabbedInput) {
-                return false
-            }
-
-            val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
-            if (translated.toInt() == 0) {
-                // If we sent this event as UTF-8 on key down, also report that it was handled
-                // when we get the key up event for it.
-                val unicodeChar = event.unicodeChar
-                return (unicodeChar and KeyCharacterMap.COMBINING_ACCENT) == 0 &&
-                    (unicodeChar and KeyCharacterMap.COMBINING_ACCENT_MASK) != 0 &&
-                    Character.isValidCodePoint(unicodeChar)
-            }
-
-            conn.sendKeyboardInput(
-                translated,
-                KeyboardPacket.KEY_UP,
-                getModifierState(event),
-                if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
-                else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED,
-            )
-            // BOREALIS: keys held down are released when the chrome takes the input
-            heldKeys.up(translated.toInt() and VIRTUAL_KEY_MASK)
+        // Pass through keyboard input if we're not grabbing
+        if (!grabbedInput) {
+            return false
         }
 
-        return true
+        val translated = keyboardTranslator.translate(event.keyCode, event.deviceId)
+        return if (translated.toInt() == 0) {
+            // If we sent this event as UTF-8 on key down, also report that it was handled
+            // when we get the key up event for it.
+            isTextChar(event.unicodeChar)
+        } else {
+            sendKeyUp(event, translated)
+            true
+        }
+    }
+
+    private fun sendKeyUp(event: KeyEvent, translated: Short) {
+        conn.sendKeyboardInput(
+            translated,
+            KeyboardPacket.KEY_UP,
+            getModifierState(event),
+            if (keyboardTranslator.hasNormalizedMapping(event.keyCode, event.deviceId)) 0
+            else MoonBridge.SS_KBE_FLAG_NON_NORMALIZED,
+        )
+        // BOREALIS: keys held down are released when the chrome takes the input
+        heldKeys.up(translated.toInt() and VIRTUAL_KEY_MASK)
     }
 
     override fun onKeyMultiple(keyCode: Int, repeatCount: Int, event: KeyEvent): Boolean {
@@ -2321,55 +2432,58 @@ class Game :
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
+    // Sends each stylus pointer of a move to the host, in index order, and stops at the first
+    // that the host refuses (false). True when the event had a stylus pointer, false when it had
+    // none.
+    private fun sendPenMove(view: View, event: MotionEvent, eventType: Byte): Boolean {
+        var handledStylusEvent = false
+        for (i in 0 until event.pointerCount) {
+            val toolType = convertToolTypeToStylusToolType(event, i)
+            if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
+                // Not a stylus pointer, so skip it
+                continue
+            }
+            // This pointer is a stylus, so we'll report that we handled this event
+            handledStylusEvent = true
+
+            if (!sendPenEventForPointer(view, event, eventType, toolType, i)) {
+                // Pen events aren't supported by the host
+                return false
+            }
+        }
+        return handledStylusEvent
+    }
+
     private fun trySendPenEvent(view: View, event: MotionEvent): Boolean {
         val eventType = getLiTouchTypeFromEvent(event)
         if (eventType < 0) {
             return false
         }
 
-        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
+        return when (event.actionMasked) {
             // Move events may impact all active pointers
-            var handledStylusEvent = false
-            for (i in 0 until event.pointerCount) {
-                val toolType = convertToolTypeToStylusToolType(event, i)
-                if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
-                    // Not a stylus pointer, so skip it
-                    continue
-                } else {
-                    // This pointer is a stylus, so we'll report that we handled this event
-                    handledStylusEvent = true
-                }
-
-                if (!sendPenEventForPointer(view, event, eventType, toolType, i)) {
-                    // Pen events aren't supported by the host
-                    return false
-                }
-            }
-            return handledStylusEvent
-        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            MotionEvent.ACTION_MOVE -> sendPenMove(view, event, eventType)
             // Cancel impacts all active pointers
-            return conn.sendPenEvent(
-                MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
-                MoonBridge.LI_TOOL_TYPE_UNKNOWN,
-                0,
-                0f,
-                0f,
-                0f,
-                0f,
-                0f,
-                MoonBridge.LI_ROT_UNKNOWN,
-                MoonBridge.LI_TILT_UNKNOWN,
-            ) != MoonBridge.LI_ERR_UNSUPPORTED
-        } else {
+            MotionEvent.ACTION_CANCEL ->
+                conn.sendPenEvent(
+                    MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL,
+                    MoonBridge.LI_TOOL_TYPE_UNKNOWN,
+                    0,
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    0f,
+                    MoonBridge.LI_ROT_UNKNOWN,
+                    MoonBridge.LI_TILT_UNKNOWN,
+                ) != MoonBridge.LI_ERR_UNSUPPORTED
             // Up, Down, and Hover events are specific to the action index
-            val toolType = convertToolTypeToStylusToolType(event, event.actionIndex)
-            if (toolType == MoonBridge.LI_TOOL_TYPE_UNKNOWN) {
-                // Not a stylus event
-                return false
+            else -> {
+                val toolType = convertToolTypeToStylusToolType(event, event.actionIndex)
+                // A pointer that is no stylus is no pen event
+                toolType != MoonBridge.LI_TOOL_TYPE_UNKNOWN &&
+                    sendPenEventForPointer(view, event, eventType, toolType, event.actionIndex)
             }
-            return sendPenEventForPointer(view, event, eventType, toolType, event.actionIndex)
         }
     }
 
@@ -2469,37 +2583,303 @@ class Game :
             MoonBridge.LI_ROT_UNKNOWN,
         )
 
-    // True when the host took the event, false when it answered that touch is not supported.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
-    private fun sendTouchEvents(view: View, event: MotionEvent, eventType: Byte): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
-            // Move events may impact all active pointers
-            for (i in 0 until event.pointerCount) {
-                if (!sendTouchEventForPointer(view, event, eventType, i)) {
-                    return false
-                }
+    // Sends each pointer of a move to the host, in index order, and stops at the first that the
+    // host refuses (false).
+    private fun sendTouchMove(view: View, event: MotionEvent, eventType: Byte): Boolean {
+        for (i in 0 until event.pointerCount) {
+            if (!sendTouchEventForPointer(view, event, eventType, i)) {
+                return false
             }
-            return true
-        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+        }
+        return true
+    }
+
+    // True when the host took the event, false when it answered that touch is not supported.
+    private fun sendTouchEvents(view: View, event: MotionEvent, eventType: Byte): Boolean =
+        when (event.actionMasked) {
+            // Move events may impact all active pointers
+            MotionEvent.ACTION_MOVE -> sendTouchMove(view, event, eventType)
             // Cancel impacts all active pointers
-            return sendCancelAllTouches() != MoonBridge.LI_ERR_UNSUPPORTED
-        } else {
+            MotionEvent.ACTION_CANCEL -> sendCancelAllTouches() != MoonBridge.LI_ERR_UNSUPPORTED
             // Up, Down, and Hover events are specific to the action index
-            return sendTouchEventForPointer(view, event, eventType, event.actionIndex)
+            else -> sendTouchEventForPointer(view, event, eventType, event.actionIndex)
+        }
+
+    // Always update the position before sending any button events. If we're dealing with a stylus
+    // without hover support, our position might be significantly different than before.
+    // True when the host took the event as a pen event: nothing else is sent for it.
+    private fun placePointer(view: View?, event: MotionEvent): Boolean {
+        when {
+            inputCaptureProvider.eventHasRelativeMouseAxes(event) -> sendRelativeMove(event)
+            (event.source and InputDevice.SOURCE_CLASS_POSITION) != 0 -> sendTouchpadPosition(event)
+            view != null && trySendPenEvent(view, event) -> {
+                // If our host supports pen events, send it directly
+                // BOREALIS: a cancel ends the mouse buttons too, or the host keeps them down
+                if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                    releaseMouseButtons()
+                }
+                return true
+            }
+            // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
+            view != null -> updateMousePosition(view, event)
+            else -> updateMousePositionInWindow(event)
+        }
+        return false
+    }
+
+    // Send the deltas straight from the motion event
+    private fun sendRelativeMove(event: MotionEvent) {
+        val deltaX = inputCaptureProvider.getRelativeAxisX(event).toInt().toShort()
+        val deltaY = inputCaptureProvider.getRelativeAxisY(event).toInt().toShort()
+
+        if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
+            if (prefConfig.absoluteMouseMode) {
+                // NB: view may be null, but we can unconditionally use streamView
+                // because we don't need to adjust relative axis deltas for the position
+                // of the streamView within the parent's coordinate system.
+                conn.sendMouseMoveAsMousePosition(
+                    deltaX,
+                    deltaY,
+                    streamView.width.toShort(),
+                    streamView.height.toShort(),
+                )
+            } else {
+                conn.sendMouseMove(deltaX, deltaY)
+            }
+        }
+    }
+
+    // If this input device is not associated with the view itself (like a trackpad), we'll convert
+    // the device-specific coordinates to use to send the cursor position. This really isn't ideal
+    // but it's probably better than nothing.
+    //
+    // Trackpad on newer versions of Android (Oreo and later) should be caught by the relative axes
+    // case of the caller. If we get here, we're on an older version that doesn't support pointer
+    // capture.
+    private fun sendTouchpadPosition(event: MotionEvent) {
+        val device = event.device
+        if (device == null) {
+            return
+        }
+        val xRange = device.getMotionRange(MotionEvent.AXIS_X, event.source)
+        val yRange = device.getMotionRange(MotionEvent.AXIS_Y, event.source)
+        if (xRange == null || yRange == null) {
+            return
+        }
+
+        // All touchpads coordinate planes should start at (0, 0)
+        if (xRange.min != 0f || yRange.min != 0f) {
+            return
+        }
+
+        val xMax = xRange.max.toInt()
+        val yMax = yRange.max.toInt()
+
+        // Touchpads must be smaller than (65535, 65535)
+        if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
+            conn.sendMousePosition(
+                event.x.toInt().toShort(),
+                event.y.toInt().toShort(),
+                xMax.toShort(),
+                yMax.toShort(),
+            )
+        }
+    }
+
+    // BOREALIS: an event that reaches the activity itself has window coordinates; place it on the
+    // stream view
+    private fun updateMousePositionInWindow(event: MotionEvent) {
+        val origin = IntArray(2)
+        streamView.getLocationInWindow(origin)
+        val onStreamView = MotionEvent.obtain(event)
+        onStreamView.offsetLocation(-origin[0].toFloat(), -origin[1].toFloat())
+        updateMousePosition(streamView, onStreamView)
+        onStreamView.recycle()
+    }
+
+    // BOREALIS: the buttons of a mouse event as the host knows them. The DeX touchpad on the Fold 4
+    // sends proper right click events using BUTTON_SECONDARY, but doesn't send BUTTON_PRIMARY for
+    // a regular click. Instead it sends ACTION_DOWN/UP, so we need to fix that up to look like a
+    // sane input event to process it correctly.
+    private fun mouseButtonState(event: MotionEvent): Int {
+        val buttonState = event.buttonState
+        if (event.source != SAMSUNG_DEX_MOUSE_SOURCE) return buttonState
+        return when {
+            // BOREALIS: only a plain touch down is the missing left click; a right click comes down
+            // with its own button
+            event.actionMasked == MotionEvent.ACTION_DOWN && buttonState == 0 ->
+                buttonState or MotionEvent.BUTTON_PRIMARY
+            event.action == MotionEvent.ACTION_UP ->
+                buttonState and MotionEvent.BUTTON_PRIMARY.inv()
+            // We may be faking the primary button down from a previous event, so be sure to add
+            // that bit back into the button state.
+            else -> buttonState or (lastButtonState and MotionEvent.BUTTON_PRIMARY)
+        }
+    }
+
+    // The vertical scroll packet, then the horizontal one
+    private fun sendMouseScroll(event: MotionEvent) {
+        conn.sendMouseHighResScroll(
+            (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * HIGH_RES_SCROLL_UNIT).toInt().toShort()
+        )
+        conn.sendMouseHighResHScroll(
+            (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * HIGH_RES_SCROLL_UNIT).toInt().toShort()
+        )
+    }
+
+    private fun sendMouseButton(button: Byte, down: Boolean) {
+        if (down) {
+            conn.sendMouseButtonDown(button)
+        } else {
+            conn.sendMouseButtonUp(button)
+        }
+    }
+
+    // The host buttons that changed, left, right, then middle. Mouse secondary or stylus primary is
+    // right click (stylus down is left click); mouse tertiary or stylus secondary is middle click.
+    // BOREALIS: the two of a group share one host button, which changes only when the group does
+    private fun sendMouseButtons(buttonState: Int, changedButtons: Int) {
+        if ((changedButtons and MotionEvent.BUTTON_PRIMARY) != 0) {
+            sendMouseButton(
+                MouseButtonPacket.BUTTON_LEFT,
+                (buttonState and MotionEvent.BUTTON_PRIMARY) != 0,
+            )
+        }
+
+        val rightGroup = MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY
+        if (groupChanged(buttonState, rightGroup)) {
+            sendMouseButton(MouseButtonPacket.BUTTON_RIGHT, (buttonState and rightGroup) != 0)
+        }
+
+        val middleGroup = MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY
+        if (groupChanged(buttonState, middleGroup)) {
+            sendMouseButton(MouseButtonPacket.BUTTON_MIDDLE, (buttonState and middleGroup) != 0)
+        }
+    }
+
+    // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see whether the
+    // other joins them. True when the chord of the two was completed: the caller opens the menu
+    // once it has noted the buttons (stream)
+    private fun sideButtonsChanged(
+        buttonState: Int,
+        changedButtons: Int,
+        eventTime: Long,
+    ): Boolean {
+        if (!prefConfig.mouseNavButtons) return false
+        var sideChord = false
+        if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
+            sideChord =
+                sideButtonMoved(
+                    sideBack,
+                    (buttonState and MotionEvent.BUTTON_BACK) != 0,
+                    eventTime,
+                )
+        }
+
+        if ((changedButtons and MotionEvent.BUTTON_FORWARD) != 0) {
+            sideChord =
+                sideButtonMoved(
+                    sideForward,
+                    (buttonState and MotionEvent.BUTTON_FORWARD) != 0,
+                    eventTime,
+                ) || sideChord
+        }
+        return sideChord
+    }
+
+    // Handle stylus presses: a stylus is left click and an eraser is right click, and the place and
+    // time of the press and of the release keep the pointer out of the dead zones around them
+    private fun noteStylusPress(event: MotionEvent) {
+        if (event.pointerCount != 1 || event.actionIndex != 0) return
+        val action = event.actionMasked
+        val down = action == MotionEvent.ACTION_DOWN
+        if (!down && action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) return
+        val button =
+            when (event.getToolType(0)) {
+                MotionEvent.TOOL_TYPE_STYLUS -> MouseButtonPacket.BUTTON_LEFT
+                MotionEvent.TOOL_TYPE_ERASER -> MouseButtonPacket.BUTTON_RIGHT
+                else -> return
+            }
+        if (down) {
+            lastAbsTouchDownTime = event.eventTime
+            lastAbsTouchDownX = event.getX(0)
+            lastAbsTouchDownY = event.getY(0)
+        } else {
+            lastAbsTouchUpTime = event.eventTime
+            lastAbsTouchUpX = event.getX(0)
+            lastAbsTouchUpY = event.getY(0)
+        }
+        sendMouseButton(button, down)
+    }
+
+    // The mouse, the stylus and the DeX desktop mouse; the other pointers are fingers
+    private fun isMouseOrStylusEvent(event: MotionEvent): Boolean {
+        val eventSource = event.source
+        return eventSource == InputDevice.SOURCE_MOUSE ||
+            (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 || // SOURCE_TOUCHPAD
+            eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
+            (event.pointerCount >= 1 &&
+                (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
+                    event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
+                    event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
+            eventSource == SAMSUNG_DEX_MOUSE_SOURCE // Samsung DeX mode desktop mouse
+    }
+
+    // This case is for mice and non-finger touch devices. The result is true: the event is taken
+    // even when it is ignored, because otherwise Android may synthesize d-pad events from it.
+    private fun handleMouseEvent(view: View?, event: MotionEvent): Boolean {
+        val buttonState = mouseButtonState(event)
+        val changedButtons = buttonState xor lastButtonState
+
+        // Ignore mouse input if we're not capturing from our input source
+        if (!inputCaptureProvider.isCapturingActive()) {
+            return true
+        }
+
+        if (placePointer(view, event)) {
+            return true
+        }
+
+        if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
+            sendMouseScroll(event)
+        }
+
+        sendMouseButtons(buttonState, changedButtons)
+        val sideChord = sideButtonsChanged(buttonState, changedButtons, event.eventTime)
+        noteStylusPress(event)
+
+        lastButtonState = buttonState
+        // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the
+        // input clears them (stream)
+        if (sideChord) streamSession.openMenu()
+        return true
+    }
+
+    // The event goes by its source: the controller handler for a joystick, then for the touchpad of
+    // a joystick device, then the mouse or the finger handler for a pointer. A joystick event that
+    // the handler does not take is not consumed; neither is a source of another class.
+    private fun routeMotionEvent(view: View?, event: MotionEvent): Boolean {
+        val eventSource = event.source
+        val deviceSources = if (event.device != null) event.device.sources else 0
+        return when {
+            (eventSource and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 ->
+                controllerHandler.handleMotionEvent(event)
+            (deviceSources and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 &&
+                controllerHandler.tryHandleTouchpadEvent(event) -> true
+            (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0 ||
+                (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 ||
+                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ->
+                if (isMouseOrStylusEvent(event)) {
+                    handleMouseEvent(view, event)
+                } else {
+                    handleFingerEvent(view, event)
+                }
+            else -> false
         }
     }
 
     // Returns true if the event was consumed
     // NB: View is only present if called from a view callback
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress(
-        "ComplexCondition",
-        "CyclomaticComplexMethod",
-        "LongMethod",
-        "NestedBlockDepth",
-        "ReturnCount",
-    )
     private fun handleMotionEvent(view: View?, event: MotionEvent): Boolean {
         // BOREALIS: the chrome takes the input while it is modal
         if (chromeInput.toChrome(event)) return false
@@ -2507,433 +2887,193 @@ class Game :
         if (!grabbedInput) {
             return false
         }
+        return routeMotionEvent(view, event)
+    }
 
-        val eventSource = event.source
-        val deviceSources = if (event.device != null) event.device.sources else 0
-        if ((eventSource and InputDevice.SOURCE_CLASS_JOYSTICK) != 0) {
-            if (controllerHandler.handleMotionEvent(event)) {
-                return true
-            }
-        } else if (
-            (deviceSources and InputDevice.SOURCE_CLASS_JOYSTICK) != 0 &&
-                controllerHandler.tryHandleTouchpadEvent(event)
+    // BOREALIS: whether the Native touch mode sends this finger to the host as a touch event and
+    // the host takes it; a host that refuses puts the session in Direct (stream)
+    private fun hostTookTouch(touchMode: TouchMode, view: View?, event: MotionEvent): Boolean =
+        touchMode == TouchMode.NATIVE && view != null && trySendTouchEvent(view, event)
+
+    // Three fingers are down: notes when, and cancels the first and second touches to avoid
+    // erroneous events
+    private fun startThreeFingerGesture(event: MotionEvent) {
+        threeFingerDownTime = event.eventTime
+        for (aTouchContext in touchContextMap) {
+            touchContextEntry(aTouchContext).cancelTouch()
+        }
+    }
+
+    // A finger went down: every touch context learns how many fingers are down, then the context of
+    // this finger starts its touch.
+    private fun fingerDown(context: TouchContext, event: MotionEvent, eventX: Int, eventY: Int) {
+        for (touchContext in touchContextMap) {
+            touchContextEntry(touchContext).setPointerCount(event.pointerCount)
+        }
+        context.touchDownEvent(eventX, eventY, event.eventTime, true)
+    }
+
+    // The last finger lifts soon after the third went down: a tap of three fingers. Android 13
+    // marks a lift that it cancelled; before that a lift is a lift.
+    private fun endsThreeFingerTap(event: MotionEvent): Boolean =
+        event.pointerCount == 1 &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                (event.flags and MotionEvent.FLAG_CANCELED) == 0) &&
+            event.eventTime - threeFingerDownTime < THREE_FINGER_TAP_THRESHOLD
+
+    // A finger lifted: its touch ends (cancelled when Android cancelled it), then every touch
+    // context learns how many fingers are left.
+    private fun liftFinger(context: TouchContext, event: MotionEvent, eventX: Int, eventY: Int) {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                (event.flags and MotionEvent.FLAG_CANCELED) != 0
         ) {
-            return true
-        } else if (
-            (eventSource and InputDevice.SOURCE_CLASS_POINTER) != 0 ||
-                (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 ||
-                eventSource == InputDevice.SOURCE_MOUSE_RELATIVE
+            context.cancelTouch()
+        } else {
+            context.touchUpEvent(eventX, eventY, event.eventTime)
+        }
+
+        for (touchContext in touchContextMap) {
+            touchContextEntry(touchContext).setPointerCount(event.pointerCount - 1)
+        }
+    }
+
+    // The first finger lifted and a second one is left: the original secondary touch now becomes
+    // primary.
+    private fun promoteSecondFinger(
+        context: TouchContext,
+        event: MotionEvent,
+        xOffset: Float,
+        yOffset: Float,
+    ) {
+        if (event.actionIndex == 0 && event.pointerCount > 1 && !context.isCancelled) {
+            context.touchDownEvent(
+                (event.getX(1) + xOffset).toInt(),
+                (event.getY(1) + yOffset).toInt(),
+                event.eventTime,
+                false,
+            )
+        }
+    }
+
+    // ACTION_MOVE is special because it always has actionIndex == 0, so the move handlers of all
+    // indexes are called here: the historical samples first, oldest first, then the current values.
+    private fun moveFingers(event: MotionEvent, xOffset: Float, yOffset: Float) {
+        for (i in 0 until event.historySize) {
+            for (aTouchContextMap in touchContextMap) {
+                val touch = touchContextEntry(aTouchContextMap)
+                if (touch.actionIndex < event.pointerCount) {
+                    touch.touchMoveEvent(
+                        (event.getHistoricalX(touch.actionIndex, i) + xOffset).toInt(),
+                        (event.getHistoricalY(touch.actionIndex, i) + yOffset).toInt(),
+                        event.getHistoricalEventTime(i),
+                    )
+                }
+            }
+        }
+
+        for (aTouchContextMap in touchContextMap) {
+            val touch = touchContextEntry(aTouchContextMap)
+            if (touch.actionIndex < event.pointerCount) {
+                touch.touchMoveEvent(
+                    (event.getX(touch.actionIndex) + xOffset).toInt(),
+                    (event.getY(touch.actionIndex) + yOffset).toInt(),
+                    event.eventTime,
+                )
+            }
+        }
+    }
+
+    // The gesture was cancelled: every touch ends, and no finger is down.
+    private fun cancelFingers() {
+        for (aTouchContext in touchContextMap) {
+            touchContextEntry(aTouchContext).cancelTouch()
+            touchContextEntry(aTouchContext).setPointerCount(0)
+        }
+    }
+
+    // BOREALIS: a finger of the touch screen (the other sources of the pointer class are the mouse
+    // and its kin). True when the event was consumed.
+    private fun handleFingerEvent(view: View?, event: MotionEvent): Boolean {
+        val controllerMode = virtualController?.controllerMode
+        if (
+            controllerMode == VirtualController.ControllerMode.MoveButtons ||
+                controllerMode == VirtualController.ControllerMode.ResizeButtons
         ) {
-            // This case is for mice and non-finger touch devices
-            if (
-                eventSource == InputDevice.SOURCE_MOUSE ||
-                    (eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0 || // SOURCE_TOUCHPAD
-                    eventSource == InputDevice.SOURCE_MOUSE_RELATIVE ||
-                    (event.pointerCount >= 1 &&
-                        (event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE ||
-                            event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
-                            event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER)) ||
-                    eventSource == SAMSUNG_DEX_MOUSE_SOURCE // Samsung DeX mode desktop mouse
-            ) {
-                var buttonState = event.buttonState
-                var changedButtons = buttonState xor lastButtonState
-
-                // The DeX touchpad on the Fold 4 sends proper right click events using
-                // BUTTON_SECONDARY, but doesn't send BUTTON_PRIMARY for a regular click. Instead it
-                // sends ACTION_DOWN/UP, so we need to fix that up to look like a sane input event
-                // to process it correctly.
-                if (eventSource == SAMSUNG_DEX_MOUSE_SOURCE) {
-                    // BOREALIS: only a plain touch down is the missing left click; a right click
-                    // comes down with its own button
-                    if (event.actionMasked == MotionEvent.ACTION_DOWN && buttonState == 0) {
-                        buttonState = buttonState or MotionEvent.BUTTON_PRIMARY
-                    } else if (event.action == MotionEvent.ACTION_UP) {
-                        buttonState = buttonState and MotionEvent.BUTTON_PRIMARY.inv()
-                    } else {
-                        // We may be faking the primary button down from a previous event,
-                        // so be sure to add that bit back into the button state.
-                        buttonState =
-                            buttonState or (lastButtonState and MotionEvent.BUTTON_PRIMARY)
-                    }
-
-                    changedButtons = buttonState xor lastButtonState
-                }
-
-                // Ignore mouse input if we're not capturing from our input source
-                if (!inputCaptureProvider.isCapturingActive()) {
-                    // We return true here because otherwise the events may end up causing
-                    // Android to synthesize d-pad events.
-                    return true
-                }
-
-                // Always update the position before sending any button events. If we're
-                // dealing with a stylus without hover support, our position might be
-                // significantly different than before.
-                if (inputCaptureProvider.eventHasRelativeMouseAxes(event)) {
-                    // Send the deltas straight from the motion event
-                    val deltaX = inputCaptureProvider.getRelativeAxisX(event).toInt().toShort()
-                    val deltaY = inputCaptureProvider.getRelativeAxisY(event).toInt().toShort()
-
-                    if (deltaX.toInt() != 0 || deltaY.toInt() != 0) {
-                        if (prefConfig.absoluteMouseMode) {
-                            // NB: view may be null, but we can unconditionally use streamView
-                            // because we don't need to adjust relative axis deltas for the position
-                            // of the streamView within the parent's coordinate system.
-                            conn.sendMouseMoveAsMousePosition(
-                                deltaX,
-                                deltaY,
-                                streamView.width.toShort(),
-                                streamView.height.toShort(),
-                            )
-                        } else {
-                            conn.sendMouseMove(deltaX, deltaY)
-                        }
-                    }
-                } else if ((eventSource and InputDevice.SOURCE_CLASS_POSITION) != 0) {
-                    // If this input device is not associated with the view itself (like a
-                    // trackpad), we'll convert the device-specific coordinates to use to send the
-                    // cursor position. This really isn't ideal but it's probably better than
-                    // nothing.
-                    //
-                    // Trackpad on newer versions of Android (Oreo and later) should be caught by
-                    // the relative axes case above. If we get here, we're on an older version that
-                    // doesn't support pointer capture.
-                    val device = event.device
-                    if (device != null) {
-                        val xRange = device.getMotionRange(MotionEvent.AXIS_X, eventSource)
-                        val yRange = device.getMotionRange(MotionEvent.AXIS_Y, eventSource)
-
-                        // All touchpads coordinate planes should start at (0, 0)
-                        if (
-                            xRange != null && yRange != null && xRange.min == 0f && yRange.min == 0f
-                        ) {
-                            val xMax = xRange.max.toInt()
-                            val yMax = yRange.max.toInt()
-
-                            // Touchpads must be smaller than (65535, 65535)
-                            if (xMax <= Short.MAX_VALUE && yMax <= Short.MAX_VALUE) {
-                                conn.sendMousePosition(
-                                    event.x.toInt().toShort(),
-                                    event.y.toInt().toShort(),
-                                    xMax.toShort(),
-                                    yMax.toShort(),
-                                )
-                            }
-                        }
-                    }
-                } else if (view != null && trySendPenEvent(view, event)) {
-                    // If our host supports pen events, send it directly
-                    // BOREALIS: a cancel ends the mouse buttons too, or the host keeps them down
-                    if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
-                        releaseMouseButtons()
-                    }
-                    return true
-                } else if (view != null) {
-                    // Otherwise send absolute position based on the view for SOURCE_CLASS_POINTER
-                    updateMousePosition(view, event)
-                } else {
-                    // BOREALIS: an event that reaches the activity itself has window
-                    // coordinates; place it on the stream view
-                    val origin = IntArray(2)
-                    streamView.getLocationInWindow(origin)
-                    val onStreamView = MotionEvent.obtain(event)
-                    onStreamView.offsetLocation(-origin[0].toFloat(), -origin[1].toFloat())
-                    updateMousePosition(streamView, onStreamView)
-                    onStreamView.recycle()
-                }
-
-                if (event.actionMasked == MotionEvent.ACTION_SCROLL) {
-                    // Send the vertical scroll packet
-                    conn.sendMouseHighResScroll(
-                        (event.getAxisValue(MotionEvent.AXIS_VSCROLL) * HIGH_RES_SCROLL_UNIT)
-                            .toInt()
-                            .toShort()
-                    )
-                    conn.sendMouseHighResHScroll(
-                        (event.getAxisValue(MotionEvent.AXIS_HSCROLL) * HIGH_RES_SCROLL_UNIT)
-                            .toInt()
-                            .toShort()
-                    )
-                }
-
-                if ((changedButtons and MotionEvent.BUTTON_PRIMARY) != 0) {
-                    if ((buttonState and MotionEvent.BUTTON_PRIMARY) != 0) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                    }
-                }
-
-                // Mouse secondary or stylus primary is right click (stylus down is left click)
-                // BOREALIS: the two share one host button, which changes only when the group does
-                if (
-                    groupChanged(
-                        buttonState,
-                        MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY,
-                    )
-                ) {
-                    if (
-                        (buttonState and
-                            (MotionEvent.BUTTON_SECONDARY or MotionEvent.BUTTON_STYLUS_PRIMARY)) !=
-                            0
-                    ) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                    }
-                }
-
-                // Mouse tertiary or stylus secondary is middle click
-                if (
-                    groupChanged(
-                        buttonState,
-                        MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY,
-                    )
-                ) {
-                    if (
-                        (buttonState and
-                            (MotionEvent.BUTTON_TERTIARY or MotionEvent.BUTTON_STYLUS_SECONDARY)) !=
-                            0
-                    ) {
-                        conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_MIDDLE)
-                    } else {
-                        conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_MIDDLE)
-                    }
-                }
-
-                // BOREALIS: Back waits to see whether it is held, and Back and Forward wait to see
-                // whether the other joins them (stream)
-                var sideChord = false
-                if (prefConfig.mouseNavButtons) {
-                    if ((changedButtons and MotionEvent.BUTTON_BACK) != 0) {
-                        sideChord =
-                            sideButtonMoved(
-                                sideBack,
-                                (buttonState and MotionEvent.BUTTON_BACK) != 0,
-                                event.eventTime,
-                            )
-                    }
-
-                    if ((changedButtons and MotionEvent.BUTTON_FORWARD) != 0) {
-                        sideChord =
-                            sideButtonMoved(
-                                sideForward,
-                                (buttonState and MotionEvent.BUTTON_FORWARD) != 0,
-                                event.eventTime,
-                            ) || sideChord
-                    }
-                }
-
-                // Handle stylus presses
-                if (event.pointerCount == 1 && event.actionIndex == 0) {
-                    if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-                            lastAbsTouchDownTime = event.eventTime
-                            lastAbsTouchDownX = event.getX(0)
-                            lastAbsTouchDownY = event.getY(0)
-
-                            // Stylus is left click
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_LEFT)
-                        } else if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
-                            lastAbsTouchDownTime = event.eventTime
-                            lastAbsTouchDownX = event.getX(0)
-                            lastAbsTouchDownY = event.getY(0)
-
-                            // Eraser is right click
-                            conn.sendMouseButtonDown(MouseButtonPacket.BUTTON_RIGHT)
-                        }
-                    } else if (
-                        event.actionMasked == MotionEvent.ACTION_UP ||
-                            event.actionMasked == MotionEvent.ACTION_CANCEL
-                    ) {
-                        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-                            lastAbsTouchUpTime = event.eventTime
-                            lastAbsTouchUpX = event.getX(0)
-                            lastAbsTouchUpY = event.getY(0)
-
-                            // Stylus is left click
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_LEFT)
-                        } else if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
-                            lastAbsTouchUpTime = event.eventTime
-                            lastAbsTouchUpX = event.getX(0)
-                            lastAbsTouchUpY = event.getY(0)
-
-                            // Eraser is right click
-                            conn.sendMouseButtonUp(MouseButtonPacket.BUTTON_RIGHT)
-                        }
-                    }
-                }
-
-                lastButtonState = buttonState
-                // BOREALIS: the menu opens once the buttons are noted, so the chrome that takes the
-                // input clears them (stream)
-                if (sideChord) streamSession.openMenu()
-            }
-            // This case is for fingers
-            else {
-                val controllerMode = virtualController?.controllerMode
-                if (
-                    controllerMode == VirtualController.ControllerMode.MoveButtons ||
-                        controllerMode == VirtualController.ControllerMode.ResizeButtons
-                ) {
-                    // Ignore presses when the virtual controller is being configured
-                    return true
-                }
-
-                // BOREALIS: the touch mode of the stream session; Off ignores the touch screen
-                val touchMode = TouchContexts.mode(streamSession, prefConfig)
-                if (touchMode == TouchMode.OFF) {
-                    return true
-                }
-
-                // If this is the parent view, we'll offset our coordinates to appear as if they
-                // are relative to the StreamView like our StreamView touch events are.
-                val xOffset: Float
-                val yOffset: Float
-                if (view != streamView && touchMode != TouchMode.TRACKPAD) {
-                    xOffset = -streamView.x
-                    yOffset = -streamView.y
-                } else {
-                    xOffset = 0f
-                    yOffset = 0f
-                }
-
-                val actionIndex = event.actionIndex
-
-                val eventX = (event.getX(actionIndex) + xOffset).toInt()
-                val eventY = (event.getY(actionIndex) + yOffset).toInt()
-
-                // BOREALIS: the Native touch mode sends every finger to the host as a touch event,
-                // the third one too, and the code below takes what the host refuses. A tap of
-                // three fingers that opens the keyboard is theirs: a finger that went to the host
-                // does not reach it (stream)
-                if (
-                    touchMode == TouchMode.NATIVE && view != null && trySendTouchEvent(view, event)
-                ) {
-                    return true
-                }
-
-                // Special handling for 3 finger gesture
-                if (
-                    event.actionMasked == MotionEvent.ACTION_POINTER_DOWN &&
-                        event.pointerCount == THREE_FINGER_COUNT
-                ) {
-                    // Three fingers down
-                    threeFingerDownTime = event.eventTime
-
-                    // Cancel the first and second touches to avoid
-                    // erroneous events
-                    for (aTouchContext in touchContextMap) {
-                        touchContextEntry(aTouchContext).cancelTouch()
-                    }
-
-                    return true
-                }
-
-                val context = getTouchContext(actionIndex)
-                if (context == null) {
-                    return false
-                }
-
-                when (event.actionMasked) {
-                    MotionEvent.ACTION_POINTER_DOWN,
-                    MotionEvent.ACTION_DOWN -> {
-                        for (touchContext in touchContextMap) {
-                            touchContextEntry(touchContext).setPointerCount(event.pointerCount)
-                        }
-                        context.touchDownEvent(eventX, eventY, event.eventTime, true)
-                    }
-
-                    MotionEvent.ACTION_POINTER_UP,
-                    MotionEvent.ACTION_UP -> {
-                        if (
-                            event.pointerCount == 1 &&
-                                (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                                    (event.flags and MotionEvent.FLAG_CANCELED) == 0)
-                        ) {
-                            // All fingers up
-                            if (
-                                event.eventTime - threeFingerDownTime < THREE_FINGER_TAP_THRESHOLD
-                            ) {
-                                // This is a 3 finger tap to bring up the keyboard
-                                toggleKeyboard()
-                                return true
-                            }
-                        }
-
-                        if (
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                (event.flags and MotionEvent.FLAG_CANCELED) != 0
-                        ) {
-                            context.cancelTouch()
-                        } else {
-                            context.touchUpEvent(eventX, eventY, event.eventTime)
-                        }
-
-                        for (touchContext in touchContextMap) {
-                            touchContextEntry(touchContext).setPointerCount(event.pointerCount - 1)
-                        }
-                        if (actionIndex == 0 && event.pointerCount > 1 && !context.isCancelled) {
-                            // The original secondary touch now becomes primary
-                            context.touchDownEvent(
-                                (event.getX(1) + xOffset).toInt(),
-                                (event.getY(1) + yOffset).toInt(),
-                                event.eventTime,
-                                false,
-                            )
-                        }
-                    }
-
-                    MotionEvent.ACTION_MOVE -> {
-                        // ACTION_MOVE is special because it always has actionIndex == 0
-                        // We'll call the move handlers for all indexes manually
-
-                        // First process the historical events
-                        for (i in 0 until event.historySize) {
-                            for (aTouchContextMap in touchContextMap) {
-                                val touch = touchContextEntry(aTouchContextMap)
-                                if (touch.actionIndex < event.pointerCount) {
-                                    touch.touchMoveEvent(
-                                        (event.getHistoricalX(touch.actionIndex, i) + xOffset)
-                                            .toInt(),
-                                        (event.getHistoricalY(touch.actionIndex, i) + yOffset)
-                                            .toInt(),
-                                        event.getHistoricalEventTime(i),
-                                    )
-                                }
-                            }
-                        }
-
-                        // Now process the current values
-                        for (aTouchContextMap in touchContextMap) {
-                            val touch = touchContextEntry(aTouchContextMap)
-                            if (touch.actionIndex < event.pointerCount) {
-                                touch.touchMoveEvent(
-                                    (event.getX(touch.actionIndex) + xOffset).toInt(),
-                                    (event.getY(touch.actionIndex) + yOffset).toInt(),
-                                    event.eventTime,
-                                )
-                            }
-                        }
-                    }
-
-                    MotionEvent.ACTION_CANCEL -> {
-                        for (aTouchContext in touchContextMap) {
-                            touchContextEntry(aTouchContext).cancelTouch()
-                            touchContextEntry(aTouchContext).setPointerCount(0)
-                        }
-                    }
-
-                    else -> return false
-                }
-            }
-
-            // Handled a known source
+            // Ignore presses when the virtual controller is being configured
             return true
         }
 
-        // Unknown class
-        return false
+        // BOREALIS: the touch mode of the stream session; Off ignores the touch screen
+        val touchMode = TouchContexts.mode(streamSession, prefConfig)
+
+        // BOREALIS: the Native touch mode sends every finger to the host as a touch event, the
+        // third one too, and the code below takes what the host refuses. A tap of three fingers
+        // that opens the keyboard is theirs: a finger that went to the host does not reach it
+        // (stream)
+        return when {
+            touchMode == TouchMode.OFF || hostTookTouch(touchMode, view, event) -> true
+
+            // Special handling for 3 finger gesture
+            event.actionMasked == MotionEvent.ACTION_POINTER_DOWN &&
+                event.pointerCount == THREE_FINGER_COUNT -> {
+                startThreeFingerGesture(event)
+                true
+            }
+
+            else -> sendToTouchContexts(view, event, touchMode)
+        }
+    }
+
+    // Sends the finger to the touch contexts, which are fetched now: the attempt to send it to
+    // the host can have rebuilt them. False when there is no context for the pointer, or the
+    // action is no touch.
+    private fun sendToTouchContexts(
+        view: View?,
+        event: MotionEvent,
+        touchMode: TouchMode,
+    ): Boolean {
+        // If this is the parent view, we'll offset our coordinates to appear as if they
+        // are relative to the StreamView like our StreamView touch events are.
+        val xOffset: Float
+        val yOffset: Float
+        if (view != streamView && touchMode != TouchMode.TRACKPAD) {
+            xOffset = -streamView.x
+            yOffset = -streamView.y
+        } else {
+            xOffset = 0f
+            yOffset = 0f
+        }
+
+        val actionIndex = event.actionIndex
+
+        val eventX = (event.getX(actionIndex) + xOffset).toInt()
+        val eventY = (event.getY(actionIndex) + yOffset).toInt()
+
+        val context = getTouchContext(actionIndex) ?: return false
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_POINTER_DOWN,
+            MotionEvent.ACTION_DOWN -> fingerDown(context, event, eventX, eventY)
+
+            MotionEvent.ACTION_POINTER_UP,
+            MotionEvent.ACTION_UP -> {
+                if (endsThreeFingerTap(event)) {
+                    // This is a 3 finger tap to bring up the keyboard
+                    toggleKeyboard()
+                } else {
+                    liftFinger(context, event, eventX, eventY)
+                    promoteSecondFinger(context, event, xOffset, yOffset)
+                }
+            }
+
+            MotionEvent.ACTION_MOVE -> moveFingers(event, xOffset, yOffset)
+
+            MotionEvent.ACTION_CANCEL -> cancelFingers()
+
+            else -> return false
+        }
+        return true
     }
 
     // The Java dereferenced the entries of the touch context array without a check: an entry that
@@ -2977,8 +3117,13 @@ class Game :
         return handleMotionEvent(null, event) || super.onGenericMotionEvent(event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ComplexCondition")
+    // Only one stylus or eraser on its own has the dead zones of updateMousePosition
+    private fun isLoneStylus(event: MotionEvent): Boolean =
+        event.pointerCount == 1 &&
+            event.actionIndex == 0 &&
+            (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
+                event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
+
     private fun updateMousePosition(touchedView: View, event: MotionEvent) {
         // X and Y are already relative to the provided view object
         var eventX: Float
@@ -2995,12 +3140,7 @@ class Game :
             eventY = event.getY(0) - streamView.y
         }
 
-        if (
-            event.pointerCount == 1 &&
-                event.actionIndex == 0 &&
-                (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER ||
-                    event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS)
-        ) {
+        if (isLoneStylus(event)) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN,
                 MotionEvent.ACTION_HOVER_ENTER,
@@ -3055,7 +3195,9 @@ class Game :
         return handleMotionEvent(view, event)
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Converted as is from the inherited Java; ClickableViewAccessibility stays because the
+    // background touch view handles its touches itself and has no click action
+    // (Sprint 18c backlog).
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(view: View, event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) {

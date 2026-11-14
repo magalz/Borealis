@@ -15,7 +15,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
 /** Binds the Library contracts and their seams to the adapters over the upstream services. */
-@Suppress("TooManyFunctions") // One declarative binding per interface.
+@Suppress("TooManyFunctions") // Kept (BORE-92): one declarative binding per interface.
 @Module
 @InstallIn(SingletonComponent::class)
 internal interface LibraryAdapterModule {

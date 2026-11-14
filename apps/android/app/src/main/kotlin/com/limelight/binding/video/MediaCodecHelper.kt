@@ -17,8 +17,8 @@ import java.util.LinkedList
 import java.util.Locale
 import java.util.regex.Pattern
 
-// Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-@Suppress("TooManyFunctions", "LargeClass", "ForbiddenComment")
+// TooManyFunctions and LargeClass stay: the class waits for its split (Sprint 18d backlog).
+@Suppress("TooManyFunctions", "LargeClass")
 object MediaCodecHelper {
     private const val NOT_INITIALIZED = "MediaCodecHelper must be initialized before use"
 
@@ -162,7 +162,7 @@ object MediaCodecHelper {
         // With the Android 12 update, Sabrina now uses HEVC (with RFI) based upon
         // FEATURE_LowLatency support, which provides equivalent latency to H.264 now.
         //
-        // FIXME: Should we do this for all Amlogic S905X SoCs?
+        // Inherited open question: should we do this for all Amlogic S905X SoCs?
         if (!Build.DEVICE.equals("sabrina", ignoreCase = true)) {
             whitelistedHevcDecoders.add("omx.amlogic")
         }
@@ -423,7 +423,7 @@ object MediaCodecHelper {
 
     // A null mime type reaches getCapabilitiesForType as in the Java, whose callers catch what it
     // throws.
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Buggy codecs are tolerated and the trace printed, as in the Java (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     private fun decoderSupportsAndroidRLowLatency(
         decoderInfo: MediaCodecInfo,
@@ -456,8 +456,8 @@ object MediaCodecHelper {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("TooGenericExceptionCaught", "PrintStackTrace", "NestedBlockDepth")
+    // Buggy codecs are tolerated and the trace printed, as in the Java (Sprint 18c backlog).
+    @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     private fun decoderSupportsKnownVendorLowLatencyOption(decoderName: String): Boolean {
         // It's only possible to probe vendor parameters on Android 12 and above.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -467,22 +467,25 @@ object MediaCodecHelper {
                 // options.
                 testCodec = MediaCodec.createByCodecName(decoderName)
 
-                // See if any of the vendor parameters match ones we know about
-                for (supportedOption in testCodec.supportedVendorParameters) {
-                    for (knownLowLatencyOption in knownVendorLowLatencyOptions) {
-                        if (supportedOption.equals(knownLowLatencyOption, ignoreCase = true)) {
-                            LimeLog.info(
-                                "$decoderName supports known low latency option: $supportedOption"
-                            )
-                            return true
-                        }
-                    }
-                }
+                return hasKnownVendorOption(decoderName, testCodec.supportedVendorParameters)
             } catch (e: Exception) {
                 // Tolerate buggy codecs
                 e.printStackTrace()
             } finally {
                 testCodec?.release()
+            }
+        }
+        return false
+    }
+
+    // See if any of the vendor parameters match ones we know about
+    private fun hasKnownVendorOption(decoderName: String, options: List<String>): Boolean {
+        for (supportedOption in options) {
+            for (knownLowLatencyOption in knownVendorLowLatencyOptions) {
+                if (supportedOption.equals(knownLowLatencyOption, ignoreCase = true)) {
+                    LimeLog.info("$decoderName supports known low latency option: $supportedOption")
+                    return true
+                }
             }
         }
         return false
@@ -501,8 +504,6 @@ object MediaCodecHelper {
         return isDecoderInList(qualcommDecoderPrefixes, decoderName) && !isAdreno620
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
     @JvmStatic
     fun setDecoderLowLatencyOptions(
         videoFormat: MediaFormat,
@@ -555,14 +556,32 @@ object MediaCodecHelper {
         }
 
         if (tryNumber < OPERATING_RATE_TRY_BOUND) {
-            if (decoderSupportsMaxOperatingRate(decoderInfo.name)) {
-                videoFormat.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
-                setNewOption = true
-            } else {
-                videoFormat.setInteger(MediaFormat.KEY_PRIORITY, 0)
-                setNewOption = true
-            }
+            setOperatingRateOrPriority(videoFormat, decoderInfo.name)
+            setNewOption = true
         }
+
+        if (setVendorLowLatencyOptions(videoFormat, decoderInfo.name, tryNumber)) {
+            setNewOption = true
+        }
+
+        return setNewOption
+    }
+
+    private fun setOperatingRateOrPriority(format: MediaFormat, decoderName: String) {
+        if (decoderSupportsMaxOperatingRate(decoderName)) {
+            format.setInteger(MediaFormat.KEY_OPERATING_RATE, Short.MAX_VALUE.toInt())
+        } else {
+            format.setInteger(MediaFormat.KEY_PRIORITY, 0)
+        }
+    }
+
+    // Sets the vendor keys of the decoder's family for the try number; true when it set one.
+    private fun setVendorLowLatencyOptions(
+        format: MediaFormat,
+        decoderName: String,
+        tryNumber: Int,
+    ): Boolean {
+        var setNewOption = false
 
         // MediaCodec supports vendor-defined format keys using the
         // "vendor.<extension name>.<parameter name>" syntax. These allow access to functionality
@@ -574,7 +593,7 @@ object MediaCodecHelper {
         // Try vendor-specific low latency options
         //
         // NOTE: Update knownVendorLowLatencyOptions if you modify this code!
-        if (isDecoderInList(qualcommDecoderPrefixes, decoderInfo.name)) {
+        if (isDecoderInList(qualcommDecoderPrefixes, decoderName)) {
             // Examples of Qualcomm's vendor extensions for Snapdragon 845:
             // https://cs.android.com/android/platform/superproject/+/master:hardware/qcom/sdm845/media/mm-video-v4l2/vidc/vdec/src/omx_vdec_extensions.hpp
             // https://cs.android.com/android/_/android/platform/hardware/qcom/sm8150/media/+/0621ceb1c1b19564999db8293574a0e12952ff6c
@@ -582,38 +601,38 @@ object MediaCodecHelper {
             // We will first try both, then try vendor.qti-ext-dec-low-latency.enable alone if that
             // fails
             if (tryNumber < VENDOR_OPTIONS_TRY_BOUND) {
-                videoFormat.setInteger("vendor.qti-ext-dec-picture-order.enable", 1)
+                format.setInteger("vendor.qti-ext-dec-picture-order.enable", 1)
                 setNewOption = true
             }
             if (tryNumber < QUALCOMM_LOW_LATENCY_TRY_BOUND) {
-                videoFormat.setInteger("vendor.qti-ext-dec-low-latency.enable", 1)
+                format.setInteger("vendor.qti-ext-dec-low-latency.enable", 1)
                 setNewOption = true
             }
-        } else if (isDecoderInList(kirinDecoderPrefixes, decoderInfo.name)) {
+        } else if (isDecoderInList(kirinDecoderPrefixes, decoderName)) {
             if (tryNumber < VENDOR_OPTIONS_TRY_BOUND) {
                 // Kirin low latency options
                 // https://developer.huawei.com/consumer/cn/forum/topic/0202325564295980115
-                videoFormat.setInteger(
+                format.setInteger(
                     "vendor.hisi-ext-low-latency-video-dec.video-scene-for-low-latency-req",
                     1,
                 )
-                videoFormat.setInteger(
+                format.setInteger(
                     "vendor.hisi-ext-low-latency-video-dec.video-scene-for-low-latency-rdy",
                     -1,
                 )
                 setNewOption = true
             }
-        } else if (isDecoderInList(exynosDecoderPrefixes, decoderInfo.name)) {
+        } else if (isDecoderInList(exynosDecoderPrefixes, decoderName)) {
             if (tryNumber < VENDOR_OPTIONS_TRY_BOUND) {
                 // Exynos low latency option for H.264 decoder
-                videoFormat.setInteger("vendor.rtc-ext-dec-low-latency.enable", 1)
+                format.setInteger("vendor.rtc-ext-dec-low-latency.enable", 1)
                 setNewOption = true
             }
-        } else if (isDecoderInList(amlogicDecoderPrefixes, decoderInfo.name)) {
+        } else if (isDecoderInList(amlogicDecoderPrefixes, decoderName)) {
             if (tryNumber < VENDOR_OPTIONS_TRY_BOUND) {
                 // Amlogic low latency vendor extension
                 // https://github.com/codewalkerster/android_vendor_amlogic_common_prebuilt_libstagefrighthw/commit/41fefc4e035c476d58491324a5fe7666bfc2989e
-                videoFormat.setInteger("vendor.low-latency.enable", 1)
+                format.setInteger("vendor.low-latency.enable", 1)
                 setNewOption = true
             }
         }
@@ -621,7 +640,7 @@ object MediaCodecHelper {
         return setNewOption
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Buggy codecs are tolerated and the trace printed, as in the Java (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     @JvmStatic
     fun decoderSupportsFusedIdrFrame(decoderInfo: MediaCodecInfo, mimeType: String): Boolean {
@@ -645,7 +664,7 @@ object MediaCodecHelper {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // Buggy codecs are tolerated and the trace printed, as in the Java (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace")
     @JvmStatic
     fun decoderSupportsAdaptivePlayback(decoderInfo: MediaCodecInfo, mimeType: String): Boolean {
@@ -754,34 +773,37 @@ object MediaCodecHelper {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
     @JvmStatic
     fun decoderIsWhitelistedForHevc(decoderInfo: MediaCodecInfo): Boolean {
         requireInitialized()
 
-        //
-        // Software decoders are terrible and we never want to use them.
-        // We want to catch decoders like:
-        // OMX.qcom.video.decoder.hevcswvdec
-        // OMX.SEC.hevc.sw.dec
-        //
-        if (decoderInfo.name.contains("sw", ignoreCase = true)) {
-            LimeLog.info("Disallowing HEVC on software decoder: " + decoderInfo.name)
-            return false
-        } else if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                (!decoderInfo.isHardwareAccelerated || decoderInfo.isSoftwareOnly)
-        ) {
+        if (isSoftwareDecoder(decoderInfo)) {
             LimeLog.info("Disallowing HEVC on software decoder: " + decoderInfo.name)
             return false
         }
 
-        // If this device is media performance class 12 or higher, we will assume any hardware
-        // HEVC decoder present is fast and modern enough for streaming.
-        //
-        // [5.3/H-1-1] MUST NOT drop more than 2 frames in 10 seconds (i.e less than 0.333 percent
-        // frame drop) for a 1080p 60 fps video session under load.
+        // Otherwise, we use our list of known working HEVC decoders
+        return hevcAllowedByPerformanceClass() ||
+            hevcAllowedByLowLatency(decoderInfo) ||
+            isDecoderInList(whitelistedHevcDecoders, decoderInfo.name)
+    }
+
+    // Software decoders are terrible and we never want to use them.
+    // We want to catch decoders like:
+    // OMX.qcom.video.decoder.hevcswvdec
+    // OMX.SEC.hevc.sw.dec
+    private fun isSoftwareDecoder(decoderInfo: MediaCodecInfo): Boolean {
+        return decoderInfo.name.contains("sw", ignoreCase = true) ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                (!decoderInfo.isHardwareAccelerated || decoderInfo.isSoftwareOnly))
+    }
+
+    // If this device is media performance class 12 or higher, we will assume any hardware
+    // HEVC decoder present is fast and modern enough for streaming.
+    //
+    // [5.3/H-1-1] MUST NOT drop more than 2 frames in 10 seconds (i.e less than 0.333 percent
+    // frame drop) for a 1080p 60 fps video session under load.
+    private fun hevcAllowedByPerformanceClass(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             LimeLog.info("Media performance class: " + Build.VERSION.MEDIA_PERFORMANCE_CLASS)
             if (Build.VERSION.MEDIA_PERFORMANCE_CLASS >= Build.VERSION_CODES.S) {
@@ -789,20 +811,19 @@ object MediaCodecHelper {
                 return true
             }
         }
+        return false
+    }
 
-        // If the decoder supports FEATURE_LowLatency, we will assume it is fast and modern enough
-        // to be preferable for streaming over H.264 decoders.
+    // If the decoder supports FEATURE_LowLatency, we will assume it is fast and modern enough
+    // to be preferable for streaming over H.264 decoders.
+    private fun hevcAllowedByLowLatency(decoderInfo: MediaCodecInfo): Boolean {
         if (decoderSupportsAndroidRLowLatency(decoderInfo, "video/hevc")) {
             LimeLog.info("Allowing HEVC based on FEATURE_LowLatency support")
             return true
         }
-
-        // Otherwise, we use our list of known working HEVC decoders
-        return isDecoderInList(whitelistedHevcDecoders, decoderInfo.name)
+        return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("ReturnCount")
     @JvmStatic
     fun isDecoderWhitelistedForAv1(decoderInfo: MediaCodecInfo): Boolean {
         requireInitialized()
@@ -813,21 +834,12 @@ object MediaCodecHelper {
             return false
         }
 
-        //
-        // Software decoders are terrible and we never want to use them.
-        // We want to catch decoders like:
-        // OMX.qcom.video.decoder.hevcswvdec
-        // OMX.SEC.hevc.sw.dec
-        //
-        if (decoderInfo.name.contains("sw", ignoreCase = true)) {
-            LimeLog.info("Disallowing AV1 on software decoder: " + decoderInfo.name)
-            return false
-        } else if (!decoderInfo.isHardwareAccelerated || decoderInfo.isSoftwareOnly) {
+        if (isSoftwareDecoder(decoderInfo)) {
             LimeLog.info("Disallowing AV1 on software decoder: " + decoderInfo.name)
             return false
         }
 
-        // TODO: Test some AV1 decoders
+        // Inherited note: test some AV1 decoders.
         return false
     }
 
@@ -858,33 +870,25 @@ object MediaCodecHelper {
         return false
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("LoopWithTooManyJumpStatements")
+    // Encoders, and the compatibility aliases that Android 10 lists, are not candidates.
+    private fun isEncoderOrAlias(codecInfo: MediaCodecInfo): Boolean {
+        return codecInfo.isEncoder ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && codecInfo.isAlias)
+    }
+
     @JvmStatic
     fun findFirstDecoder(mimeType: String): MediaCodecInfo? {
         requireInitialized()
 
         for (codecInfo in getMediaCodecList()) {
-            // Skip encoders
-            if (codecInfo.isEncoder) {
+            if (isEncoderOrAlias(codecInfo)) {
                 continue
             }
 
-            // Skip compatibility aliases on Q+
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                if (codecInfo.isAlias) {
-                    continue
-                }
-            }
-
-            // Find a decoder that supports the specified video format
+            // Find a decoder that supports the specified video format. A blacklisted decoder is
+            // logged once for each listing of the type and the walk goes on.
             for (mime in codecInfo.supportedTypes) {
-                if (mime.equals(mimeType, ignoreCase = true)) {
-                    // Skip blacklisted codecs
-                    if (isCodecBlacklisted(codecInfo)) {
-                        continue
-                    }
-
+                if (mime.equals(mimeType, ignoreCase = true) && !isCodecBlacklisted(codecInfo)) {
                     LimeLog.info("First decoder choice is " + codecInfo.name)
                     return codecInfo
                 }
@@ -907,26 +911,17 @@ object MediaCodecHelper {
     // device without a decoder. This answers the first decoder of the type, with the candidates of
     // that search (no encoder, alias or blacklisted decoder), when every one of them throws; it
     // answers null when there is none, or when one can be read, which the search would have found.
-    @Suppress("LoopWithTooManyJumpStatements")
     @JvmStatic
     fun findDecoderWhenAllThrow(mimeType: String): MediaCodecInfo? {
         requireInitialized()
 
         var first: MediaCodecInfo? = null
         for (codecInfo in getMediaCodecList()) {
-            if (codecInfo.isEncoder) {
-                continue
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && codecInfo.isAlias) {
-                continue
-            }
-
             val mime =
-                codecInfo.supportedTypes.firstOrNull { it.equals(mimeType, ignoreCase = true) }
-                    ?: continue
+                if (isEncoderOrAlias(codecInfo)) null
+                else codecInfo.supportedTypes.firstOrNull { it.equals(mimeType, ignoreCase = true) }
 
-            if (isCodecBlacklisted(codecInfo)) {
+            if (mime == null || isCodecBlacklisted(codecInfo)) {
                 continue
             }
 
@@ -976,8 +971,50 @@ object MediaCodecHelper {
         }
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
-    @Suppress("NestedBlockDepth", "LoopWithTooManyJumpStatements", "CyclomaticComplexMethod")
+    // The capabilities of one listing of the type of a decoder in a round (0 is the first), or null
+    // when the listing is skipped: the decoder is blacklisted or throws for its capabilities, or it
+    // lacks FEATURE_LowLatency in the first round.
+    private fun readSafeCapabilities(
+        codecInfo: MediaCodecInfo,
+        mime: String,
+        round: Int,
+    ): CodecCapabilities? {
+        LimeLog.info("Examining decoder capabilities of ${codecInfo.name} (round ${round + 1})")
+
+        // Skip blacklisted codecs
+        if (isCodecBlacklisted(codecInfo)) {
+            return null
+        }
+
+        val caps = readCapabilities(codecInfo, mime)
+
+        if (caps != null && round == 0 && !supportsLowLatencyFeature(codecInfo, caps)) {
+            LimeLog.info("Skipping decoder that lacks FEATURE_LowLatency for round 1")
+            return null
+        }
+
+        return caps
+    }
+
+    // Any profile is good when none is required.
+    private fun supportsRequiredProfile(
+        codecInfo: MediaCodecInfo,
+        caps: CodecCapabilities,
+        requiredProfile: Int,
+    ): Boolean {
+        if (requiredProfile == -1) {
+            return true
+        }
+
+        if (caps.profileLevels.any { it.profile == requiredProfile }) {
+            LimeLog.info("Decoder ${codecInfo.name} supports required profile")
+            return true
+        }
+
+        LimeLog.info("Decoder ${codecInfo.name} does NOT support required profile")
+        return false
+    }
+
     private fun findKnownSafeDecoder(mimeType: String, requiredProfile: Int): MediaCodecInfo? {
         // Some devices (Exynos devces, at least) have two sets of decoders.
         // The first set of decoders are C2 which do not support FEATURE_LowLatency,
@@ -987,57 +1024,21 @@ object MediaCodecHelper {
         // (like c2.qti.hevc.decoder.low_latency) that advertise FEATURE_LowLatency while
         // the standard ones (like c2.qti.hevc.decoder) do not. Like Exynos, the decoders
         // with FEATURE_LowLatency support are listed after the standard ones.
-        for (i in 0 until 2) {
+        for (round in 0 until 2) {
             for (codecInfo in getMediaCodecList()) {
-                // Skip encoders
-                if (codecInfo.isEncoder) {
+                if (isEncoderOrAlias(codecInfo)) {
                     continue
-                }
-
-                // Skip compatibility aliases on Q+
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    if (codecInfo.isAlias) {
-                        continue
-                    }
                 }
 
                 // Find a decoder that supports the requested video format
                 for (mime in codecInfo.supportedTypes) {
-                    if (mime.equals(mimeType, ignoreCase = true)) {
-                        LimeLog.info(
-                            "Examining decoder capabilities of ${codecInfo.name} (round ${i + 1})"
-                        )
+                    if (!mime.equals(mimeType, ignoreCase = true)) {
+                        continue
+                    }
 
-                        // Skip blacklisted codecs
-                        if (isCodecBlacklisted(codecInfo)) {
-                            continue
-                        }
-
-                        val caps = readCapabilities(codecInfo, mime) ?: continue
-
-                        if (i == 0 && !supportsLowLatencyFeature(codecInfo, caps)) {
-                            LimeLog.info(
-                                "Skipping decoder that lacks FEATURE_LowLatency for round 1"
-                            )
-                            continue
-                        }
-
-                        if (requiredProfile != -1) {
-                            for (profile in caps.profileLevels) {
-                                if (profile.profile == requiredProfile) {
-                                    LimeLog.info(
-                                        "Decoder ${codecInfo.name} supports required profile"
-                                    )
-                                    return codecInfo
-                                }
-                            }
-
-                            LimeLog.info(
-                                "Decoder ${codecInfo.name} does NOT support required profile"
-                            )
-                        } else {
-                            return codecInfo
-                        }
+                    val caps = readSafeCapabilities(codecInfo, mime, round)
+                    if (caps != null && supportsRequiredProfile(codecInfo, caps, requiredProfile)) {
+                        return codecInfo
                     }
                 }
             }
@@ -1063,7 +1064,7 @@ object MediaCodecHelper {
         return string.lowercase(Locale.ENGLISH).contains(substring.lowercase(Locale.ENGLISH))
     }
 
-    // Converted as is from the inherited Java; refactor in a later sprint (Sprint 14 backlog).
+    // The true branches read fixed system paths, so no test proves a rewrite (Sprint 18c backlog).
     @Suppress("TooGenericExceptionCaught", "PrintStackTrace", "ReturnCount")
     private fun isExynos4Device(): Boolean {
         try {

@@ -58,8 +58,8 @@ object StreamSessionFactory {
      * example when a running session is resumed. The placeholder name that the Library gives a
      * resumed app it has no name for is dropped here, so the screens never show it.
      */
-    @JvmStatic
     // Kept (BORE-92): the call site in Game.kt passes what the activity has.
+    @JvmStatic
     @Suppress("LongParameterList")
     fun create(
         activity: Activity,

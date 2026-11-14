@@ -17,8 +17,7 @@ import io.github.magalz.borealis.logging.NativeLogForwarder
  * the `INSTANCE` that the initializer never set. The private state needs no annotation: it is a
  * static field that only this class reads.
  */
-// TooManyFunctions stays: the JNI natives and callbacks that the C code binds by name all live in
-// this object until it is split (Sprint 18d backlog).
+// The JNI natives and callbacks bound by name stay here until the split (Sprint 18d backlog).
 @Suppress("TooManyFunctions")
 object MoonBridge {
     /* See documentation in Limelight.h for information about these functions and constants */

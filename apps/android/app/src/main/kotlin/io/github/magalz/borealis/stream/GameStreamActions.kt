@@ -59,7 +59,8 @@ private class NvConnectionInput(private val connection: NvConnection) : InputSin
  * main thread. The overlay needs nothing from here: the session state shows it, and `PerfGate`
  * turns the decoder numbers on while it is visible.
  */
-@Suppress("TooManyFunctions") // Kept (BORE-92): one call per thing the chrome can ask of the stream.
+// Kept (BORE-92): one call per thing the chrome can ask of the stream.
+@Suppress("TooManyFunctions")
 class GameStreamActions
 internal constructor(
     private val activity: Activity,

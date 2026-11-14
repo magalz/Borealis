@@ -148,8 +148,7 @@ object MoonBridge {
         init()
     }
 
-    @JvmStatic
-    fun capabilitySlicesPerFrame(slices: Byte): Int = slices.toInt() shl SLICES_SHIFT
+    @JvmStatic fun capabilitySlicesPerFrame(slices: Byte): Int = slices.toInt() shl SLICES_SHIFT
 
     class AudioConfiguration {
         @JvmField val channelCount: Int

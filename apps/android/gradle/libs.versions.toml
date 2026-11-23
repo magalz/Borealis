@@ -24,13 +24,13 @@ jcodec = "0.2.5"
 jmdns = "3.6.5"
 junit = "4.13.2"
 kotlinx-coroutines = "1.11.0"
-kotlinx-serialization = "1.12.0"
+kotlinx-serialization = "1.13.0"
 # Kotlin Gradle plugin used by AGP built-in Kotlin. It may lead the version bundled with
 # AGP when CI passes (ADR 0047); Dependabot groups it with KSP.
 kotlin = "2.4.21"
 kover = "0.9.11"
 # 2.3.13 is skipped: its regression google/ksp#3286 left the Hilt test components ungenerated in CI (BORE-151).
-ksp = "2.3.12"
+ksp = "2.3.14"
 ktfmt = "0.64"
 licensee = "1.14.1"
 okhttp = "5.5.1"
